@@ -49,8 +49,8 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
             ) : null}
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenu.Content align="end" className="w-72">
-          <DropdownMenu.Label>Notifications</DropdownMenu.Label>
+        <DropdownMenuContent align="end" className="w-72">
+          <DropdownMenuLabel>Notifications</DropdownMenuLabel>
           {isLoading ? (
             <div className="px-2 py-4 text-sm text-muted">Loading…</div>
           ) : visibleAnnouncements.length === 0 ? (
@@ -81,7 +81,7 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
               </div>
             </div>
           )}
-        </DropdownMenu.Content>
+        </DropdownMenuContent>
       </DropdownMenu>
     </div>
   );
@@ -104,19 +104,19 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
           <span>{user.displayName}</span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenu.Content align="end" className="w-56">
-        <DropdownMenu.Label className="text-sm font-medium text-ink">
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="text-sm font-medium text-ink">
           {user.displayName}
-        </DropdownMenu.Label>
-        <DropdownMenu.Separator />
-        <DropdownMenu.Item asChild>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
           <Link href="/profile">Profile</Link>
-        </DropdownMenu.Item>
-        <DropdownMenu.Item asChild>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link href="/settings">Settings</Link>
-        </DropdownMenu.Item>
-        <DropdownMenu.Separator />
-        <DropdownMenu.Item asChild>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
           <button
             onClick={() => {
               window.location.href = "/sign-in";
@@ -125,8 +125,8 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
           >
             Sign out
           </button>
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
     </DropdownMenu>
   );
 }

@@ -27,7 +27,7 @@ const navItems = [
   { label: "Testimonials", href: "/testimonials" },
 ];
 
-export function PublicHeader({ user }: { user?: { displayName: string; role: string; email: string } }) {
+export default function PublicHeader({ user }: { user?: { displayName: string; role: string; email: string } }) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { mounted } = useTheme() as { mounted?: boolean };
 
@@ -56,7 +56,7 @@ export function PublicHeader({ user }: { user?: { displayName: string; role: str
                   NCLEX-RN
                   <ChevronDownIcon className="ml-1 h-3 w-3 opacity-50 group-data-[state=open]:opacity-100" />
                 </NavigationMenuTrigger>
-                <NavigationMenuContent className="w-56 align-start" side="bottom" sideOffset={4}>
+                <NavigationMenuContent className="w-56 align-start">
                   <NavigationMenuLink asChild className="text-sm">
                     <Link href="/nclex-rn">RN Overview</Link>
                   </NavigationMenuLink>
@@ -76,7 +76,7 @@ export function PublicHeader({ user }: { user?: { displayName: string; role: str
                   NCLEX-PN
                   <ChevronDownIcon className="ml-1 h-3 w-3 opacity-50 group-data-[state=open]:opacity-100" />
                 </NavigationMenuTrigger>
-                <NavigationMenuContent className="w-56 align-start" side="bottom" sideOffset={4}>
+                <NavigationMenuContent className="w-56 align-start">
                   <NavigationMenuLink asChild className="text-sm">
                     <Link href="/nclex-pn">PN Overview</Link>
                   </NavigationMenuLink>
@@ -96,7 +96,7 @@ export function PublicHeader({ user }: { user?: { displayName: string; role: str
                   Courses
                   <ChevronDownIcon className="ml-1 h-3 w-3 opacity-50 group-data-[state=open]:opacity-100" />
                 </NavigationMenuTrigger>
-                <NavigationMenuContent className="w-56 align-start" side="bottom" sideOffset={4}>
+                <NavigationMenuContent className="w-56 align-start">
                   <NavigationMenuLink asChild className="text-sm">
                     <Link href="/courses">All Courses</Link>
                   </NavigationMenuLink>
@@ -119,7 +119,7 @@ export function PublicHeader({ user }: { user?: { displayName: string; role: str
                   More
                   <ChevronDownIcon className="ml-1 h-3 w-3 opacity-50 group-data-[state=open]:opacity-100" />
                 </NavigationMenuTrigger>
-                <NavigationMenuContent className="w-52 align-start" side="bottom" sideOffset={4}>
+                <NavigationMenuContent className="w-52 align-start">
                   <NavigationMenuLink asChild className="text-sm">
                     <Link href="/features">Our Features</Link>
                   </NavigationMenuLink>

@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils";
 const NavigationMenu = NavigationMenuPrimitive.Root;
 const NavigationMenuList = NavigationMenuPrimitive.List;
 const NavigationMenuItem = NavigationMenuPrimitive.Item;
+const NavigationMenuViewport = NavigationMenuPrimitive.Viewport;
+const NavigationMenuIndicator = NavigationMenuPrimitive.Indicator;
+
 const NavigationMenuTrigger = React.forwardRef<
   React.ElementRef<typeof NavigationMenuPrimitive.Trigger>,
   React.ComponentPropsWithoutRef<typeof NavigationMenuPrimitive.Trigger> & { className?: string }
@@ -63,6 +66,6 @@ export {
   NavigationMenuTrigger,
   NavigationMenuContent,
   NavigationMenuLink,
-  NavigationMenuPrimitive.Viewport as NavigationMenuViewport,
-  NavigationMenuPrimitive.Indicator as NavigationMenuIndicator,
+  NavigationMenuViewport,
+  NavigationMenuIndicator,
 };
