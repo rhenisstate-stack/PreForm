@@ -1,19 +1,23 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "next-themes";
-import { Link, useRouter } from "next/router";
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu } from "@/components/ui/dropdown-menu";
-import { Announcement } from "@/types";
-import { useAnnouncements } from "@/hooks/use-api";
-import { cn } from "@/lib/utils";
+import type { Announcement } from "@/types";
 
-export function NotificationPanel() {
-  const { data: announcements, isLoading } = useAnnouncements();
-  const router = useRouter();
+interface AnnouncementsData {
+  announcements: Announcement[] | null;
+  isLoading: boolean;
+}
 
+interface NotificationPanelProps {
+  announcementsData: AnnouncementsData;
+}
+
+export function NotificationPanel({ announcementsData }: NotificationPanelProps) {
+  const { announcements, isLoading } = announcementsData;
   const now = Date.now();
   const activeAnnouncements = React.useMemo(
     () =>
@@ -22,7 +26,7 @@ export function NotificationPanel() {
         const to = a.activeTo ? new Date(a.activeTo).getTime() : Infinity;
         return now >= from && now <= to && !a.dismissed;
       }),
-    [announcements]
+    [announcements, now]
   );
   const unreadCount = activeAnnouncements.filter((a) => !a.dismissed).length;
 
@@ -58,7 +62,7 @@ export function NotificationPanel() {
                   className="flex flex-col gap-1 px-2 py-2 cursor-pointer rounded-md hover:bg-accent transition-colors"
                   onClick={() => {
                     if (a.destination) {
-                      router.push(a.destination);
+                      window.location.href = a.destination;
                     }
                   }}
                 >
@@ -85,7 +89,11 @@ export function NotificationPanel() {
   );
 }
 
-export function ProfileMenu({ user }: { user: { displayName: string; role: string; email: string } }) {
+interface ProfileMenuProps {
+  user: { displayName: string; role: string; email: string };
+}
+
+export function ProfileMenu({ user }: ProfileMenuProps) {
   return (
     <DropdownMenu>
       <DropdownMenu.Trigger asChild>
@@ -125,9 +133,16 @@ export function ProfileMenu({ user }: { user: { displayName: string; role: strin
   );
 }
 
-export function CartButton({ itemCount = 0 }: { itemCount?: number }) {
+interface CartButtonProps {
+  itemCount?: number;
+}
+
+export function CartButton({ itemCount = 0 }: CartButtonProps) {
   return (
-    <Button variant="outline" size="icon" aria-label={`Shopping cart (${itemCount} items)`} className="relative">
+    <button
+      className="relative p-1.5 rounded-md text-ink transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      aria-label={`Shopping cart (${itemCount} items)`}
+    >
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <path d="M3 3h1l.5 2h11.5l.5 2H17l.5 2H3z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M8 7v1a1 1 0 01-1 1H4a1 1 0 01-1-1V7zM16 7v1a1 1 0 01-1 1h-3a1 1 0 01-1-1V7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -137,6 +152,6 @@ export function CartButton({ itemCount = 0 }: { itemCount?: number }) {
           {itemCount}
         </Badge>
       )}
-    </Button>
+    </button>
   );
 }

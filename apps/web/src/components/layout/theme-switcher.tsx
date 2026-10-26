@@ -17,7 +17,7 @@ export function ThemeSwitcher() {
     setTheme(nextTheme);
   };
 
-  const activeIcon = icons[theme] ?? icons.system;
+  const ActiveIcon = icons[theme] ?? icons.system;
 
   if (!mounted) {
     return null;
@@ -40,30 +40,33 @@ export function ThemeSwitcher() {
           }
         }}
       >
-        <activeIcon className="h-4 w-4" />
+        <ActiveIcon className="h-4 w-4" />
         <span className="hidden sm:block capitalize">{theme}</span>
       </button>
       <div className="absolute right-0 mt-2 w-40 rounded-md border border-line bg-white p-1 shadow-lg">
-        {["system", "light", "dark"].map((option) => (
-          <button
-            key={option}
-            className={`flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm ${
-              option === theme
-                ? "bg-accent text-accent-foreground"
-                : "text-ink hover:bg-accent"
-            }`}
-            onClick={() => toggleTheme(option)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                toggleTheme(option);
-              }
-            }}
-          >
-            <icons[option] className="h-4 w-4" />
-            <span className="capitalize">{option}</span>
-          </button>
-        ))}
+        {["system", "light", "dark"].map((option) => {
+          const OptionIcon = icons[option];
+          return (
+            <button
+              key={option}
+              className={`flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm ${
+                option === theme
+                  ? "bg-accent text-accent-foreground"
+                  : "text-ink hover:bg-accent"
+              }`}
+              onClick={() => toggleTheme(option)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  toggleTheme(option);
+                }
+              }}
+            >
+              <OptionIcon className="h-4 w-4" />
+              <span className="capitalize">{option}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

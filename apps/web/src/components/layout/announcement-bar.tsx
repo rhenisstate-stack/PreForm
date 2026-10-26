@@ -2,27 +2,24 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useAnnouncements } from "@/hooks/use-api";
-import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import type { Announcement } from "@/types";
 
-export function AnnouncementBar() {
-  const { data: announcements, isLoading } = useAnnouncements();
+interface AnnouncementBarProps {
+  announcements: Announcement[] | null;
+  isLoading: boolean;
+}
+
+export function AnnouncementBar({ announcements, isLoading }: AnnouncementBarProps) {
   const [dismissedIds, setDismissedIds] = React.useState<Set<string>>(new Set());
   const [activeAnnouncement, setActiveAnnouncement] = React.useState<
     Announcement | null
   >(null);
 
-  const now = Date.now();
   const active = React.useMemo(() => {
     if (isLoading || !announcements) return null;
-    return announcements.find((a: Announcement) => {
-      const from = new Date(a.activeFrom).getTime();
-      const to = a.activeTo ? new Date(a.activeTo).getTime() : Infinity;
-      return now >= from && now <= to && !dismissedIds.has(a.id);
-    });
-  }, [announcements, isLoading, dismissedIds, now]);
+    return announcements.find((a) => !dismissedIds.has(a.id));
+  }, [announcements, isLoading, dismissedIds]);
 
   if (!active) return null;
 
