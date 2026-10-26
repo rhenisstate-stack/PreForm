@@ -17,7 +17,7 @@ const navItems = [
   { label: "Testimonials", href: "/testimonials" },
 ];
 
-export default function PublicHeader({ user }: { user?: { displayName: string; role: string; email: string } }) {
+export function PublicHeader({ user }: { user?: { displayName: string; role: string; email: string } }) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const { mounted } = useTheme() as { mounted?: boolean };
 

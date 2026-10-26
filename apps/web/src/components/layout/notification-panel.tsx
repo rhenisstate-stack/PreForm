@@ -1,18 +1,11 @@
 "use client";
 
 import * as React from "react";
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import type { Announcement } from "@/types";
-
-const DropdownMenu = DropdownMenuPrimitive.Root;
-const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
-const DropdownMenuContent = DropdownMenuPrimitive.Content;
-const DropdownMenuLabel = DropdownMenuPrimitive.Label;
-const DropdownMenuSeparator = DropdownMenuPrimitive.Separator;
-const DropdownMenuItem = DropdownMenuPrimitive.Item;
 
 interface AnnouncementsData {
   announcements: Announcement[] | null;
@@ -49,8 +42,8 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
             ) : null}
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-72">
-          <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+        <DropdownMenu.Content align="end" className="w-72">
+          <DropdownMenu.Label>Notifications</DropdownMenu.Label>
           {isLoading ? (
             <div className="px-2 py-4 text-sm text-muted">Loading…</div>
           ) : visibleAnnouncements.length === 0 ? (
@@ -81,7 +74,7 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
               </div>
             </div>
           )}
-        </DropdownMenuContent>
+        </DropdownMenu.Content>
       </DropdownMenu>
     </div>
   );
@@ -104,19 +97,19 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
           <span>{user.displayName}</span>
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="text-sm font-medium text-ink">
+      <DropdownMenu.Content align="end" className="w-56">
+        <DropdownMenu.Label className="text-sm font-medium text-ink">
           {user.displayName}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
+        </DropdownMenu.Label>
+        <DropdownMenu.Separator />
+        <DropdownMenu.Item asChild>
           <Link href="/profile">Profile</Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
+        </DropdownMenu.Item>
+        <DropdownMenu.Item asChild>
           <Link href="/settings">Settings</Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
+        </DropdownMenu.Item>
+        <DropdownMenu.Separator />
+        <DropdownMenu.Item asChild>
           <button
             onClick={() => {
               window.location.href = "/sign-in";
@@ -125,8 +118,8 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
           >
             Sign out
           </button>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
     </DropdownMenu>
   );
 }
