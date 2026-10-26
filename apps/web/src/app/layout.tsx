@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
-import { ThemeProvider } from "@/components/providers";
+import { Providers } from "@/components/providers";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import PublicHeader from "@/components/layout/public-header";
 import PublicFooter from "@/components/layout/public-footer";
@@ -24,13 +24,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+        <Providers attribute="class" defaultTheme="system" enableSystem>
           <AnnouncementBar announcements={null} isLoading={false} />
           <PublicHeader />
           <main className="min-h-screen">{children}</main>
           <PublicFooter />
           <Toaster position="bottom-right" richColors />
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );
