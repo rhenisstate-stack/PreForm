@@ -11,18 +11,36 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: preform
+          POSTGRES_PASSWORD: preform
+          POSTGRES_DB: preform
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U preform -d preform"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       DATABASE_URL: postgresql://preform:preform@localhost:5432/preform?schema=public
+      ASPNETCORE_ENVIRONMENT: Testing
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
       - run: npm ci
-      - run: npm run db:generate
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run test
-      - run: npm run test:e2e
-      - run: npm run build
+      - run: npm run test:api
+      - run: npm run build:web
+      - run: npm run build:api

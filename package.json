@@ -12,15 +12,18 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @preform/web",
-    "dev:api": "npm run start:dev --workspace @preform/api",
-    "build": "npm run build --workspaces --if-present",
-    "lint": "npm run lint --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present",
-    "test:e2e": "npm run test:e2e --workspace @preform/api",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy"
+    "dev:api": "cd apps/api && dotnet run",
+    "build": "npm run build --workspace @preform/web --if-present && cd apps/api && dotnet build",
+    "build:api": "cd apps/api && dotnet build",
+    "build:web": "npm run build --workspace @preform/web",
+    "lint": "npm run lint --workspace @preform/web --if-present",
+    "typecheck": "npm run typecheck --workspace @preform/web --if-present",
+    "test": "npm run test --workspace @preform/web --if-present && cd apps/api && dotnet test",
+    "test:api": "cd apps/api && dotnet test",
+    "test:e2e": "cd apps/api && dotnet test --filter FullyQualifiedName~Integration",
+    "db:generate": "cd apps/api && dotnet ef migrations bundle --output ../migrate --self-contained || echo 'EF Core tools required: dotnet tool install --global dotnet-ef'",
+    "db:migrate": "cd apps/api && dotnet ef database update",
+    "db:deploy": "cd apps/api && dotnet ef database update"
   },
   "devDependencies": {
     "dotenv": "^16.6.1",

@@ -2,42 +2,50 @@
 
 ## 1. Start as a modular monorepo
 
-**Decision:** Use npm workspaces with a Next.js web application and a NestJS API.
+**Decision:** Use npm workspaces with a Next.js web application and an ASP.NET Core Web API backend.
 
 **Reason:** This keeps the public/student UI and server-side business logic in one repository while giving them clear dependency and deployment boundaries.
 
-## 2. Use Fastify for the API adapter
+## 2. Use ASP.NET Core Web API for the backend
 
-**Decision:** Use NestJS with its Fastify platform adapter.
+**Decision:** Use C# and ASP.NET Core Web API on .NET 8 LTS, with Entity Framework Core and the Npgsql PostgreSQL provider.
 
-**Reason:** This follows the proposed API architecture and avoids adding a second HTTP server framework.
+**Reason:** This is the agreed target stack for PREform NCLEX. The backend handles domain logic, authoritative permissions, assessment scoring, subscription enforcement, and persistent business operations.
 
-## 3. PostgreSQL and Prisma; no queue yet
+## 3. PostgreSQL and EF Core; no queue yet
 
-**Decision:** PostgreSQL is the system-of-record target; Prisma 7 with its PostgreSQL driver adapter owns schema and migrations. Do not add Redis/BullMQ to the initial scaffold.
+**Decision:** PostgreSQL is the system-of-record target; Entity Framework Core with the Npgsql provider owns schema and migrations. Do not add Redis/BullMQ to the initial scaffold.
 
-**Reason:** The initial foundation needs durable relational storage. There is not yet an implemented asynchronous workflow that justifies operating a queue.
+**Reason:** The initial foundation needs durable relational storage. There is not yet an implemented asynchronous workflow that justifies operating a queue. .NET hosted services are used for simple in-process background tasks where appropriate.
 
-## 4. Keep claims and capabilities honest
+## 4. OpenAPI/Swagger documentation
+
+**Decision:** Provide OpenAPI/Swagger documentation for the versioned API (`/api/v1`).
+
+**Reason:** Required by the agreed stack. Swagger UI is available in development at the API root.
+
+## 5. Keep claims and capabilities honest
 
 **Decision:** The initial public shell identifies itself as an early platform foundation and does not present mock questions, fabricated metrics, live plans, validated readiness labels, or working product features.
 
 **Reason:** Accurate product status is more important than a simulated finished experience.
 
-## 5. Defer product-specific models until their workflows exist
+## 6. Defer product-specific models until their workflows exist
 
 **Decision:** The initial database migration creates only the RN/PN programme reference model.
 
 **Reason:** Attempts, question versions, subscriptions, AI data and other domain records need workflow-specific integrity and retention decisions; creating them prematurely would produce unused schema.
 
-## 6. CAT is disabled until validated
+## 7. CAT is disabled until validated
 
 **Decision:** Do not implement or advertise CAT in the scaffold.
 
 **Reason:** A defensible CAT implementation requires calibrated item parameters, an approved model and validated stopping rules, none of which were supplied.
 
-## 7. Preserve the NestJS/TypeScript + Prisma backend (deviation from the agreed .NET stack)
+## 8. Backend migration from NestJS/Prisma to ASP.NET Core/EF Core
 
-**Decision:** Keep the existing NestJS 12 + Fastify backend with Prisma 7 and PostgreSQL; do not rewrite it as ASP.NET Core / EF Core.
+**Decision:** Migrate the backend from NestJS + Fastify + Prisma to ASP.NET Core Web API + EF Core + Npgsql, per explicit product approval.
 
-**Reason:** The backend is a working, tested module (lint, typecheck, unit tests, e2e tests, and production build all pass). Stack rule #1 prohibits a wholesale rewrite, and rule #3 requires reusing working modules. The agreed stack names .NET/C# ASP.NET Core, but the actual repository is NestJS/TypeScript. This deviation is documented in `docs/audit-report.md` (stack mapping) rather than silently changing architecture. Prisma is retained as the ORM; no second ORM is introduced.
+**Reason:** The agreed target stack mandates C# / ASP.NET Core / EF Core / Npgsql. The migration is incremental and controlled: the existing NestJS backend is preserved during migration work and is retired only after the .NET replacement passes verification (build, tests, migrations, health endpoints).
+
+**Status:** In progress. The .NET foundation (Programme model, health endpoints, EF Core migrations, xUnit tests) has been implemented. The NestJS/Prisma backend remains in `apps/api/src/` until removal is reviewed.
