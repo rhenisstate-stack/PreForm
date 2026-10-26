@@ -62,31 +62,62 @@ Backend migration approved (see `docs/decisions.md` decision 8). Migrating from 
 
 ## Phase 2 — Design system, navigation and core UI shell
 
-**Status: initial public shell scaffolded and production build verified; authentication and student/admin shells remain outstanding.**
+**Status: in progress.**
 
-- [x] Responsive public landing page and RN/PN pathway routes.
-- [x] Keyboard focus, reduced-motion support and small-screen layouts.
-- [ ] Authenticated student and administrator layouts.
-- [ ] Shared reusable form, navigation and application-state components.
-- [ ] shadcn/ui component system (adopt as the single component system; do not maintain two competing systems).
+**Completed:**
+- [x] shadcn/ui component system installed (button, card, dialog, dropdown-menu, popover, sheet, toggle, toggle-group, separator, label, input, badge, avatar, skeleton, scroll-area)
+- [x] Design tokens extended with shadcn/ui CSS variables (light/dark themes)
+- [x] Theme provider with next-themes (light/dark/system, persisted)
+- [x] TanStack Query provider + API client layer (`src/lib/api.ts`, `src/hooks/use-api.ts`)
+- [x] React Hook Form + Zod installed (available for forms)
+- [x] Vitest + React Testing Library + jsdom test infrastructure
+- [x] Shared public shell: PublicHeader, PublicFooter, AnnouncementBar, NotificationPanel, ProfileMenu, CartButton, ThemeSwitcher
+- [x] Root layout uses shared shell + Toaster
+- [x] CORS added to .NET API (`AllowFrontend` policy from WEB_ORIGIN)
+- [x] Homepage refactored to use shared shell with all interactive sections:
+  - HeroSection with pathway selection (RN/PN preserved in state)
+  - ExamPathwayCards (RN/PN cards with feature lists)
+  - SubscriptionCards (fetches programmes from real API `/api/v1/programmes`)
+  - FeatureShowcase (4 feature cards)
+  - HowItWorks (6-step journey)
+  - CourseFinderQuiz (4-question recommendation quiz)
+  - TestimonialsPreview (approved content only, link to /testimonials)
+  - FAQPreview (6 FAQs, link to /faq)
+  - FinalCTA (Buy Now / Try Now)
+- [x] Theme selector with Light/Dark/System options
+- [x] Cookie consent utilities (`src/lib/cookie.ts`, types)
+- [x] Loading, error, empty state patterns
+
+**Blocked:**
+- [ ] .NET 8 SDK is NOT installed locally — backend build/test verification deferred to CI
+- [ ] Backend product/subscription/cart/checkout endpoints not yet implemented — commerce integration deferred to Phase 5
+
+- [x] npm workspaces and documented local development commands.
+- [x] Environment example and server-side API environment validation.
+- [x] PostgreSQL Compose service (CI) and local PostgreSQL 18 (development).
+- [x] Separate liveness and database readiness endpoints.
+- [x] ASP.NET Core middleware pipeline, CORS, health checks.
+- [x] Lint, typecheck, unit-test, integration-test and build scripts.
+- [x] CI workflow for install and core checks.
+
+## Phase 3 — RN and PN Pathways
+
+**Status: not started.**
+
+- [ ] `/nclex-rn` and `/nclex-pn` product pages
+- [ ] Pathway-specific learning tools, question previews, assessment features
+- [ ] Sample question interaction (labelled as learning preview)
 
 ## Remaining phases
 
 | Phase | Scope | Status |
 |---|---|---|
-| 3 | Public pages, original sample content and dynamic pricing UI | Not started |
-| 4 | Authentication, onboarding and programme selection | Not started |
-| 5 | Versioned question bank, practice and rationales | Not started |
-| 6 | Administrator content management | Not started |
-| 7 | Readiness assessments; CAT only with validated methods and item data | Not started |
-| 8 | Data-backed analytics and explainable recommendations | Not started |
-| 9 | Approved-source AI Study Studio foundations | Not started |
-| 10 | Flashcards and spaced repetition | Not started |
-| 11 | Contextual AI tutor | Not started |
-| 12 | Secure document learning and advanced study tools | Not started |
-| 13 | Admin-managed plans and server-enforced entitlements | Not started |
-| 14 | Accessibility, responsive and product-flow QA | Not started |
-| 15 | Security, integration and release readiness | Not started |
+| 3 | RN and PN product pages | Not started |
+| 4 | Supporting pages (Courses, Features, Educators, Testimonials, Contact, FAQ) | Not started |
+| 5 | Commerce (subscriptions, cart, checkout) — blocked on backend endpoints | Not started |
+| 6 | Profile, notifications, support — blocked on backend auth/support endpoints | Not started |
+| 7 | Legal and Cookie Consent | Not started |
+| 8 | Quality Assurance | Not started |
 
 ## Decisions and blockers
 
@@ -97,3 +128,5 @@ Backend migration approved (see `docs/decisions.md` decision 8). Migrating from 
 - Backend migrated from NestJS/TypeScript + Prisma to .NET 8 / ASP.NET Core / EF Core + Npgsql (decision 8).
 - .NET 8 SDK is not installed locally — build and test verification must be performed in an environment with the SDK.
 - PostgreSQL 18 is running locally with trust authentication; `preform` database and `preform` user created.
+- Backend CORS configured for `WEB_ORIGIN` (http://localhost:3000) to enable frontend API calls.
+- Browser-based visual QA against Archer Review references cannot be performed — no browser tool available in this environment. This limitation is documented.
