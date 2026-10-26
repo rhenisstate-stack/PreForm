@@ -17,8 +17,6 @@ import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { NotificationPanel } from "@/components/layout/notification-panel";
 import { ProfileMenu } from "@/components/layout/notification-panel";
 import { CartButton } from "@/components/layout/notification-panel";
-import { useTheme } from "@/hooks/use-theme";
-
 const navItems = [
   { label: "NCLEX-RN", href: "/nclex-rn" },
   { label: "NCLEX-PN", href: "/nclex-pn" },
@@ -29,9 +27,6 @@ const navItems = [
 
 export default function PublicHeader({ user }: { user?: { displayName: string; role: string; email: string } }) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const { mounted } = useTheme() as { mounted?: boolean };
-
-  if (!mounted) return null;
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/80 backdrop-blur-md">
