@@ -25,7 +25,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className="antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <AnnouncementBar />
+          <AnnouncementBar announcements={null} isLoading={false} />
           <PublicHeader />
           <main className="min-h-screen">{children}</main>
           <PublicFooter />

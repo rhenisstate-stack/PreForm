@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
+import { useTheme } from "@/hooks/use-theme";
 import { NotificationPanel } from "@/components/layout/notification-panel";
 import { ProfileMenu } from "@/components/layout/notification-panel";
 import { CartButton } from "@/components/layout/notification-panel";
@@ -18,7 +19,7 @@ const navItems = [
 
 export function PublicHeader({ user }: { user?: { displayName: string; role: string; email: string } }) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const { mounted } = useNextThemes();
+  const { mounted } = useTheme();
 
   if (!mounted) return null;
 
@@ -102,8 +103,4 @@ export function PublicHeader({ user }: { user?: { displayName: string; role: str
       )}
     </header>
   );
-}
-
-function useNextThemes() {
-  return { mounted: true };
 }
