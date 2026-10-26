@@ -22,7 +22,6 @@ export function AnnouncementBar({ announcements, isLoading }: AnnouncementBarPro
 
   const handleDismiss = () => {
     setDismissedIds((prev) => new Set([...prev, active.id]));
-    setActiveAnnouncement(null);
   };
 
   return (
