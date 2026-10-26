@@ -19,3 +19,15 @@ Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: createMatchMedia,
 });
+
+// Mock ResizeObserver for Radix NavigationMenu component
+const createResizeObserver = () => ({
+  observe: () => {},
+  unobserve: () => {},
+  disconnect: () => {},
+});
+
+Object.defineProperty(window, "ResizeObserver", {
+  writable: true,
+  value: createResizeObserver,
+});

@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, within, fireEvent } from "@testing-library/react";
 import * as React from "react";
 
 // Mock next-themes to avoid jsdom/document issues
@@ -29,34 +29,41 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
   };
 });
 
-import { PublicHeader } from "@/components/layout/public-header";
+import PublicHeader from "@/components/layout/public-header";
 import { HomeClient } from "@/app/home-client";
+
+const renderHeader = () => {
+  const utils = render(
+    <>
+      <PublicHeader />
+      <main id="main-content">
+        <HomeClient />
+      </main>
+    </>
+  );
+  return {
+    ...utils,
+    header: utils.getByRole("banner"),
+  };
+};
 
 describe("Homepage header integration", () => {
   it("renders the PREform header on the homepage", () => {
-    render(
-      <>
-        <PublicHeader />
-        <main id="main-content">
-          <HomeClient />
-        </main>
-      </>
-    );
+    const { header } = renderHeader();
 
     // Header is present
-    const header = screen.getByRole("banner");
     expect(header).toBeInTheDocument();
 
     // Logo and homepage link
-    const logoLink = screen.getByRole("link", { name: "PREform NCLEX home" });
+    const logoLink = within(header).getByRole("link", { name: "PREform NCLEX home" });
     expect(logoLink).toBeInTheDocument();
 
-    // Main navigation links are visible
-    expect(screen.getByText("NCLEX-RN")).toBeInTheDocument();
-    expect(screen.getByText("NCLEX-PN")).toBeInTheDocument();
-    expect(screen.getByText("Courses")).toBeInTheDocument();
-    expect(screen.getByText("Features")).toBeInTheDocument();
-    expect(screen.getByText("Testimonials")).toBeInTheDocument();
+    // Main navigation links are visible in header
+    expect(within(header).getByText("NCLEX-RN")).toBeInTheDocument();
+    expect(within(header).getByText("NCLEX-PN")).toBeInTheDocument();
+    expect(within(header).getByText("Courses")).toBeInTheDocument();
+    expect(within(header).getByText("Features")).toBeInTheDocument();
+    expect(within(header).getByText("Testimonials")).toBeInTheDocument();
   });
 
   it("renders main content below the header", () => {
@@ -69,12 +76,12 @@ describe("Homepage header integration", () => {
       </>
     );
 
-    // Hero heading from homepage
+    // Hero heading from homepage (scoped to main content, not header)
     expect(screen.getByText(/prepare with clarity/i)).toBeInTheDocument();
 
-    // Pathway cards
-    expect(screen.getByText("NCLEX-RN")).toBeInTheDocument();
-    expect(screen.getByText("NCLEX-PN")).toBeInTheDocument();
+    // Pathway cards in main content
+    expect(screen.getByText("Registered Nurse preparation")).toBeInTheDocument();
+    expect(screen.getByText("Practical / Vocational Nurse preparation")).toBeInTheDocument();
   });
 
   it("does not duplicate the header", () => {
@@ -92,16 +99,9 @@ describe("Homepage header integration", () => {
   });
 
   it("opens and closes the NCLEX-RN dropdown", () => {
-    render(
-      <>
-        <PublicHeader />
-        <main id="main-content">
-          <HomeClient />
-        </main>
-      </>
-    );
+    const { header } = renderHeader();
 
-    const rnTrigger = screen.getByRole("button", { name: /NCLEX-RN/i });
+    const rnTrigger = within(header).getByRole("button", { name: /NCLEX-RN/i });
     expect(rnTrigger).toBeInTheDocument();
 
     // Click to open dropdown
@@ -113,16 +113,9 @@ describe("Homepage header integration", () => {
   });
 
   it("opens and closes the More dropdown", () => {
-    render(
-      <>
-        <PublicHeader />
-        <main id="main-content">
-          <HomeClient />
-        </main>
-      </>
-    );
+    const { header } = renderHeader();
 
-    const moreTrigger = screen.getByRole("button", { name: /More/i });
+    const moreTrigger = within(header).getByRole("button", { name: /More/i });
     expect(moreTrigger).toBeInTheDocument();
 
     fireEvent.click(moreTrigger);
@@ -133,64 +126,43 @@ describe("Homepage header integration", () => {
     expect(screen.getByText("FAQ")).toBeInTheDocument();
   });
 
-  it("shows Buy Now and Try Now CTAs", () => {
-    render(
-      <>
-        <PublicHeader />
-        <main id="main-content">
-          <HomeClient />
-        </main>
-      </>
-    );
+  it("shows Buy Now and Try Now CTAs in header", () => {
+    const { header } = renderHeader();
 
-    expect(screen.getByRole("link", { name: /Buy Now/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Try Now/i })).toBeInTheDocument();
+    expect(
+      within(header).getByRole("link", { name: /Buy Now/i })
+    ).toBeInTheDocument();
+    expect(
+      within(header).getByRole("link", { name: /Try Now/i })
+    ).toBeInTheDocument();
   });
 
-  it("shows theme selector", () => {
-    render(
-      <>
-        <PublicHeader />
-        <main id="main-content">
-          <HomeClient />
-        </main>
-      </>
-    );
+  it("shows theme selector in header", () => {
+    const { header } = renderHeader();
 
-    // ThemeSwitcher renders a button for theme selection
-    const themeButton = screen.getByRole("button", { name: /Change theme/i });
+    const themeButton = within(header).getByRole("button", {
+      name: /Change theme/i,
+    });
     expect(themeButton).toBeInTheDocument();
   });
 
-  it("shows notification bell icon", () => {
-    render(
-      <>
-        <PublicHeader />
-        <main id="main-content">
-          <HomeClient />
-        </main>
-      </>
-    );
+  it("shows notification bell icon in header", () => {
+    const { header } = renderHeader();
 
-    const bellButton = screen.getByRole("button", {
+    const bellButton = within(header).getByRole("button", {
       name: /Notifications and support/i,
     });
     expect(bellButton).toBeInTheDocument();
   });
 
   it("shows sign-in and create account for unauthenticated users", () => {
-    render(
-      <>
-        <PublicHeader />
-        <main id="main-content">
-          <HomeClient />
-        </main>
-      </>
-    );
+    const { header } = renderHeader();
 
-    expect(screen.getByRole("link", { name: /Sign in/i })).toBeInTheDocument();
     expect(
-      screen.getByRole("link", { name: /Create account/i })
+      within(header).getByRole("link", { name: /Sign in/i })
+    ).toBeInTheDocument();
+    expect(
+      within(header).getByRole("link", { name: /Create account/i })
     ).toBeInTheDocument();
   });
 });
