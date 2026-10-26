@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
+import { ArrowRight } from "lucide-react";
+import { useProgrammes } from "@/hooks/use-api";
 import { HeroSection } from "@/components/home/hero-section";
 import { ExamPathwayCards } from "@/components/home/exam-pathway-cards";
 import { FeatureShowcase } from "@/components/home/feature-showcase";
@@ -8,9 +11,6 @@ import { TestimonialsPreview } from "@/components/home/testimonials-preview";
 import { FAQPreview } from "@/components/home/faq-preview";
 import { FinalCTA } from "@/components/home/final-cta";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ArrowRight } from "lucide-react";
-import { useProgrammes } from "@/hooks/use-api";
 
 export const metadata = {
   title: "PREform NCLEX | Prepare with clarity",
