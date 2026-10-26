@@ -66,10 +66,9 @@ export function FAQPreview() {
         <div className="mt-12 space-y-4 lg:max-w-2xl lg:mx-auto">
           {faqs.map((f) => (
             <Card key={f.question}>
-              <CardHeader className="flex flex-row items-center justify-between py-3 cursor-pointer select-none group" asChild>
-                <Link href="/faq">
-                  <CardTitle>{f.question}</CardTitle>
-                </Link>
+              <CardHeader className="flex flex-row items-center justify-between py-3">
+                <CardTitle>{f.question}</CardTitle>
+                <ChevronRight className="h-4 w-4 text-muted" />
               </CardHeader>
               <CardContent className="pt-0 pb-4">
                 <p className="text-sm text-muted leading-relaxed">{f.answer}</p>

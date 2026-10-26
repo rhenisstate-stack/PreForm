@@ -3,7 +3,6 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import Link from "next/link";
 import { ArrowRight, Quote } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface TestimonialProps {
   name: string;
@@ -34,8 +33,7 @@ export function TestimonialsPreview() {
         <div className="text-center max-w-2xl mx-auto">
           <Quote className="mx-auto h-8 w-8 text-green/40" aria-hidden="true" />
           <p className="mt-6 text-xl font-serif text-white/90 leading-relaxed sm:text-2xl">
-            "Preform helped me focus on the reasoning behind each answer, not
-            just memorisation."
+            Preform helped me focus on the reasoning behind each answer, not just memorisation.
           </p>
           <p className="mt-4 text-sm text-green/60">— Jordan M., RN candidate</p>
         </div>
@@ -45,14 +43,12 @@ export function TestimonialsPreview() {
             <Card key={t.name} className="border-green/30 bg-white/5">
               <CardContent className="pb-4">
                 <Quote className="mb-4 h-5 w-5 text-green/40" aria-hidden="true" />
-                <p className="text-sm text-white/80 leading-relaxed">
-                  {t.content}
-                </p>
+                <p className="text-sm text-white/80 leading-relaxed">{t.content}</p>
               </CardContent>
               <CardFooter className="pt-0 border-t border-green/20">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-semibold text-white">{t.name}</span>
-                  <span className="text-xs text-green/60">· {t.role}</span>
+                  <span className="text-xs text-green/60">&middot; {t.role}</span>
                 </div>
                 <BadgeInline pathway={t.pathway} />
               </CardFooter>

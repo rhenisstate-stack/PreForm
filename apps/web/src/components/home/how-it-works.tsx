@@ -1,15 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide.react";
+import { ArrowRight } from "lucide-react";
 
-interface StepProps {
-  number: number;
-  title: string;
-  description: string;
-}
-
-const steps: StepProps[] = [
+const steps = [
   {
     number: 1,
     title: "Choose your pathway",
