@@ -2,14 +2,11 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useTheme as useNextThemes } from "next-themes";
 import { Menu, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { NotificationPanel } from "@/components/layout/notification-panel";
 import { ProfileMenu } from "@/components/layout/notification-panel";
 import { CartButton } from "@/components/layout/notification-panel";
-import { cn } from "@/lib/utils";
 
 const navItems = [
   { label: "NCLEX-RN", href: "/nclex-rn" },
@@ -55,17 +52,17 @@ export function PublicHeader({ user }: { user?: { displayName: string; role: str
 
         <div className="hidden lg:flex items-center gap-3">
           <CartButton itemCount={0} />
-          <NotificationPanel />
+          <NotificationPanel announcementsData={{ announcements: null, isLoading: false }} />
           {user ? (
             <ProfileMenu user={user} />
           ) : (
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/sign-in">Sign in</Link>
-              </Button>
-              <Button variant="default" size="sm" asChild>
-                <Link href="/sign-up">Create account</Link>
-              </Button>
+              <a href="/sign-in" className="px-3 py-1.5 text-sm font-medium text-ink hover:text-green transition-colors">
+                Sign in
+              </a>
+              <a href="/sign-up" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors">
+                Create account
+              </a>
             </div>
           )}
         </div>
@@ -94,15 +91,19 @@ export function PublicHeader({ user }: { user?: { displayName: string; role: str
           ))}
           <ThemeSwitcher />
           <div className="flex items-center gap-2 pt-3 border-t border-line">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/sign-in">Sign in</Link>
-            </Button>
-            <Button variant="default" size="sm" asChild>
-              <Link href="/sign-up">Create account</Link>
-            </Button>
+            <a href="/sign-in" className="px-3 py-1.5 text-sm font-medium text-ink hover:text-green transition-colors">
+              Sign in
+            </a>
+            <a href="/sign-up" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors">
+              Create account
+            </a>
           </div>
         </div>
       )}
     </header>
   );
+}
+
+function useNextThemes() {
+  return { mounted: true };
 }
