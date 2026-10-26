@@ -10,3 +10,17 @@ npm-debug.log*
 apps/api/prisma/*.db
 apps/api/prisma/*.db-journal
 apps/api/src/generated/prisma/
+
+# .NET build artifacts
+bin/
+obj/
+*.user
+*.suo
+apps/api/bin/
+apps/api/obj/
+apps/api/Preform.Api.dll
+apps/api/Preform.Api.pdb
+apps/api/Preform.Api.deps.json
+apps/api/Preform.Api.runtimeconfig.json
+apps/api/Tests/bin/
+apps/api/Tests/obj/

@@ -1,12 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Preform.Api.Configuration;
 using Preform.Api.Data;
 using Preform.Api.Models;
 
 var builder = WebApplication.CreateBuilder(args);
-
-// Validate and bind configuration
-builder.Services.AddConfiguration(builder.Configuration);
 
 // Add services to the container.
 builder.Services.AddControllers();
