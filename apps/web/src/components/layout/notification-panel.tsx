@@ -18,17 +18,11 @@ interface NotificationPanelProps {
 
 export function NotificationPanel({ announcementsData }: NotificationPanelProps) {
   const { announcements, isLoading } = announcementsData;
-  const now = Date.now();
-  const activeAnnouncements = React.useMemo(
-    () =>
-      (announcements ?? []).filter((a: Announcement) => {
-        const from = new Date(a.activeFrom).getTime();
-        const to = a.activeTo ? new Date(a.activeTo).getTime() : Infinity;
-        return now >= from && now <= to && !a.dismissed;
-      }),
-    [announcements, now]
+  const visibleAnnouncements = React.useMemo(
+    () => announcements ?? [],
+    [announcements]
   );
-  const unreadCount = activeAnnouncements.filter((a) => !a.dismissed).length;
+  const unreadCount = visibleAnnouncements.filter((a) => !a.dismissed).length;
 
   return (
     <div className="relative inline-block text-ink">
@@ -52,11 +46,11 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
           <DropdownMenu.Label>Notifications</DropdownMenu.Label>
           {isLoading ? (
             <div className="px-2 py-4 text-sm text-muted">Loading…</div>
-          ) : activeAnnouncements.length === 0 ? (
+          ) : visibleAnnouncements.length === 0 ? (
             <div className="px-2 py-4 text-sm text-muted">No announcements.</div>
           ) : (
             <div className="max-h-60 overflow-y-auto">
-              {activeAnnouncements.map((a) => (
+              {visibleAnnouncements.map((a) => (
                 <div
                   key={a.id}
                   className="flex flex-col gap-1 px-2 py-2 cursor-pointer rounded-md hover:bg-accent transition-colors"
@@ -68,9 +62,6 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
                 >
                   <div className="text-sm font-medium text-ink">{a.title}</div>
                   <div className="text-xs text-muted">{a.summary}</div>
-                  <div className="text-xs text-muted">
-                    {new Date(a.activeFrom).toLocaleDateString()}
-                  </div>
                 </div>
               ))}
               <div className="border-t border-line px-2 py-2">
