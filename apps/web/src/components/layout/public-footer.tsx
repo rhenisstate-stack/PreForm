@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Mail, Phone, Linkedin, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 
 const footerLinks = [
   {
@@ -88,20 +86,8 @@ export default function PublicFooter() {
             © {year} Preform NCLEX. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
-            <a
-              href="#"
-              className="text-muted hover:text-green transition-colors"
-              aria-label="LinkedIn"
-            >
-              <Linkedin className="h-4 w-4" />
-            </a>
-            <a
-              href="#"
-              className="text-muted hover:text-green transition-colors"
-              aria-label="X"
-            >
-              <X className="h-4 w-4" />
-            </a>
+            <a href="#" className="text-muted hover:text-green transition-colors" aria-label="LinkedIn" />
+            <a href="#" className="text-muted hover:text-green transition-colors" aria-label="X" />
           </div>
         </div>
       </div>

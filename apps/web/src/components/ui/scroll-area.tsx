@@ -4,15 +4,33 @@ import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area";
 import { cn } from "@/lib/utils";
 import * as React from "react";
 
-const ScrollArea = ScrollAreaPrimitive.Root;
-const ScrollAreaScrollbar = ScrollAreaPrimitive.Scrollbar;
-const ScrollAreaThumb = ScrollAreaPrimitive.Thumb;
-const ScrollAreaCorner = ScrollAreaPrimitive.Corner;
-const ScrollAreaViewport = ScrollAreaPrimitive.Viewport;
+const ScrollArea = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root>
+>(({ className, ...props }, ref) => (
+  <ScrollAreaPrimitive.Root
+    ref={ref}
+    className={cn("rounded-md border-line bg-card p-1", className)}
+    {...props}
+  />
+));
+ScrollArea.displayName = "ScrollArea";
 
-const ScrollAreaIndicator = React.forwardRef<
-  React.ElementRef<typeof ScrollAreaPrimitive.Thumb>,
- React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Thumb>
+const ScrollAreaScrollbar = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Scrollbar>
+>(({ className, ...props }, ref) => (
+  <ScrollAreaPrimitive.Scrollbar
+    ref={ref}
+    className={cn("h-4 w-4", className)}
+    {...props}
+  />
+));
+ScrollAreaScrollbar.displayName = "ScrollAreaScrollbar";
+
+const ScrollAreaThumb = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Thumb>
 >(({ className, ...props }, ref) => (
   <ScrollAreaPrimitive.Thumb
     ref={ref}
@@ -20,12 +38,23 @@ const ScrollAreaIndicator = React.forwardRef<
     {...props}
   />
 ));
+ScrollAreaThumb.displayName = "ScrollAreaThumb";
+
+const ScrollAreaViewport = React.forwardRef<
+  HTMLDivElement,
+  React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Viewport>
+>(({ className, ...props }, ref) => (
+  <ScrollAreaPrimitive.Viewport
+    ref={ref}
+    className={cn("h-full w-full", className)}
+    {...props}
+  />
+));
+ScrollAreaViewport.displayName = "ScrollAreaViewport";
 
 export {
   ScrollArea,
   ScrollAreaScrollbar,
   ScrollAreaThumb,
-  ScrollAreaIndicator,
   ScrollAreaViewport,
-  ScrollAreaCorner,
 };

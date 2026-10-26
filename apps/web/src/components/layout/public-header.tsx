@@ -2,10 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useTheme } from "next-themes";
-import { Sun, Moon, Monitor, Menu, X, Shop, GraduationCap, Stethoscope } from "lucide-react";
+import { useTheme as useNextThemes } from "next-themes";
+import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { NotificationPanel } from "@/components/layout/notification-panel";
 import { ProfileMenu } from "@/components/layout/notification-panel";
@@ -22,7 +21,9 @@ const navItems = [
 
 export function PublicHeader({ user }: { user?: { displayName: string; role: string; email: string } }) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const { theme, setTheme, mounted } = useTheme();
+  const { mounted } = useNextThemes();
+
+  if (!mounted) return null;
 
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-white/80 backdrop-blur-md">
@@ -54,7 +55,7 @@ export function PublicHeader({ user }: { user?: { displayName: string; role: str
 
         <div className="hidden lg:flex items-center gap-3">
           <CartButton itemCount={0} />
-          <NotificationPanel user={user} />
+          <NotificationPanel />
           {user ? (
             <ProfileMenu user={user} />
           ) : (
