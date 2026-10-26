@@ -4,6 +4,8 @@ export const metadata = {
     "Sign in to your Preform NCLEX account to access your learning dashboard, practice questions, and subscription.",
 };
 
+import { SignInPageClient } from "./page-client";
+
 export default function SignInPage() {
   return <SignInPageClient />;
 }

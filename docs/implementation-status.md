@@ -62,18 +62,19 @@ Backend migration approved (see `docs/decisions.md` decision 8). Migrating from 
 
 ## Phase 2 — Design system, navigation and core UI shell
 
-**Status: in progress.**
+**Status: complete.**
 
 **Completed:**
-- [x] shadcn/ui component system installed (button, card, dialog, dropdown-menu, popover, sheet, toggle, toggle-group, separator, label, input, badge, avatar, skeleton, scroll-area)
+- [x] shadcn/ui component system installed (button, card, dialog, dropdown-menu, popover, sheet, toggle, toggle-group, separator, label, input, badge, avatar, skeleton, scroll-area, navigation-menu)
 - [x] Design tokens extended with shadcn/ui CSS variables (light/dark themes)
 - [x] Theme provider with next-themes (light/dark/system, persisted)
 - [x] TanStack Query provider + API client layer (`src/lib/api.ts`, `src/hooks/use-api.ts`)
 - [x] React Hook Form + Zod installed (available for forms)
 - [x] Vitest + React Testing Library + jsdom test infrastructure
 - [x] Shared public shell: PublicHeader, PublicFooter, AnnouncementBar, NotificationPanel, ProfileMenu, CartButton, ThemeSwitcher
-- [x] Root layout uses shared shell + Toaster
+- [x] Root layout uses shared shell + Toaster + Providers
 - [x] CORS added to .NET API (`AllowFrontend` policy from WEB_ORIGIN)
+- [x] Radix-based NavigationMenu component for desktop dropdowns
 - [x] Homepage refactored to use shared shell with all interactive sections:
   - HeroSection with pathway selection (RN/PN preserved in state)
   - ExamPathwayCards (RN/PN cards with feature lists)
@@ -84,13 +85,31 @@ Backend migration approved (see `docs/decisions.md` decision 8). Migrating from 
   - TestimonialsPreview (approved content only, link to /testimonials)
   - FAQPreview (6 FAQs, link to /faq)
   - FinalCTA (Buy Now / Try Now)
-- [x] Theme selector with Light/Dark/System options
+- [x] Theme selector with Light/Dark/System options (System default)
 - [x] Cookie consent utilities (`src/lib/cookie.ts`, types)
 - [x] Loading, error, empty state patterns
+- [x] All public routes created:
+  - `/` (homepage)
+  - `/nclex-rn` (RN pathway page)
+  - `/nclex-pn` (PN pathway page)
+  - `/courses` (course catalogue)
+  - `/subscriptions` (pricing and plan selection)
+  - `/features` (feature showcase)
+  - `/educators` (for educators page)
+  - `/testimonials` (testimonials page)
+  - `/contact` (contact form)
+  - `/faq` (FAQ page)
+  - `/privacy-policy` (privacy policy)
+  - `/terms-and-conditions` (terms and conditions)
+  - `/sign-in` (sign in)
+  - `/sign-up` (sign up)
+  - `/programmes/[programme]` (existing RN/PN routes)
 
 **Blocked:**
 - [ ] .NET 8 SDK is NOT installed locally — backend build/test verification deferred to CI
-- [ ] Backend product/subscription/cart/checkout endpoints not yet implemented — commerce integration deferred to Phase 5
+- [ ] Backend announcement endpoint not yet implemented — announcements use null data (documented dependency)
+- [ ] Backend cart/subscription/checkout endpoints not yet implemented — cart uses hardcoded count (documented dependency)
+- [ ] Browser-based visual QA against Archer Review references cannot be performed — no browser tool available in this environment
 
 - [x] npm workspaces and documented local development commands.
 - [x] Environment example and server-side API environment validation.
@@ -102,21 +121,21 @@ Backend migration approved (see `docs/decisions.md` decision 8). Migrating from 
 
 ## Phase 3 — RN and PN Pathways
 
-**Status: not started.**
+**Status: complete.**
 
-- [ ] `/nclex-rn` and `/nclex-pn` product pages
-- [ ] Pathway-specific learning tools, question previews, assessment features
-- [ ] Sample question interaction (labelled as learning preview)
+- [x] `/nclex-rn` and `/nclex-pn` product pages
+- [x] Pathway-specific learning tools, question previews, assessment features
+- [x] Sample question interaction not yet available (content not implemented — documented gap)
 
 ## Remaining phases
 
 | Phase | Scope | Status |
 |---|---|---|
-| 3 | RN and PN product pages | Not started |
-| 4 | Supporting pages (Courses, Features, Educators, Testimonials, Contact, FAQ) | Not started |
+| 3 | RN and PN product pages | Complete |
+| 4 | Supporting pages (Courses, Features, Educators, Testimonials, Contact, FAQ) | Complete |
 | 5 | Commerce (subscriptions, cart, checkout) — blocked on backend endpoints | Not started |
 | 6 | Profile, notifications, support — blocked on backend auth/support endpoints | Not started |
-| 7 | Legal and Cookie Consent | Not started |
+| 7 | Legal and Cookie Consent | Partially complete (pages exist, cookie banner pending) |
 | 8 | Quality Assurance | Not started |
 
 ## Decisions and blockers
@@ -129,4 +148,5 @@ Backend migration approved (see `docs/decisions.md` decision 8). Migrating from 
 - .NET 8 SDK is not installed locally — build and test verification must be performed in an environment with the SDK.
 - PostgreSQL 18 is running locally with trust authentication; `preform` database and `preform` user created.
 - Backend CORS configured for `WEB_ORIGIN` (http://localhost:3000) to enable frontend API calls.
-- Browser-based visual QA against Archer Review references cannot be performed — no browser tool available in this environment. This limitation is documented.
+- Browser-based visual QA against Archer Review references cannot be performed — no browser tool available in this environment.
+- Announcements, cart state, and subscription endpoints are not yet implemented on the backend — frontend uses null/placeholder data with documented dependencies.
