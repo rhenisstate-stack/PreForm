@@ -17,7 +17,7 @@ export function ThemeSwitcher() {
     setTheme(nextTheme);
   };
 
-  const ActiveIcon = icons[theme] ?? icons.system;
+  const ActiveIcon = icons[theme ?? "system"];
 
   if (!mounted) {
     return null;
