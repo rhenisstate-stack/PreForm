@@ -28,11 +28,7 @@ export default function Home() {
       {isLoading ? (
         <div className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
           <div className="mx-auto max-w-7xl">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-64 rounded-xl" />
-              ))}
-            </div>
+            <p className="text-muted">Loading programmes…</p>
           </div>
         </div>
       ) : (

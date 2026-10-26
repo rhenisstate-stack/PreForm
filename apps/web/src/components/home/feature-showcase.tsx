@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface FeatureProps {
   icon: React.ReactNode;
@@ -14,6 +14,7 @@ interface FeatureProps {
 
 const features: FeatureProps[] = [
   {
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="16" height="14" rx="2" /><path d="M2 10h16" /><path d="M6 7h8" /><path d="M10 13h4" /></svg>,
     title: "NCLEX-style question bank",
     description:
       "Original single-best-answer, multiple-response, and NGN-style questions written by nursing educators.",
@@ -21,6 +22,7 @@ const features: FeatureProps[] = [
     label: "Practise",
   },
   {
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 20v-6" /><path d="M14 4h6" /><path d="M10 20H4" /><path d="M16 16l-3-3m3 3l3-3" /></svg>,
     title: "Detailed answer rationales",
     description:
       "Understand why the correct answer is appropriate and why each distractor is less appropriate.",
@@ -28,6 +30,7 @@ const features: FeatureProps[] = [
     label: "Review",
   },
   {
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="14" height="14" rx="2" ry="2" /><path d="M8 10h8" /><path d="M10 8v8" /></svg>,
     title: "Readiness assessments",
     description:
       "Server-scored practice exams with topic-level feedback and clear interpretation of results.",
@@ -35,6 +38,7 @@ const features: FeatureProps[] = [
     label: "Assess",
   },
   {
+    icon: <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 20a10 10 0 110-20 10 10 0 010 20Z" /><path d="M10 12h4" /><path d="M12 10v4" /></svg>,
     title: "Progress tracking",
     description:
       "Accuracy by topic, question type, and time, with explainable recommendations based on your data.",

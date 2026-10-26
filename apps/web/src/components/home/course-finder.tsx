@@ -1,7 +1,9 @@
 "use client";
 
+import * as React from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
 
 interface QuizQuestion {
   id: string;
@@ -175,7 +177,11 @@ export function CourseFinderQuiz() {
                 Back
               </Button>
             )}
-            <Button size="sm" disabled={!answers[q.id]} onClick={() => handleAnswer("")}>
+            <Button
+              size="sm"
+              disabled={!answers[q.id]}
+              onClick={() => handleAnswer("")}
+            >
               {isLastStep ? "Get recommendation" : "Next"}
             </Button>
           </CardFooter>
