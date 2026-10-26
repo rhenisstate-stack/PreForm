@@ -1,21 +1,20 @@
 "use client";
 
 import * as React from "react";
-import { useTheme } from "next-themes";
-import { Moon, Sun, Monitor, Icon } from "lucide-react";
-import { useTheme as useThemeHook } from "@/hooks/use-theme";
+import { useTheme as useNextThemes } from "next-themes";
+import { Moon, Sun, Monitor } from "lucide-react";
+
+const icons: Record<string, React.ComponentType<{ className?: string }>> = {
+  light: Sun,
+  dark: Moon,
+  system: Monitor,
+};
 
 export function ThemeSwitcher() {
-  const { theme, setTheme, mounted } = useThemeHook();
+  const { theme, setTheme, mounted } = useNextThemes();
 
   const toggleTheme = (nextTheme: string) => {
     setTheme(nextTheme);
-  };
-
-  const icons: Record<string, React.ComponentType<{ className?: string }>> = {
-    light: Sun,
-    dark: Moon,
-    system: Monitor,
   };
 
   const activeIcon = icons[theme] ?? icons.system;
@@ -35,7 +34,7 @@ export function ThemeSwitcher() {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             const options = ["system", "light", "dark"];
-            const current = options.indexOf(theme);
+            const current = options.indexOf(theme ?? "system");
             const next = options[(current + 1) % options.length];
             toggleTheme(next);
           }

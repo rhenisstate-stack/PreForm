@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useAnnouncements } from "@/hooks/use-api";
 import { Button } from "@/components/ui/button";
-import Link from "next/link";
 import { X } from "lucide-react";
 import type { Announcement } from "@/types";
 
@@ -14,32 +14,29 @@ export function AnnouncementBar() {
     Announcement | null
   >(null);
 
-  React.useEffect(() => {
-    if (isLoading || !announcements) return;
-    const now = Date.now();
-    const active = announcements.find((a) => {
+  const now = Date.now();
+  const active = React.useMemo(() => {
+    if (isLoading || !announcements) return null;
+    return announcements.find((a: Announcement) => {
       const from = new Date(a.activeFrom).getTime();
       const to = a.activeTo ? new Date(a.activeTo).getTime() : Infinity;
       return now >= from && now <= to && !dismissedIds.has(a.id);
     });
-    setActiveAnnouncement(active ?? null);
-  }, [announcements, isLoading, dismissedIds]);
+  }, [announcements, isLoading, dismissedIds, now]);
 
-  if (!activeAnnouncement) return null;
+  if (!active) return null;
 
   const handleDismiss = () => {
-    setDismissedIds((prev) => new Set([...prev, activeAnnouncement.id]));
+    setDismissedIds((prev) => new Set([...prev, active.id]));
     setActiveAnnouncement(null);
   };
 
   return (
-    <div
-      className="flex items-center justify-center px-4 py-2 text-xs font-medium bg-green text-white"
-    >
-      <span className="mr-2">{activeAnnouncement.title}</span>
-      {activeAnnouncement.destination ? (
+    <div className="flex items-center justify-center px-4 py-2 text-xs font-medium bg-green text-white">
+      <span className="mr-2">{active.title}</span>
+      {active.destination ? (
         <Link
-          href={activeAnnouncement.destination}
+          href={active.destination}
           className="underline underline-offset-4 hover:opacity-80"
           onClick={handleDismiss}
         >
