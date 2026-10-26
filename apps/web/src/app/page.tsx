@@ -111,7 +111,3 @@ function SubscriptionCards({ programmes }: { programmes: Array<{ code: string; d
     </section>
   );
 }
-
-function Skeleton() {
-  return null;
-}
