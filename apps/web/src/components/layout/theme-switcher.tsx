@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { useTheme as useNextThemes } from "next-themes";
 import { Sun, Moon, Monitor } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 const icons: Record<string, React.ComponentType<{ className?: string }>> = {
   light: Sun,

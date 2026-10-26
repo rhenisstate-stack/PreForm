@@ -4,7 +4,14 @@ import * as React from "react";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import type { Announcement } from "@/types";
 
 interface AnnouncementsData {
