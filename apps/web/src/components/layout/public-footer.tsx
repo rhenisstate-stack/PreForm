@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 
 const footerLinks = [
   {
@@ -50,7 +51,11 @@ const footerLinks = [
 ];
 
 export default function PublicFooter() {
-  const year = new Date().getFullYear();
+  const [year, setYear] = useState<number | null>(null);
+
+  useEffect(() => {
+    setYear(new Date().getFullYear());
+  }, []);
 
   return (
     <footer className="border-t border-line bg-white">
@@ -82,9 +87,11 @@ export default function PublicFooter() {
             <span className="rounded bg-green p-1 text-white font-serif font-bold text-lg">P</span>
             <span className="text-sm font-semibold text-ink">PREform NCLEX</span>
           </div>
-          <p className="text-xs text-muted">
-            © {year} Preform NCLEX. All rights reserved.
-          </p>
+          {year !== null && (
+            <p className="text-xs text-muted">
+              © {year} Preform NCLEX. All rights reserved.
+            </p>
+          )}
           <div className="flex items-center gap-4">
             <a href="#" className="text-muted hover:text-green transition-colors" aria-label="LinkedIn" />
             <a href="#" className="text-muted hover:text-green transition-colors" aria-label="X" />
