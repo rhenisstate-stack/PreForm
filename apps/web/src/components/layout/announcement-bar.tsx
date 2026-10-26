@@ -12,9 +12,6 @@ interface AnnouncementBarProps {
 
 export function AnnouncementBar({ announcements, isLoading }: AnnouncementBarProps) {
   const [dismissedIds, setDismissedIds] = React.useState<Set<string>>(new Set());
-  const [activeAnnouncement, setActiveAnnouncement] = React.useState<
-    Announcement | null
-  >(null);
 
   const active = React.useMemo(() => {
     if (isLoading || !announcements) return null;

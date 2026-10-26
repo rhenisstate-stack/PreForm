@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import "./globals.css";
 import { ThemeProvider } from "@/components/providers";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
+import PublicHeader from "@/components/layout/public-header";
 import PublicFooter from "@/components/layout/public-footer";
 import { Toaster } from "@/components/ui/sonner";
 

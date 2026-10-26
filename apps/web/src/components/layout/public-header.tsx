@@ -19,7 +19,7 @@ const navItems = [
 
 export function PublicHeader({ user }: { user?: { displayName: string; role: string; email: string } }) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
-  const { mounted } = useTheme();
+  const { mounted } = useTheme() as { mounted?: boolean };
 
   if (!mounted) return null;
 

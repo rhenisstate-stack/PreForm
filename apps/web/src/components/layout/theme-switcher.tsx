@@ -11,17 +11,13 @@ const icons: Record<string, React.ComponentType<{ className?: string }>> = {
 };
 
 export function ThemeSwitcher() {
-  const { theme, setTheme, mounted } = useNextThemes();
+  const { theme, setTheme } = useNextThemes();
 
   const toggleTheme = (nextTheme: string) => {
     setTheme(nextTheme);
   };
 
   const ActiveIcon = icons[theme ?? "system"];
-
-  if (!mounted) {
-    return null;
-  }
 
   return (
     <div className="relative inline-block text-ink">

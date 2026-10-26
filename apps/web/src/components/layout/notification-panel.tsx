@@ -1,11 +1,18 @@
 "use client";
 
 import * as React from "react";
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
 import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { DropdownMenu } from "@/components/ui/dropdown-menu";
 import type { Announcement } from "@/types";
+
+const DropdownMenu = DropdownMenuPrimitive.Root;
+const DropdownMenuTrigger = DropdownMenuPrimitive.Trigger;
+const DropdownMenuContent = DropdownMenuPrimitive.Content;
+const DropdownMenuLabel = DropdownMenuPrimitive.Label;
+const DropdownMenuSeparator = DropdownMenuPrimitive.Separator;
+const DropdownMenuItem = DropdownMenuPrimitive.Item;
 
 interface AnnouncementsData {
   announcements: Announcement[] | null;
@@ -27,7 +34,7 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
   return (
     <div className="relative inline-block text-ink">
       <DropdownMenu>
-        <DropdownMenu.Trigger asChild>
+        <DropdownMenuTrigger asChild>
           <button
             className="relative p-1.5 rounded-md text-ink transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label="Notifications and support"
@@ -41,9 +48,9 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
               </Badge>
             ) : null}
           </button>
-        </DropdownMenu.Trigger>
-        <DropdownMenu.Content align="end" className="w-72">
-          <DropdownMenu.Label>Notifications</DropdownMenu.Label>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-72">
+          <DropdownMenuLabel>Notifications</DropdownMenuLabel>
           {isLoading ? (
             <div className="px-2 py-4 text-sm text-muted">Loading…</div>
           ) : visibleAnnouncements.length === 0 ? (
@@ -74,7 +81,7 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
               </div>
             </div>
           )}
-        </DropdownMenu.Content>
+        </DropdownMenuContent>
       </DropdownMenu>
     </div>
   );
@@ -87,7 +94,7 @@ interface ProfileMenuProps {
 export function ProfileMenu({ user }: ProfileMenuProps) {
   return (
     <DropdownMenu>
-      <DropdownMenu.Trigger asChild>
+      <DropdownMenuTrigger asChild>
         <button
           className="flex items-center gap-2 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="User profile menu"
@@ -96,20 +103,20 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
         >
           <span>{user.displayName}</span>
         </button>
-      </DropdownMenu.Trigger>
-      <DropdownMenu.Content align="end" className="w-56">
-        <DropdownMenu.Label className="text-sm font-medium text-ink">
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel className="text-sm font-medium text-ink">
           {user.displayName}
-        </DropdownMenu.Label>
-        <DropdownMenu.Separator />
-        <DropdownMenu.Item asChild>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
           <Link href="/profile">Profile</Link>
-        </DropdownMenu.Item>
-        <DropdownMenu.Item asChild>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
           <Link href="/settings">Settings</Link>
-        </DropdownMenu.Item>
-        <DropdownMenu.Separator />
-        <DropdownMenu.Item asChild>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
           <button
             onClick={() => {
               window.location.href = "/sign-in";
@@ -118,8 +125,8 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
           >
             Sign out
           </button>
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
+        </DropdownMenuItem>
+      </DropdownMenuContent>
     </DropdownMenu>
   );
 }
