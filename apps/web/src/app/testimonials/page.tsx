@@ -3,7 +3,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { ArrowRight, Quote } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface TestimonialProps {
   name: string;

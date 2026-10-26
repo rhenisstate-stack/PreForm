@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowRight } from "lucide-react";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight } from "lucide.react";
 import { useProgrammes } from "@/hooks/use-api";
 
 interface CourseCardProps {
@@ -52,7 +52,7 @@ export const metadata = {
 };
 
 export default function CoursesPage() {
-  const { data: programmes, isLoading } = useProgrammes();
+  const { data: programmes } = useProgrammes();
 
   return (
     <>
@@ -99,7 +99,7 @@ export default function CoursesPage() {
             <div className="mt-16 border-t border-line pt-8">
               <h3 className="text-lg font-semibold text-ink mb-4">Available pathways</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {programmes.map((p) => (
+                {programmes.map((p: { code: string; displayName: string; isActive: boolean }) => (
                   <Card key={p.code}>
                     <CardHeader>
                       <CardTitle>{p.displayName}</CardTitle>

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface FAQItem {
@@ -106,14 +107,11 @@ export default function FAQPage() {
           <div className="mt-12 space-y-3 lg:max-w-2xl lg:mx-auto">
             {faqs[activeCategory].map((f) => (
               <Card key={f.question}>
-                <CardHeader className="py-3 cursor-pointer" asChild>
-                  <button
-                    onClick={() => {}}
-                    className="flex w-full items-center justify-between"
-                  >
+                <CardHeader className="py-3 cursor-pointer">
+                  <div className="flex w-full items-center justify-between">
                     <CardTitle>{f.question}</CardTitle>
                     <span className="h-4 w-4 text-muted" />
-                  </button>
+                  </div>
                 </CardHeader>
                 <CardContent className="pt-0 pb-4">
                   <p className="text-sm text-muted leading-relaxed">{f.answer}</p>

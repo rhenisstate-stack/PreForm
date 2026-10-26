@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 
 export const metadata = {
   title: "Features | PREform NCLEX",
