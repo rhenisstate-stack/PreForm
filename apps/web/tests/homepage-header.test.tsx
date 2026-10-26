@@ -62,8 +62,7 @@ describe("Homepage header integration", () => {
     expect(within(header).getByText("NCLEX-RN")).toBeInTheDocument();
     expect(within(header).getByText("NCLEX-PN")).toBeInTheDocument();
     expect(within(header).getByText("Courses")).toBeInTheDocument();
-    expect(within(header).getByText("Features")).toBeInTheDocument();
-    expect(within(header).getByText("Testimonials")).toBeInTheDocument();
+    expect(within(header).getByText("More")).toBeInTheDocument();
   });
 
   it("renders main content below the header", () => {
@@ -108,8 +107,8 @@ describe("Homepage header integration", () => {
     fireEvent.click(rnTrigger);
 
     // Dropdown content should be visible
-    expect(screen.getByText("RN Overview")).toBeInTheDocument();
-    expect(screen.getByText("RN Courses")).toBeInTheDocument();
+    expect(within(header).getByText("RN Overview")).toBeInTheDocument();
+    expect(within(header).getByText("RN Courses")).toBeInTheDocument();
   });
 
   it("opens and closes the More dropdown", () => {
@@ -120,10 +119,10 @@ describe("Homepage header integration", () => {
 
     fireEvent.click(moreTrigger);
 
-    expect(screen.getByText("Our Features")).toBeInTheDocument();
-    expect(screen.getByText("For Educators")).toBeInTheDocument();
-    expect(screen.getByText("Contact Us")).toBeInTheDocument();
-    expect(screen.getByText("FAQ")).toBeInTheDocument();
+    expect(within(header).getByText("Our Features")).toBeInTheDocument();
+    expect(within(header).getByText("For Educators")).toBeInTheDocument();
+    expect(within(header).getByText("Contact Us")).toBeInTheDocument();
+    expect(within(header).getByText("FAQ")).toBeInTheDocument();
   });
 
   it("shows Buy Now and Try Now CTAs in header", () => {

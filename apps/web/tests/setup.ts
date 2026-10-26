@@ -21,13 +21,8 @@ Object.defineProperty(window, "matchMedia", {
 });
 
 // Mock ResizeObserver for Radix NavigationMenu component
-const createResizeObserver = () => ({
-  observe: () => {},
-  unobserve: () => {},
-  disconnect: () => {},
-});
-
-Object.defineProperty(window, "ResizeObserver", {
-  writable: true,
-  value: createResizeObserver,
-});
+(globalThis as any).ResizeObserver = class ResizeObserver {
+  observe = () => {};
+  unobserve = () => {};
+  disconnect = () => {};
+};
