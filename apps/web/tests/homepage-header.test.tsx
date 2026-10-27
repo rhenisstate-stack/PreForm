@@ -58,6 +58,7 @@ describe("Homepage header integration", () => {
     expect(within(header).getByText("NCLEX-RN")).toBeInTheDocument();
     expect(within(header).getByText("NCLEX-PN")).toBeInTheDocument();
     expect(within(header).getByText("Courses")).toBeInTheDocument();
+    expect(within(header).getByText("Study Guide")).toBeInTheDocument();
     expect(within(header).getByText("More")).toBeInTheDocument();
   });
 
