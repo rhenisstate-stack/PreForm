@@ -55,8 +55,8 @@ describe("PrepFord Study Guide & Clinical Notes System", () => {
       ).toBeInTheDocument();
 
       expect(screen.getByText("Medical-Surgical Nursing")).toBeInTheDocument();
-      expect(screen.getByText("Pharmacology & Parenteral Therapy")).toBeInTheDocument();
-      expect(screen.getByText("Maternal-Newborn Care (OB)")).toBeInTheDocument();
+      expect(screen.getByText("Pharmacology & Medication Safety")).toBeInTheDocument();
+      expect(screen.getByText("Maternal & Newborn Nursing")).toBeInTheDocument();
       expect(screen.getByText("Leadership, Delegation & Priority")).toBeInTheDocument();
     });
 
@@ -79,7 +79,7 @@ describe("PrepFord Study Guide & Clinical Notes System", () => {
       expect(screen.getByRole("heading", { name: "Medical-Surgical Nursing" })).toBeInTheDocument();
       expect(screen.getByText(/Cardiovascular Disorders & Heart Failure/i)).toBeInTheDocument();
       expect(screen.getByText(/Respiratory Compromise & Acute ARDS/i)).toBeInTheDocument();
-      expect(screen.getByText(/All Categories/i)).toHaveAttribute("href", "/study-guide");
+      expect(screen.getByRole("link", { name: /All Categories/i })).toHaveAttribute("href", "/study-guide");
     });
   });
 
