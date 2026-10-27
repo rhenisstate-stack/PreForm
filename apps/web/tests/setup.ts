@@ -1,7 +1,22 @@
 import "@testing-library/jest-dom";
 import { TextEncoder, TextDecoder } from "node:util";
+import { vi } from "vitest";
 
 Object.assign(globalThis, { TextEncoder, TextDecoder });
+
+// Mock next/navigation
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    prefetch: vi.fn(),
+    back: vi.fn(),
+    forward: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+}));
 
 // Mock matchMedia for next-themes system theme detection
 const createMatchMedia = () => ({

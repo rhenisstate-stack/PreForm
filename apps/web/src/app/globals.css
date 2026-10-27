@@ -2,121 +2,150 @@
 
 :root {
   color-scheme: light;
-  --ink: #142b4a;
-  --muted: #475569;
-  --paper: #f8fafc;
-  --white: #ffffff;
-  --green: #0d9488;
-  --green-dark: #0f766e;
-  --line: #e2e8f0;
-  --coral: #d4a72c;
-  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --sans: "Aptos", "Segoe UI", sans-serif;
 
-  /* PREform design tokens (light theme) */
-  --background: 210 33% 97%;
-  --foreground: 214 57% 18%;
-  --card: 0 0% 100%;
-  --card-foreground: 214 57% 18%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 214 57% 18%;
-  --primary: 214 57% 18%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 174 76% 32%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 210 20% 96%;
-  --muted-foreground: 215 25% 40%;
-  --accent: 44 66% 50%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 358 90% 42%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 213 33% 92%;
-  --input: 213 33% 92%;
-  --ring: 174 76% 32%;
+  /* PREform Core Brand Palette (Light) */
+  --background: #F8FAFC;
+  --foreground: #142B4A;
+  --card: #FFFFFF;
+  --card-foreground: #142B4A;
+  --popover: #FFFFFF;
+  --popover-foreground: #142B4A;
+  --primary: #142B4A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #0D9488;
+  --secondary-foreground: #FFFFFF;
+  --muted: #F1F5F9;
+  --muted-foreground: #475569;
+  --accent: #D4A72C;
+  --accent-foreground: #142B4A;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #0D9488;
   --radius: 0.75rem;
 
-  /* PREform status tokens */
-  --success: 142 76% 36%;
-  --success-foreground: 0 0% 100%;
-  --warning: 36 100% 29%;
-  --warning-foreground: 0 0% 100%;
-  --error: 358 90% 42%;
-  --error-foreground: 0 0% 100%;
-  --info: 217 91% 50%;
-  --info-foreground: 0 0% 100%;
+  /* Brand semantic aliases */
+  --ink: #142B4A;
+  --paper: #F8FAFC;
+  --white: #FFFFFF;
+  --green: #0D9488;
+  --green-dark: #0F766E;
+  --line: #E2E8F0;
+  --coral: #D4A72C;
+  --gold: #D4A72C;
+  --teal: #0D9488;
+  --navy: #142B4A;
+
+  /* Status tokens */
+  --success: #16A34A;
+  --success-foreground: #FFFFFF;
+  --warning: #D97706;
+  --warning-foreground: #FFFFFF;
+  --error: #DC2626;
+  --error-foreground: #FFFFFF;
+  --info: #2563EB;
+  --info-foreground: #FFFFFF;
+
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --sans: "Aptos", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
 }
 
 @theme {
-  --background: var(--background);
-  --foreground: var(--foreground);
-  --card: var(--card);
-  --card-foreground: var(--card-foreground);
-  --popover: var(--popover);
-  --popover-foreground: var(--popover-foreground);
-  --primary: var(--primary);
-  --primary-foreground: var(--primary-foreground);
-  --secondary: var(--secondary);
-  --secondary-foreground: var(--secondary-foreground);
-  --muted: var(--muted);
-  --muted-foreground: var(--muted-foreground);
-  --accent: var(--accent);
-  --accent-foreground: var(--accent-foreground);
-  --destructive: var(--destructive);
-  --destructive-foreground: var(--destructive-foreground);
-  --border: var(--border);
-  --input: var(--input);
-  --ring: var(--ring);
-  --success: var(--success);
-  --success-foreground: var(--success-foreground);
-  --warning: var(--warning);
-  --warning-foreground: var(--warning-foreground);
-  --error: var(--error);
-  --error-foreground: var(--error-foreground);
-  --info: var(--info);
-  --info-foreground: var(--info-foreground);
-  --radius: var(--radius);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-ink: var(--ink);
+  --color-paper: var(--paper);
+  --color-white: var(--white);
+  --color-green: var(--green);
+  --color-green-dark: var(--green-dark);
+  --color-line: var(--line);
+  --color-coral: var(--coral);
+  --color-gold: var(--gold);
+  --color-teal: var(--teal);
+  --color-navy: var(--navy);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-error: var(--error);
+  --color-error-foreground: var(--error-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-serif: var(--serif);
+  --font-sans: var(--sans);
 }
 
 .dark {
-  --background: 220 49% 8%;
-  --foreground: 210 33% 97%;
-  --card: 217 44% 14%;
-  --card-foreground: 210 33% 97%;
-  --popover: 217 44% 14%;
-  --popover-foreground: 210 33% 97%;
-  --primary: 217 91% 63%;
-  --primary-foreground: 220 49% 8%;
-  --secondary: 171 80% 40%;
-  --secondary-foreground: 220 49% 8%;
-  --muted: 217 33% 22%;
-  --muted-foreground: 213 22% 82%;
-  --accent: 44 66% 50%;
-  --accent-foreground: 220 49% 8%;
-  --destructive: 358 90% 42%;
-  --destructive-foreground: 0 0% 100%;
-  --border: 217 25% 27%;
-  --input: 217 25% 27%;
-  --ring: 171 84% 53%;
+  color-scheme: dark;
 
-  /* Custom marketing vars (dark theme) */
-  --ink: #f8fafc;
-  --muted: #cbd5e1;
-  --paper: #0b1220;
-  --white: #ffffff;
-  --green: #14b8a6;
-  --green-dark: #064e3b;
+  /* PREform Core Brand Palette (Dark) */
+  --background: #0B1220;
+  --foreground: #F8FAFC;
+  --card: #142033;
+  --card-foreground: #F8FAFC;
+  --popover: #142033;
+  --popover-foreground: #F8FAFC;
+  --primary: #60A5FA;
+  --primary-foreground: #0B1220;
+  --secondary: #14B8A6;
+  --secondary-foreground: #0B1220;
+  --muted: #1E293B;
+  --muted-foreground: #CBD5E1;
+  --accent: #D4A72C;
+  --accent-foreground: #0B1220;
+  --destructive: #EF4444;
+  --destructive-foreground: #FFFFFF;
+  --border: #334155;
+  --input: #334155;
+  --ring: #14B8A6;
+
+  /* Brand semantic aliases (Dark) */
+  --ink: #F8FAFC;
+  --paper: #0B1220;
+  --white: #FFFFFF;
+  --green: #14B8A6;
+  --green-dark: #064E3B;
   --line: #334155;
-  --coral: #d4a72c;
+  --coral: #D4A72C;
+  --gold: #D4A72C;
+  --teal: #14B8A6;
+  --navy: #60A5FA;
 
-  /* PREform status tokens (dark) */
-  --success: 142 76% 36%;
-  --success-foreground: 0 0% 100%;
-  --warning: 36 100% 29%;
-  --warning-foreground: 0 0% 100%;
-  --error: 358 90% 42%;
-  --error-foreground: 0 0% 100%;
-  --info: 217 91% 50%;
-  --info-foreground: 0 0% 100%;
+  /* Status tokens */
+  --success: #22C55E;
+  --success-foreground: #0B1220;
+  --warning: #F59E0B;
+  --warning-foreground: #0B1220;
+  --error: #EF4444;
+  --error-foreground: #FFFFFF;
+  --info: #3B82F6;
+  --info-foreground: #0B1220;
 }
 
 * {
@@ -129,7 +158,7 @@ html {
 
 body {
   margin: 0;
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;

@@ -119,15 +119,21 @@ describe("Homepage header integration", () => {
     expect(moreTrigger).toHaveAttribute("aria-expanded", "true");
   });
 
-  it("shows Buy Now and Try Now CTAs in header", () => {
+  it("does not show Buy Now in the header", () => {
     const { header } = renderHeader();
 
     expect(
-      within(header).getByRole("link", { name: /Buy Now/i })
-    ).toBeInTheDocument();
-    expect(
-      within(header).getByRole("link", { name: /Try Now/i })
-    ).toBeInTheDocument();
+      within(header).queryByRole("link", { name: /Buy Now/i })
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows shopping cart button in header", () => {
+    const { header } = renderHeader();
+
+    const cartButton = within(header).getByRole("button", {
+      name: /Shopping cart/i,
+    });
+    expect(cartButton).toBeInTheDocument();
   });
 
   it("shows theme selector in header", () => {

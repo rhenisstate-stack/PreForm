@@ -1,69 +1,76 @@
 "use client";
 
 import * as React from "react";
-import { useTheme as useNextThemes } from "next-themes";
-import { Sun, Moon, Monitor } from "lucide-react";
+import { useTheme } from "next-themes";
+import { Sun, Moon, Monitor, Check } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 
-const icons: Record<string, React.ComponentType<{ className?: string }>> = {
-  light: Sun,
-  dark: Moon,
-  system: Monitor,
-};
+const emptySubscribe = () => () => {};
 
 export function ThemeSwitcher() {
-  const { theme, setTheme } = useNextThemes();
+  const { theme, setTheme } = useTheme();
+  const mounted = React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
 
-  const toggleTheme = (nextTheme: string) => {
-    setTheme(nextTheme);
-  };
-
-  const ActiveIcon = icons[theme ?? "system"];
+  const currentTheme = mounted ? theme ?? "system" : "system";
 
   return (
-    <div className="relative inline-block text-foreground">
-      <button
-        className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-        aria-label="Change theme"
-        aria-haspopup="true"
-        aria-expanded="false"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            const options = ["system", "light", "dark"];
-            const current = options.indexOf(theme ?? "system");
-            const next = options[(current + 1) % options.length];
-            toggleTheme(next);
-          }
-        }}
-      >
-        <ActiveIcon className="h-4 w-4" />
-        <span className="hidden sm:block capitalize">{theme}</span>
-      </button>
-      <div className="absolute right-0 mt-2 w-40 rounded-md border border-border bg-popover p-1 shadow-lg">
-        {["system", "light", "dark"].map((option) => {
-          const OptionIcon = icons[option];
-          return (
-            <button
-              key={option}
-              className={`flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm ${
-                option === theme
-                  ? "bg-accent text-accent-foreground"
-                  : "text-foreground hover:bg-accent hover:text-accent-foreground"
-              }`}
-              onClick={() => toggleTheme(option)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  toggleTheme(option);
-                }
-              }}
-            >
-              <OptionIcon className="h-4 w-4" />
-              <span className="capitalize">{option}</span>
-            </button>
-          );
-        })}
-      </div>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          className="relative inline-flex items-center justify-center rounded-md p-2 text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          aria-label="Change theme"
+        >
+          {currentTheme === "dark" ? (
+            <Moon className="h-4 w-4 transition-transform" />
+          ) : currentTheme === "light" ? (
+            <Sun className="h-4 w-4 transition-transform" />
+          ) : (
+            <Monitor className="h-4 w-4 transition-transform" />
+          )}
+          <span className="sr-only">Toggle theme ({currentTheme})</span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-36 bg-popover border border-border shadow-lg">
+        <DropdownMenuItem
+          onClick={() => setTheme("light")}
+          className="flex items-center justify-between cursor-pointer"
+        >
+          <span className="flex items-center gap-2">
+            <Sun className="h-4 w-4 text-amber-500" />
+            <span>Light</span>
+          </span>
+          {currentTheme === "light" && <Check className="h-3.5 w-3.5 text-secondary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setTheme("dark")}
+          className="flex items-center justify-between cursor-pointer"
+        >
+          <span className="flex items-center gap-2">
+            <Moon className="h-4 w-4 text-blue-400" />
+            <span>Dark</span>
+          </span>
+          {currentTheme === "dark" && <Check className="h-3.5 w-3.5 text-secondary" />}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => setTheme("system")}
+          className="flex items-center justify-between cursor-pointer"
+        >
+          <span className="flex items-center gap-2">
+            <Monitor className="h-4 w-4 text-muted-foreground" />
+            <span>System</span>
+          </span>
+          {currentTheme === "system" && <Check className="h-3.5 w-3.5 text-secondary" />}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
