@@ -20,21 +20,40 @@ import { Button } from "@/components/ui/button";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { signInSchema, type SignInInput } from "@/lib/validation/auth";
 
+function getGoogleErrorMessage(errorParam: string | null): string | null {
+  if (errorParam === "google_not_configured") {
+    return "Google authentication is not yet configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the server environment.";
+  }
+  if (errorParam === "google_cancelled") {
+    return "Google sign-in was cancelled or consent was not granted. Please try again.";
+  }
+  if (errorParam === "state_mismatch" || errorParam === "csrf_detected") {
+    return "Security verification failed (state mismatch). Please try again.";
+  }
+  if (errorParam === "token_exchange_failed" || errorParam === "auth_failed") {
+    return "Unable to complete Google authentication at this time. Please try signing in with email.";
+  }
+  return null;
+}
+
 export function SignInPageClient() {
   const searchParams = useSearchParams();
   const errorParam = searchParams.get("error");
+  const urlError = React.useMemo(() => getGoogleErrorMessage(errorParam), [errorParam]);
 
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [showForgotModal, setShowForgotModal] = React.useState(false);
 
+  const displayError = errorMessage || urlError;
+
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<SignInInput>({
-    resolver: zodResolver(signInSchema as any),
+    resolver: zodResolver(signInSchema as unknown as Parameters<typeof zodResolver>[0]),
     defaultValues: {
       email: "",
       password: "",
@@ -43,22 +62,8 @@ export function SignInPageClient() {
     mode: "onTouched",
   });
 
-  // Map Google authentication URL error parameters to safe, non-sensitive messages
-  React.useEffect(() => {
-    if (errorParam === "google_not_configured") {
-      setErrorMessage(
-        "Google authentication is not yet configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the server environment."
-      );
-    } else if (errorParam === "google_cancelled") {
-      setErrorMessage("Google sign-in was cancelled or consent was not granted. Please try again.");
-    } else if (errorParam === "state_mismatch" || errorParam === "csrf_detected") {
-      setErrorMessage("Security verification failed (state mismatch). Please try again.");
-    } else if (errorParam === "token_exchange_failed" || errorParam === "auth_failed") {
-      setErrorMessage("Unable to complete Google authentication at this time. Please try signing in with email.");
-    }
-  }, [errorParam]);
-
   const onSubmit = async (_data: SignInInput) => {
+    void _data;
     setErrorMessage(null);
     setIsLoading(true);
 
@@ -173,7 +178,7 @@ export function SignInPageClient() {
             </div>
 
             {/* Error / Status Alert */}
-            {errorMessage && (
+            {displayError && (
               <div
                 className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200"
                 role="alert"
@@ -181,7 +186,7 @@ export function SignInPageClient() {
               >
                 <div className="flex items-start gap-2.5">
                   <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-                  <p className="leading-snug">{errorMessage}</p>
+                  <p className="leading-snug">{displayError}</p>
                 </div>
               </div>
             )}
