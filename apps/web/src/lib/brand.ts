@@ -10,14 +10,14 @@ export const BRAND = {
   description:
     "A focused learning platform for NCLEX-RN and NCLEX-PN candidates, built with clinical accuracy and transparent assessment at its core.",
   logo: {
-    assetPath: "/prepford-logo.jpg",
+    assetPath: "/prepford-logo.png",
     alt: "PrepFord logo",
     width: 1024,
     height: 1024,
   },
   favicon: {
-    assetPath: "/prepford-logo.jpg",
-    type: "image/jpeg",
+    assetPath: "/prepford-logo.png",
+    type: "image/png",
   },
   supportEmail: "support@prepford.com",
   educatorsEmail: "educators@prepford.com",

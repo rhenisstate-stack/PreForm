@@ -20,7 +20,7 @@ describe("BrandedLoading Component", () => {
     // Logo image with verified prepford-logo path
     const logoImg = screen.getByAltText(/PrepFord logo/i);
     expect(logoImg).toBeInTheDocument();
-    expect(logoImg.getAttribute("src")).toContain("prepford-logo.jpg");
+    expect(logoImg.getAttribute("src")).toContain("prepford-logo.png");
 
     // Loading message
     expect(screen.getAllByText("Loading student workspace...")[0]).toBeInTheDocument();

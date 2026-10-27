@@ -65,6 +65,21 @@ const desktopNav: DesktopNavItem[] = [
     ],
   },
   {
+    id: "study-guide",
+    label: "Study Guide",
+    href: "/study-guide",
+    items: [
+      { label: "All Study Guides", href: "/study-guide" },
+      { label: "Medical-Surgical Nursing", href: "/study-guide/medical-surgical" },
+      { label: "Pharmacology & Calculations", href: "/study-guide/pharmacology" },
+      { label: "Maternal-Newborn Care", href: "/study-guide/maternal-newborn" },
+      { label: "Pediatric Nursing", href: "/study-guide/pediatrics" },
+      { label: "Mental Health Nursing", href: "/study-guide/mental-health" },
+      { label: "Fundamentals of Nursing", href: "/study-guide/fundamentals" },
+      { label: "Leadership & Delegation", href: "/study-guide/leadership-delegation" },
+    ],
+  },
+  {
     id: "more",
     label: "More",
     items: [
@@ -82,6 +97,7 @@ const mobileNavLinks: NavLink[] = [
   { label: "NCLEX-RN Pathway", href: "/nclex-rn" },
   { label: "NCLEX-PN Pathway", href: "/nclex-pn" },
   { label: "Courses", href: "/courses" },
+  { label: "Study Guide & Notes", href: "/study-guide" },
   { label: "Features", href: "/features" },
   { label: "Blog", href: "/blog" },
   { label: "Educators", href: "/educators" },

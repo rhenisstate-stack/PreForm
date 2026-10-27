@@ -14,7 +14,7 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         src: BRAND.favicon.assetPath,
         sizes: "1024x1024",
-        type: "image/jpeg",
+        type: "image/png",
         purpose: "any",
       },
     ],

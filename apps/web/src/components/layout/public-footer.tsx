@@ -24,6 +24,7 @@ const footerColumns: FooterColumn[] = [
   {
     heading: "Learning Resources",
     links: [
+      { label: "Study Guide & Notes", href: "/study-guide" },
       { label: "Blog & Learning Hub", href: "/blog" },
       { label: "Platform Features", href: "/features" },
       { label: "Readiness Assessments", href: "/courses" },
