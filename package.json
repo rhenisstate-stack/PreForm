@@ -1,5 +1,5 @@
 {
-  "name": "preform-nclex",
+  "name": "prepford",
   "version": "0.1.0",
   "private": true,
   "packageManager": "npm@11.19.0",
@@ -12,26 +12,20 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspace @preform/web",
-    "dev:api": "cd apps/api && dotnet run",
-    "build": "npm run build --workspace @preform/web --if-present && cd apps/api && dotnet build",
-    "build:api": "cd apps/api && dotnet build",
+    "dev:api": "npm run dev --workspace @preform/api",
+    "build": "npm run build --workspace @preform/web --if-present && npm run build --workspace @preform/api --if-present",
+    "build:api": "npm run build --workspace @preform/api",
     "build:web": "npm run build --workspace @preform/web",
     "lint": "npm run lint --workspace @preform/web --if-present",
     "typecheck": "npm run typecheck --workspace @preform/web --if-present",
-    "test": "npm run test --workspace @preform/web --if-present && cd apps/api && dotnet test",
-    "test:api": "cd apps/api && dotnet test",
-    "test:e2e": "cd apps/api && dotnet test --filter FullyQualifiedName~Integration",
+    "test": "npm run test --workspace @preform/web --if-present && npm run test --workspace @preform/api --if-present",
+    "test:api": "npm run test --workspace @preform/api",
+    "test:e2e": "cd apps/api && dotnet test Tests/Preform.Api.Tests.csproj --filter FullyQualifiedName~Integration",
     "db:generate": "cd apps/api && dotnet ef migrations bundle --output ../migrate --self-contained || echo 'EF Core tools required: dotnet tool install --global dotnet-ef'",
     "db:migrate": "cd apps/api && dotnet ef database update",
     "db:deploy": "cd apps/api && dotnet ef database update"
   },
   "devDependencies": {
-    "dotenv": "^16.6.1",
-    "prisma": "^7.10.1"
-  },
-  "allowScripts": {
-    "prisma@7.10.1": true,
-    "@prisma/engines@7.10.1": true,
-    "unrs-resolver@1.12.2": true
+    "dotenv": "^16.6.1"
   }
 }

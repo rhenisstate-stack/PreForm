@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Preform.Api.DTOs;
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
 
 namespace Preform.Api.Tests;
 
@@ -18,7 +19,16 @@ public class HealthControllerTests : IClassFixture<WebApplicationFactory<Program
 
     public HealthControllerTests(WebApplicationFactory<Program> factory)
     {
-        _factory = factory;
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureServices(services =>
+            {
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+                if (descriptor != null) services.Remove(descriptor);
+                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestingHealthDb"));
+            });
+        });
     }
 
     [Fact]
@@ -52,11 +62,25 @@ public class ProgrammeControllerTests : IClassFixture<WebApplicationFactory<Prog
     {
         _factory = factory.WithWebHostBuilder(builder =>
         {
+            builder.UseEnvironment("Testing");
             builder.ConfigureServices(services =>
             {
-                // Override DATABASE_URL to use test database if needed
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+                if (descriptor != null) services.Remove(descriptor);
+                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestingProgrammeControllerDb"));
             });
         });
+
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (!context.Programmes.Any(p => p.Code == ProgrammeCode.RN))
+        {
+            context.Programmes.AddRange(
+                new Programme { Code = ProgrammeCode.RN, DisplayName = "NCLEX-RN", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow },
+                new Programme { Code = ProgrammeCode.PN, DisplayName = "NCLEX-PN", IsActive = true, CreatedAt = DateTime.UtcNow, UpdatedAt = DateTime.UtcNow }
+            );
+            context.SaveChanges();
+        }
     }
 
     [Fact]

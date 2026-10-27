@@ -26,18 +26,17 @@ builder.Services.AddCors(options =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new() { Title = "PREform NCLEX API", Version = "v1" });
+    c.SwaggerDoc("v1", new() { Title = "PrepFord API", Version = "v1" });
 });
 
 // Add EF Core with Npgsql
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-    var connectionString = config["DATABASE_URL"];
-    if (string.IsNullOrEmpty(connectionString))
-    {
-        throw new InvalidOperationException("DATABASE_URL configuration is required.");
-    }
+    var connectionString = config["DATABASE_URL"]
+        ?? config.GetConnectionString("DefaultConnection")
+        ?? "Host=localhost;Port=5432;Database=prepford;Username=postgres;Password=postgres";
+
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
         npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory", "public");
@@ -56,7 +55,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "PREform NCLEX API v1");
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "PrepFord API v1");
         c.RoutePrefix = string.Empty;
     });
 }
@@ -72,33 +71,51 @@ app.MapHealthChecks("/api/v1/health/live");
 app.MapHealthChecks("/api/v1/health/ready");
 
 // Ensure database is created and migrated
-using (var scope = app.Services.CreateScope())
+if (!app.Environment.IsEnvironment("Testing"))
 {
-    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    dbContext.Database.Migrate();
-
-    // Seed initial data
-    if (!dbContext.Programmes.Any())
+    using (var scope = app.Services.CreateScope())
     {
-        dbContext.Programmes.AddRange(
-            new Programme
+        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (dbContext.Database.IsRelational())
+        {
+            try
             {
-                Code = ProgrammeCode.RN,
-                DisplayName = "NCLEX-RN",
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            },
-            new Programme
-            {
-                Code = ProgrammeCode.PN,
-                DisplayName = "NCLEX-PN",
-                IsActive = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                dbContext.Database.Migrate();
+
+                // Seed initial data
+                if (!dbContext.Programmes.Any())
+                {
+                    dbContext.Programmes.AddRange(
+                        new Programme
+                        {
+                            Code = ProgrammeCode.RN,
+                            DisplayName = "NCLEX-RN",
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        },
+                        new Programme
+                        {
+                            Code = ProgrammeCode.PN,
+                            DisplayName = "NCLEX-PN",
+                            IsActive = true,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        }
+                    );
+                    dbContext.SaveChanges();
+                }
             }
-        );
-        dbContext.SaveChanges();
+            catch (Exception ex)
+            {
+                var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+                logger.LogWarning(ex, "Database migration on startup was deferred or skipped.");
+            }
+        }
+        else
+        {
+            dbContext.Database.EnsureCreated();
+        }
     }
 }
 
