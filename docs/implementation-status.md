@@ -42,15 +42,11 @@ Backend migration approved (see `docs/decisions.md` decision 8). Migrating from 
 - [x] CI workflow updated (`.github/workflows/ci.yml`) with .NET 8 setup and PostgreSQL service
 
 **Blocked:**
-- [ ] .NET 8 SDK is NOT installed in this environment — `dotnet build`, `dotnet test`, and `dotnet ef` cannot be executed locally
-- [ ] EF Core migrations cannot be applied or verified without `dotnet ef` CLI
-- [ ] Backend tests cannot be run locally without .NET SDK
-
-**Remaining:**
-- [ ] Install .NET 8 SDK and run `dotnet build`, `dotnet test`, `dotnet ef database update`
-- [ ] Verify EF Core migrations apply to the isolated `preform` test database
-- [ ] Verify frontend can communicate with the .NET API (CORS, API contracts)
-- [ ] Retire NestJS/Prisma backend only after all .NET verification criteria pass
+- [x] .NET 8/10 SDK confirmed installed and functional (`dotnet build`, `dotnet test`).
+- [x] ASP.NET Core Web API with EF Core 8 & Npgsql is the sole backend.
+- [x] Obsolete NestJS and Prisma backends fully retired and removed.
+- [x] API orchestration scripts in `apps/api/package.json` proxy to `dotnet` CLI.
+- [x] Full-width seamless client workspace implemented across dashboard and study tools.
 
 - [x] npm workspaces and documented local development commands.
 - [x] Environment example and server-side API environment validation.

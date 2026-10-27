@@ -1,132 +1,162 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# PrepFord API — ASP.NET Core Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+The official backend Web API for **PrepFord**, a Next Generation NCLEX® (RN & PN) clinical preparation and assessment platform.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+Built with **.NET 8 (C#)**, **ASP.NET Core Web API**, **Entity Framework Core 8**, and **Npgsql** targeting **PostgreSQL 16+**.
 
-## Description
+---
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+## Architecture & Technology Stack
 
-## Project setup
+- **Framework:** ASP.NET Core 8.0 Web API (`Microsoft.NET.Sdk.Web`)
+- **Language:** C# 12 / .NET 8 LTS
+- **Data Access:** Entity Framework Core 8.0 (`Npgsql.EntityFrameworkCore.PostgreSQL`)
+- **Database:** PostgreSQL 16+ (Docker Compose or managed instance)
+- **API Documentation:** Swagger / OpenAPI (`Swashbuckle.AspNetCore 6.6.2`)
+- **Testing:** xUnit, `Microsoft.AspNetCore.Mvc.Testing`, Moq, InMemory EF Core
+- **Client Integration:** Strict CORS support for Next.js frontend (`WEB_ORIGIN`)
 
-```bash
-$ npm install
+---
+
+## Directory Structure
+
+```text
+apps/api/
+├── Configuration/          # App configuration bindings
+├── Controllers/            # API endpoints & route handlers
+│   ├── HealthController.cs     # /api/v1/health/live & /api/v1/health/ready
+│   └── ProgrammesController.cs # /api/v1/programmes
+├── Data/                   # EF Core DbContext & model configurations
+│   └── AppDbContext.cs
+├── DTOs/                   # Data Transfer Objects
+├── Migrations/             # EF Core database migrations
+├── Models/                 # Domain entity models
+│   ├── Identity.cs             # Candidate profiles, auth & roles
+│   ├── LearningStructure.cs    # Subjects, domains & lesson modules
+│   ├── Questions.cs            # NGN case studies, item types & rationales
+│   ├── Assessments.cs          # Practice attempts, CAT & diagnostic tests
+│   ├── Subscriptions.cs        # Orders, tiers, entitlements & billing
+│   └── Programme.cs            # RN & PN target pathways
+├── Properties/             # Launch settings
+├── Services/               # Domain business logic
+│   └── ProgrammeService.cs
+├── Tests/                  # xUnit automated test suite
+│   ├── Preform.Api.Tests.csproj
+│   └── AppTests.cs
+├── appsettings.json        # Base configuration
+├── appsettings.Development.json
+├── package.json            # npm orchestration proxy to dotnet CLI
+├── Preform.Api.csproj      # .NET 8 project specification
+└── Program.cs              # Application entry point, middleware & DI
 ```
 
-## Compile and run the project
+---
+
+## Environment Variables & Configuration
+
+Configure via environment variables or `appsettings.json` / `appsettings.Development.json`:
+
+| Variable | Description | Default |
+| :--- | :--- | :--- |
+| `DATABASE_URL` | PostgreSQL connection string (Npgsql format) | `Host=localhost;Port=5432;Database=prepford;Username=postgres;Password=postgres` |
+| `ConnectionStrings__DefaultConnection` | Alternative standard EF Core connection string key | Same as above |
+| `WEB_ORIGIN` | Allowed CORS origin for the Next.js frontend | `http://localhost:3000` |
+| `ASPNETCORE_ENVIRONMENT` | Environment mode (`Development`, `Production`, `Testing`) | `Development` |
+| `PORT` | Listening port for HTTP | `4000` (or `5000` / `5180`) |
+
+---
+
+## Development & CLI Commands
+
+You can run commands using npm workspace scripts or native `dotnet` CLI commands:
+
+### Using npm Workspace Scripts
+
+From the repository root or `apps/api`:
 
 ```bash
-# development
-$ npm run start
+# Build the API
+npm run build:api
+# or from apps/api:
+npm run build
 
-# watch mode
-$ npm run start:dev
+# Start the API in development mode
+npm run dev:api
+# or from apps/api:
+npm run dev
 
-# production mode
-$ npm run start:prod
+# Start with hot reload (file watcher)
+npm run watch --workspace @preform/api
+
+# Run automated tests
+npm run test:api
+# or from apps/api:
+npm run test
+
+# Database migrations
+npm run ef:migrations:list --workspace @preform/api
+npm run ef:database:update --workspace @preform/api
 ```
 
-## Run tests
+### Using Native .NET CLI
 
-```bash
-# unit tests
-$ npm run test
+From `apps/api`:
 
-# e2e tests
-$ npm run test:e2e
+```powershell
+# Restore NuGet packages
+dotnet restore Preform.Api.csproj
 
-# test coverage
-$ npm run test:cov
+# Build project
+dotnet build Preform.Api.csproj
+
+# Run application
+dotnet run --project Preform.Api.csproj
+
+# Watch mode
+dotnet watch --project Preform.Api.csproj run
+
+# Execute test suite
+dotnet test Tests/Preform.Api.Tests.csproj
+
+# Apply EF Core migrations
+dotnet ef database update --project Preform.Api.csproj
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## API Endpoints
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### Health & Readiness
 
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+- `GET /api/v1/health/live` — Returns `{ "status": "ok" }` when the process is up and healthy.
+- `GET /api/v1/health/ready` — Checks PostgreSQL database connectivity and reports `{ "status": "ready" }` (or `503 Service Unavailable` if unreachable).
+
+### Educational Pathways
+
+- `GET /api/v1/programmes` — Returns active programmes (`NCLEX-RN`, `NCLEX-PN`).
+- `GET /api/v1/programmes/code/{code}` — Returns details for pathway `RN` or `PN`.
+- `POST /api/v1/programmes` — Adds or activates a programme (admin only).
+
+### OpenAPI / Swagger
+
+When running in `Development` mode, interactive Swagger documentation is available at:
+
+```text
+http://localhost:4000/swagger
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Observability
+## Testing
 
-In production applications, observability is essential for understanding how your system behaves, detecting issues early, and maintaining reliable performance.
+The xUnit test suite (`apps/api/Tests/AppTests.cs`) covers:
 
-[NestJS Observe](https://observe.nestjs.com) automatically instruments your NestJS application, giving you deep visibility into your system with minimal setup:
+1. **Liveness & Readiness Endpoints:** Verifies status codes and payload structure.
+2. **Controller Routing & Serialization:** Verifies JSON response formatting for RN/PN programmes.
+3. **Domain Business Logic:** Validates `ProgrammeService` ordering, uniqueness, and conflict handling with in-memory database isolation.
 
-- **Distributed tracing:** Follow requests across services and understand how they flow through your system.
-- **Waterfall analysis:** Visualize request execution and identify slow operations, bottlenecks, and unexpected delays.
-- **Performance analysis:** Analyze application performance in real time and quickly pinpoint areas that need optimization.
-- **Metrics:** Track key application and infrastructure metrics to understand system health and performance trends.
-- **Logging:** Centralize and correlate logs with traces and other telemetry to make debugging easier.
-- **Error tracking:** Detect errors quickly and investigate their root causes with the surrounding context.
-- **SLA monitoring:** Track service-level objectives and identify when your application is approaching or exceeding defined thresholds.
-- **Alarms and alerts:** Set up alerts for critical errors, performance degradation, SLA violations, and other anomalies so your team can react quickly.
+---
 
-To add it to this project, run this and approve the code it prints at [observe.nestjs.com/link](https://observe.nestjs.com/link) - signing up for free if you have no account:
+## Backend Consolidation Note
 
-```bash
-$ npx @nestjs/observe link
-```
-
-It installs `@nestjs/observe`, wires it into `AppModule` and `main.ts`, and writes the app key and secret into `.env`, which every `nest start` script (`start`, `start:dev`, `start:debug`) then loads. In production, set `OBSERVE_APP_KEY` and `OBSERVE_APP_SECRET` in the environment instead.
-
-Or do it by hand:
-
-```bash
-$ npm install @nestjs/observe
-```
-
-Then follow the [setup guide](https://docs.nestjs.com/observability/sdk) - it takes a single import and an app key.
-
-The free plan needs no payment details and covers 300,000 events a month. You can also browse the [live demo](https://www.observe-demo.nestjs.com/dashboard) first - the whole dashboard over a busy service's data, with nothing to install.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Auto-instrument your application with [NestJS Observe](https://observe.nestjs.com). Distributed tracing, metrics, and logging made easy. Error tracking and performance monitoring for your NestJS applications.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+The legacy NestJS/Fastify TypeScript backend and Prisma ORM have been completely retired and excised from the repository. All backend contracts, data structures, and health endpoints are authored and maintained directly in ASP.NET Core 8.

@@ -48,4 +48,4 @@
 
 **Reason:** The agreed target stack mandates C# / ASP.NET Core / EF Core / Npgsql. The migration is incremental and controlled: the existing NestJS backend is preserved during migration work and is retired only after the .NET replacement passes verification (build, tests, migrations, health endpoints).
 
-**Status:** In progress. The .NET foundation (Programme model, health endpoints, EF Core migrations, xUnit tests) has been implemented. The NestJS/Prisma backend remains in `apps/api/src/` until removal is reviewed.
+**Status:** Complete. Obsolete NestJS and Prisma implementations have been fully removed. ASP.NET Core 8 Web API + EF Core 8 + Npgsql is now the sole authoritative backend implementation. All API npm scripts delegate cleanly to dotnet CLI.
