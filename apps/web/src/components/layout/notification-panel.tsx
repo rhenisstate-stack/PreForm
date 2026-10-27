@@ -3,9 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, ShoppingCart, ArrowRight } from "lucide-react";
+import { Bell, ShoppingCart, ArrowRight, User, BookOpen, CreditCard, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,34 +13,29 @@ import {
   DropdownMenuSeparator,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetTrigger,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetClose,
-} from "@/components/ui/sheet";
+import { useNotifications } from "@/lib/notifications-context";
+import { useCart } from "@/lib/cart-context";
+import { useAuth } from "@/lib/auth-context";
 import type { Announcement } from "@/types";
 
 interface AnnouncementsData {
-  announcements: Announcement[] | null;
-  isLoading: boolean;
+  announcements?: Announcement[] | null;
+  isLoading?: boolean;
 }
 
 interface NotificationPanelProps {
-  announcementsData: AnnouncementsData;
+  announcementsData?: AnnouncementsData;
 }
 
 export function NotificationPanel({ announcementsData }: NotificationPanelProps) {
   const router = useRouter();
-  const { announcements, isLoading } = announcementsData;
-  const visibleAnnouncements = React.useMemo(
-    () => announcements ?? [],
-    [announcements]
-  );
-  const unreadCount = visibleAnnouncements.filter((a) => !a.dismissed).length;
+  const notifContext = useNotifications();
+
+  // If notifications context is available, use it; otherwise fallback to announcementsData
+  const notifications = notifContext?.notifications ?? [];
+  const unreadCount = notifContext?.unreadCount ?? (announcementsData?.announcements?.filter((a) => !a.dismissed).length ?? 0);
+  const markAsRead = notifContext?.markAsRead ?? (() => {});
+  const markAllAsRead = notifContext?.markAllAsRead ?? (() => {});
 
   return (
     <div className="relative inline-block text-foreground">
@@ -49,7 +43,7 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
         <DropdownMenuTrigger asChild>
           <button
             className="relative p-2 rounded-md text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-            aria-label="Notifications and support"
+            aria-label={`Notifications and support${unreadCount > 0 ? ` (${unreadCount} unread)` : ""}`}
           >
             <Bell className="h-5 w-5" aria-hidden="true" />
             {unreadCount > 0 ? (
@@ -60,38 +54,54 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-80 bg-popover border border-border shadow-lg p-2">
-          <DropdownMenuLabel className="font-semibold text-foreground px-2 py-1.5">
-            Notifications
-          </DropdownMenuLabel>
+          <div className="flex items-center justify-between px-2 py-1.5">
+            <DropdownMenuLabel className="font-semibold text-foreground p-0">
+              Notifications
+            </DropdownMenuLabel>
+            {unreadCount > 0 && (
+              <button
+                type="button"
+                onClick={() => markAllAsRead()}
+                className="text-xs text-secondary hover:underline focus-visible:outline-none"
+              >
+                Mark all as read
+              </button>
+            )}
+          </div>
           <DropdownMenuSeparator />
-          {isLoading ? (
-            <div className="px-3 py-6 text-sm text-center text-muted-foreground">Loading announcements…</div>
-          ) : visibleAnnouncements.length === 0 ? (
+          {notifications.length === 0 ? (
             <div className="px-3 py-6 text-sm text-center text-muted-foreground">
-              <p className="font-medium text-foreground">No new announcements</p>
+              <p className="font-medium text-foreground">No new notifications</p>
               <p className="text-xs text-muted-foreground mt-1">Platform updates and alerts will appear here.</p>
             </div>
           ) : (
-            <div className="max-h-60 overflow-y-auto space-y-1">
-              {visibleAnnouncements.map((a) => (
+            <div className="max-h-72 overflow-y-auto space-y-1">
+              {notifications.map((n) => (
                 <div
-                  key={a.id}
-                  className="flex flex-col gap-1 px-3 py-2 cursor-pointer rounded-md hover:bg-accent transition-colors"
+                  key={n.id}
+                  className={`flex flex-col gap-1 px-3 py-2 cursor-pointer rounded-md transition-colors ${
+                    n.read ? "hover:bg-accent opacity-80" : "bg-secondary/10 hover:bg-secondary/15 border-l-2 border-secondary font-medium"
+                  }`}
                   onClick={() => {
-                    if (a.destination) {
-                      router.push(a.destination);
+                    markAsRead(n.id);
+                    if (n.destination) {
+                      router.push(n.destination);
                     }
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter" && a.destination) {
-                      router.push(a.destination);
+                    if (e.key === "Enter" && n.destination) {
+                      markAsRead(n.id);
+                      router.push(n.destination);
                     }
                   }}
                   role="button"
                   tabIndex={0}
                 >
-                  <div className="text-sm font-medium text-foreground">{a.title}</div>
-                  <div className="text-xs text-muted-foreground">{a.summary}</div>
+                  <div className="flex items-start justify-between gap-1">
+                    <span className="text-sm font-semibold text-foreground leading-snug">{n.title}</span>
+                    <span className="text-[10px] text-muted-foreground shrink-0">{n.timestamp}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{n.summary}</div>
                 </div>
               ))}
             </div>
@@ -113,11 +123,20 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
 }
 
 interface ProfileMenuProps {
-  user: { displayName: string; role: string; email: string };
+  user: { displayName?: string; role?: string; email?: string; name?: string };
 }
 
 export function ProfileMenu({ user }: ProfileMenuProps) {
   const router = useRouter();
+  const { logout } = useAuth();
+  const displayName = user.displayName || user.name || "Candidate";
+  const initial = displayName.charAt(0).toUpperCase();
+
+  const handleLogout = async () => {
+    await logout();
+    router.push("/");
+    router.refresh();
+  };
 
   return (
     <DropdownMenu>
@@ -127,31 +146,48 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
           aria-label="User profile menu"
         >
           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-white text-xs font-bold">
-            {user.displayName.charAt(0).toUpperCase()}
+            {initial}
           </span>
-          <span className="hidden sm:inline font-medium">{user.displayName}</span>
+          <span className="hidden sm:inline font-medium">{displayName}</span>
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 bg-popover border border-border shadow-lg p-1">
         <DropdownMenuLabel className="px-2 py-1.5">
-          <p className="text-sm font-semibold text-foreground">{user.displayName}</p>
-          <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+          <p className="text-sm font-semibold text-foreground">{displayName}</p>
+          {user.email && <p className="text-xs text-muted-foreground truncate">{user.email}</p>}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href="/courses" className="cursor-pointer">My Courses</Link>
+          <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
+            <User className="h-4 w-4" />
+            <span>My Profile</span>
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/subscriptions" className="cursor-pointer">My Subscriptions</Link>
+          <Link href="/courses" className="flex items-center gap-2 cursor-pointer">
+            <BookOpen className="h-4 w-4" />
+            <span>My Courses</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/subscriptions" className="flex items-center gap-2 cursor-pointer">
+            <CreditCard className="h-4 w-4" />
+            <span>My Subscriptions</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/cart" className="flex items-center gap-2 cursor-pointer">
+            <ShoppingCart className="h-4 w-4" />
+            <span>Shopping Cart</span>
+          </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => {
-            router.push("/sign-in");
-          }}
-          className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+          onClick={handleLogout}
+          className="flex items-center gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
         >
-          Sign out
+          <LogOut className="h-4 w-4" />
+          <span>Sign out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -162,61 +198,22 @@ interface CartButtonProps {
   itemCount?: number;
 }
 
-export function CartButton({ itemCount = 0 }: CartButtonProps) {
-  const [open, setOpen] = React.useState(false);
+export function CartButton({ itemCount }: CartButtonProps) {
+  const cart = useCart();
+  const effectiveCount = itemCount !== undefined ? itemCount : (cart?.itemCount ?? 0);
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>
-        <button
-          className="relative p-2 rounded-md text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          aria-label={`Shopping cart (${itemCount} items)`}
-        >
-          <ShoppingCart className="h-5 w-5" aria-hidden="true" />
-          {itemCount > 0 && (
-            <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-bold text-white">
-              {itemCount}
-            </span>
-          )}
-        </button>
-      </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-md bg-card border-l border-border p-6 flex flex-col justify-between">
-        <div>
-          <SheetHeader className="px-0 pt-0 text-left">
-            <SheetTitle className="text-2xl font-serif text-foreground">Your Cart</SheetTitle>
-            <SheetDescription className="text-muted-foreground">
-              PREform NCLEX preparation plans and study subscriptions.
-            </SheetDescription>
-          </SheetHeader>
-
-          <div className="mt-8 flex flex-col items-center justify-center text-center py-12 px-4 rounded-xl border border-dashed border-border bg-muted/50">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-background border border-border text-muted-foreground mb-4">
-              <ShoppingCart className="h-8 w-8 text-secondary" />
-            </div>
-            <h3 className="text-base font-semibold text-foreground">Your cart is empty</h3>
-            <p className="mt-1 text-sm text-muted-foreground max-w-xs">
-              Explore our NCLEX-RN and NCLEX-PN pathways to choose a preparation plan tailored to your exam.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-auto pt-6 border-t border-border space-y-3">
-          <SheetClose asChild>
-            <Button className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium" asChild>
-              <Link href="/subscriptions">
-                Browse Preparation Plans
-              </Link>
-            </Button>
-          </SheetClose>
-          <SheetClose asChild>
-            <Button variant="outline" className="w-full" asChild>
-              <Link href="/courses">
-                View All Courses
-              </Link>
-            </Button>
-          </SheetClose>
-        </div>
-      </SheetContent>
-    </Sheet>
+    <Link
+      href="/cart"
+      className="relative p-2 rounded-md text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      aria-label={`Shopping cart (${effectiveCount} items)`}
+    >
+      <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+      {effectiveCount > 0 && (
+        <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-bold text-white">
+          {effectiveCount}
+        </span>
+      )}
+    </Link>
   );
 }

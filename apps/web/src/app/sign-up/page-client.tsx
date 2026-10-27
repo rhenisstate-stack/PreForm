@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { PasswordStrengthIndicator } from "@/components/auth/password-strength-indicator";
 import { signUpSchema, type SignUpInput } from "@/lib/validation/auth";
+import { useAuth } from "@/lib/auth-context";
 
 function getGoogleErrorMessage(errorParam: string | null): string | null {
   if (errorParam === "google_not_configured") {
@@ -39,7 +40,9 @@ function getGoogleErrorMessage(errorParam: string | null): string | null {
 }
 
 export function SignUpPageClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const { registerUser } = useAuth();
   const errorParam = searchParams.get("error");
   const urlError = React.useMemo(() => getGoogleErrorMessage(errorParam), [errorParam]);
 
@@ -70,18 +73,24 @@ export function SignUpPageClient() {
   const currentPathway = watch("pathway");
   const currentPassword = watch("password");
 
-  const onSubmit = async (_data: SignUpInput) => {
-    void _data;
+  const onSubmit = async (data: SignUpInput) => {
     setErrorMessage(null);
     setIsLoading(true);
 
-    // Simulate authenticating against backend contract
-    setTimeout(() => {
+    try {
+      const result = await registerUser(data);
+      if (result.success) {
+        const from = searchParams.get("from") || searchParams.get("returnUrl") || "/courses";
+        router.push(from);
+        router.refresh();
+      } else {
+        setErrorMessage(result.error || "Failed to create account. Please check your details.");
+      }
+    } catch {
+      setErrorMessage("An unexpected network error occurred. Please try again.");
+    } finally {
       setIsLoading(false);
-      setErrorMessage(
-        "Account services are currently in preview mode. Live student registration will be activated in Phase 4."
-      );
-    }, 800);
+    }
   };
 
   return (

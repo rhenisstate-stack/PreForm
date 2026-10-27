@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -19,6 +19,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { signInSchema, type SignInInput } from "@/lib/validation/auth";
+import { useAuth } from "@/lib/auth-context";
 
 function getGoogleErrorMessage(errorParam: string | null): string | null {
   if (errorParam === "google_not_configured") {
@@ -37,7 +38,9 @@ function getGoogleErrorMessage(errorParam: string | null): string | null {
 }
 
 export function SignInPageClient() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const { login } = useAuth();
   const errorParam = searchParams.get("error");
   const urlError = React.useMemo(() => getGoogleErrorMessage(errorParam), [errorParam]);
 
@@ -62,18 +65,24 @@ export function SignInPageClient() {
     mode: "onTouched",
   });
 
-  const onSubmit = async (_data: SignInInput) => {
-    void _data;
+  const onSubmit = async (data: SignInInput) => {
     setErrorMessage(null);
     setIsLoading(true);
 
-    // Simulate authenticating against backend contract
-    setTimeout(() => {
+    try {
+      const result = await login(data);
+      if (result.success) {
+        const from = searchParams.get("from") || searchParams.get("returnUrl") || "/courses";
+        router.push(from);
+        router.refresh();
+      } else {
+        setErrorMessage(result.error || "Failed to sign in. Please verify your credentials.");
+      }
+    } catch {
+      setErrorMessage("An unexpected network error occurred. Please try again.");
+    } finally {
       setIsLoading(false);
-      setErrorMessage(
-        "Account services are currently in preview mode. Live student authentication will be available in Phase 4."
-      );
-    }, 800);
+    }
   };
 
   return (

@@ -2,8 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Menu, X, ChevronDown, User, ShoppingCart, BookOpen, CreditCard, LogOut } from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/navigation-menu";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { NotificationPanel, ProfileMenu, CartButton } from "@/components/layout/notification-panel";
+import { useAuth } from "@/lib/auth-context";
+import { useCart } from "@/lib/cart-context";
 
 interface PublicHeaderProps {
   user?: { displayName: string; role: string; email: string };
@@ -87,11 +89,30 @@ const mobileNavLinks: NavLink[] = [
   { label: "Contact Us", href: "/contact" },
 ];
 
-export default function PublicHeader({ user }: PublicHeaderProps) {
+export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
+  const authContext = useAuth();
+  const cartContext = useCart();
+
+  const authUser = authContext?.user;
+  const isAuthenticated = authContext?.isAuthenticated ?? false;
+  const logout = authContext?.logout ?? (async () => {});
+  const cartItemCount = cartContext?.itemCount ?? 0;
+
+  const currentUser = propUser || (isAuthenticated ? authUser : null);
+  const isAuthed = Boolean(propUser || isAuthenticated);
+
   const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  const handleMobileLogout = async () => {
+    closeMobileMenu();
+    await logout();
+    router.push("/");
+    router.refresh();
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-card/90 backdrop-blur-md">
@@ -155,16 +176,21 @@ export default function PublicHeader({ user }: PublicHeaderProps) {
 
         <div className="flex items-center gap-1.5 sm:gap-2">
           <ThemeSwitcher />
-          <CartButton itemCount={0} />
-          <NotificationPanel announcementsData={{ announcements: null, isLoading: false }} />
 
-          <div className="hidden lg:block h-5 w-px bg-border mx-1" aria-hidden="true" />
+          {/* Authenticated Icons: Shopping Cart, Notifications, Profile Avatar */}
+          {isAuthed && currentUser ? (
+            <>
+              <CartButton />
+              <NotificationPanel />
 
-          {user ? (
-            <div className="hidden lg:block">
-              <ProfileMenu user={user} />
-            </div>
+              <div className="hidden lg:block h-5 w-px bg-border mx-1" aria-hidden="true" />
+
+              <div className="hidden lg:block">
+                <ProfileMenu user={currentUser} />
+              </div>
+            </>
           ) : (
+            /* Unauthenticated Visitor Actions: Sign In & Create Account (Cart/Notif/Profile omitted from DOM) */
             <div className="hidden lg:flex items-center gap-2">
               <Link
                 href="/sign-in"
@@ -174,7 +200,7 @@ export default function PublicHeader({ user }: PublicHeaderProps) {
               </Link>
               <Link
                 href="/sign-up"
-                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-sm"
               >
                 Create account
               </Link>
@@ -215,27 +241,56 @@ export default function PublicHeader({ user }: PublicHeaderProps) {
           </div>
 
           <div className="mt-5 pt-5 border-t border-border">
-            {user ? (
+            {isAuthed && currentUser ? (
               <div className="space-y-3">
                 <div className="px-3 py-1 text-sm font-medium text-muted-foreground">
-                  Signed in as <span className="font-semibold text-foreground">{user.displayName}</span>
+                  Signed in as{" "}
+                  <span className="font-semibold text-foreground">
+                    {currentUser.displayName || (currentUser as { name?: string }).name || "Candidate"}
+                  </span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <Link
+                    href="/profile"
+                    onClick={closeMobileMenu}
+                    className="flex items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                  >
+                    <User className="h-4 w-4" />
+                    <span>My Profile</span>
+                  </Link>
+                  <Link
+                    href="/cart"
+                    onClick={closeMobileMenu}
+                    className="flex items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    <span>Cart {cartItemCount > 0 ? `(${cartItemCount})` : ""}</span>
+                  </Link>
+                  <Link
                     href="/courses"
                     onClick={closeMobileMenu}
-                    className="block text-center rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                    className="flex items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
                   >
-                    My Courses
+                    <BookOpen className="h-4 w-4" />
+                    <span>My Courses</span>
                   </Link>
                   <Link
                     href="/subscriptions"
                     onClick={closeMobileMenu}
-                    className="block text-center rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+                    className="flex items-center justify-center gap-1.5 rounded-md border border-border px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
                   >
-                    My Subscriptions
+                    <CreditCard className="h-4 w-4" />
+                    <span>Subscriptions</span>
                   </Link>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleMobileLogout}
+                  className="flex w-full items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  <span>Sign out</span>
+                </button>
               </div>
             ) : (
               <div className="flex flex-col gap-2">
@@ -249,7 +304,7 @@ export default function PublicHeader({ user }: PublicHeaderProps) {
                 <Link
                   href="/sign-up"
                   onClick={closeMobileMenu}
-                  className="flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
+                  className="flex w-full items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
                 >
                   Create account
                 </Link>

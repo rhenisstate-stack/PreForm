@@ -29,7 +29,7 @@ const plans: PlanCardProps[] = [
       "Detailed answer rationales",
       "Basic progress tracking",
     ],
-    href: "/subscriptions?plan=starter",
+    href: "/cart?add=rn-starter",
   },
   {
     name: "Pro",
@@ -45,7 +45,7 @@ const plans: PlanCardProps[] = [
       "Priority support",
     ],
     isFeatured: true,
-    href: "/subscriptions?plan=pro",
+    href: "/cart?add=rn-pro",
   },
   {
     name: "Premium",
@@ -59,7 +59,7 @@ const plans: PlanCardProps[] = [
       "AI-assisted study tools (limited)",
       "Personalised study recommendations",
     ],
-    href: "/subscriptions?plan=premium",
+    href: "/cart?add=prep-premium",
   },
 ];
 
