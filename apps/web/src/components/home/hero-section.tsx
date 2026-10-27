@@ -9,7 +9,6 @@ import {
   BookOpen,
   Play,
   HeartPulse,
-  Activity,
   ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";

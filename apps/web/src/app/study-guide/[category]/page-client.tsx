@@ -17,7 +17,6 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
 } from "lucide-react";
 import { STUDY_GUIDE_CATEGORIES, type StudyGuideCategory } from "@/lib/study-guide-data";
 

@@ -14,12 +14,11 @@ import {
   BookOpen,
   ArrowRight,
   Sparkles,
-  ShieldCheck,
   GraduationCap,
   Clock,
   ChevronRight,
 } from "lucide-react";
-import { STUDY_GUIDE_CATEGORIES, type StudyGuideCategory } from "@/lib/study-guide-data";
+import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
 
 function getCategoryIcon(iconName: string) {
   switch (iconName) {

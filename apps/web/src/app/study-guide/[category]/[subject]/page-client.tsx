@@ -10,12 +10,9 @@ import {
   AlertTriangle,
   Lightbulb,
   Pill,
-  BookOpen,
   ArrowRight,
-  Share2,
   Printer,
   Sparkles,
-  Layers,
 } from "lucide-react";
 import type { StudyGuideCategory, StudyGuideSubject, StudyGuideSection } from "@/lib/study-guide-data";
 
