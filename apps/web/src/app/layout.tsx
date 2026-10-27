@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { BRAND } from "@/lib/brand";
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://prepfordnclex.com"),
   title: {
     default: `${BRAND.fullName} | ${BRAND.tagline}`,
     template: `%s | ${BRAND.fullName}`,
