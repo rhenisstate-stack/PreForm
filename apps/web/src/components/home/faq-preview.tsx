@@ -48,16 +48,16 @@ export function FAQPreview() {
       <div className="mx-auto max-w-7xl">
         <div className="flex justify-between items-end md:flex-col md:items-start gap-6 lg:max-w-3xl lg:mx-auto">
           <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-green">
+            <p className="text-xs font-medium uppercase tracking-wider text-secondary">
               Frequently asked questions
             </p>
-            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
               Questions learners ask
             </h2>
           </div>
           <Link
             href="/faq"
-            className="inline-flex items-center gap-1 text-sm font-medium text-green transition-colors"
+            className="inline-flex items-center gap-1 text-sm font-medium text-secondary hover:underline transition-colors"
           >
             View all FAQs <ChevronRight className="h-3 w-3" />
           </Link>
@@ -67,11 +67,11 @@ export function FAQPreview() {
           {faqs.map((f) => (
             <Card key={f.question}>
               <CardHeader className="flex flex-row items-center justify-between py-3">
-                <CardTitle>{f.question}</CardTitle>
-                <ChevronRight className="h-4 w-4 text-muted" />
+                <CardTitle className="text-base font-serif">{f.question}</CardTitle>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent className="pt-0 pb-4">
-                <p className="text-sm text-muted leading-relaxed">{f.answer}</p>
+                <p className="text-sm text-muted-foreground leading-relaxed">{f.answer}</p>
               </CardContent>
             </Card>
           ))}

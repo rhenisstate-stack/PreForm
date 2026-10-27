@@ -12,19 +12,19 @@ export function FinalCTA() {
             <h2 className="text-3xl font-serif font-semibold tracking-tight text-white sm:text-4xl">
               Ready to begin?
             </h2>
-            <p className="mt-6 max-w-xl mx-auto text-secondary/50 text-lg lg:text-xl">
+            <p className="mt-6 max-w-xl mx-auto text-white/90 text-lg lg:text-xl">
               Choose your pathway, explore a subscription, and start practising
               with confidence.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" className="w-full sm:w-auto bg-card text-foreground hover:bg-accent hover:text-accent-foreground">
-                Buy Now
+              <Button size="lg" asChild className="w-full sm:w-auto bg-card text-card-foreground hover:bg-card/90 shadow-md">
+                <Link href="/subscriptions">Buy Now</Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
+              <Button size="lg" variant="outline" asChild className="w-full sm:w-auto bg-transparent border-white text-white hover:bg-white/10 hover:text-white">
                 <Link href="/sign-up">Try Now</Link>
               </Button>
             </div>
-            <p className="mt-6 text-xs text-muted-foreground">
+            <p className="mt-6 text-xs text-white/80">
               Independent preparation platform. Not affiliated with or endorsed
               by NCSBN.
             </p>

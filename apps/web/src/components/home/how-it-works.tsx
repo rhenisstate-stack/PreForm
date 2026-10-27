@@ -41,13 +41,13 @@ export function HowItWorks() {
     <section id="how-it-works" className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-3xl lg:mx-auto">
-          <p className="text-xs font-medium uppercase tracking-wider text-green">
+          <p className="text-xs font-medium uppercase tracking-wider text-secondary">
             How Preform works
           </p>
-          <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+          <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
             A clear path to exam day
           </h2>
-          <p className="mt-6 text-muted max-w-xl mx-auto lg:text-lg">
+          <p className="mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg">
             Work through a structured learning journey that adapts to your
             progress and keeps you focused on what matters most.
           </p>
@@ -60,8 +60,8 @@ export function HowItWorks() {
                 {s.number}
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-ink">{s.title}</h3>
-                <p className="mt-2 text-sm text-muted leading-relaxed">{s.description}</p>
+                <h3 className="text-lg font-semibold text-foreground">{s.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{s.description}</p>
               </div>
             </div>
           ))}

@@ -93,10 +93,10 @@ export function CourseFinderQuiz() {
       <section id="course-finder" className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="text-center lg:max-w-2xl lg:mx-auto">
-            <p className="text-xs font-medium uppercase tracking-wider text-green">
+            <p className="text-xs font-medium uppercase tracking-wider text-secondary">
               Your recommendation
             </p>
-            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
               Based on your answers
             </h2>
             <Card className="mt-8">
@@ -130,23 +130,23 @@ export function CourseFinderQuiz() {
     <section id="course-finder" className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-2xl lg:mx-auto">
-          <p className="text-xs font-medium uppercase tracking-wider text-green">
+          <p className="text-xs font-medium uppercase tracking-wider text-secondary">
             Course finder
           </p>
-          <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+          <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
             Find the right preparation for you
           </h2>
-          <p className="mt-6 text-muted max-w-lg mx-auto lg:text-lg">
+          <p className="mt-6 text-muted-foreground max-w-lg mx-auto lg:text-lg">
             Answer a few quick questions and we’ll suggest a starting point.
           </p>
         </div>
 
         <div className="mt-12 flex justify-center">
           <div className="w-full max-w-md">
-            <div className="w-full border-border rounded-full h-2 mb-6">
+            <div className="w-full border-border rounded-full h-2 mb-6 bg-muted">
               <div className="h-2 bg-secondary rounded-full" style={{ width: `${progress}%` }} />
             </div>
-            <p className="text-xs text-muted text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Step {currentStep + 1} of {questions.length}
             </p>
           </div>

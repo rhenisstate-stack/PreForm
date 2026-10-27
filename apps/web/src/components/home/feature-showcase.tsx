@@ -52,13 +52,13 @@ export function FeatureShowcase() {
     <section id="features" className="pt-20 pb-24 px-4 bg-card lg:pt-32 lg:pb-32 lg:px-8 border-y border-border">
       <div className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-3xl lg:mx-auto">
-          <p className="text-xs font-medium uppercase tracking-wider text-green">
+          <p className="text-xs font-medium uppercase tracking-wider text-secondary">
             Our features
           </p>
-          <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+          <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
             Everything you need to prepare
           </h2>
-          <p className="mt-6 text-muted max-w-xl mx-auto lg:text-lg">
+          <p className="mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg">
             Structured practice, honest scoring, and clear explanations built
             for NCLEX-RN and NCLEX-PN candidates.
           </p>
@@ -68,16 +68,16 @@ export function FeatureShowcase() {
           {features.map((f) => (
             <Card key={f.title} className="flex flex-col h-full">
               <CardHeader className="pb-3">
-                <div className="flex shrink-0 items-center rounded-md bg-green/10 p-3 text-green" aria-hidden="true">
+                <div className="flex shrink-0 items-center rounded-md bg-secondary/15 p-3 text-secondary" aria-hidden="true">
                   {f.icon}
                 </div>
                 <CardTitle className="mt-4">{f.title}</CardTitle>
-                <CardDescription className="mt-2 text-sm">{f.description}</CardDescription>
+                <CardDescription className="mt-2 text-sm text-muted-foreground">{f.description}</CardDescription>
               </CardHeader>
               <CardFooter className="pt-4">
                 <Link
                   href={f.href}
-                  className="inline-flex items-center gap-1 text-sm font-medium text-green transition-colors"
+                  className="inline-flex items-center gap-1 text-sm font-medium text-secondary hover:underline transition-colors"
                 >
                   {f.label} <ArrowRight className="h-3 w-3" />
                 </Link>

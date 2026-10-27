@@ -30,15 +30,15 @@ export function HeroSection() {
     >
       <div className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-4xl lg:mx-auto">
-          <p className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-green">
-            <span className="relative -top-[1px] h-1.5 w-1.5 rounded-full bg-green" />
+          <p className="inline-flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-secondary">
+            <span className="relative -top-[1px] h-1.5 w-1.5 rounded-full bg-secondary" />
             For NCLEX-RN and NCLEX-PN candidates
           </p>
-          <h1 className="mt-6 text-4xl font-serif font-semibold tracking-tight text-ink sm:text-5xl lg:text-6xl">
+          <h1 className="mt-6 text-4xl font-serif font-semibold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Prepare with clarity.{" "}
-            <span className="block text-green italic">Progress with purpose.</span>
+            <span className="block text-secondary italic">Progress with purpose.</span>
           </h1>
-          <p className="mt-6 max-w-2xl text-lg text-muted leading-relaxed lg:mx-auto lg:text-xl">
+          <p className="mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed lg:mx-auto lg:text-xl">
             A focused learning platform for future nurses—built around sound
             clinical reasoning, original study content, and honest measures of
             progress.
@@ -55,7 +55,7 @@ export function HeroSection() {
               </Link>
             </Button>
           </div>
-          <p className="mt-8 text-sm text-muted">
+          <p className="mt-8 text-sm text-muted-foreground">
             Independent preparation platform. Not affiliated with or endorsed by
             NCSBN.
           </p>
@@ -63,7 +63,7 @@ export function HeroSection() {
 
         {/* Pathway selector */}
         <div className="mt-16 max-w-2xl mx-auto space-y-4">
-          <p className="text-sm font-medium text-muted uppercase tracking-wider">
+          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
             Select your pathway
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -79,10 +79,12 @@ export function HeroSection() {
                   aria-pressed={selected}
                 >
                   <div>
-                    <span className="block text-sm font-semibold text-ink">
+                    <span className={`block text-sm font-semibold ${selected ? "text-primary-foreground" : "text-foreground"}`}>
                       {p.label}
                     </span>
-                    <span className="text-xs text-muted">{p.description}</span>
+                    <span className={`text-xs ${selected ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                      {p.description}
+                    </span>
                   </div>
                   {selected ? (
                     <ChevronRight className="h-4 w-4 text-primary-foreground" />
@@ -92,10 +94,10 @@ export function HeroSection() {
             })}
           </div>
           {selectedPathway && (
-            <div className="mt-3 flex items-center gap-2 rounded-md bg-green/10 px-3 py-2 text-xs text-green-dark">
-              <span className="relative -top-[1px] h-1.5 w-1.5 rounded-full bg-green-dark" />
+            <div className="mt-3 flex items-center gap-2 rounded-md bg-secondary/15 px-3 py-2 text-xs text-secondary font-medium">
+              <span className="relative -top-[1px] h-1.5 w-1.5 rounded-full bg-secondary" />
               Selected{" "}
-              <span className="font-medium">{selectedPathway.toUpperCase()}</span>{" "}
+              <span className="font-semibold">{selectedPathway.toUpperCase()}</span>{" "}
               pathway
             </div>
           )}
