@@ -7,9 +7,9 @@ namespace Preform.Api.Controllers;
 [Route("api/v1/health")]
 public class HealthController : ControllerBase
 {
-    private readonly IHealthCheckService _healthCheckService;
+    private readonly HealthCheckService _healthCheckService;
 
-    public HealthController(IHealthCheckService healthCheckService)
+    public HealthController(HealthCheckService healthCheckService)
     {
         _healthCheckService = healthCheckService;
     }

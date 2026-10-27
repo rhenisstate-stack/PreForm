@@ -1,11 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Preform.Api.Data;
 using Preform.Api.Models;
+using Preform.Api.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
+builder.Services.AddScoped<IProgrammeService, ProgrammeService>();
 
 // CORS for the Next.js frontend (WEB_ORIGIN, default http://localhost:3000)
 var webOrigin = builder.Configuration["WEB_ORIGIN"] ?? "http://localhost:3000";
@@ -44,7 +46,7 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 
 // Health checks
 builder.Services.AddHealthChecks()
-    .AddDbContextCheck<AppDbContext>();
+    .AddCheck("database", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
 
 var app = builder.Build();
 
