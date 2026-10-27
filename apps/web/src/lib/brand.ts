@@ -5,28 +5,28 @@
 
 export const BRAND = {
   name: "PrepFord",
-  fullName: "PrepFord NCLEX",
+  fullName: "PrepFord",
   tagline: "Prepare with clarity",
   description:
     "A focused learning platform for NCLEX-RN and NCLEX-PN candidates, built with clinical accuracy and transparent assessment at its core.",
   logo: {
-    assetPath: "/favicon-logo.jpg",
-    alt: "PrepFord NCLEX logo",
+    assetPath: "/prepford-logo.jpg",
+    alt: "PrepFord logo",
     width: 1024,
     height: 1024,
   },
   favicon: {
-    assetPath: "/favicon-logo.jpg",
+    assetPath: "/prepford-logo.jpg",
     type: "image/jpeg",
   },
-  supportEmail: "support@prepfordnclex.com",
-  educatorsEmail: "educators@prepfordnclex.com",
-  legalEmail: "legal@prepfordnclex.com",
+  supportEmail: "support@prepford.com",
+  educatorsEmail: "educators@prepford.com",
+  legalEmail: "legal@prepford.com",
   socials: {
-    linkedin: "https://www.linkedin.com/company/prepford-nclex",
-    twitter: "https://x.com/prepfordnclex",
-    youtube: "https://www.youtube.com/@prepfordnclex",
-    facebook: "https://www.facebook.com/prepfordnclex",
+    linkedin: "https://www.linkedin.com/company/prepford",
+    twitter: "https://x.com/prepford",
+    youtube: "https://www.youtube.com/@prepford",
+    facebook: "https://www.facebook.com/prepford",
   },
 } as const;
 
