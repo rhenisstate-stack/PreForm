@@ -28,12 +28,12 @@ export function ContactPageClient() {
                 <CardTitle>Message sent</CardTitle>
               </CardHeader>
               <CardContent className="pt-0 pb-6">
-                <p className="text-muted text-center">
+                <p className="text-muted-foreground text-center">
                   Thank you for contacting Preform NCLEX. We&rsquo;ll get back
                   to you as soon as possible.
                 </p>
                 <div className="mt-6 flex justify-center">
-                  <Link href="/" className="text-sm font-medium text-green hover:underline">
+                  <Link href="/" className="text-sm font-medium text-secondary hover:underline">
                     Return to homepage
                   </Link>
                 </div>
@@ -45,13 +45,13 @@ export function ContactPageClient() {
         <section className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
           <div className="mx-auto max-w-3xl">
             <div className="text-center">
-              <p className="text-xs font-medium uppercase tracking-wider text-green">
+              <p className="text-xs font-medium uppercase tracking-wider text-secondary">
                 Get in touch
               </p>
-              <h1 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+              <h1 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
                 Contact us
               </h1>
-              <p className="mt-6 text-muted max-w-xl mx-auto lg:text-lg">
+              <p className="mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg">
                 Have a question about Preform NCLEX? Select the category that
                 best matches your enquiry.
               </p>
@@ -65,7 +65,7 @@ export function ContactPageClient() {
               className="mt-12 space-y-4"
             >
               <div className="space-y-2">
-                <label htmlFor="category" className="text-sm font-medium text-ink">
+                <label htmlFor="category" className="text-sm font-medium text-foreground">
                   Enquiry category
                 </label>
                 <select
@@ -82,40 +82,40 @@ export function ContactPageClient() {
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="name" className="text-sm font-medium text-ink">
+                <label htmlFor="name" className="text-sm font-medium text-foreground">
                   Your name
                 </label>
                 <input
                   id="name"
                   type="text"
                   placeholder="Enter your name"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-ink">
+                <label htmlFor="email" className="text-sm font-medium text-foreground">
                   Email address
                 </label>
                 <input
                   id="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   required
                 />
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="message" className="text-sm font-medium text-ink">
+                <label htmlFor="message" className="text-sm font-medium text-foreground">
                   Message
                 </label>
                 <textarea
                   id="message"
                   rows={5}
                   placeholder="How can we help you?"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   required
                 />
               </div>

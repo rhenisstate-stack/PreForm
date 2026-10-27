@@ -28,27 +28,27 @@ const testimonials: TestimonialProps[] = [
 
 export function TestimonialsPreview() {
   return (
-    <section id="testimonials-preview" className="pt-20 pb-24 px-4 bg-muted lg:pt-32 lg:pb-32 lg:px-8">
+    <section id="testimonials-preview" className="pt-20 pb-24 px-4 bg-muted/50 lg:pt-32 lg:pb-32 lg:px-8 border-y border-border">
       <div className="mx-auto max-w-7xl">
         <div className="text-center max-w-2xl mx-auto">
-          <Quote className="mx-auto h-8 w-8 text-green/40" aria-hidden="true" />
-          <p className="mt-6 text-xl font-serif text-white/90 leading-relaxed sm:text-2xl">
+          <Quote className="mx-auto h-8 w-8 text-secondary/60" aria-hidden="true" />
+          <p className="mt-6 text-xl font-serif text-foreground leading-relaxed sm:text-2xl">
             Preform helped me focus on the reasoning behind each answer, not just memorisation.
           </p>
-          <p className="mt-4 text-sm text-green/60">— Jordan M., RN candidate</p>
+          <p className="mt-4 text-sm text-muted-foreground">— Jordan M., RN candidate</p>
         </div>
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-6">
           {testimonials.map((t) => (
-            <Card key={t.name} className="border-secondary/30 bg-card/50">
-              <CardContent className="pb-4">
-                <Quote className="mb-4 h-5 w-5 text-green/40" aria-hidden="true" />
-                <p className="text-sm text-white/80 leading-relaxed">{t.content}</p>
+            <Card key={t.name} className="border-border bg-card shadow-sm">
+              <CardContent className="pt-6 pb-4">
+                <Quote className="mb-4 h-5 w-5 text-secondary/60" aria-hidden="true" />
+                <p className="text-sm text-foreground leading-relaxed">{t.content}</p>
               </CardContent>
-              <CardFooter className="pt-0 border-t border-secondary/20">
+              <CardFooter className="pt-3 border-t border-border">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-foreground">{t.name}</span>
-                    <span className="text-xs text-secondary-foreground">&middot; {t.role}</span>
+                    <span className="text-xs text-muted-foreground">&middot; {t.role}</span>
                   </div>
                 <BadgeInline pathway={t.pathway} />
               </CardFooter>
@@ -59,7 +59,7 @@ export function TestimonialsPreview() {
         <div className="mt-12 flex justify-center">
           <Link
             href="/testimonials"
-            className="inline-flex items-center gap-1 text-sm font-medium text-foreground underline underline-offset-4 hover:text-secondary/80"
+            className="inline-flex items-center gap-1 text-sm font-medium text-secondary hover:underline transition-colors"
           >
             Read all testimonials <ArrowRight className="h-3 w-3" />
           </Link>

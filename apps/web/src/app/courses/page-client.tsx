@@ -53,13 +53,13 @@ export function CoursesPageClient() {
       <section className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="text-center lg:max-w-3xl lg:mx-auto">
-            <p className="text-xs font-medium uppercase tracking-wider text-green">
+            <p className="text-xs font-medium uppercase tracking-wider text-secondary">
               Course catalogue
             </p>
-            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
               Choose your preparation
             </h2>
-            <p className="mt-6 text-muted max-w-xl mx-auto lg:text-lg">
+            <p className="mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg">
               Select the pathway that matches your licensure exam. Each course
               includes original questions, detailed rationales, and progress tracking.
             </p>
@@ -75,12 +75,12 @@ export function CoursesPageClient() {
                   <CardTitle className="mt-2 text-lg">{c.title}</CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <p className="text-sm text-muted">{c.description}</p>
+                  <p className="text-sm text-muted-foreground">{c.description}</p>
                 </CardContent>
                 <CardFooter>
                   <Link
                     href={c.href}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-green transition-colors"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-secondary hover:underline transition-colors"
                   >
                     Explore {c.pathway} <ArrowRight className="h-3 w-3" />
                   </Link>
@@ -91,7 +91,7 @@ export function CoursesPageClient() {
 
           {programmes && programmes.length > 0 && (
             <div className="mt-16 border-t border-border pt-8">
-              <h3 className="text-lg font-semibold text-ink mb-4">Available pathways</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Available pathways</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {programmes.map((p: { code: string; displayName: string; isActive: boolean }) => (
                   <Card key={p.code}>
@@ -99,14 +99,14 @@ export function CoursesPageClient() {
                       <CardTitle>{p.displayName}</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <p className="text-sm text-muted">
+                      <p className="text-sm text-muted-foreground">
                         {p.isActive ? "Available for enrolment" : "Not currently available"}
                       </p>
                     </CardContent>
                     <CardFooter>
                       <Link
                         href={`/nclex-${p.code.toLowerCase()}`}
-                        className="text-sm font-medium text-green hover:underline"
+                        className="text-sm font-medium text-secondary hover:underline"
                       >
                         View {p.displayName}
                       </Link>
