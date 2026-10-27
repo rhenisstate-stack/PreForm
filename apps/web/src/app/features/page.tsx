@@ -49,13 +49,13 @@ export default function FeaturesPage() {
       <section className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="text-center lg:max-w-3xl lg:mx-auto">
-            <p className="text-xs font-medium uppercase tracking-wider text-green">
+            <p className="text-xs font-medium uppercase tracking-wider text-secondary">
               Our features
             </p>
-            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
               Everything you need to prepare
             </h2>
-            <p className="mt-6 text-muted max-w-xl mx-auto lg:text-lg">
+            <p className="mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg">
               Structured practice, honest scoring, and clear explanations built
               for NCLEX-RN and NCLEX-PN candidates.
             </p>
@@ -64,11 +64,11 @@ export default function FeaturesPage() {
           <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f) => (
               <div key={f.title} className="rounded-xl border border-border bg-card p-6 shadow-sm">
-                <div className="flex shrink-0 items-center justify-center rounded-md bg-secondary/10 p-3 text-secondary mb-4" aria-hidden="true">
+                <div className="flex shrink-0 items-center justify-center rounded-md bg-secondary/15 p-3 text-secondary mb-4" aria-hidden="true">
                   <span className="text-sm font-bold">{f.icon}</span>
                 </div>
-                <h3 className="text-lg font-serif font-semibold text-ink">{f.title}</h3>
-                <p className="mt-2 text-sm text-muted leading-relaxed">{f.description}</p>
+                <h3 className="text-lg font-serif font-semibold text-foreground">{f.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{f.description}</p>
               </div>
             ))}
           </div>

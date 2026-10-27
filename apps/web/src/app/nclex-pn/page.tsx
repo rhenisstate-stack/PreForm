@@ -33,13 +33,13 @@ export default function PNPage() {
       <section className="pt-20 pb-16 px-4 lg:pt-24 lg:pb-24 lg:px-8">
         <div className="mx-auto max-w-3xl">
           <div className="text-center">
-            <p className="text-xs font-medium uppercase tracking-wider text-green">
+            <p className="text-xs font-medium uppercase tracking-wider text-secondary">
               NCLEX-PN Pathway
             </p>
-            <h1 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+            <h1 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
               Practical / Vocational Nurse Preparation
             </h1>
-            <p className="mt-6 text-muted max-w-xl mx-auto lg:text-lg">
+            <p className="mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg">
               Everything you need to prepare for the National Council Licensure
               Examination for Practical Nurses — original questions, detailed
               rationales, and honest progress measurement.
@@ -47,7 +47,7 @@ export default function PNPage() {
             <div className="mt-10 flex justify-center">
               <Link
                 href="/subscriptions?programme=PN"
-                className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+                className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 shadow-sm"
               >
                 Explore PN Subscriptions <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
