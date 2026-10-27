@@ -22,7 +22,7 @@ describe("Blog Data & Pagination Logic", () => {
     const post = getBlogPostBySlug("mastering-ngn-clinical-judgment-measurement-model");
     expect(post).toBeDefined();
     expect(post?.title).toContain("Clinical Judgment Measurement Model");
-    expect(post?.author.name).toBe("PREform Nurse Educator Team");
+    expect(post?.author.name).toBe("PrepFord Nurse Educator Team");
 
     const nonExistent = getBlogPostBySlug("non-existent-article-slug");
     expect(nonExistent).toBeUndefined();

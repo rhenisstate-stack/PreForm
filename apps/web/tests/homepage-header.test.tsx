@@ -44,14 +44,14 @@ const renderHeader = (props?: { user?: { displayName: string; role: string; emai
 };
 
 describe("Homepage header integration", () => {
-  it("renders the PREform header on the homepage", () => {
+  it("renders the PrepFord header on the homepage", () => {
     const { header } = renderHeader();
 
     // Header is present
     expect(header).toBeInTheDocument();
 
     // Logo and homepage link
-    const logoLink = within(header).getByRole("link", { name: "PREform NCLEX home" });
+    const logoLink = within(header).getByRole("link", { name: "PrepFord NCLEX home" });
     expect(logoLink).toBeInTheDocument();
 
     // Main navigation links are visible in header

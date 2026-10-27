@@ -49,7 +49,7 @@ describe("PublicFooter Component & Navigation Integrity", () => {
   it("contains verified external social profiles without dead hash anchors", () => {
     render(<PublicFooter />);
 
-    const socialLinks = screen.getAllByRole("link", { name: /Follow PREform NCLEX on/i });
+    const socialLinks = screen.getAllByRole("link", { name: /Follow PrepFord NCLEX on/i });
     expect(socialLinks.length).toBe(4);
 
     for (const link of socialLinks) {
@@ -65,7 +65,7 @@ describe("PublicFooter Component & Navigation Integrity", () => {
     render(<PublicFooter />);
 
     expect(
-      screen.getByText(/PREform NCLEX is an independent test preparation and educational platform/i)
+      screen.getByText(/PrepFord NCLEX is an independent test preparation and educational platform/i)
     ).toBeInTheDocument();
   });
 });
