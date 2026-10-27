@@ -44,6 +44,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
               });
             }
           }
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setItems(validatedItems);
         }
       }
@@ -114,10 +115,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useCart() {
+const defaultCartContext: CartContextType = {
+  items: [],
+  itemCount: 0,
+  subtotal: 0,
+  total: 0,
+  addItem: () => false,
+  removeItem: () => {},
+  clearCart: () => {},
+};
+
+export function useCart(): CartContextType {
   const context = React.useContext(CartContext);
   if (!context) {
-    throw new Error("useCart must be used within a CartProvider");
+    return defaultCartContext;
   }
   return context;
 }

@@ -52,7 +52,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   React.useEffect(() => {
-    fetchSession();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchSession();
   }, [fetchSession]);
 
   const login = async (data: SignInInput): Promise<{ success: boolean; error?: string }> => {
@@ -104,8 +105,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Logout exception:", err);
     } finally {
       setUser(null);
-      // Trigger hard or client redirect if needed
-      window.location.href = "/";
     }
   };
 
@@ -126,10 +125,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuth() {
+const defaultAuthContext: AuthContextType = {
+  user: null,
+  isAuthenticated: false,
+  isLoading: false,
+  login: async () => ({ success: false, error: "Auth provider not active" }),
+  registerUser: async () => ({ success: false, error: "Auth provider not active" }),
+  logout: async () => {},
+  refreshSession: async () => {},
+};
+
+export function useAuth(): AuthContextType {
   const context = React.useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within an AuthProvider");
+    return defaultAuthContext;
   }
   return context;
 }

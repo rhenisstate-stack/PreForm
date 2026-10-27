@@ -28,10 +28,10 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 import PublicHeader from "@/components/layout/public-header";
 import { HomeClient } from "@/app/home-client";
 
-const renderHeader = () => {
+const renderHeader = (props?: { user?: { displayName: string; role: string; email: string } }) => {
   const utils = render(
     <>
-      <PublicHeader />
+      <PublicHeader {...props} />
       <main id="main-content">
         <HomeClient />
       </main>
@@ -181,13 +181,15 @@ describe("Homepage header integration", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows shopping cart button in header", () => {
+  it("does not show shopping cart or notifications for unauthenticated visitors", () => {
     const { header } = renderHeader();
 
-    const cartButton = within(header).getByRole("button", {
-      name: /Shopping cart/i,
-    });
-    expect(cartButton).toBeInTheDocument();
+    expect(
+      within(header).queryByRole("link", { name: /Shopping cart/i })
+    ).not.toBeInTheDocument();
+    expect(
+      within(header).queryByRole("button", { name: /Notifications and support/i })
+    ).not.toBeInTheDocument();
   });
 
   it("shows theme selector in header", () => {
@@ -199,15 +201,6 @@ describe("Homepage header integration", () => {
     expect(themeButton).toBeInTheDocument();
   });
 
-  it("shows notification bell icon in header", () => {
-    const { header } = renderHeader();
-
-    const bellButton = within(header).getByRole("button", {
-      name: /Notifications and support/i,
-    });
-    expect(bellButton).toBeInTheDocument();
-  });
-
   it("shows sign-in and create account for unauthenticated users", () => {
     const { header } = renderHeader();
 
@@ -217,5 +210,33 @@ describe("Homepage header integration", () => {
     expect(
       within(header).getByRole("link", { name: /Create account/i })
     ).toBeInTheDocument();
+  });
+
+  it("shows cart, notifications, and profile menu when authenticated and hides sign-in", () => {
+    const { header } = renderHeader({
+      user: { displayName: "Candidate Nurse", role: "candidate", email: "candidate@example.com" },
+    });
+
+    const cartLink = within(header).getByRole("link", {
+      name: /Shopping cart/i,
+    });
+    expect(cartLink).toBeInTheDocument();
+
+    const bellButton = within(header).getByRole("button", {
+      name: /Notifications and support/i,
+    });
+    expect(bellButton).toBeInTheDocument();
+
+    const profileMenu = within(header).getByRole("button", {
+      name: /User profile menu/i,
+    });
+    expect(profileMenu).toBeInTheDocument();
+
+    expect(
+      within(header).queryByRole("link", { name: /Sign in/i })
+    ).not.toBeInTheDocument();
+    expect(
+      within(header).queryByRole("link", { name: /Create account/i })
+    ).not.toBeInTheDocument();
   });
 });

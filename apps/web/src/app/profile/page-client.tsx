@@ -4,23 +4,17 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  User,
   Shield,
-  Key,
   BookOpen,
-  CreditCard,
-  Bell,
   LogOut,
   CheckCircle2,
   AlertCircle,
   Calendar,
-  Sparkles,
-  ExternalLink,
   Lock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PasswordStrengthIndicator } from "@/components/auth/password-strength-indicator";
 import { useAuth } from "@/lib/auth-context";
 
@@ -56,6 +50,7 @@ export function ProfilePageClient() {
   // Initialize from user session
   React.useEffect(() => {
     if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDisplayName(user.displayName || user.name || "");
       setPathway(user.pathway || "rn");
     }

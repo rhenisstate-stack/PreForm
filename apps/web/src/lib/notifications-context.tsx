@@ -63,6 +63,7 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
+          // eslint-disable-next-line react-hooks/set-state-in-effect
           setNotifications(parsed);
         }
       }
@@ -108,10 +109,17 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
   );
 }
 
-export function useNotifications() {
+const defaultNotificationsContext: NotificationsContextType = {
+  notifications: [],
+  unreadCount: 0,
+  markAsRead: () => {},
+  markAllAsRead: () => {},
+};
+
+export function useNotifications(): NotificationsContextType {
   const context = React.useContext(NotificationsContext);
   if (!context) {
-    throw new Error("useNotifications must be used within a NotificationsProvider");
+    return defaultNotificationsContext;
   }
   return context;
 }

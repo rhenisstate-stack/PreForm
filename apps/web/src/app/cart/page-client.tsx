@@ -6,15 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ShoppingCart,
   Trash2,
-  ArrowRight,
   ShieldCheck,
   CheckCircle2,
   Clock,
   Sparkles,
-  HelpCircle,
   Lock,
   Tag,
-  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
