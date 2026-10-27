@@ -171,6 +171,29 @@ body {
   color: var(--muted-foreground);
 }
 
+/* Button contrast safeguard: ensure primary and blue-filled buttons always have high-contrast text in Light & Dark modes */
+.bg-primary,
+button.bg-primary,
+a.bg-primary,
+[class*="bg-primary"] {
+  color: var(--primary-foreground);
+}
+
+.bg-blue-600,
+.bg-blue-700,
+.bg-blue-800,
+button.bg-blue-600,
+button.bg-blue-700 {
+  color: #FFFFFF !important;
+}
+
+button.bg-primary *,
+button.bg-secondary *,
+a.bg-primary *,
+a.bg-secondary * {
+  color: inherit;
+}
+
 a {
   color: inherit;
   text-decoration: none;
