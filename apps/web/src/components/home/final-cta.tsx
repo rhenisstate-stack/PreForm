@@ -17,10 +17,10 @@ export function FinalCTA() {
               with confidence.
             </p>
             <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Button size="lg" asChild className="w-full sm:w-auto bg-card text-card-foreground hover:bg-card/90 shadow-md">
+              <Button size="lg" asChild className="w-full sm:w-auto bg-white text-[#142B4A] hover:bg-white/95 font-semibold shadow-md">
                 <Link href="/cart?add=rn-pro">Buy Now</Link>
               </Button>
-              <Button size="lg" variant="outline" asChild className="w-full sm:w-auto bg-transparent border-white text-white hover:bg-white/10 hover:text-white">
+              <Button size="lg" variant="outline" asChild className="w-full sm:w-auto bg-transparent border-white text-white hover:bg-white/10 hover:text-white font-medium">
                 <Link href="/sign-up">Try Now</Link>
               </Button>
             </div>

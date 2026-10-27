@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, ChevronRight, Play } from "lucide-react";
+import { ChevronRight, Sparkles, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const pathwayOptions = [
@@ -11,17 +11,23 @@ const pathwayOptions = [
     label: "NCLEX-RN",
     description: "Registered Nurse preparation",
     code: "RN",
+    overviewHref: "/nclex-rn",
+    enrollHref: "/cart?add=rn-pro",
   },
   {
     id: "pn",
     label: "NCLEX-PN",
     description: "Practical / Vocational Nurse preparation",
     code: "PN",
+    overviewHref: "/nclex-pn",
+    enrollHref: "/cart?add=pn-pro",
   },
 ] as const;
 
 export function HeroSection() {
   const [selectedPathway, setSelectedPathway] = React.useState<string | null>(null);
+
+  const activeOption = pathwayOptions.find((p) => p.id === selectedPathway);
 
   return (
     <section
@@ -44,27 +50,28 @@ export function HeroSection() {
             progress.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" asChild className="w-full sm:w-auto">
-              <Link href="/subscriptions">
-                Buy Now <ArrowRight className="ml-2 h-4 w-4" />
+            <Button size="lg" asChild className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm">
+              <Link href="/courses">
+                <BookOpen className="mr-2 h-4 w-4" />
+                Explore Courses
               </Link>
             </Button>
-            <Button variant="outline" size="lg" asChild className="w-full sm:w-auto">
-              <Link href="/sign-up">
-                Try Now <Play className="ml-2 h-4 w-4" />
+            <Button variant="outline" size="lg" asChild className="w-full sm:w-auto font-medium">
+              <Link href="#course-finder">
+                <Sparkles className="mr-2 h-4 w-4 text-secondary" />
+                Find Your Course
               </Link>
             </Button>
           </div>
           <p className="mt-8 text-sm text-muted-foreground">
-            Independent preparation platform. Not affiliated with or endorsed by
-            NCSBN.
+            Independent preparation platform. Not affiliated with or endorsed by NCSBN.
           </p>
         </div>
 
         {/* Pathway selector */}
         <div className="mt-16 max-w-2xl mx-auto space-y-4">
-          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-            Select your pathway
+          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider text-center sm:text-left">
+            Select your licensure pathway
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {pathwayOptions.map((p) => {
@@ -74,8 +81,8 @@ export function HeroSection() {
                   key={p.id}
                   variant={selected ? "default" : "outline"}
                   size="lg"
-                  className="w-full justify-between text-left border-2 transition-all"
-                  onClick={() => setSelectedPathway(p.id)}
+                  className="w-full justify-between text-left border-2 transition-all h-auto py-3.5"
+                  onClick={() => setSelectedPathway(selected ? null : p.id)}
                   aria-pressed={selected}
                 >
                   <div>
@@ -87,18 +94,35 @@ export function HeroSection() {
                     </span>
                   </div>
                   {selected ? (
-                    <ChevronRight className="h-4 w-4 text-primary-foreground" />
+                    <ChevronRight className="h-4 w-4 text-primary-foreground shrink-0" />
                   ) : null}
                 </Button>
               );
             })}
           </div>
-          {selectedPathway && (
-            <div className="mt-3 flex items-center gap-2 rounded-md bg-secondary/15 px-3 py-2 text-xs text-secondary font-medium">
-              <span className="relative -top-[1px] h-1.5 w-1.5 rounded-full bg-secondary" />
-              Selected{" "}
-              <span className="font-semibold">{selectedPathway.toUpperCase()}</span>{" "}
-              pathway
+
+          {activeOption && (
+            <div className="mt-3 rounded-lg border border-secondary/30 bg-secondary/10 p-4 text-xs text-foreground flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-secondary shrink-0" />
+                <span>
+                  Selected <strong className="text-foreground">{activeOption.label}</strong>: Tailored study materials &amp; CAT assessment packs.
+                </span>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <Link
+                  href={activeOption.overviewHref}
+                  className="font-medium text-secondary hover:underline"
+                >
+                  View Details →
+                </Link>
+                <Link
+                  href={activeOption.enrollHref}
+                  className="inline-flex items-center rounded bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                >
+                  Enroll Now
+                </Link>
+              </div>
             </div>
           )}
         </div>
