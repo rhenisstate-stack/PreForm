@@ -11,14 +11,14 @@ interface FAQItem {
 const faqs: Record<string, FAQItem[]> = {
   general: [
     {
-      question: "What is Preform NCLEX?",
+      question: "What is PrepFord NCLEX?",
       answer:
-        "Preform NCLEX is a learning platform for candidates preparing for the NCLEX-RN and NCLEX-PN licensure examinations.",
+        "PrepFord NCLEX is a learning platform for candidates preparing for the NCLEX-RN and NCLEX-PN licensure examinations.",
     },
     {
-      question: "Is Preform affiliated with NCSBN?",
+      question: "Is PrepFord affiliated with NCSBN?",
       answer:
-        "No. PREform is independent and not affiliated with, endorsed by, or sponsored by the National Council of State Boards of Nursing, Inc.",
+        "No. PrepFord is independent and not affiliated with, endorsed by, or sponsored by the National Council of State Boards of Nursing, Inc.",
     },
   ],
   "nclex-rn": [

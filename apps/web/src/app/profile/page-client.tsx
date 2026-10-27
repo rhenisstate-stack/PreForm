@@ -174,7 +174,7 @@ export function ProfilePageClient() {
           </div>
           <h1 className="text-2xl font-serif font-bold text-foreground">Sign In Required</h1>
           <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-            Please sign in to your PREform account to manage your profile, exam pathway, active subscriptions, and study tools.
+            Please sign in to your PrepFord account to manage your profile, exam pathway, active subscriptions, and study tools.
           </p>
           <div className="mt-6 flex flex-col gap-2.5">
             <Button asChild size="lg" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">

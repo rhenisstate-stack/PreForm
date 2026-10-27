@@ -3,9 +3,9 @@ import Link from "next/link";
 import { ArrowRight, AlertCircle, FileText } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | PREform NCLEX",
+  title: "Privacy Policy | PrepFord NCLEX",
   description:
-    "Comprehensive PREform NCLEX Privacy Policy detailing how candidate data, Google authentication, session cookies, assessment telemetry, and personal information are processed and protected.",
+    "Comprehensive PrepFord NCLEX Privacy Policy detailing how candidate data, Google authentication, session cookies, assessment telemetry, and personal information are processed and protected.",
 };
 
 interface PolicySection {
@@ -26,8 +26,8 @@ const policySections: PolicySection[] = [
     title: "1. Introduction & Scope",
     content: {
       paragraphs: [
-        "Welcome to PREform NCLEX ('PREform', 'we', 'us', or 'our'). PREform provides an independent examination preparation platform designed specifically for nursing licensure candidates preparing for the National Council Licensure Examination for Registered Nurses (NCLEX-RN®) and Practical Nurses (NCLEX-PN®).",
-        "This Privacy Policy explains how PREform collects, uses, stores, discloses, and protects your personal data when you interact with our website, access our online question banks and diagnostic assessments, register an account, or communicate with our support personnel.",
+        "Welcome to PrepFord NCLEX ('PrepFord', 'we', 'us', or 'our'). PrepFord provides an independent examination preparation platform designed specifically for nursing licensure candidates preparing for the National Council Licensure Examination for Registered Nurses (NCLEX-RN®) and Practical Nurses (NCLEX-PN®).",
+        "This Privacy Policy explains how PrepFord collects, uses, stores, discloses, and protects your personal data when you interact with our website, access our online question banks and diagnostic assessments, register an account, or communicate with our support personnel.",
         "We are committed to transparent, lawful, and secure handling of candidate information. Please read this Privacy Policy carefully to understand our data practices and your rights regarding your personal information.",
       ],
     },
@@ -43,10 +43,10 @@ const policySections: PolicySection[] = [
         {
           title: "Key Definitions",
           items: [
-            "'Candidate' or 'User' refers to any individual accessing or registered on the PREform platform.",
+            "'Candidate' or 'User' refers to any individual accessing or registered on the PrepFord platform.",
             "'Personal Data' means any information relating to an identified or identifiable natural person.",
             "'Assessment Telemetry' refers to question responses, timing data, topic proficiencies, exam scores, and readiness calculations generated during study sessions.",
-            "'Services' encompasses the PREform web application, NCLEX question banks, rationales, diagnostic evaluations, and customer support channels.",
+            "'Services' encompasses the PrepFord web application, NCLEX question banks, rationales, diagnostic evaluations, and customer support channels.",
           ],
         },
       ],
@@ -57,7 +57,7 @@ const policySections: PolicySection[] = [
     title: "3. Information Users Provide Directly",
     content: {
       paragraphs: [
-        "We collect personal data that you voluntarily provide to us when interacting with the PREform platform:",
+        "We collect personal data that you voluntarily provide to us when interacting with the PrepFord platform:",
       ],
       subsections: [
         {
@@ -77,7 +77,7 @@ const policySections: PolicySection[] = [
     title: "4. Account & Authentication Information",
     content: {
       paragraphs: [
-        "To safeguard candidate accounts and prevent unauthorized access to prep materials, PREform implements secure authentication mechanisms:",
+        "To safeguard candidate accounts and prevent unauthorized access to prep materials, PrepFord implements secure authentication mechanisms:",
         "Email/Password Authentication: When registering with email and password, passwords are never stored in plaintext. They are evaluated against high-entropy baseline security policies (zxcvbn score 3 or higher) and cryptographically hashed using salted, industry-standard key derivation functions before storage.",
         "Federated Google Authentication: When you sign in using Google OAuth 2.0, authentication occurs directly via Google's identity servers using the Authorization Code Flow with Proof Key for Code Exchange (PKCE, RFC 7636). We collect only your verified email address, full name, and unique Google account identifier provided by Google Identity Services. We never receive or store your Google account password.",
       ],
@@ -107,7 +107,7 @@ const policySections: PolicySection[] = [
     title: "6. Cookies & Tracking Technologies",
     content: {
       paragraphs: [
-        "PREform uses strictly necessary and functional cookies to ensure platform security, maintain login state, and remember your visual display preferences:",
+        "PrepFord uses strictly necessary and functional cookies to ensure platform security, maintain login state, and remember your visual display preferences:",
       ],
       subsections: [
         {
@@ -126,7 +126,7 @@ const policySections: PolicySection[] = [
     title: "7. Third-Party Integrations & Google Identity",
     content: {
       paragraphs: [
-        "PREform integrates select third-party infrastructure providers to support essential platform operations:",
+        "PrepFord integrates select third-party infrastructure providers to support essential platform operations:",
         "Google OAuth 2.0 / OpenID Connect: Used for streamlined, secure single sign-on. Your interaction with Google's authentication modal is governed by the Google Privacy Policy (https://policies.google.com/privacy).",
         "Hosting & Infrastructure: Our web servers and databases reside within certified, compliant cloud hosting facilities adhering to SOC 2 and ISO/IEC 27001 data center security standards.",
       ],
@@ -178,7 +178,7 @@ const policySections: PolicySection[] = [
     title: "10. Data Sharing & Service Providers",
     content: {
       paragraphs: [
-        "PREform does not sell, rent, monetize, or trade candidate personal data. We never disclose your personal information to third-party advertisers or unauthorized data brokers.",
+        "PrepFord does not sell, rent, monetize, or trade candidate personal data. We never disclose your personal information to third-party advertisers or unauthorized data brokers.",
         "We share personal data strictly with vetted service providers bound by enforceable data processing agreements, including cloud hosting providers, database operators, customer support ticketing infrastructure, and transaction processors. These providers are authorized to process data solely to execute contracted services on our behalf.",
       ],
     },
@@ -188,7 +188,7 @@ const policySections: PolicySection[] = [
     title: "11. Payments & Transaction Information",
     content: {
       paragraphs: [
-        "Subscription transactions on PREform are processed entirely through certified, PCI-DSS Level 1 compliant payment gateways. PREform does not store, intercept, or handle raw payment card numbers, CVVs, or bank account credentials on its servers.",
+        "Subscription transactions on PrepFord are processed entirely through certified, PCI-DSS Level 1 compliant payment gateways. PrepFord does not store, intercept, or handle raw payment card numbers, CVVs, or bank account credentials on its servers.",
         "We receive only transaction confirmation metadata (e.g., transaction identifier, subscription plan purchased, renewal date, and billing postal code) required for subscription provisioning and accounting records.",
       ],
     },
@@ -237,7 +237,7 @@ const policySections: PolicySection[] = [
     title: "15. International Transfers",
     content: {
       paragraphs: [
-        "PREform operates infrastructure that may process data on servers located outside your country of residence. Where personal data is transferred across international boundaries, we ensure appropriate cross-border transfer safeguards, such as Standard Contractual Clauses (SCCs) or adequacy decisions recognized by relevant regulatory authorities.",
+        "PrepFord operates infrastructure that may process data on servers located outside your country of residence. Where personal data is transferred across international boundaries, we ensure appropriate cross-border transfer safeguards, such as Standard Contractual Clauses (SCCs) or adequacy decisions recognized by relevant regulatory authorities.",
       ],
     },
   },
@@ -268,7 +268,7 @@ const policySections: PolicySection[] = [
     title: "17. Children's & Minor Privacy",
     content: {
       paragraphs: [
-        "PREform is designed exclusively for adult nursing candidates and nursing students preparing for professional licensure. We do not knowingly market to or solicit personal data from individuals under the age of 18. If we learn that personal data from a child has been collected, we will take prompt steps to delete that information.",
+        "PrepFord is designed exclusively for adult nursing candidates and nursing students preparing for professional licensure. We do not knowingly market to or solicit personal data from individuals under the age of 18. If we learn that personal data from a child has been collected, we will take prompt steps to delete that information.",
       ],
     },
   },
@@ -277,7 +277,7 @@ const policySections: PolicySection[] = [
     title: "18. Third-Party Links",
     content: {
       paragraphs: [
-        "Our platform and blog articles may contain informational hyperlinks to external websites (such as regulatory state boards of nursing, NCSBN publications, or clinical guidelines). PREform is not responsible for the privacy practices, content, or policies of third-party websites. We encourage you to review their policies upon visiting.",
+        "Our platform and blog articles may contain informational hyperlinks to external websites (such as regulatory state boards of nursing, NCSBN publications, or clinical guidelines). PrepFord is not responsible for the privacy practices, content, or policies of third-party websites. We encourage you to review their policies upon visiting.",
       ],
     },
   },
@@ -297,8 +297,8 @@ const policySections: PolicySection[] = [
     content: {
       paragraphs: [
         "If you have questions, comments, or wish to exercise any of your statutory data protection rights, please contact our designated Data Protection team:",
-        "Email: privacy@preformnclex.com (or via our Contact Us portal at /contact)",
-        "Postal Address: PREform NCLEX Data Protection Office, Attn: Privacy Compliance Officer.",
+        "Email: privacy@prepfordnclex.com (or via our Contact Us portal at /contact)",
+        "Postal Address: PrepFord NCLEX Data Protection Office, Attn: Privacy Compliance Officer.",
       ],
     },
   },
@@ -335,7 +335,7 @@ export default function PrivacyPolicyPage() {
               Last Updated: <strong className="text-foreground">October 27, 2026</strong> • Version 2.0
             </p>
             <p className="mt-4 text-base text-muted-foreground leading-relaxed">
-              This Privacy Policy details how PREform NCLEX safeguards candidate data, session tokens, assessment telemetry, and personal information across our nursing licensure preparation services.
+              This Privacy Policy details how PrepFord NCLEX safeguards candidate data, session tokens, assessment telemetry, and personal information across our nursing licensure preparation services.
             </p>
           </div>
         </div>
@@ -346,7 +346,7 @@ export default function PrivacyPolicyPage() {
         <div className="mx-auto max-w-7xl flex items-center gap-3 text-xs text-amber-900 dark:text-amber-200">
           <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <span>
-            <strong>Administrative Notice:</strong> This document reflects the technical architecture and data processing operations of the PREform platform. Commercial deployment remains subject to formal legal review by qualified counsel.
+            <strong>Administrative Notice:</strong> This document reflects the technical architecture and data processing operations of the PrepFord platform. Commercial deployment remains subject to formal legal review by qualified counsel.
           </span>
         </div>
       </section>

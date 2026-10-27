@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Courses | PREform NCLEX",
+  title: "Courses | PrepFord NCLEX",
   description:
     "Browse NCLEX-RN and NCLEX-PN preparation courses, practice questions, and subscription plans.",
 };

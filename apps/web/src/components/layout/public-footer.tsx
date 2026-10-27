@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Linkedin, Twitter, Youtube, Facebook } from "lucide-react";
+import { BRAND } from "@/lib/brand";
 
 interface FooterColumn {
   heading: string;
@@ -44,7 +45,7 @@ const footerColumns: FooterColumn[] = [
     links: [
       { label: "Terms and Conditions", href: "/terms-and-conditions" },
       { label: "Privacy Policy", href: "/privacy-policy" },
-      { label: "About PREform", href: "/" },
+      { label: "About PrepFord", href: "/" },
     ],
   },
 ];
@@ -52,22 +53,22 @@ const footerColumns: FooterColumn[] = [
 const socialLinks = [
   {
     name: "LinkedIn",
-    href: "https://www.linkedin.com/company/preform-nclex",
+    href: BRAND.socials.linkedin,
     icon: Linkedin,
   },
   {
     name: "X (formerly Twitter)",
-    href: "https://x.com/preformnclex",
+    href: BRAND.socials.twitter,
     icon: Twitter,
   },
   {
     name: "YouTube",
-    href: "https://www.youtube.com/@preformnclex",
+    href: BRAND.socials.youtube,
     icon: Youtube,
   },
   {
     name: "Facebook",
-    href: "https://www.facebook.com/preformnclex",
+    href: BRAND.socials.facebook,
     icon: Facebook,
   },
 ];
@@ -85,12 +86,18 @@ export default function PublicFooter() {
             <Link
               href="/"
               className="inline-flex items-center gap-2.5 text-xl font-serif font-semibold text-foreground hover:opacity-90 transition-opacity"
+              aria-label={`${BRAND.fullName} home`}
             >
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-white font-serif font-bold text-lg shadow-sm">
-                P
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={BRAND.logo.assetPath}
+                alt={BRAND.logo.alt}
+                className="h-8 w-8 rounded-lg object-contain shadow-xs border border-border/50"
+                width={32}
+                height={32}
+              />
               <span>
-                PREform <span className="text-xs font-sans font-bold text-secondary uppercase">NCLEX</span>
+                {BRAND.name} <span className="text-xs font-sans font-bold text-secondary uppercase">NCLEX</span>
               </span>
             </Link>
 
@@ -113,7 +120,7 @@ export default function PublicFooter() {
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex h-9 w-9 items-center justify-center rounded-md border border-input bg-background text-muted-foreground hover:bg-muted hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors shadow-sm"
-                      aria-label={`Follow PREform NCLEX on ${social.name}`}
+                      aria-label={`Follow ${BRAND.fullName} on ${social.name}`}
                     >
                       <Icon className="h-4 w-4" />
                     </a>
@@ -152,12 +159,12 @@ export default function PublicFooter() {
           <div className="rounded-lg bg-muted/40 p-4 border border-border/60">
             <p className="text-xs text-muted-foreground leading-relaxed">
               <strong className="text-foreground">Official Examination Disclaimer: </strong>
-              PREform NCLEX is an independent test preparation and educational platform. NCLEX-RN® and NCLEX-PN® are registered trademarks of the National Council of State Boards of Nursing, Inc. (NCSBN). PREform NCLEX is not affiliated with, sponsored by, or endorsed by the National Council of State Boards of Nursing, Inc. Diagnostic readiness indicators are signals based on practice performance and do not guarantee an official examination pass result.
+              {BRAND.fullName} is an independent test preparation and educational platform. NCLEX-RN® and NCLEX-PN® are registered trademarks of the National Council of State Boards of Nursing, Inc. (NCSBN). {BRAND.fullName} is not affiliated with, sponsored by, or endorsed by the National Council of State Boards of Nursing, Inc. Diagnostic readiness indicators are signals based on practice performance and do not guarantee an official examination pass result.
             </p>
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground pt-2">
-            <p>© {currentYear} PREform NCLEX. All rights reserved.</p>
+            <p>© {currentYear} {BRAND.fullName}. All rights reserved.</p>
             <div className="flex items-center gap-6">
               <Link href="/terms-and-conditions" className="hover:text-secondary transition-colors">
                 Terms of Use

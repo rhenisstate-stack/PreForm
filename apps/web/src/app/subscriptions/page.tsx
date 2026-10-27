@@ -1,5 +1,5 @@
 export const metadata = {
-  title: "Subscriptions | PREform NCLEX",
+  title: "Subscriptions | PrepFord NCLEX",
   description:
     "Compare NCLEX-RN and NCLEX-PN subscription plans and select the preparation option that fits your needs.",
 };

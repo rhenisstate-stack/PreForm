@@ -18,13 +18,13 @@ export async function generateMetadata({
 
   if (!post) {
     return {
-      title: "Article Not Found | PREform NCLEX",
+      title: "Article Not Found | PrepFord NCLEX",
       description: "The requested NCLEX educational article could not be found.",
     };
   }
 
   return {
-    title: `${post.title} | PREform NCLEX Blog`,
+    title: `${post.title} | PrepFord NCLEX Blog`,
     description: post.excerpt,
     openGraph: {
       title: post.title,

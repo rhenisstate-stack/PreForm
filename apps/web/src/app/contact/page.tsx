@@ -1,7 +1,7 @@
 export const metadata = {
-  title: "Contact Us | PREform NCLEX",
+  title: "Contact Us | PrepFord NCLEX",
   description:
-    "Contact PREform NCLEX for account, subscription, technical support, or educator enquiries.",
+    "Contact PrepFord NCLEX for account, subscription, technical support, or educator enquiries.",
 };
 
 import { ContactPageClient } from "./page-client";

@@ -120,7 +120,7 @@ export function BlogPageClient() {
               </span>
             </div>
             <h1 className="text-3xl font-serif font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              PREform NCLEX Blog
+              PrepFord NCLEX Blog
             </h1>
             <p className="mt-4 text-base sm:text-lg text-muted-foreground leading-relaxed">
               Clinical study strategies, Next Gen NCLEX breakdowns, high-alert pharmacology reviews, and evidence-based test preparation guides written by nurse educators.

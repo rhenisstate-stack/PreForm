@@ -1,7 +1,7 @@
 export const metadata = {
-  title: "Create Account | PREform NCLEX",
+  title: "Create Account | PrepFord NCLEX",
   description:
-    "Create a Preform NCLEX account to start preparing for your NCLEX-RN or NCLEX-PN exam.",
+    "Create a PrepFord NCLEX account to start preparing for your NCLEX-RN or NCLEX-PN exam.",
 };
 
 import { Suspense } from "react";

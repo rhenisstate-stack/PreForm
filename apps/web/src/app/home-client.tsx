@@ -6,6 +6,8 @@ import { ArrowRight, ShoppingCart, CheckCircle2 } from "lucide-react";
 import { useProgrammes } from "@/hooks/use-api";
 import { HeroSection } from "@/components/home/hero-section";
 import { ExamPathwayCards } from "@/components/home/exam-pathway-cards";
+import { FreeDemoSection } from "@/components/home/free-demo-section";
+import { QuestionLearningShowcase } from "@/components/home/question-learning-showcase";
 import { FeatureShowcase } from "@/components/home/feature-showcase";
 import { HowItWorks } from "@/components/home/how-it-works";
 import { CourseFinderQuiz } from "@/components/home/course-finder";
@@ -23,6 +25,8 @@ export function HomeClient() {
     <>
       <HeroSection />
       <ExamPathwayCards />
+      <FreeDemoSection />
+      <QuestionLearningShowcase />
       {isLoading ? (
         <div className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
           <div className="mx-auto max-w-7xl text-center">

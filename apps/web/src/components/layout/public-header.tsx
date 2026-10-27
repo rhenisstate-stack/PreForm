@@ -16,6 +16,7 @@ import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { NotificationPanel, ProfileMenu, CartButton } from "@/components/layout/notification-panel";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
+import { BRAND } from "@/lib/brand";
 
 interface PublicHeaderProps {
   user?: { displayName: string; role: string; email: string };
@@ -120,13 +121,18 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
         <Link
           href="/"
           className="flex items-center gap-2.5 text-xl font-serif font-semibold text-foreground transition-opacity hover:opacity-90"
-          aria-label="PREform NCLEX home"
+          aria-label={`${BRAND.fullName} home`}
         >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground font-serif font-bold text-lg">
-            P
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={BRAND.logo.assetPath}
+            alt={BRAND.logo.alt}
+            className="h-8 w-8 rounded-lg object-contain shadow-xs border border-border/50"
+            width={32}
+            height={32}
+          />
           <span className="flex items-baseline gap-1 font-serif">
-            <span className="tracking-tight text-foreground">PREform</span>
+            <span className="tracking-tight text-foreground">{BRAND.name}</span>
             <span className="text-xs font-sans font-bold tracking-wider text-secondary uppercase">
               NCLEX
             </span>

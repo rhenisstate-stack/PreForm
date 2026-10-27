@@ -1,7 +1,7 @@
 export const metadata = {
-  title: "Sign In | PREform NCLEX",
+  title: "Sign In | PrepFord NCLEX",
   description:
-    "Sign in to your Preform NCLEX account to access your learning dashboard, practice questions, and subscription.",
+    "Sign in to your PrepFord NCLEX account to access your learning dashboard, practice questions, and subscription.",
 };
 
 import { Suspense } from "react";

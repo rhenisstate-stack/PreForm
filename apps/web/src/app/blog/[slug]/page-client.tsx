@@ -37,7 +37,7 @@ export function ArticleDetailClient({ post, relatedPosts }: ArticleDetailClientP
   };
 
   const shareUrl = typeof window !== "undefined" ? encodeURIComponent(window.location.href) : "";
-  const shareText = encodeURIComponent(`${post.title} — PREform NCLEX Learning Hub`);
+  const shareText = encodeURIComponent(`${post.title} — PrepFord NCLEX Learning Hub`);
 
   return (
     <article className="bg-background min-h-[calc(100vh-4.5rem)]">

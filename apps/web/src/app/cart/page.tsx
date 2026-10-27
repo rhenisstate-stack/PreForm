@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { CartPageClient } from "./page-client";
 
 export const metadata: Metadata = {
-  title: "Shopping Cart | PREform NCLEX",
+  title: "Shopping Cart | PrepFord NCLEX",
   description: "Review your NCLEX-RN and NCLEX-PN preparation plans and proceed to checkout.",
 };
 

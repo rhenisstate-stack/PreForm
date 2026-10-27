@@ -1,7 +1,7 @@
 export const metadata = {
-  title: "Features | PREform NCLEX",
+  title: "Features | PrepFord NCLEX",
   description:
-    "Explore Preform NCLEX features: question bank, detailed rationales, readiness assessments, progress tracking, and clinical judgment practice.",
+    "Explore PrepFord NCLEX features: question bank, detailed rationales, readiness assessments, progress tracking, and clinical judgment practice.",
 };
 
 const features = [

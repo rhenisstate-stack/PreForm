@@ -42,7 +42,7 @@ export function HowItWorks() {
       <div className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-3xl lg:mx-auto">
           <p className="text-xs font-medium uppercase tracking-wider text-secondary">
-            How Preform works
+            How PrepFord works
           </p>
           <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
             A clear path to exam day

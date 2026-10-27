@@ -15,7 +15,7 @@ export interface CandidateNotification {
 const DEFAULT_NOTIFICATIONS: CandidateNotification[] = [
   {
     id: "notif-1",
-    title: "Welcome to PREform NCLEX",
+    title: "Welcome to PrepFord NCLEX",
     summary: "Your candidate study portal is active. Start with an NCLEX diagnostic assessment.",
     timestamp: "10 mins ago",
     read: false,

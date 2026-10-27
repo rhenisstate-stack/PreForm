@@ -3,9 +3,9 @@ import Link from "next/link";
 import { ArrowRight, AlertCircle, FileText } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Terms and Conditions | PREform NCLEX",
+  title: "Terms and Conditions | PrepFord NCLEX",
   description:
-    "Terms and conditions governing the use of the PREform NCLEX learning platform, candidate subscriptions, educational materials, intellectual property, and disclaimers.",
+    "Terms and conditions governing the use of the PrepFord NCLEX learning platform, candidate subscriptions, educational materials, intellectual property, and disclaimers.",
 };
 
 interface TermsSection {
@@ -26,7 +26,7 @@ const termsSections: TermsSection[] = [
     title: "1. Acceptance of Terms & Platform Access",
     content: {
       paragraphs: [
-        "These Terms and Conditions ('Terms') constitute a legally binding agreement between you ('Candidate', 'User', or 'you') and PREform NCLEX ('PREform', 'we', 'us', or 'our') governing your access to and use of our website, web applications, question banks, clinical rationales, diagnostic assessments, and associated educational services (collectively, the 'Services').",
+        "These Terms and Conditions ('Terms') constitute a legally binding agreement between you ('Candidate', 'User', or 'you') and PrepFord NCLEX ('PrepFord', 'we', 'us', or 'our') governing your access to and use of our website, web applications, question banks, clinical rationales, diagnostic assessments, and associated educational services (collectively, the 'Services').",
         "By accessing our platform, creating an account, or purchasing a subscription, you confirm that you have read, understood, and agree to be bound by these Terms and our Privacy Policy. If you do not agree to these Terms, you must not access or use the Services.",
       ],
     },
@@ -55,7 +55,7 @@ const termsSections: TermsSection[] = [
             "Accurate Data: You agree to provide true, accurate, and complete registration information and promptly update changes.",
             "Credential Confidentiality: You are solely responsible for maintaining the confidentiality of your credentials. You must not share, transfer, or sell your account login to any other individual.",
             "Single-User License: Every account represents a single-seat personal license. Simultaneous sessions from disparate geographical locations or suspicious concurrent access may trigger automated security holds.",
-            "Unauthorized Access: You agree to notify PREform immediately at security@preformnclex.com upon discovering any unauthorized use of your account.",
+            "Unauthorized Access: You agree to notify PrepFord immediately at security@prepfordnclex.com upon discovering any unauthorized use of your account.",
           ],
         },
       ],
@@ -73,7 +73,7 @@ const termsSections: TermsSection[] = [
           title: "Strictly Prohibited Actions",
           items: [
             "Scraping & Extraction: Using automated bots, web scrapers, crawlers, or harvesting scripts to extract questions, rationales, images, or code.",
-            "Commercial Exploitation: Reselling, sublicensing, broadcasting, or distributing PREform test materials, clinical case studies, or mock exams.",
+            "Commercial Exploitation: Reselling, sublicensing, broadcasting, or distributing PrepFord test materials, clinical case studies, or mock exams.",
             "Security Circumvention: Attempting to probe, bypass, reverse-engineer, or tamper with security controls, rate limiters, or token verification logic.",
             "Unauthorized Screen Capture: Systematically capturing, publishing, or sharing question banks on external social media channels or forums.",
             "Disruption: Introducing viruses, worms, denial-of-service payloads, or any destructive computer code.",
@@ -87,8 +87,8 @@ const termsSections: TermsSection[] = [
     title: "5. Educational Content & Intellectual Property",
     content: {
       paragraphs: [
-        "All content hosted on the PREform platform—including text, questions, case studies, answer rationales, images, diagrams, algorithms, layout, software code, and design tokens—is the proprietary intellectual property of PREform NCLEX or its content licensors and is protected by copyright, trademark, and trade secret laws.",
-        "No right, title, or interest in or to our intellectual property is transferred to you. All rights not expressly granted under these Terms are reserved by PREform.",
+        "All content hosted on the PrepFord platform—including text, questions, case studies, answer rationales, images, diagrams, algorithms, layout, software code, and design tokens—is the proprietary intellectual property of PrepFord NCLEX or its content licensors and is protected by copyright, trademark, and trade secret laws.",
+        "No right, title, or interest in or to our intellectual property is transferred to you. All rights not expressly granted under these Terms are reserved by PrepFord.",
       ],
     },
   },
@@ -98,7 +98,7 @@ const termsSections: TermsSection[] = [
     content: {
       paragraphs: [
         "You may view and interact with our materials solely via standard web browser software during an active subscription or preview period. You may not print bulk question compendiums, export items to external flashcard databases, or compile commercial test preparation study aids from our intellectual property.",
-        "PREform actively monitors for unauthorized distribution of its copyrighted question banks. Suspected piracy or unauthorized commercial resale will result in immediate permanent account termination without refund and may be pursued through statutory copyright infringement remedies.",
+        "PrepFord actively monitors for unauthorized distribution of its copyrighted question banks. Suspected piracy or unauthorized commercial resale will result in immediate permanent account termination without refund and may be pursued through statutory copyright infringement remedies.",
       ],
     },
   },
@@ -107,7 +107,7 @@ const termsSections: TermsSection[] = [
     title: "7. Subscription & Paid Access Provisions",
     content: {
       paragraphs: [
-        "PREform offers tiered subscription plans (e.g., 30-day, 60-day, 90-day, or multi-month access) for NCLEX-RN and NCLEX-PN pathways. Access begins immediately upon successful payment confirmation and terminates at the conclusion of the purchased billing term unless renewed.",
+        "PrepFord offers tiered subscription plans (e.g., 30-day, 60-day, 90-day, or multi-month access) for NCLEX-RN and NCLEX-PN pathways. Access begins immediately upon successful payment confirmation and terminates at the conclusion of the purchased billing term unless renewed.",
       ],
     },
   },
@@ -132,7 +132,7 @@ const termsSections: TermsSection[] = [
         {
           title: "Refund Framework",
           items: [
-            "Technical Inaccessibility: If a verified technical defect on PREform's infrastructure prevents platform access for more than 48 continuous hours, candidates are entitled to prorated credit or a full refund upon timely report.",
+            "Technical Inaccessibility: If a verified technical defect on PrepFord's infrastructure prevents platform access for more than 48 continuous hours, candidates are entitled to prorated credit or a full refund upon timely report.",
             "Unused Subscriptions: Refund requests submitted within 48 hours of initial purchase where zero test questions have been attempted may be granted less administrative payment processing fees.",
             "Completed or Active Study: Once a candidate has actively engaged with question banks or completed mock assessments, subscriptions are strictly non-refundable.",
           ],
@@ -155,7 +155,7 @@ const termsSections: TermsSection[] = [
     title: "11. User Feedback & Communications",
     content: {
       paragraphs: [
-        "If you submit feedback, suggestions, question critiques, or clinical suggestions to PREform, you grant us an irrevocable, perpetual, royalty-free license to use and incorporate that feedback into future platform iterations without obligation or compensation to you.",
+        "If you submit feedback, suggestions, question critiques, or clinical suggestions to PrepFord, you grant us an irrevocable, perpetual, royalty-free license to use and incorporate that feedback into future platform iterations without obligation or compensation to you.",
       ],
     },
   },
@@ -164,7 +164,7 @@ const termsSections: TermsSection[] = [
     title: "12. Third-Party Links & Integrations",
     content: {
       paragraphs: [
-        "Our platform may reference third-party resources, clinical guidelines, or regulatory state nursing boards. PREform does not endorse, control, or assume liability for the availability, accuracy, or content of third-party platforms.",
+        "Our platform may reference third-party resources, clinical guidelines, or regulatory state nursing boards. PrepFord does not endorse, control, or assume liability for the availability, accuracy, or content of third-party platforms.",
       ],
     },
   },
@@ -173,15 +173,15 @@ const termsSections: TermsSection[] = [
     title: "13. Crucial Examination & Educational Disclaimers",
     content: {
       paragraphs: [
-        "Please read this section carefully as it defines the scope and limitations of the PREform NCLEX platform:",
+        "Please read this section carefully as it defines the scope and limitations of the PrepFord NCLEX platform:",
       ],
       subsections: [
         {
           title: "Mandatory Disclaimers",
           items: [
-            "Independent Study Platform: PREform NCLEX is an independent preparation product and is NOT affiliated with, sponsored by, or endorsed by the National Council of State Boards of Nursing, Inc. (NCSBN).",
+            "Independent Study Platform: PrepFord NCLEX is an independent preparation product and is NOT affiliated with, sponsored by, or endorsed by the National Council of State Boards of Nursing, Inc. (NCSBN).",
             "Trademark Notice: NCLEX®, NCLEX-RN®, and NCLEX-PN® are registered trademarks of the National Council of State Boards of Nursing, Inc. (NCSBN). Any use of these marks on our site is strictly for nominative reference to describe exam preparation pathways.",
-            "No Examination Guarantee: PREform provides diagnostic signals, readiness indicators, and practice analytics. However, examination outcomes depend on individual candidate knowledge, testing environment, and clinical competence. PREform makes NO guarantee, warranty, or representation that completing our question banks guarantees passing the NCLEX or obtaining licensure.",
+            "No Examination Guarantee: PrepFord provides diagnostic signals, readiness indicators, and practice analytics. However, examination outcomes depend on individual candidate knowledge, testing environment, and clinical competence. PrepFord makes NO guarantee, warranty, or representation that completing our question banks guarantees passing the NCLEX or obtaining licensure.",
             "Not Medical Advice: Platform content is designed solely for educational review by nursing candidates. It does NOT constitute medical diagnosis, clinical treatment protocols, or advice for live patient care. Clinical judgment must always be guided by institutional policies and licensed healthcare providers.",
           ],
         },
@@ -193,8 +193,8 @@ const termsSections: TermsSection[] = [
     title: "14. Limitation of Liability",
     content: {
       paragraphs: [
-        "To the maximum extent permitted by applicable law, in no event shall PREform NCLEX, its directors, officers, employees, nurse educators, or agents be liable for any indirect, punitive, incidental, special, or consequential damages arising out of or in connection with your use of or inability to use the Services.",
-        "In all circumstances, PREform's aggregate liability for all claims relating to the Services shall be limited to the greater of \$50 USD or the total amount paid by you to PREform for subscription access during the three (3) months preceding the incident giving rise to liability.",
+        "To the maximum extent permitted by applicable law, in no event shall PrepFord NCLEX, its directors, officers, employees, nurse educators, or agents be liable for any indirect, punitive, incidental, special, or consequential damages arising out of or in connection with your use of or inability to use the Services.",
+        "In all circumstances, PrepFord's aggregate liability for all claims relating to the Services shall be limited to the greater of \$50 USD or the total amount paid by you to PrepFord for subscription access during the three (3) months preceding the incident giving rise to liability.",
       ],
     },
   },
@@ -203,7 +203,7 @@ const termsSections: TermsSection[] = [
     title: "15. Indemnification",
     content: {
       paragraphs: [
-        "You agree to defend, indemnify, and hold harmless PREform NCLEX, its officers, directors, employees, and educational contractors from and against any claims, liabilities, damages, judgments, awards, losses, costs, or expenses (including reasonable legal fees) arising out of your violation of these Terms, unauthorized redistribution of test materials, or infringement of intellectual property rights.",
+        "You agree to defend, indemnify, and hold harmless PrepFord NCLEX, its officers, directors, employees, and educational contractors from and against any claims, liabilities, damages, judgments, awards, losses, costs, or expenses (including reasonable legal fees) arising out of your violation of these Terms, unauthorized redistribution of test materials, or infringement of intellectual property rights.",
       ],
     },
   },
@@ -222,7 +222,7 @@ const termsSections: TermsSection[] = [
     content: {
       paragraphs: [
         "Administrative Note: The governing law and jurisdiction clause is designated for formal corporate legal review prior to final commercial execution.",
-        "Unless mandatory consumer legislation in your local jurisdiction provides otherwise, these Terms shall be construed and governed in accordance with applicable commercial laws. In the event of any controversy or claim arising out of or relating to these Terms, the parties agree to first seek informal resolution in good faith by contacting legal@preformnclex.com before initiating formal legal proceedings.",
+        "Unless mandatory consumer legislation in your local jurisdiction provides otherwise, these Terms shall be construed and governed in accordance with applicable commercial laws. In the event of any controversy or claim arising out of or relating to these Terms, the parties agree to first seek informal resolution in good faith by contacting legal@prepfordnclex.com before initiating formal legal proceedings.",
       ],
     },
   },
@@ -232,8 +232,8 @@ const termsSections: TermsSection[] = [
     content: {
       paragraphs: [
         "For legal inquiries, copyright notices, or questions regarding these Terms, please contact us at:",
-        "Email: legal@preformnclex.com (or via our Contact Us portal at /contact)",
-        "Attention: PREform NCLEX Legal Compliance Department.",
+        "Email: legal@prepfordnclex.com (or via our Contact Us portal at /contact)",
+        "Attention: PrepFord NCLEX Legal Compliance Department.",
       ],
     },
   },
@@ -270,7 +270,7 @@ export default function TermsAndConditionsPage() {
               Last Updated: <strong className="text-foreground">October 27, 2026</strong> • Version 2.0
             </p>
             <p className="mt-4 text-base text-muted-foreground leading-relaxed">
-              These Terms and Conditions govern your access to the PREform NCLEX examination preparation platform, candidate subscriptions, diagnostic assessments, and intellectual property.
+              These Terms and Conditions govern your access to the PrepFord NCLEX examination preparation platform, candidate subscriptions, diagnostic assessments, and intellectual property.
             </p>
           </div>
         </div>
@@ -281,7 +281,7 @@ export default function TermsAndConditionsPage() {
         <div className="mx-auto max-w-7xl flex items-center gap-3 text-xs text-amber-900 dark:text-amber-200">
           <AlertCircle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <span>
-            <strong>Administrative Notice:</strong> This document reflects the technical and service delivery model of PREform NCLEX. Specific commercial terms (such as refund windows and dispute venues) remain subject to formal corporate legal review.
+            <strong>Administrative Notice:</strong> This document reflects the technical and service delivery model of PrepFord NCLEX. Specific commercial terms (such as refund windows and dispute venues) remain subject to formal corporate legal review.
           </span>
         </div>
       </section>

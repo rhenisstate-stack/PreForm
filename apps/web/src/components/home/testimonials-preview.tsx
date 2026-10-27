@@ -33,7 +33,7 @@ export function TestimonialsPreview() {
         <div className="text-center max-w-2xl mx-auto">
           <Quote className="mx-auto h-8 w-8 text-secondary/60" aria-hidden="true" />
           <p className="mt-6 text-xl font-serif text-foreground leading-relaxed sm:text-2xl">
-            Preform helped me focus on the reasoning behind each answer, not just memorisation.
+            PrepFord helped me focus on the reasoning behind each answer, not just memorisation.
           </p>
           <p className="mt-4 text-sm text-muted-foreground">— Jordan M., RN candidate</p>
         </div>

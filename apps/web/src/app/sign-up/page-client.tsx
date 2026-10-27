@@ -104,11 +104,16 @@ export function SignUpPageClient() {
 
           {/* Top Brand Identity */}
           <div className="relative z-10">
-            <Link href="/" className="inline-flex items-center gap-2.5 text-2xl font-serif font-bold text-white mb-12">
-              <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#0D9488] text-white font-serif font-bold text-xl shadow-md">
-                P
-              </span>
-              <span className="tracking-tight">PREform <span className="text-xs font-sans font-bold tracking-widest text-[#0D9488] uppercase">NCLEX</span></span>
+            <Link href="/" className="inline-flex items-center gap-2.5 text-2xl font-serif font-bold text-white mb-12" aria-label="PrepFord NCLEX home">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/favicon-logo.jpg"
+                alt="PrepFord NCLEX logo"
+                className="h-9 w-9 rounded-lg object-contain shadow-md border border-white/20"
+                width={36}
+                height={36}
+              />
+              <span className="tracking-tight">PrepFord <span className="text-xs font-sans font-bold tracking-widest text-[#0D9488] uppercase">NCLEX</span></span>
             </Link>
 
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0D9488]/20 border border-[#0D9488]/30 px-3 py-1 text-xs font-semibold text-[#14B8A6] mb-4">
@@ -177,11 +182,16 @@ export function SignUpPageClient() {
           <div className="mx-auto w-full max-w-md">
             {/* Mobile Header Branding */}
             <div className="mb-8 lg:hidden text-center">
-              <Link href="/" className="inline-flex items-center gap-2 text-xl font-serif font-bold text-foreground">
-                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-white font-serif font-bold text-lg shadow-sm">
-                  P
-                </span>
-                <span>PREform <span className="text-xs font-sans font-bold text-secondary uppercase">NCLEX</span></span>
+              <Link href="/" className="inline-flex items-center gap-2 text-xl font-serif font-bold text-foreground" aria-label="PrepFord NCLEX home">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/favicon-logo.jpg"
+                  alt="PrepFord NCLEX logo"
+                  className="h-8 w-8 rounded-lg object-contain shadow-xs border border-border/50"
+                  width={32}
+                  height={32}
+                />
+                <span>PrepFord <span className="text-xs font-sans font-bold text-secondary uppercase">NCLEX</span></span>
               </Link>
             </div>
 

@@ -6,14 +6,35 @@ import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import PublicHeader from "@/components/layout/public-header";
 import PublicFooter from "@/components/layout/public-footer";
 import { Toaster } from "@/components/ui/sonner";
+import { BRAND } from "@/lib/brand";
 
 export const metadata: Metadata = {
   title: {
-    default: "PREform NCLEX | Prepare with clarity",
-    template: "%s | PREform NCLEX",
+    default: `${BRAND.fullName} | ${BRAND.tagline}`,
+    template: `%s | ${BRAND.fullName}`,
   },
-  description:
-    "A focused learning platform for NCLEX-RN and NCLEX-PN candidates, being built with clinical accuracy and transparent assessment at its core.",
+  description: BRAND.description,
+  icons: {
+    icon: [
+      { url: BRAND.favicon.assetPath, type: BRAND.favicon.type },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    shortcut: BRAND.favicon.assetPath,
+    apple: BRAND.favicon.assetPath,
+  },
+  openGraph: {
+    title: `${BRAND.fullName} | ${BRAND.tagline}`,
+    description: BRAND.description,
+    siteName: BRAND.fullName,
+    images: [
+      {
+        url: BRAND.logo.assetPath,
+        width: BRAND.logo.width,
+        height: BRAND.logo.height,
+        alt: BRAND.logo.alt,
+      },
+    ],
+  },
 };
 
 export default function RootLayout({

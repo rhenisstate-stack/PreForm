@@ -61,7 +61,7 @@ export function CartPageClient() {
     setPromoError(null);
 
     const cleanCode = promoCode.trim().toUpperCase();
-    if (cleanCode === "NURSE10" || cleanCode === "PREFORM10" || cleanCode === "FUTURENURSE") {
+    if (cleanCode === "NURSE10" || cleanCode === "PREPFORD10" || cleanCode === "PREFORM10" || cleanCode === "FUTURENURSE") {
       setPromoApplied(0.1); // 10% discount
     } else if (cleanCode === "CLINICAL20") {
       setPromoApplied(0.2); // 20% discount
@@ -377,7 +377,7 @@ export function CartPageClient() {
                 <span>Payment Gateway Mode</span>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Stripe live payment integration is running in sandbox mode for Phase 4. Confirming will activate your study entitlement immediately on your PREform account without charging your card.
+                Stripe live payment integration is running in sandbox mode for Phase 4. Confirming will activate your study entitlement immediately on your PrepFord account without charging your card.
               </p>
             </div>
 

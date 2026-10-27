@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
     const ticketId = `PRF-${timestamp}-${randomSuffix}`;
 
-    const recipient = process.env.CONTACT_EMAIL_RECIPIENT || "support@preformnclex.com";
+    const recipient = process.env.CONTACT_EMAIL_RECIPIENT || "support@prepfordnclex.com";
 
     // Structured server log for observability
     console.info(`[Contact API] Received submission: Ticket=${ticketId}, Category=${data.category}, From=${data.email}, Recipient=${recipient}`);
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
         success: true,
         ticketId,
         message:
-          "Thank you for reaching out to PREform NCLEX. Your message has been received by our support team.",
+          "Thank you for reaching out to PrepFord NCLEX. Your message has been received by our support team.",
         details: {
           recipient,
           category: data.category,

@@ -169,7 +169,7 @@ export function ContactPageClient() {
                 </div>
                 <CardTitle className="text-lg font-serif">Nursing Faculty &amp; Schools</CardTitle>
                 <CardDescription>
-                  Looking to incorporate PREform NCLEX diagnostic modules and analytics into your nursing curriculum?
+                  Looking to incorporate PrepFord NCLEX diagnostic modules and analytics into your nursing curriculum?
                 </CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -423,11 +423,11 @@ export function ContactPageClient() {
                 <CardContent className="space-y-3 text-sm text-muted-foreground">
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-wider text-foreground">General Support:</span>
-                    <p className="font-mono text-xs text-secondary mt-0.5">support@preformnclex.com</p>
+                    <p className="font-mono text-xs text-secondary mt-0.5">support@prepfordnclex.com</p>
                   </div>
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-wider text-foreground">Institutional Partnerships:</span>
-                    <p className="font-mono text-xs text-secondary mt-0.5">educators@preformnclex.com</p>
+                    <p className="font-mono text-xs text-secondary mt-0.5">educators@prepfordnclex.com</p>
                   </div>
                 </CardContent>
               </Card>
@@ -435,8 +435,8 @@ export function ContactPageClient() {
               <div className="rounded-lg border border-border bg-muted/40 p-5 text-xs text-muted-foreground leading-relaxed">
                 <p className="font-semibold text-foreground mb-1">NCLEX® Candidate Disclaimer</p>
                 <p>
-                  PREform NCLEX is an independent test preparation platform. NCLEX-RN® and NCLEX-PN® are registered
-                  trademarks of the National Council of State Boards of Nursing, Inc. (NCSBN). PREform NCLEX is not
+                  PrepFord NCLEX is an independent test preparation platform. NCLEX-RN® and NCLEX-PN® are registered
+                  trademarks of the National Council of State Boards of Nursing, Inc. (NCSBN). PrepFord NCLEX is not
                   affiliated with or endorsed by NCSBN.
                 </p>
               </div>

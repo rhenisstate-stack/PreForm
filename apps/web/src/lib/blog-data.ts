@@ -39,7 +39,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "A candidate guide to understanding Layer 3 cognitive operations: Recognize Cues, Analyze Cues, Prioritize Hypotheses, Generate Solutions, Take Action, and Evaluate Outcomes.",
     category: "Next Gen NCLEX",
     author: {
-      name: "PREform Nurse Educator Team",
+      name: "PrepFord Nurse Educator Team",
       role: "Clinical Curriculum Specialist",
       credentials: "MSN, RN, CNE",
     },
@@ -94,7 +94,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Key nursing considerations, black box warnings, antidote associations, and therapeutic monitoring for insulins, anticoagulants, opioids, and chemotherapeutic agents.",
     category: "Pharmacology",
     author: {
-      name: "PREform Clinical Review Board",
+      name: "PrepFord Clinical Review Board",
       role: "Pharmacology & Nursing Faculty",
       credentials: "PharmD, MSN, RN",
     },
@@ -146,7 +146,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "When does an acute psychosocial cue override a stable physiological need? Deciding priority nursing actions using evidence-based frameworks.",
     category: "Clinical Judgment",
     author: {
-      name: "PREform Nurse Educator Team",
+      name: "PrepFord Nurse Educator Team",
       role: "Nurse Educator & Testing Coach",
       credentials: "MSN, RN, CNE",
     },
@@ -196,7 +196,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "How to navigate 6-part unfolding case studies without losing momentum or points on partial credit scoring items.",
     category: "Next Gen NCLEX",
     author: {
-      name: "PREform Clinical Review Board",
+      name: "PrepFord Clinical Review Board",
       role: "Curriculum & Evaluation Specialist",
       credentials: "DNP, RN",
     },
@@ -238,7 +238,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Safe dose range verification, mg/kg/day formulas, fluid bolus thresholds, and avoiding arithmetic calculation errors under exam conditions.",
     category: "Pharmacology",
     author: {
-      name: "PREform Nurse Educator Team",
+      name: "PrepFord Nurse Educator Team",
       role: "Pediatric Clinical Educator",
       credentials: "MSN, RN, CPN",
     },
@@ -272,7 +272,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Overcoming decision fatigue, pacing yourself through the adaptive test algorithm, and maintaining sharp clinical focus across 150 potential items.",
     category: "Study Strategies",
     author: {
-      name: "PREform Nurse Educator Team",
+      name: "PrepFord Nurse Educator Team",
       role: "Candidate Success Coach",
       credentials: "MSN, RN",
     },
@@ -304,7 +304,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Contact, Droplet, and Airborne precautions cheat sheet, PPE donning and doffing sequence, and cohorting infectious patients safely.",
     category: "Clinical Judgment",
     author: {
-      name: "PREform Clinical Review Board",
+      name: "PrepFord Clinical Review Board",
       role: "Infection Prevention Consultant",
       credentials: "MSN, RN, CIC",
     },
@@ -344,7 +344,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "Detailed breakdown of test plan category weights, scope of practice boundaries, and supervisory expectations between RN and PN licensure exams.",
     category: "Nursing Licensure",
     author: {
-      name: "PREform Clinical Review Board",
+      name: "PrepFord Clinical Review Board",
       role: "Dean of Nursing Education",
       credentials: "PhD, RN, FAAN",
     },
@@ -377,7 +377,7 @@ export const BLOG_POSTS: BlogPost[] = [
       "The 5 Rights of Delegation: clarifying nursing judgment tasks that cannot be delegated versus routine, predictable care activities.",
     category: "Clinical Judgment",
     author: {
-      name: "PREform Nurse Educator Team",
+      name: "PrepFord Nurse Educator Team",
       role: "Leadership & Management Educator",
       credentials: "MSN, RN, NE-BC",
     },

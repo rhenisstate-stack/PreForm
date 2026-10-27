@@ -2,9 +2,9 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 export const metadata = {
-  title: "For Educators | PREform NCLEX",
+  title: "For Educators | PrepFord NCLEX",
   description:
-    "Information for nursing educators and training institutions about Preform NCLEX learning tools, progress reporting, and institutional enquiries.",
+    "Information for nursing educators and training institutions about PrepFord NCLEX learning tools, progress reporting, and institutional enquiries.",
 };
 
 export default function EducatorsPage() {
@@ -20,7 +20,7 @@ export default function EducatorsPage() {
               Teaching tools for nursing educators
             </h1>
             <p className="mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg">
-              Preform NCLEX supports nursing educators and training institutions
+              PrepFord NCLEX supports nursing educators and training institutions
               with practice questions, readiness assessments, and progress
               reporting for RN and PN candidates.
             </p>
