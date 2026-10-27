@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, ShoppingCart, CheckCircle2, Clock } from "lucide-react";
+import { ShoppingCart, CheckCircle2, Clock } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ const products: ProductCardData[] = [
     id: "rn-pro",
     code: "RN",
     title: "NCLEX-RN Complete Preparation",
-    audience: "Registered Nurse Candidates",
+    audience: "Registered Nurse preparation",
     description:
       "Comprehensive licensure preparation aligning with the NCSBN Clinical Judgment Measurement Model, CAT simulation, and verified rationales.",
     price: 59,
@@ -50,7 +50,7 @@ const products: ProductCardData[] = [
     id: "pn-pro",
     code: "PN",
     title: "NCLEX-PN Complete Preparation",
-    audience: "Practical / Vocational Nurse Candidates",
+    audience: "Practical / Vocational Nurse preparation",
     description:
       "Targeted preparation for practical and vocational licensure, emphasizing patient assignment, vital sign evaluation, and safe medication practices.",
     price: 59,

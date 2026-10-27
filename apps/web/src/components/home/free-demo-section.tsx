@@ -2,9 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, XCircle, ArrowRight, Sparkles, FileText, Activity, AlertTriangle, RotateCcw } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowRight, Sparkles, FileText, Activity, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 interface DemoQuestion {
@@ -68,8 +68,6 @@ const SAMPLE_QUESTION: DemoQuestion = {
 export function FreeDemoSection() {
   const [selectedOptionId, setSelectedOptionId] = React.useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = React.useState(false);
-
-  const selectedOption = SAMPLE_QUESTION.options.find((o) => o.id === selectedOptionId);
 
   const handleSubmit = () => {
     if (!selectedOptionId) return;

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, CheckCircle2, ShieldCheck, ArrowRight, BrainCircuit, Activity, BarChart3, HelpCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface StepSlide {

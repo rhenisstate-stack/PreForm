@@ -148,7 +148,7 @@ export function TestimonialsPageClient() {
                       </span>
                     </div>
                     <p className="text-sm text-foreground leading-relaxed italic">
-                      "{t.content}"
+                      &ldquo;{t.content}&rdquo;
                     </p>
                   </div>
 

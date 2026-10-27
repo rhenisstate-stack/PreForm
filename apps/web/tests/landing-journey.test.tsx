@@ -34,16 +34,20 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 import { HomeClient } from "@/app/home-client";
 
 describe("Landing Page User Journey & Product Discovery", () => {
-  it("renders Hero section with Explore Courses and Find Your Course CTAs", () => {
+  it("renders Hero section with View Products and Try Free CTAs and carousel", () => {
     render(<HomeClient />);
 
     expect(screen.getByText(/Prepare with clarity/i)).toBeInTheDocument();
 
-    const exploreCoursesBtn = screen.getByRole("link", { name: /Explore Courses/i });
-    expect(exploreCoursesBtn).toHaveAttribute("href", "/courses");
+    const viewProductsBtns = screen.getAllByRole("link", { name: /^View Products$/i });
+    expect(viewProductsBtns[0]).toHaveAttribute("href", "#products");
 
-    const findYourCourseBtn = screen.getByRole("link", { name: /Find Your Course/i });
-    expect(findYourCourseBtn).toHaveAttribute("href", "#course-finder");
+    const tryFreeBtn = screen.getByRole("link", { name: /^Try Free$/i });
+    expect(tryFreeBtn).toHaveAttribute("href", "#demo");
+
+    // Carousel buttons
+    expect(screen.getByRole("button", { name: /Previous slide/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Next slide/i })).toBeInTheDocument();
   });
 
   it("renders Product & Pathway Discovery cards with verified prices and distinct detail/cart CTAs", () => {
@@ -60,6 +64,42 @@ describe("Landing Page User Journey & Product Discovery", () => {
 
     const allAccessEnroll = screen.getByRole("link", { name: /Enroll Now — \$89/i });
     expect(allAccessEnroll).toHaveAttribute("href", "/cart?add=prep-premium");
+  });
+
+  it("renders the interactive Free Demo section and evaluates candidate clinical responses", async () => {
+    const user = userEvent.setup();
+    render(<HomeClient />);
+
+    expect(screen.getByText(/Try PrepFord Free/i)).toBeInTheDocument();
+
+    const correctOption = screen.getByRole("radio", {
+      name: /Elevate the head of the bed to high-Fowler's and initiate supplemental oxygen/i,
+    });
+    expect(correctOption).toBeInTheDocument();
+
+    // Select the correct option
+    await user.click(correctOption);
+
+    // Submit answer
+    const submitBtn = screen.getByRole("button", { name: /Submit Clinical Response/i });
+    await user.click(submitBtn);
+
+    // Verify rationale displays
+    expect(screen.getByText(/Applying the ABC \(Airway, Breathing, Circulation\) framework/i)).toBeInTheDocument();
+    expect(screen.getByText(/Clinical Judgment Takeaway/i)).toBeInTheDocument();
+  });
+
+  it("renders the Question-Learning Showcase inspired by UWorld with step carousel", () => {
+    render(<HomeClient />);
+
+    expect(
+      screen.getByText(/Practice NCLEX-Style Questions\. Understand the Why\./i)
+    ).toBeInTheDocument();
+
+    expect(screen.getAllByRole("tab", { name: /1\. Recognize Cues/i })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole("tab", { name: /2\. Generate Solutions/i })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole("tab", { name: /3\. Evaluate Outcomes/i })[0]).toBeInTheDocument();
+    expect(screen.getAllByRole("tab", { name: /4\. Readiness Insights/i })[0]).toBeInTheDocument();
   });
 
   it("completes the course recommendation quiz and renders direct purchase and pathway CTAs", async () => {
