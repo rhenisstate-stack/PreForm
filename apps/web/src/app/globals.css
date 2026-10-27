@@ -977,11 +977,53 @@ p {
   }
 }
 
+@keyframes heartbeat {
+  0% { transform: scale(1); }
+  14% { transform: scale(1.12); }
+  28% { transform: scale(1); }
+  42% { transform: scale(1.12); }
+  70% { transform: scale(1); }
+}
+
+@keyframes floatSlow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.35; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(1.04); }
+}
+
+@keyframes ecgPulse {
+  0% { stroke-dashoffset: 1000; }
+  100% { stroke-dashoffset: 0; }
+}
+
+.animate-heartbeat {
+  animation: heartbeat 2.2s ease-in-out infinite;
+}
+
+.animate-float-slow {
+  animation: floatSlow 4.5s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 3.5s ease-in-out infinite;
+}
+
+.animate-ecg {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: ecgPulse 4s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+    animation: none !important;
   }
 }
