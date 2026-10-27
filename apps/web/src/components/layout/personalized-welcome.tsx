@@ -63,7 +63,7 @@ export function PersonalizedWelcome({
   return (
     <section
       aria-label="Welcome banner"
-      className="relative overflow-hidden rounded-2xl border border-secondary/20 bg-linear-to-r from-secondary/10 via-card to-background p-6 shadow-sm sm:p-8"
+      className="relative w-full pb-6 pt-1"
     >
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2 max-w-xl">

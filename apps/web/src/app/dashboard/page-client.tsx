@@ -114,14 +114,14 @@ export function DashboardClient() {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="mx-auto max-w-xl py-20 px-4 text-center">
+      <div className="w-full py-24 px-4 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/10 text-secondary mb-6">
           <Stethoscope className="h-8 w-8" />
         </div>
-        <h1 className="text-2xl font-serif font-bold text-foreground mb-3">
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground mb-3">
           Sign In Required
         </h1>
-        <p className="text-muted-foreground mb-8 text-sm">
+        <p className="text-muted-foreground mb-8 text-sm max-w-md mx-auto">
           Please sign in to access your PrepFord learning dashboard, question bank, and clinical readiness assessments.
         </p>
         <Link
@@ -143,12 +143,12 @@ export function DashboardClient() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
-      {/* Personalized Welcome Banner */}
+    <div className="w-full px-4 sm:px-8 lg:px-12 py-8 space-y-12 bg-background min-h-[calc(100vh-4.5rem)]">
+      {/* Personalized Welcome Banner (Seamless, non-boxed) */}
       <PersonalizedWelcome user={user} />
 
-      {/* Pathway Selector & Status Pill */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border pb-6">
+      {/* Pathway Selector & Status Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border/40">
         <div>
           <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground tracking-tight">
             Learning Workspace
@@ -158,11 +158,11 @@ export function DashboardClient() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-muted/60 p-1 rounded-xl border border-border">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-muted/60">
           <button
             type="button"
             onClick={() => setSelectedPathway("rn")}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
               activePathway === "rn"
                 ? "bg-primary text-primary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -173,7 +173,7 @@ export function DashboardClient() {
           <button
             type="button"
             onClick={() => setSelectedPathway("pn")}
-            className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all ${
+            className={`px-4 py-2 text-xs font-semibold rounded-lg transition-all ${
               activePathway === "pn"
                 ? "bg-primary text-primary-foreground shadow-xs"
                 : "text-muted-foreground hover:text-foreground"
@@ -184,146 +184,158 @@ export function DashboardClient() {
         </div>
       </div>
 
-      {/* High-Level Candidate Readiness Metrics */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground mb-2">
+      {/* Candidate Readiness Metrics (Open Canvas, No Boxed Borders) */}
+      <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 pb-8 border-b border-border/30">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold uppercase tracking-wider">Questions Answered</span>
             <FileQuestion className="h-4 w-4 text-secondary" />
           </div>
-          <p className="text-2xl font-serif font-bold text-foreground">
-            {totalCompleted.toLocaleString()} <span className="text-xs font-sans text-muted-foreground font-normal">/ {totalQuestions.toLocaleString()}</span>
+          <p className="text-3xl font-serif font-bold text-foreground">
+            {totalCompleted.toLocaleString()}{" "}
+            <span className="text-sm font-sans text-muted-foreground font-normal">
+              / {totalQuestions.toLocaleString()}
+            </span>
           </p>
-          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-secondary"
+              className="h-full rounded-full bg-secondary transition-all"
               style={{ width: `${Math.round((totalCompleted / totalQuestions) * 100)}%` }}
             />
           </div>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground mb-2">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold uppercase tracking-wider">Overall Accuracy</span>
             <CheckCircle2 className="h-4 w-4 text-emerald-600" />
           </div>
-          <p className="text-2xl font-serif font-bold text-foreground">
+          <p className="text-3xl font-serif font-bold text-foreground">
             {overallAccuracy}%
           </p>
-          <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+          <p className="text-xs text-muted-foreground flex items-center gap-1">
             <TrendingUp className="h-3 w-3 text-emerald-600" />
-            +4.2% above peer average
+            <span>+4.2% above peer average</span>
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground mb-2">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold uppercase tracking-wider">Readiness Assessment</span>
             <Award className="h-4 w-4 text-secondary" />
           </div>
-          <p className="text-2xl font-serif font-bold text-foreground">
+          <p className="text-3xl font-serif font-bold text-foreground">
             High Pass Signal
           </p>
-          <p className="mt-2 text-xs text-secondary font-medium">
+          <p className="text-xs text-secondary font-medium">
             Based on 4 simulated CAT modules
           </p>
         </div>
 
-        <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
-          <div className="flex items-center justify-between text-muted-foreground mb-2">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold uppercase tracking-wider">Active Study Streak</span>
             <Calendar className="h-4 w-4 text-amber-500" />
           </div>
-          <p className="text-2xl font-serif font-bold text-foreground">
+          <p className="text-3xl font-serif font-bold text-foreground">
             6 Days
           </p>
-          <p className="mt-2 text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Consistency benchmark on track
           </p>
         </div>
       </div>
 
-      {/* Action Workspace Cards: Practice Engine & CAT */}
-      <div>
-        <h2 className="text-lg font-serif font-semibold text-foreground mb-4">
-          Study & Assessment Modes
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between hover:border-secondary/50 transition-colors">
-            <div>
-              <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary mb-4">
+      {/* Action Workspace (Open Interactive Grid) */}
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-xl font-serif font-bold text-foreground">
+            Study &amp; Assessment Modes
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Launch adaptive testing, focused practice quizzes, or review remediated rationale items
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="flex flex-col justify-between py-1 space-y-4">
+            <div className="space-y-2.5">
+              <div className="h-10 w-10 rounded-xl bg-secondary/10 flex items-center justify-center text-secondary">
                 <BrainCircuit className="h-5 w-5" />
               </div>
-              <h3 className="font-serif font-semibold text-foreground text-lg mb-1">
+              <h3 className="font-serif font-semibold text-foreground text-xl">
                 Custom Practice Quiz
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Choose question counts, specific nursing client need categories, and toggle Tutor Mode for immediate clinical rationales.
               </p>
             </div>
-            <div className="mt-6">
+            <div className="pt-2">
               <Link
                 href="/courses?type=practice"
-                className="inline-flex items-center gap-2 text-xs font-semibold text-secondary hover:text-secondary/80 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-secondary hover:underline transition-colors"
               >
-                Configure Practice Session <ArrowRight className="h-3.5 w-3.5" />
+                <span>Configure Practice Session</span>
+                <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between hover:border-secondary/50 transition-colors">
-            <div>
-              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary mb-4">
+          <div className="flex flex-col justify-between py-1 space-y-4">
+            <div className="space-y-2.5">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                 <BarChart3 className="h-5 w-5" />
               </div>
-              <h3 className="font-serif font-semibold text-foreground text-lg mb-1">
+              <h3 className="font-serif font-semibold text-foreground text-xl">
                 Computer Adaptive Test (CAT)
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Simulate official NCLEX testing conditions with an adaptive question algorithm scaling from 75 to 150 items.
               </p>
             </div>
-            <div className="mt-6">
+            <div className="pt-2">
               <Link
                 href="/nclex-rn"
-                className="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline transition-colors"
               >
-                Launch CAT Simulator <ArrowRight className="h-3.5 w-3.5" />
+                <span>Launch CAT Simulator</span>
+                <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between hover:border-secondary/50 transition-colors">
-            <div>
-              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600 mb-4">
+          <div className="flex flex-col justify-between py-1 space-y-4">
+            <div className="space-y-2.5">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
                 <RotateCcw className="h-5 w-5" />
               </div>
-              <h3 className="font-serif font-semibold text-foreground text-lg mb-1">
+              <h3 className="font-serif font-semibold text-foreground text-xl">
                 Targeted Rationale Review
               </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Revisit previously missed questions with detailed distractor breakdowns, physiologic principles, and clinical takeaways.
               </p>
             </div>
-            <div className="mt-6">
+            <div className="pt-2">
               <Link
                 href="/courses"
-                className="inline-flex items-center gap-2 text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:underline transition-colors"
               >
-                Review 48 Missed Concepts <ArrowRight className="h-3.5 w-3.5" />
+                <span>Review 48 Missed Concepts</span>
+                <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Clinical Notes & Study Guide Banner */}
-      <div className="rounded-2xl border border-teal-500/30 bg-gradient-to-r from-teal-950/20 via-card to-card p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      {/* Clinical Notes & Study Guide Banner (Open Full-Width Integration) */}
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-5 px-6 rounded-2xl bg-teal-500/10 border border-teal-500/20">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-secondary" />
             <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
-              PrepFord Clinical Study Guide & Notes
+              PrepFord Clinical Study Guide &amp; Notes
             </span>
           </div>
           <h3 className="text-lg font-serif font-bold text-foreground">
@@ -342,11 +354,11 @@ export function DashboardClient() {
         </Link>
       </div>
 
-      {/* Curriculum Breakdown by Domain */}
-      <div className="rounded-2xl border border-border bg-card p-6 shadow-xs">
-        <div className="flex items-center justify-between mb-6">
+      {/* Curriculum Breakdown by Domain (Continuous Open Canvas) */}
+      <div className="space-y-6">
+        <div className="flex items-center justify-between pb-3 border-b border-border/40">
           <div>
-            <h2 className="text-lg font-serif font-semibold text-foreground">
+            <h2 className="text-xl font-serif font-bold text-foreground">
               Clinical Domain Mastery
             </h2>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -358,14 +370,14 @@ export function DashboardClient() {
           </span>
         </div>
 
-        <div className="divide-y divide-border/60">
+        <div className="divide-y divide-border/40">
           {subjects.map((sub) => {
             const pct = Math.round((sub.questionsCompleted / sub.questionsTotal) * 100);
             return (
-              <div key={sub.id} className="py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-foreground">{sub.title}</span>
+              <div key={sub.id} className="py-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-base font-semibold text-foreground">{sub.title}</span>
                     <span className="text-xs px-2 py-0.5 rounded-sm bg-muted text-muted-foreground font-mono">
                       {sub.domain}
                     </span>
@@ -377,18 +389,18 @@ export function DashboardClient() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="w-28 sm:w-36 h-2 rounded-full bg-muted overflow-hidden">
+                <div className="flex items-center gap-6">
+                  <div className="w-32 sm:w-48 h-2 rounded-full bg-muted overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-secondary"
+                      className="h-full rounded-full bg-secondary transition-all"
                       style={{ width: `${pct}%` }}
                     />
                   </div>
                   <Link
                     href={`/courses?domain=${encodeURIComponent(sub.title)}`}
-                    className="shrink-0 rounded-lg border border-input px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition-colors"
+                    className="shrink-0 text-xs font-semibold text-secondary hover:underline transition-colors"
                   >
-                    Study Domain
+                    Study Domain →
                   </Link>
                 </div>
               </div>
