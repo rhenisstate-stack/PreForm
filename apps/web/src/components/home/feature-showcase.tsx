@@ -42,7 +42,7 @@ const features: FeatureProps[] = [
     title: "Progress tracking",
     description:
       "Accuracy by topic, question type, and time, with explainable recommendations based on your data.",
-    href: "#analytics",
+    href: "/features",
     label: "Track",
   },
 ];

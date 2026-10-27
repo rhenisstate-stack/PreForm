@@ -70,11 +70,16 @@ export function CourseFinderQuiz() {
   const [completed, setCompleted] = React.useState(false);
 
   const isLastStep = currentStep === questions.length - 1;
-  const progress = ((currentStep) / questions.length) * 100;
+  const progress = (currentStep / questions.length) * 100;
 
-  const handleAnswer = (optionId: string) => {
+  const handleSelectOption = (optionId: string) => {
     const q = questions[currentStep];
     setAnswers((prev) => ({ ...prev, [q.id]: optionId }));
+  };
+
+  const handleNext = () => {
+    const q = questions[currentStep];
+    if (!answers[q.id]) return;
     if (isLastStep) {
       setCompleted(true);
     } else {
@@ -83,7 +88,13 @@ export function CourseFinderQuiz() {
   };
 
   const goBack = () => {
-    setCurrentStep((prev) => prev - 1);
+    setCurrentStep((prev) => Math.max(0, prev - 1));
+  };
+
+  const handleReset = () => {
+    setAnswers({});
+    setCurrentStep(0);
+    setCompleted(false);
   };
 
   if (completed) {
@@ -115,7 +126,7 @@ export function CourseFinderQuiz() {
                 </Button>
               </CardContent>
             </Card>
-            <Button variant="outline" onClick={() => setCompleted(false)} className="mt-4">
+            <Button variant="outline" onClick={handleReset} className="mt-4">
               Start over
             </Button>
           </div>
@@ -162,7 +173,7 @@ export function CourseFinderQuiz() {
                 key={o.id}
                 variant={answers[q.id] === o.id ? "default" : "outline"}
                 className="w-full justify-between text-left"
-                onClick={() => handleAnswer(o.id)}
+                onClick={() => handleSelectOption(o.id)}
               >
                 {o.label}
                 {answers[q.id] === o.id ? (
@@ -180,7 +191,7 @@ export function CourseFinderQuiz() {
             <Button
               size="sm"
               disabled={!answers[q.id]}
-              onClick={() => handleAnswer("")}
+              onClick={handleNext}
             >
               {isLastStep ? "Get recommendation" : "Next"}
             </Button>
