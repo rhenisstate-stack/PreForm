@@ -103,12 +103,12 @@ export function FAQPageClient() {
               <Card key={f.question}>
                 <CardHeader className="py-3 cursor-pointer">
                   <div className="flex w-full items-center justify-between">
-                    <CardTitle>{f.question}</CardTitle>
-                    <span className="h-4 w-4 text-muted" />
+                    <CardTitle className="text-base font-serif">{f.question}</CardTitle>
+                    <span className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0 pb-4">
-                  <p className="text-sm text-muted leading-relaxed">{f.answer}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{f.answer}</p>
                 </CardContent>
               </Card>
             ))}

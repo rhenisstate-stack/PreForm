@@ -93,8 +93,12 @@ describe("Homepage header integration", () => {
     expect(headers).toHaveLength(1);
   });
 
-  it("opens and closes the NCLEX-RN dropdown", () => {
+  it("opens and closes the NCLEX-RN dropdown without duplicates", () => {
     const { header } = renderHeader();
+
+    // Direct navigation link exists
+    const rnLink = within(header).getByRole("link", { name: "NCLEX-RN" });
+    expect(rnLink).toHaveAttribute("href", "/nclex-rn");
 
     const rnTrigger = within(header).getByRole("button", { name: /NCLEX-RN/i });
     expect(rnTrigger).toBeInTheDocument();
@@ -105,9 +109,52 @@ describe("Homepage header integration", () => {
 
     // Dropdown should be open
     expect(rnTrigger).toHaveAttribute("aria-expanded", "true");
+
+    // Each sub-item must appear exactly once (no 4x duplication)
+    expect(within(header).getAllByRole("link", { name: "RN Overview" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "RN Courses" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "RN Preparation Plans" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "Try RN Questions" })).toHaveLength(1);
   });
 
-  it("opens and closes the More dropdown", () => {
+  it("opens and closes the NCLEX-PN dropdown without duplicates", () => {
+    const { header } = renderHeader();
+
+    const pnLink = within(header).getByRole("link", { name: "NCLEX-PN" });
+    expect(pnLink).toHaveAttribute("href", "/nclex-pn");
+
+    const pnTrigger = within(header).getByRole("button", { name: /NCLEX-PN/i });
+    expect(pnTrigger).toBeInTheDocument();
+    expect(pnTrigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(pnTrigger);
+    expect(pnTrigger).toHaveAttribute("aria-expanded", "true");
+
+    expect(within(header).getAllByRole("link", { name: "PN Overview" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "PN Courses" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "PN Preparation Plans" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "Try PN Questions" })).toHaveLength(1);
+  });
+
+  it("opens and closes the Courses dropdown without duplicates", () => {
+    const { header } = renderHeader();
+
+    const coursesLink = within(header).getByRole("link", { name: "Courses" });
+    expect(coursesLink).toHaveAttribute("href", "/courses");
+
+    const coursesTrigger = within(header).getByRole("button", { name: /Courses/i });
+    expect(coursesTrigger).toBeInTheDocument();
+    expect(coursesTrigger).toHaveAttribute("aria-expanded", "false");
+
+    fireEvent.click(coursesTrigger);
+    expect(coursesTrigger).toHaveAttribute("aria-expanded", "true");
+
+    expect(within(header).getAllByRole("link", { name: "All Courses" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "Compare Subscription Plans" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "Free Sample Questions" })).toHaveLength(1);
+  });
+
+  it("opens and closes the More dropdown without duplicates", () => {
     const { header } = renderHeader();
 
     const moreTrigger = within(header).getByRole("button", { name: /More/i });
@@ -117,6 +164,13 @@ describe("Homepage header integration", () => {
     fireEvent.click(moreTrigger);
 
     expect(moreTrigger).toHaveAttribute("aria-expanded", "true");
+
+    // Sub-items appear exactly once
+    expect(within(header).getAllByRole("link", { name: "Our Features" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "For Educators" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "Testimonials" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "FAQ" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "Contact Us" })).toHaveLength(1);
   });
 
   it("does not show Buy Now in the header", () => {

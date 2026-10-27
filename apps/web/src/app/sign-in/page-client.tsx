@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Eye,
   EyeOff,
@@ -16,7 +15,6 @@ import {
 import { Button } from "@/components/ui/button";
 
 export function SignInPageClient() {
-  const router = useRouter();
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [showPassword, setShowPassword] = React.useState(false);

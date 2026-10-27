@@ -38,13 +38,13 @@ export function TestimonialsPageClient() {
       <section className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="text-center lg:max-w-3xl lg:mx-auto">
-            <p className="text-xs font-medium uppercase tracking-wider text-green">
+            <p className="text-xs font-medium uppercase tracking-wider text-secondary">
               Student experiences
             </p>
-            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
               What learners say
             </h2>
-            <p className="mt-6 text-muted max-w-xl mx-auto lg:text-lg">
+            <p className="mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg">
               Individual experiences shared by nursing candidates. Results vary
               and do not guarantee identical outcomes.
             </p>
@@ -53,13 +53,13 @@ export function TestimonialsPageClient() {
           <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {testimonials.map((t) => (
               <Card key={t.name}>
-                <CardContent className="pb-4">
-                  <Quote className="mb-4 h-5 w-5 text-green/40" aria-hidden="true" />
-                  <p className="text-sm text-muted leading-relaxed">{t.content}</p>
+                <CardContent className="pt-6 pb-4">
+                  <Quote className="mb-4 h-5 w-5 text-secondary/60" aria-hidden="true" />
+                  <p className="text-sm text-foreground leading-relaxed">{t.content}</p>
                   <div className="mt-4 flex items-start gap-2">
                     <div>
-                      <p className="text-sm font-semibold text-ink">{t.name}</p>
-                      <p className="text-xs text-muted">{t.role}</p>
+                      <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                      <p className="text-xs text-muted-foreground">{t.role}</p>
                     </div>
                     <BadgeInline pathway={t.pathway} />
                   </div>
@@ -71,7 +71,7 @@ export function TestimonialsPageClient() {
           <div className="mt-12 flex justify-center">
             <Link
               href="/courses"
-              className="inline-flex items-center gap-1 text-sm font-medium text-green transition-colors"
+              className="inline-flex items-center gap-1 text-sm font-medium text-secondary hover:underline transition-colors"
             >
               Explore courses <ArrowRight className="h-3 w-3" />
             </Link>

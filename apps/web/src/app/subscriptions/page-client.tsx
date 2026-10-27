@@ -71,13 +71,13 @@ export function SubscriptionsPageClient() {
       <section className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="text-center lg:max-w-3xl lg:mx-auto">
-            <p className="text-xs font-medium uppercase tracking-wider text-green">
+            <p className="text-xs font-medium uppercase tracking-wider text-secondary">
               Choose your plan
             </p>
-            <h1 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+            <h1 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
               Simple, transparent pricing
             </h1>
-            <p className="mt-6 text-muted max-w-xl mx-auto lg:text-lg">
+            <p className="mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg">
               Select a plan that matches your exam preparation needs. All plans
               include access to original NCLEX-style questions and detailed
               rationales.
@@ -94,20 +94,20 @@ export function SubscriptionsPageClient() {
                 )}
                 <CardHeader>
                   <CardTitle className="text-xl">{plan.name}</CardTitle>
-                  <p className="text-sm text-muted">{plan.pathway} pathway</p>
+                  <p className="text-sm text-muted-foreground">{plan.pathway} pathway</p>
                 </CardHeader>
                 <CardContent className="pt-0 flex-1">
                   <div className="flex items-baseline gap-1 mb-6">
-                    <span className="text-4xl font-serif font-bold text-ink">
+                    <span className="text-4xl font-serif font-bold text-foreground">
                       {plan.price}
                     </span>
-                    <span className="text-sm text-muted">{plan.currency}</span>
-                    <span className="text-sm text-muted">/{plan.interval}</span>
+                    <span className="text-sm text-muted-foreground">{plan.currency}</span>
+                    <span className="text-sm text-muted-foreground">/{plan.interval}</span>
                   </div>
                   <ul className="space-y-3">
                     {plan.features.map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-sm text-muted">
-                        <span className="flex shrink-0 items-center text-green" aria-hidden="true">✓</span>
+                      <li key={f} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <span className="flex shrink-0 items-center text-secondary" aria-hidden="true">✓</span>
                         {f}
                       </li>
                     ))}
@@ -116,9 +116,9 @@ export function SubscriptionsPageClient() {
                 <CardFooter>
                   <Link
                     href={plan.href}
-                    className="w-full inline-flex items-center justify-center rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    className="w-full inline-flex items-center justify-center rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 shadow-sm"
                   >
-                    Select plan <ArrowRight className="ml-2 h-3 w-3" />
+                    Select plan <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </CardFooter>
               </Card>
@@ -127,7 +127,7 @@ export function SubscriptionsPageClient() {
 
           {programmes && programmes.length > 0 && (
             <div className="mt-16 border-t border-border pt-8">
-              <h3 className="text-lg font-semibold text-ink mb-4">Available pathways</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-4">Available pathways</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {programmes.map((p: { code: string; displayName: string; isActive: boolean }) => (
                   <Card key={p.code}>
@@ -135,14 +135,14 @@ export function SubscriptionsPageClient() {
                       <CardTitle>{p.displayName}</CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <p className="text-sm text-muted">
+                      <p className="text-sm text-muted-foreground">
                         {p.isActive ? "Available for enrolment" : "Not currently available"}
                       </p>
                     </CardContent>
                     <CardFooter>
                       <Link
                         href={`/nclex-${p.code.toLowerCase()}`}
-                        className="text-sm font-medium text-green hover:underline"
+                        className="text-sm font-medium text-secondary hover:underline"
                       >
                         View {p.displayName}
                       </Link>
