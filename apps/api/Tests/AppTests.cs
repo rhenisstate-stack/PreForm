@@ -1,5 +1,6 @@
 using Xunit;
 using Preform.Api.Controllers;
+using Preform.Api.Services;
 using Preform.Api.Data;
 using Preform.Api.Models;
 using Microsoft.EntityFrameworkCore;
