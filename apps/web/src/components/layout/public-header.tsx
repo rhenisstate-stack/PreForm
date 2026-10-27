@@ -66,6 +66,7 @@ const desktopNav: DesktopNavItem[] = [
     label: "More",
     items: [
       { label: "Our Features", href: "/features" },
+      { label: "Blog", href: "/blog" },
       { label: "For Educators", href: "/educators" },
       { label: "Testimonials", href: "/testimonials" },
       { label: "FAQ", href: "/faq" },
@@ -79,6 +80,7 @@ const mobileNavLinks: NavLink[] = [
   { label: "NCLEX-PN Pathway", href: "/nclex-pn" },
   { label: "Courses", href: "/courses" },
   { label: "Features", href: "/features" },
+  { label: "Blog", href: "/blog" },
   { label: "Educators", href: "/educators" },
   { label: "Testimonials", href: "/testimonials" },
   { label: "FAQ", href: "/faq" },

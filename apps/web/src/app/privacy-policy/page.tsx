@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Shield, ArrowRight, AlertCircle, FileText } from "lucide-react";
+import { ArrowRight, AlertCircle, FileText } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Privacy Policy | PREform NCLEX",

@@ -36,11 +36,13 @@ export function BlogPageClient() {
   const currentPage = rawPage ? parseInt(rawPage, 10) || 1 : 1;
   const currentCategory = rawCategory;
   const [searchInput, setSearchInput] = React.useState(rawSearch);
+  const [prevRawSearch, setPrevRawSearch] = React.useState(rawSearch);
 
   // Sync search input if URL changes externally
-  React.useEffect(() => {
+  if (rawSearch !== prevRawSearch) {
+    setPrevRawSearch(rawSearch);
     setSearchInput(rawSearch);
-  }, [rawSearch]);
+  }
 
   const categories = React.useMemo(() => getAllCategories(), []);
 

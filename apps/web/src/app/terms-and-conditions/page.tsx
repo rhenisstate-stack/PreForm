@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Scale, ArrowRight, AlertCircle, FileText } from "lucide-react";
+import { ArrowRight, AlertCircle, FileText } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Terms and Conditions | PREform NCLEX",
@@ -327,7 +327,7 @@ export default function TermsAndConditionsPage() {
 
                 {section.content.subsections && (
                   <div className="mt-4 space-y-4">
-                    {section.content.subsections.map((sub, sIdx) => (
+                    {section.content.subsections.map((sub) => (
                       <div key={sub.title} className="rounded-lg border border-border bg-card/60 p-4 sm:p-5">
                         <h3 className="font-semibold text-foreground text-sm mb-3">{sub.title}</h3>
                         <ul className="space-y-2 text-xs sm:text-sm text-muted-foreground">
