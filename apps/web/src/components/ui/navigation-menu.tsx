@@ -35,7 +35,7 @@ const NavigationMenuContent = React.forwardRef<
     <NavigationMenuPrimitive.Content
       ref={ref}
       className={cn(
-        "rounded-md border border-line bg-white p-1 shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:slide-in-from-top-2",
+        "rounded-md border border-border bg-popover p-1 shadow-md outline-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:slide-in-from-top-2",
         className
       )}
       {...props}
@@ -51,7 +51,7 @@ const NavigationMenuLink = React.forwardRef<
   <NavigationMenuPrimitive.Link
     ref={ref}
     className={cn(
-      "flex items-center rounded-md px-3 py-2 text-sm text-ink transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+      "flex items-center rounded-md px-3 py-2 text-sm text-popover-foreground transition-colors focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
       className
     )}
     {...props}

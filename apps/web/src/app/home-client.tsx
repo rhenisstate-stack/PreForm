@@ -41,7 +41,7 @@ export function HomeClient() {  const { data: programmes, isLoading } = useProgr
 
 function SubscriptionCards({ programmes }: { programmes: Array<{ code: string; displayName: string; isActive: boolean }> }) {
   return (
-    <section id="subscriptions" className="pt-20 pb-24 px-4 bg-white lg:pt-32 lg:pb-32 lg:px-8 border-y border-line">
+    <section id="subscriptions" className="pt-20 pb-24 px-4 bg-card lg:pt-32 lg:pb-32 lg:px-8 border-y border-border">
       <div className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-3xl lg:mx-auto">
           <p className="text-xs font-medium uppercase tracking-wider text-green">

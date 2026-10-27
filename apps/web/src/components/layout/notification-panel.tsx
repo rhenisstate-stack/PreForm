@@ -32,18 +32,18 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
   const unreadCount = visibleAnnouncements.filter((a) => !a.dismissed).length;
 
   return (
-    <div className="relative inline-block text-ink">
+    <div className="relative inline-block text-foreground">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button
-            className="relative p-1.5 rounded-md text-ink transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            className="relative p-1.5 rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             aria-label="Notifications and support"
             aria-haspopup="true"
             aria-expanded={false}
           >
             <Bell className="h-5 w-5" aria-hidden="true" />
             {unreadCount > 0 ? (
-              <Badge className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-destructive px-1.5 text-xs font-bold text-white -rotate-90">
+              <Badge className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-border bg-destructive px-1.5 text-xs font-bold text-white -rotate-90">
                 {unreadCount}
               </Badge>
             ) : null}
@@ -52,9 +52,9 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
         <DropdownMenuContent align="end" className="w-72">
           <DropdownMenuLabel>Notifications</DropdownMenuLabel>
           {isLoading ? (
-            <div className="px-2 py-4 text-sm text-muted">Loading…</div>
+            <div className="px-2 py-4 text-sm text-muted-foreground">Loading…</div>
           ) : visibleAnnouncements.length === 0 ? (
-            <div className="px-2 py-4 text-sm text-muted">No announcements.</div>
+            <div className="px-2 py-4 text-sm text-muted-foreground">No announcements.</div>
           ) : (
             <div className="max-h-60 overflow-y-auto">
               {visibleAnnouncements.map((a) => (
@@ -67,11 +67,11 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
                     }
                   }}
                 >
-                  <div className="text-sm font-medium text-ink">{a.title}</div>
-                  <div className="text-xs text-muted">{a.summary}</div>
+                  <div className="text-sm font-medium text-foreground">{a.title}</div>
+                  <div className="text-xs text-muted-foreground">{a.summary}</div>
                 </div>
               ))}
-              <div className="border-t border-line px-2 py-2">
+              <div className="border-t border-border px-2 py-2">
                 <a
                   href="/contact"
                   className="block text-sm text-primary hover:underline"
@@ -96,7 +96,7 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="flex items-center gap-2 rounded-full border border-line bg-white px-3 py-1.5 text-sm font-medium text-ink transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="User profile menu"
           aria-haspopup="true"
           aria-expanded={false}
@@ -105,7 +105,7 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="text-sm font-medium text-ink">
+        <DropdownMenuLabel className="text-sm font-medium text-foreground">
           {user.displayName}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
@@ -138,7 +138,7 @@ interface CartButtonProps {
 export function CartButton({ itemCount = 0 }: CartButtonProps) {
   return (
     <button
-      className="relative p-1.5 rounded-md text-ink transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      className="relative p-1.5 rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       aria-label={`Shopping cart (${itemCount} items)`}
     >
       <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -146,9 +146,9 @@ export function CartButton({ itemCount = 0 }: CartButtonProps) {
         <path d="M8 7v1a1 1 0 01-1 1H4a1 1 0 01-1-1V7zM16 7v1a1 1 0 01-1 1h-3a1 1 0 01-1-1V7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       {itemCount > 0 && (
-        <Badge className="absolute top-1 right-1 flex h-4 min-w-4 items-center justify-center rounded-full border border-white bg-primary px-1.5 text-xs font-bold text-primary-foreground">
-          {itemCount}
-        </Badge>
+          <span className="flex h-4 min-w-4 items-center justify-center rounded-full border border-border bg-primary px-1.5 text-xs font-bold text-primary-foreground">
+            {itemCount}
+          </span>
       )}
     </button>
   );

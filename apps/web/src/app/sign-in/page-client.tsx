@@ -16,10 +16,10 @@ export function SignInPageClient() {
             </h1>
           </div>
 
-          <div className="mt-12 rounded-xl border border-line bg-white p-6 shadow-sm">
+          <div className="mt-12 rounded-xl border border-border bg-card p-6 shadow-sm">
             <form className="space-y-4">
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-ink">
+                <label htmlFor="email" className="text-sm font-medium text-foreground">
                   Email address
                 </label>
                 <input
@@ -31,7 +31,7 @@ export function SignInPageClient() {
                 />
               </div>
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-ink">
+                <label htmlFor="password" className="text-sm font-medium text-foreground">
                   Password
                 </label>
                 <input
@@ -44,14 +44,14 @@ export function SignInPageClient() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+                className="w-full rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Sign in
               </button>
             </form>
             <p className="mt-6 text-center text-sm text-muted">
               Don&rsquo;t have an account?{" "}
-              <Link href="/sign-up" className="text-green hover:underline font-medium">
+              <Link href="/sign-up" className="text-secondary hover:underline font-medium">
                 Create account
               </Link>
             </p>

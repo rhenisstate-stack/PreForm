@@ -143,8 +143,8 @@ export function CourseFinderQuiz() {
 
         <div className="mt-12 flex justify-center">
           <div className="w-full max-w-md">
-            <div className="w-full bg-line rounded-full h-2 mb-6">
-              <div className="h-2 bg-green rounded-full" style={{ width: `${progress}%` }} />
+            <div className="w-full border-border rounded-full h-2 mb-6">
+              <div className="h-2 bg-secondary rounded-full" style={{ width: `${progress}%` }} />
             </div>
             <p className="text-xs text-muted text-center">
               Step {currentStep + 1} of {questions.length}

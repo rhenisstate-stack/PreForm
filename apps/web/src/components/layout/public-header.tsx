@@ -29,12 +29,12 @@ export default function PublicHeader({ user }: { user?: { displayName: string; r
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-white/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border bg-card/80 backdrop-blur-md">
       <div className="flex items-center justify-between px-4 py-3 lg:px-8 lg:py-4">
         {/* Brand */}
-        <Link
+          <Link
           href="/"
-          className="flex items-center gap-2 text-xl font-serif font-semibold text-ink"
+          className="flex items-center gap-2 text-xl font-serif font-semibold text-foreground"
           aria-label="PREform NCLEX home"
         >
           <span className="rounded bg-green p-1 text-white font-serif font-bold text-lg">P</span>
@@ -47,7 +47,7 @@ export default function PublicHeader({ user }: { user?: { displayName: string; r
           <NavigationMenu>
             <NavigationMenuList className="flex items-center gap-1 px-1">
               <NavigationMenuItem className="relative group">
-                <NavigationMenuTrigger className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-ink transition-colors hover:text-green focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <NavigationMenuTrigger className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:text-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   NCLEX-RN
                   <ChevronDownIcon className="ml-1 h-3 w-3 opacity-50 group-data-[state=open]:opacity-100" />
                 </NavigationMenuTrigger>
@@ -67,7 +67,7 @@ export default function PublicHeader({ user }: { user?: { displayName: string; r
                 </NavigationMenuContent>
               </NavigationMenuItem>
               <NavigationMenuItem className="relative group">
-                <NavigationMenuTrigger className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-ink transition-colors hover:text-green focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <NavigationMenuTrigger className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:text-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   NCLEX-PN
                   <ChevronDownIcon className="ml-1 h-3 w-3 opacity-50 group-data-[state=open]:opacity-100" />
                 </NavigationMenuTrigger>
@@ -87,7 +87,7 @@ export default function PublicHeader({ user }: { user?: { displayName: string; r
                 </NavigationMenuContent>
               </NavigationMenuItem>
               <NavigationMenuItem className="relative group">
-                <NavigationMenuTrigger className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-ink transition-colors hover:text-green focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <NavigationMenuTrigger className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:text-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   Courses
                   <ChevronDownIcon className="ml-1 h-3 w-3 opacity-50 group-data-[state=open]:opacity-100" />
                 </NavigationMenuTrigger>
@@ -110,7 +110,7 @@ export default function PublicHeader({ user }: { user?: { displayName: string; r
                 </NavigationMenuContent>
               </NavigationMenuItem>
               <NavigationMenuItem className="relative group">
-                <NavigationMenuTrigger className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-ink transition-colors hover:text-green focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <NavigationMenuTrigger className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-foreground transition-colors hover:text-secondary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
                   More
                   <ChevronDownIcon className="ml-1 h-3 w-3 opacity-50 group-data-[state=open]:opacity-100" />
                 </NavigationMenuTrigger>
@@ -148,7 +148,7 @@ export default function PublicHeader({ user }: { user?: { displayName: string; r
             <ProfileMenu user={user} />
           ) : (
             <div className="flex items-center gap-2">
-              <a href="/sign-in" className="px-3 py-1.5 text-sm font-medium text-ink hover:text-green transition-colors">
+              <a href="/sign-in" className="px-3 py-1.5 text-sm font-medium text-foreground hover:text-secondary transition-colors">
                 Sign in
               </a>
               <a href="/sign-up" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors">
@@ -168,7 +168,7 @@ export default function PublicHeader({ user }: { user?: { displayName: string; r
 
         {/* Mobile menu trigger */}
         <button
-          className="lg:hidden p-1.5 rounded-md text-ink transition-colors hover:bg-accent"
+          className="lg:hidden p-1.5 rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
           aria-label="Open mobile menu"
           aria-expanded={mobileMenuOpen}
@@ -179,20 +179,20 @@ export default function PublicHeader({ user }: { user?: { displayName: string; r
 
       {/* Mobile navigation drawer */}
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-line bg-white p-4 space-y-3">
+        <div className="lg:hidden border-t border-border bg-card p-4 space-y-3">
           {navItems.map((item) => (
             <Link
               key={item.label}
               href={item.href}
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-2 py-2 rounded-md text-sm font-medium text-ink hover:bg-accent"
+              className="block px-2 py-2 rounded-md text-sm font-medium text-foreground hover:bg-accent hover:text-accent-foreground"
             >
               {item.label}
             </Link>
           ))}
           <ThemeSwitcher />
-          <div className="flex items-center gap-2 pt-3 border-t border-line">
-            <a href="/sign-in" className="px-3 py-1.5 text-sm font-medium text-ink hover:text-green transition-colors">
+          <div className="flex items-center gap-2 pt-3 border-t border-border">
+            <a href="/sign-in" className="px-3 py-1.5 text-sm font-medium text-foreground hover:text-secondary transition-colors">
               Sign in
             </a>
             <a href="/sign-up" className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-white hover:bg-primary/90 transition-colors">

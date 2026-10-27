@@ -2,60 +2,121 @@
 
 :root {
   color-scheme: light;
-  --ink: #18302e;
-  --muted: #60716c;
-  --paper: #f7f7f1;
-  --white: #fffefa;
-  --green: #174f45;
-  --green-dark: #103b35;
-  --line: #dce2d9;
-  --coral: #d77e63;
+  --ink: #142b4a;
+  --muted: #475569;
+  --paper: #f8fafc;
+  --white: #ffffff;
+  --green: #0d9488;
+  --green-dark: #0f766e;
+  --line: #e2e8f0;
+  --coral: #d4a72c;
   --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --sans: "Aptos", "Segoe UI", sans-serif;
 
-  /* shadcn/ui design tokens */
-  --background: 0 0% 100%;
-  --foreground: 24 12% 12%;
+  /* PREform design tokens (light theme) */
+  --background: 210 33% 97%;
+  --foreground: 214 57% 18%;
   --card: 0 0% 100%;
-  --card-foreground: 24 12% 12%;
+  --card-foreground: 214 57% 18%;
   --popover: 0 0% 100%;
-  --popover-foreground: 24 12% 12%;
-  --primary: 160 63% 31%;
+  --popover-foreground: 214 57% 18%;
+  --primary: 214 57% 18%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 40 20% 94%;
-  --secondary-foreground: 24 12% 12%;
-  --muted: 40 15% 50%;
-  --muted-foreground: 40 10% 45%;
-  --accent: 40 20% 94%;
-  --accent-foreground: 24 12% 12%;
-  --destructive: 0 84% 60%;
+  --secondary: 174 76% 32%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 210 20% 96%;
+  --muted-foreground: 215 25% 40%;
+  --accent: 44 66% 50%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 358 90% 42%;
   --destructive-foreground: 0 0% 100%;
-  --border: 40 15% 85%;
-  --input: 40 15% 85%;
-  --ring: 160 63% 31%;
+  --border: 213 33% 92%;
+  --input: 213 33% 92%;
+  --ring: 174 76% 32%;
   --radius: 0.75rem;
+
+  /* PREform status tokens */
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 36 100% 29%;
+  --warning-foreground: 0 0% 100%;
+  --error: 358 90% 42%;
+  --error-foreground: 0 0% 100%;
+  --info: 217 91% 50%;
+  --info-foreground: 0 0% 100%;
+}
+
+@theme {
+  --background: var(--background);
+  --foreground: var(--foreground);
+  --card: var(--card);
+  --card-foreground: var(--card-foreground);
+  --popover: var(--popover);
+  --popover-foreground: var(--popover-foreground);
+  --primary: var(--primary);
+  --primary-foreground: var(--primary-foreground);
+  --secondary: var(--secondary);
+  --secondary-foreground: var(--secondary-foreground);
+  --muted: var(--muted);
+  --muted-foreground: var(--muted-foreground);
+  --accent: var(--accent);
+  --accent-foreground: var(--accent-foreground);
+  --destructive: var(--destructive);
+  --destructive-foreground: var(--destructive-foreground);
+  --border: var(--border);
+  --input: var(--input);
+  --ring: var(--ring);
+  --success: var(--success);
+  --success-foreground: var(--success-foreground);
+  --warning: var(--warning);
+  --warning-foreground: var(--warning-foreground);
+  --error: var(--error);
+  --error-foreground: var(--error-foreground);
+  --info: var(--info);
+  --info-foreground: var(--info-foreground);
+  --radius: var(--radius);
 }
 
 .dark {
-  --background: 24 12% 8%;
-  --foreground: 40 20% 94%;
-  --card: 24 12% 8%;
-  --card-foreground: 40 20% 94%;
-  --popover: 24 12% 8%;
-  --popover-foreground: 40 20% 94%;
-  --primary: 160 63% 31%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 40 15% 20%;
-  --secondary-foreground: 40 20% 94%;
-  --muted: 40 15% 25%;
-  --muted-foreground: 40 10% 65%;
-  --accent: 40 15% 20%;
-  --accent-foreground: 40 20% 94%;
-  --destructive: 0 63% 45%;
+  --background: 220 49% 8%;
+  --foreground: 210 33% 97%;
+  --card: 217 44% 14%;
+  --card-foreground: 210 33% 97%;
+  --popover: 217 44% 14%;
+  --popover-foreground: 210 33% 97%;
+  --primary: 217 91% 63%;
+  --primary-foreground: 220 49% 8%;
+  --secondary: 171 80% 40%;
+  --secondary-foreground: 220 49% 8%;
+  --muted: 217 33% 22%;
+  --muted-foreground: 213 22% 82%;
+  --accent: 44 66% 50%;
+  --accent-foreground: 220 49% 8%;
+  --destructive: 358 90% 42%;
   --destructive-foreground: 0 0% 100%;
-  --border: 40 15% 25%;
-  --input: 40 15% 25%;
-  --ring: 160 63% 31%;
+  --border: 217 25% 27%;
+  --input: 217 25% 27%;
+  --ring: 171 84% 53%;
+
+  /* Custom marketing vars (dark theme) */
+  --ink: #f8fafc;
+  --muted: #cbd5e1;
+  --paper: #0b1220;
+  --white: #ffffff;
+  --green: #14b8a6;
+  --green-dark: #064e3b;
+  --line: #334155;
+  --coral: #d4a72c;
+
+  /* PREform status tokens (dark) */
+  --success: 142 76% 36%;
+  --success-foreground: 0 0% 100%;
+  --warning: 36 100% 29%;
+  --warning-foreground: 0 0% 100%;
+  --error: 358 90% 42%;
+  --error-foreground: 0 0% 100%;
+  --info: 217 91% 50%;
+  --info-foreground: 0 0% 100%;
 }
 
 * {
@@ -68,8 +129,8 @@ html {
 
 body {
   margin: 0;
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--background);
+  color: var(--foreground);
   font-family: var(--sans);
   -webkit-font-smoothing: antialiased;
 }

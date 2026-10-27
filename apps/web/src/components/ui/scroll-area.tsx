@@ -10,7 +10,7 @@ const ScrollArea = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
-    className={cn("rounded-md border-line bg-card p-1", className)}
+    className={cn("rounded-md border-border bg-card p-1", className)}
     {...props}
   />
 ));

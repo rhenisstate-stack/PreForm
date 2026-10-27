@@ -8,7 +8,7 @@ const Separator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SeparatorPrimitive.Root
     ref={ref}
-    className={cn("shrink-0 border-line", className)}
+    className={cn("shrink-0 border-border", className)}
     {...props}
   />
 ));

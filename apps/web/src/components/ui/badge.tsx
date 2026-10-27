@@ -9,8 +9,8 @@ const variants = {
   default: "bg-primary text-primary-foreground hover:bg-primary/80",
   secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
   destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-  outline: "border border-input text-ink",
-  success: "border-transparent bg-green/10 text-green-dark",
+  outline: "border border-input text-foreground",
+  success: "border-transparent bg-success text-success-foreground",
 };
 
 export function Badge({ className, variant = "default", ...props }: BadgeProps) {

@@ -25,7 +25,7 @@ export function AnnouncementBar({ announcements, isLoading }: AnnouncementBarPro
   };
 
   return (
-    <div className="flex items-center justify-center px-4 py-2 text-xs font-medium bg-green text-white">
+    <div className="flex items-center justify-center px-4 py-2 text-xs font-medium bg-secondary text-secondary-foreground">
       <span className="mr-2">{active.title}</span>
       {active.destination ? (
         <Link
@@ -38,7 +38,7 @@ export function AnnouncementBar({ announcements, isLoading }: AnnouncementBarPro
       ) : null}
       <button
         onClick={handleDismiss}
-        className="ml-auto flex items-center gap-1 text-white hover:text-green/80"
+        className="ml-auto flex items-center gap-1 text-secondary-foreground hover:text-secondary/80"
         aria-label="Dismiss announcement"
       >
         <X className="h-3 w-3" />

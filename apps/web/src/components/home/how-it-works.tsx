@@ -56,7 +56,7 @@ export function HowItWorks() {
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
           {steps.map((s) => (
             <div key={s.number} className="flex flex-col gap-4">
-              <div className="flex shrink-0 items-center justify-center rounded-full border border-line bg-white p-1 text-ink font-serif font-bold text-xl">
+              <div className="flex shrink-0 items-center justify-center rounded-full border border-border bg-card p-1 text-foreground font-serif font-bold text-xl">
                 {s.number}
               </div>
               <div>
@@ -70,7 +70,7 @@ export function HowItWorks() {
         <div className="mt-16 flex justify-center">
           <Link
             href="/subscriptions"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
             Explore subscriptions <ArrowRight className="ml-2 h-4 w-4" />
           </Link>

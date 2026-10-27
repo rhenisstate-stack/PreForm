@@ -59,12 +59,12 @@ export default function PublicFooter() {
   }, []);
 
   return (
-    <footer className="border-t border-line bg-white">
+    <footer className="border-t border-border bg-card">
       <div className="px-4 py-8 lg:px-8 lg:py-12">
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
           {footerLinks.map((column) => (
             <div key={column.heading}>
-              <h3 className="text-sm font-semibold text-ink tracking-tight">
+              <h3 className="text-sm font-semibold text-foreground tracking-tight">
                 {column.heading}
               </h3>
               <ul className="mt-4 space-y-2">
@@ -72,7 +72,7 @@ export default function PublicFooter() {
                   <li key={link.label}>
                     <Link
                       href={link.href}
-                      className="text-sm text-muted hover:text-green transition-colors"
+                      className="text-sm text-muted-foreground hover:text-secondary transition-colors"
                     >
                       {link.label}
                     </Link>
@@ -83,19 +83,19 @@ export default function PublicFooter() {
           ))}
         </div>
 
-        <div className="mt-12 border-t border-line pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="mt-12 border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="rounded bg-green p-1 text-white font-serif font-bold text-lg">P</span>
-            <span className="text-sm font-semibold text-ink">PREform NCLEX</span>
+            <span className="rounded bg-secondary p-1 text-white font-serif font-bold text-lg">P</span>
+            <span className="text-sm font-semibold text-foreground">PREform NCLEX</span>
           </div>
           {year !== null && (
-            <p className="text-xs text-muted">
+            <p className="text-xs text-muted-foreground">
               © {year} Preform NCLEX. All rights reserved.
             </p>
           )}
           <div className="flex items-center gap-4">
-            <a href="#" className="text-muted hover:text-green transition-colors" aria-label="LinkedIn" />
-            <a href="#" className="text-muted hover:text-green transition-colors" aria-label="X" />
+            <a href="#" className="text-muted-foreground hover:text-secondary transition-colors" aria-label="LinkedIn" />
+            <a href="#" className="text-muted-foreground hover:text-secondary transition-colors" aria-label="X" />
           </div>
         </div>
       </div>

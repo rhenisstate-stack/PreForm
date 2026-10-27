@@ -20,9 +20,9 @@ export function ThemeSwitcher() {
   const ActiveIcon = icons[theme ?? "system"];
 
   return (
-    <div className="relative inline-block text-ink">
+    <div className="relative inline-block text-foreground">
       <button
-        className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent"
+        className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
         aria-label="Change theme"
         aria-haspopup="true"
         aria-expanded="false"
@@ -39,7 +39,7 @@ export function ThemeSwitcher() {
         <ActiveIcon className="h-4 w-4" />
         <span className="hidden sm:block capitalize">{theme}</span>
       </button>
-      <div className="absolute right-0 mt-2 w-40 rounded-md border border-line bg-white p-1 shadow-lg">
+      <div className="absolute right-0 mt-2 w-40 rounded-md border border-border bg-popover p-1 shadow-lg">
         {["system", "light", "dark"].map((option) => {
           const OptionIcon = icons[option];
           return (
@@ -48,7 +48,7 @@ export function ThemeSwitcher() {
               className={`flex items-center gap-2 w-full rounded-md px-3 py-1.5 text-sm ${
                 option === theme
                   ? "bg-accent text-accent-foreground"
-                  : "text-ink hover:bg-accent"
+                  : "text-foreground hover:bg-accent hover:text-accent-foreground"
               }`}
               onClick={() => toggleTheme(option)}
               onKeyDown={(e) => {

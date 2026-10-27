@@ -74,10 +74,10 @@ export function FAQPageClient() {
       <section className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="text-center lg:max-w-3xl lg:mx-auto">
-            <p className="text-xs font-medium uppercase tracking-wider text-green">
+            <p className="text-xs font-medium uppercase tracking-wider text-secondary">
               Frequently asked questions
             </p>
-            <h1 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-ink sm:text-4xl">
+            <h1 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
               Questions learners ask
             </h1>
           </div>
@@ -90,7 +90,7 @@ export function FAQPageClient() {
                 className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
                   activeCategory === c.id
                     ? "bg-primary text-white"
-                    : "bg-background border border-line text-ink hover:bg-accent"
+                    : "bg-background border border-border text-foreground hover:bg-accent"
                 }`}
               >
                 {c.label}

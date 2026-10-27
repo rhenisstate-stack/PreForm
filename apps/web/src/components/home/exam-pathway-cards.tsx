@@ -94,7 +94,7 @@ export function ExamPathwayCards() {
               <CardFooter>
                 <Link
                   href={p.href}
-                  className="inline-flex items-center justify-between w-full rounded-md border border-line bg-white px-4 py-3 text-sm font-medium text-ink transition-colors hover:bg-accent"
+                  className="inline-flex items-center justify-between w-full rounded-md border border-border bg-card px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 >
                   Explore {p.title}
                   <ArrowRight className="ml-2 h-4 w-4 text-green transition-transform group-hover:translate-x-1" />
