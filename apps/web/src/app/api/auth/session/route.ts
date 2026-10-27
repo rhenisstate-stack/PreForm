@@ -1,8 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -50,6 +48,9 @@ export async function GET() {
       user,
     });
   } catch (err) {
+    if (err && typeof err === "object" && "digest" in err) {
+      throw err;
+    }
     console.error("[Session API] Error retrieving session:", err);
     return NextResponse.json({ authenticated: false, user: null }, { status: 500 });
   }

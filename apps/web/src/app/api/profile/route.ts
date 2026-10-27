@@ -1,8 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-export const dynamic = "force-dynamic";
-
 interface CandidateSession {
   sub?: string;
   id?: string;
@@ -58,6 +56,9 @@ export async function GET() {
 
     return NextResponse.json({ success: true, profile });
   } catch (err) {
+    if (err && typeof err === "object" && "digest" in err) {
+      throw err;
+    }
     console.error("Profile GET error:", err);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
