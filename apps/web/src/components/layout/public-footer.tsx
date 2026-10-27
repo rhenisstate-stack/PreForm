@@ -96,8 +96,8 @@ export default function PublicFooter() {
                 width={32}
                 height={32}
               />
-              <span>
-                {BRAND.name} <span className="text-xs font-sans font-bold text-secondary uppercase">NCLEX</span>
+              <span className="font-bold tracking-tight text-foreground font-serif">
+                {BRAND.name}
               </span>
             </Link>
 

@@ -51,7 +51,7 @@ describe("Homepage header integration", () => {
     expect(header).toBeInTheDocument();
 
     // Logo and homepage link
-    const logoLink = within(header).getByRole("link", { name: "PrepFord NCLEX home" });
+    const logoLink = within(header).getByRole("link", { name: /^PrepFord home$/i });
     expect(logoLink).toBeInTheDocument();
 
     // Main navigation links are visible in header

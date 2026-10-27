@@ -131,11 +131,8 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
             width={32}
             height={32}
           />
-          <span className="flex items-baseline gap-1 font-serif">
-            <span className="tracking-tight text-foreground">{BRAND.name}</span>
-            <span className="text-xs font-sans font-bold tracking-wider text-secondary uppercase">
-              NCLEX
-            </span>
+          <span className="font-serif tracking-tight font-bold text-foreground">
+            {BRAND.name}
           </span>
         </Link>
 
