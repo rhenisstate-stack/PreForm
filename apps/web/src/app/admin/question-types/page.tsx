@@ -4,14 +4,8 @@ import * as React from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
-  CheckCircle2,
-  Layers,
-  FileQuestion,
-  HelpCircle,
   Search,
-  SlidersHorizontal,
 } from "lucide-react";
-import { BRAND } from "@/lib/brand";
 
 interface QuestionTypeCatalogueItem {
   id: string;
