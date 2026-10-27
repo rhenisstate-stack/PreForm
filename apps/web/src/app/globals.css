@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   color-scheme: light;
 
@@ -51,7 +53,7 @@
   --sans: "Aptos", "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
 }
 
-@theme {
+@theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -181,7 +183,8 @@ a:focus-visible {
   z-index: 10;
   transform: translateY(-160%);
   border-radius: 4px;
-  background: var(--white);
+  background: var(--card);
+  color: var(--card-foreground);
   padding: 10px 14px;
 }
 
@@ -231,7 +234,7 @@ a:focus-visible {
 
 .wordmark-suffix {
   margin-left: -4px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 9px;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -241,7 +244,7 @@ a:focus-visible {
   display: flex;
   align-items: center;
   gap: 34px;
-  color: #425652;
+  color: var(--foreground);
   font-size: 13px;
 }
 
@@ -329,7 +332,7 @@ p {
 .hero-description {
   max-width: 470px;
   margin-bottom: 30px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 16px;
   line-height: 1.8;
 }
@@ -551,7 +554,7 @@ p {
 .principle-card p {
   max-width: 310px;
   margin-bottom: 0;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -572,7 +575,7 @@ p {
 .pathways-heading > p {
   max-width: 330px;
   margin-bottom: 5px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 13px;
   line-height: 1.75;
 }
@@ -617,7 +620,7 @@ p {
 
 .pathway-detail {
   margin-top: 4px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 13px;
 }
 
@@ -704,7 +707,7 @@ p {
 
 .site-footer > p {
   margin-bottom: 0;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 11px;
 }
 
@@ -751,7 +754,7 @@ p {
 
 .programme-content > p {
   max-width: 590px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 16px;
   line-height: 1.8;
 }
@@ -761,7 +764,7 @@ p {
   border-left: 2px solid var(--coral);
   background: var(--white);
   padding: 19px 22px;
-  color: var(--muted);
+  color: var(--muted-foreground);
   font-size: 13px;
   line-height: 1.7;
 }
