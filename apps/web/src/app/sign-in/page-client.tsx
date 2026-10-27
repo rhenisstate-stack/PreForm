@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Eye,
   EyeOff,
@@ -11,38 +14,57 @@ import {
   ArrowRight,
   ShieldCheck,
   GraduationCap,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GoogleAuthButton } from "@/components/auth/google-auth-button";
+import { signInSchema, type SignInInput } from "@/lib/validation/auth";
 
 export function SignInPageClient() {
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get("error");
+
   const [showPassword, setShowPassword] = React.useState(false);
-  const [rememberMe, setRememberMe] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [showForgotModal, setShowForgotModal] = React.useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SignInInput>({
+    resolver: zodResolver(signInSchema as any),
+    defaultValues: {
+      email: "",
+      password: "",
+      rememberMe: false,
+    },
+    mode: "onTouched",
+  });
+
+  // Map Google authentication URL error parameters to safe, non-sensitive messages
+  React.useEffect(() => {
+    if (errorParam === "google_not_configured") {
+      setErrorMessage(
+        "Google authentication is not yet configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the server environment."
+      );
+    } else if (errorParam === "google_cancelled") {
+      setErrorMessage("Google sign-in was cancelled or consent was not granted. Please try again.");
+    } else if (errorParam === "state_mismatch" || errorParam === "csrf_detected") {
+      setErrorMessage("Security verification failed (state mismatch). Please try again.");
+    } else if (errorParam === "token_exchange_failed" || errorParam === "auth_failed") {
+      setErrorMessage("Unable to complete Google authentication at this time. Please try signing in with email.");
+    }
+  }, [errorParam]);
+
+  const onSubmit = async (_data: SignInInput) => {
     setErrorMessage(null);
-
-    if (!email || !email.includes("@")) {
-      setErrorMessage("Please enter a valid email address.");
-      return;
-    }
-
-    if (!password) {
-      setErrorMessage("Please enter your password.");
-      return;
-    }
-
     setIsLoading(true);
 
     // Simulate authenticating against backend contract
     setTimeout(() => {
       setIsLoading(false);
-      // Inform candidate of scaffold status as documented in decisions.md
       setErrorMessage(
         "Account services are currently in preview mode. Live student authentication will be available in Phase 4."
       );
@@ -141,7 +163,7 @@ export function SignInPageClient() {
               </Link>
             </div>
 
-            <div className="mb-8">
+            <div className="mb-6">
               <h2 className="text-2xl sm:text-3xl font-serif font-semibold tracking-tight text-foreground">
                 Sign in to your account
               </h2>
@@ -155,6 +177,7 @@ export function SignInPageClient() {
               <div
                 className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200"
                 role="alert"
+                aria-live="assertive"
               >
                 <div className="flex items-start gap-2.5">
                   <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
@@ -163,8 +186,25 @@ export function SignInPageClient() {
               </div>
             )}
 
+            {/* Google Authentication */}
+            <div className="mb-6">
+              <GoogleAuthButton source="sign-in" />
+            </div>
+
+            {/* Divider */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-3 font-medium text-muted-foreground">
+                  Or continue with email
+                </span>
+              </div>
+            </div>
+
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
               <div className="space-y-1.5">
                 <label
                   htmlFor="email"
@@ -178,16 +218,23 @@ export function SignInPageClient() {
                   </div>
                   <input
                     id="email"
-                    name="email"
                     type="email"
                     autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    required
-                    className="w-full rounded-md border border-input bg-background pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors shadow-sm"
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby={errors.email ? "email-error" : undefined}
+                    {...register("email")}
+                    className={`w-full rounded-md border bg-background pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors shadow-sm ${
+                      errors.email ? "border-destructive focus-visible:ring-destructive" : "border-input"
+                    }`}
                   />
                 </div>
+                {errors.email && (
+                  <p id="email-error" className="flex items-center gap-1 text-xs text-destructive mt-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    <span>{errors.email.message}</span>
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -212,14 +259,15 @@ export function SignInPageClient() {
                   </div>
                   <input
                     id="password"
-                    name="password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    required
-                    className="w-full rounded-md border border-input bg-background pl-10 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors shadow-sm"
+                    aria-invalid={Boolean(errors.password)}
+                    aria-describedby={errors.password ? "password-error" : undefined}
+                    {...register("password")}
+                    className={`w-full rounded-md border bg-background pl-10 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors shadow-sm ${
+                      errors.password ? "border-destructive focus-visible:ring-destructive" : "border-input"
+                    }`}
                   />
                   <button
                     type="button"
@@ -234,14 +282,19 @@ export function SignInPageClient() {
                     )}
                   </button>
                 </div>
+                {errors.password && (
+                  <p id="password-error" className="flex items-center gap-1 text-xs text-destructive mt-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    <span>{errors.password.message}</span>
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer text-sm text-muted-foreground select-none">
                   <input
                     type="checkbox"
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
+                    {...register("rememberMe")}
                     className="h-4 w-4 rounded border-border text-primary focus:ring-ring"
                   />
                   <span>Remember this device</span>
@@ -250,10 +303,10 @@ export function SignInPageClient() {
 
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 font-medium shadow-sm transition-all flex items-center justify-center gap-2"
               >
-                {isLoading ? (
+                {isLoading || isSubmitting ? (
                   <span className="inline-flex items-center gap-2">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                     Signing in…

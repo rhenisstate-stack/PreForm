@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Eye,
   EyeOff,
@@ -12,50 +15,66 @@ import {
   ArrowRight,
   ShieldCheck,
   GraduationCap,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GoogleAuthButton } from "@/components/auth/google-auth-button";
+import { PasswordStrengthIndicator } from "@/components/auth/password-strength-indicator";
+import { signUpSchema, type SignUpInput } from "@/lib/validation/auth";
 
 export function SignUpPageClient() {
-  const [fullName, setFullName] = React.useState("");
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [pathway, setPathway] = React.useState<"rn" | "pn">("rn");
-  const [agreeTerms, setAgreeTerms] = React.useState(false);
+  const searchParams = useSearchParams();
+  const errorParam = searchParams.get("error");
+
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<SignUpInput>({
+    resolver: zodResolver(signUpSchema as any),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      pathway: "rn",
+      password: "",
+      agreeTerms: false as unknown as true,
+    },
+    mode: "onTouched",
+  });
+
+  const currentPathway = watch("pathway");
+  const currentPassword = watch("password");
+
+  // Map Google authentication URL error parameters to safe, non-sensitive messages
+  React.useEffect(() => {
+    if (errorParam === "google_not_configured") {
+      setErrorMessage(
+        "Google authentication is not yet configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the server environment."
+      );
+    } else if (errorParam === "google_cancelled") {
+      setErrorMessage("Google registration was cancelled or consent was not granted. Please try again.");
+    } else if (errorParam === "state_mismatch" || errorParam === "csrf_detected") {
+      setErrorMessage("Security verification failed (state mismatch). Please try again.");
+    } else if (errorParam === "token_exchange_failed" || errorParam === "auth_failed") {
+      setErrorMessage("Unable to complete Google registration at this time. Please try creating an account with email.");
+    }
+  }, [errorParam]);
+
+  const onSubmit = async (_data: SignUpInput) => {
     setErrorMessage(null);
-
-    if (!fullName.trim()) {
-      setErrorMessage("Please enter your full name.");
-      return;
-    }
-
-    if (!email || !email.includes("@")) {
-      setErrorMessage("Please enter a valid email address.");
-      return;
-    }
-
-    if (!password || password.length < 8) {
-      setErrorMessage("Password must be at least 8 characters long.");
-      return;
-    }
-
-    if (!agreeTerms) {
-      setErrorMessage("Please accept the Terms and Conditions and Privacy Policy.");
-      return;
-    }
-
     setIsLoading(true);
 
-    // Simulate registration processing against backend contract
+    // Simulate authenticating against backend contract
     setTimeout(() => {
       setIsLoading(false);
       setErrorMessage(
-        "Platform registration is currently in scaffold preview. Full candidate onboarding will open in Phase 4."
+        "Account services are currently in preview mode. Live student registration will be activated in Phase 4."
       );
     }, 800);
   };
@@ -80,15 +99,15 @@ export function SignUpPageClient() {
 
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0D9488]/20 border border-[#0D9488]/30 px-3 py-1 text-xs font-semibold text-[#14B8A6] mb-4">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Evidence-Based Preparation
+              Comprehensive Licensure Preparation
             </span>
 
             <h1 className="text-3xl xl:text-4xl font-serif font-semibold leading-tight text-white">
-              Start your journey to NCLEX licensure with confidence.
+              Structured preparation engineered for first-time pass rates.
             </h1>
 
             <p className="mt-4 text-base text-slate-300 leading-relaxed">
-              Prepare for the NCLEX-RN or NCLEX-PN with high-yield questions, Next Generation clinical case studies, and transparent readiness feedback.
+              Join nursing students preparing for RN and PN licensure with rigorous Next Gen practice, adaptive performance tracking, and verified clinical rationales.
             </p>
 
             {/* Platform Highlights */}
@@ -98,8 +117,8 @@ export function SignUpPageClient() {
                   <CheckCircle2 className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-white">Dedicated Exam Pathways</h3>
-                  <p className="text-xs text-slate-300 mt-0.5">Specialized question banks tailored specifically to RN or PN scope of practice.</p>
+                  <h3 className="text-sm font-semibold text-white">Targeted Examination Pathways</h3>
+                  <p className="text-xs text-slate-300 mt-0.5">Custom question pools tailored specifically to either NCLEX-RN or NCLEX-PN.</p>
                 </div>
               </div>
 
@@ -108,8 +127,8 @@ export function SignUpPageClient() {
                   <CheckCircle2 className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-white">In-Depth Clinical Rationales</h3>
-                  <p className="text-xs text-slate-300 mt-0.5">Clear explanations for correct and incorrect options to develop true diagnostic reasoning.</p>
+                  <h3 className="text-sm font-semibold text-white">Clinical Judgment Mastery</h3>
+                  <p className="text-xs text-slate-300 mt-0.5">NGN item formats: matrix, bowtie, drop-down, and 6-question clinical case studies.</p>
                 </div>
               </div>
 
@@ -118,8 +137,8 @@ export function SignUpPageClient() {
                   <CheckCircle2 className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-semibold text-white">No Inflated Guarantees</h3>
-                  <p className="text-xs text-slate-300 mt-0.5">Transparent readiness scoring based directly on client-needs category mastery.</p>
+                  <h3 className="text-sm font-semibold text-white">Readiness Predictors</h3>
+                  <p className="text-xs text-slate-300 mt-0.5">Benchmark your category performance before stepping into the testing center.</p>
                 </div>
               </div>
             </div>
@@ -132,8 +151,8 @@ export function SignUpPageClient() {
                 <GraduationCap className="h-5 w-5" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-white">NCSBN Blueprint Aligned</p>
-                <p className="text-[11px] text-slate-300">Covers Safe and Effective Care, Health Promotion, Psychosocial, and Physiological Integrity.</p>
+                <p className="text-xs font-semibold text-white">Free Trial Included</p>
+                <p className="text-[11px] text-slate-300">Test sample questions immediately after registration.</p>
               </div>
             </div>
           </div>
@@ -152,7 +171,7 @@ export function SignUpPageClient() {
               </Link>
             </div>
 
-            <div className="mb-8">
+            <div className="mb-6">
               <h2 className="text-2xl sm:text-3xl font-serif font-semibold tracking-tight text-foreground">
                 Create your account
               </h2>
@@ -166,6 +185,7 @@ export function SignUpPageClient() {
               <div
                 className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-200"
                 role="alert"
+                aria-live="assertive"
               >
                 <div className="flex items-start gap-2.5">
                   <ShieldCheck className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
@@ -174,8 +194,25 @@ export function SignUpPageClient() {
               </div>
             )}
 
+            {/* Google Authentication */}
+            <div className="mb-6">
+              <GoogleAuthButton source="sign-up" />
+            </div>
+
+            {/* Divider */}
+            <div className="relative mb-6">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-border" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-background px-3 font-medium text-muted-foreground">
+                  Or continue with email
+                </span>
+              </div>
+            </div>
+
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
               {/* Full Name */}
               <div className="space-y-1.5">
                 <label
@@ -190,16 +227,23 @@ export function SignUpPageClient() {
                   </div>
                   <input
                     id="fullName"
-                    name="fullName"
                     type="text"
                     autoComplete="name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. Jane Doe"
-                    required
-                    className="w-full rounded-md border border-input bg-background pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors shadow-sm"
+                    aria-invalid={Boolean(errors.fullName)}
+                    aria-describedby={errors.fullName ? "fullName-error" : undefined}
+                    {...register("fullName")}
+                    className={`w-full rounded-md border bg-background pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors shadow-sm ${
+                      errors.fullName ? "border-destructive focus-visible:ring-destructive" : "border-input"
+                    }`}
                   />
                 </div>
+                {errors.fullName && (
+                  <p id="fullName-error" className="flex items-center gap-1 text-xs text-destructive mt-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    <span>{errors.fullName.message}</span>
+                  </p>
+                )}
               </div>
 
               {/* Email Address */}
@@ -216,16 +260,23 @@ export function SignUpPageClient() {
                   </div>
                   <input
                     id="email"
-                    name="email"
                     type="email"
                     autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@example.com"
-                    required
-                    className="w-full rounded-md border border-input bg-background pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors shadow-sm"
+                    aria-invalid={Boolean(errors.email)}
+                    aria-describedby={errors.email ? "email-error" : undefined}
+                    {...register("email")}
+                    className={`w-full rounded-md border bg-background pl-10 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors shadow-sm ${
+                      errors.email ? "border-destructive focus-visible:ring-destructive" : "border-input"
+                    }`}
                   />
                 </div>
+                {errors.email && (
+                  <p id="email-error" className="flex items-center gap-1 text-xs text-destructive mt-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    <span>{errors.email.message}</span>
+                  </p>
+                )}
               </div>
 
               {/* Exam Pathway Selection Cards */}
@@ -233,12 +284,14 @@ export function SignUpPageClient() {
                 <label className="block text-sm font-medium text-foreground">
                   Examination pathway
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3" role="radiogroup" aria-label="Examination pathway">
                   <button
                     type="button"
-                    onClick={() => setPathway("rn")}
+                    role="radio"
+                    aria-checked={currentPathway === "rn"}
+                    onClick={() => setValue("pathway", "rn", { shouldValidate: true })}
                     className={`flex flex-col text-left p-3 rounded-lg border transition-all ${
-                      pathway === "rn"
+                      currentPathway === "rn"
                         ? "border-secondary bg-secondary/10 ring-1 ring-secondary"
                         : "border-border bg-card hover:bg-muted/50"
                     }`}
@@ -247,7 +300,7 @@ export function SignUpPageClient() {
                       <span className="text-xs font-bold uppercase tracking-wider text-secondary">
                         NCLEX-RN
                       </span>
-                      {pathway === "rn" && <CheckCircle2 className="h-4 w-4 text-secondary" />}
+                      {currentPathway === "rn" && <CheckCircle2 className="h-4 w-4 text-secondary" />}
                     </div>
                     <span className="text-xs font-medium text-foreground mt-1">
                       Registered Nurse
@@ -256,9 +309,11 @@ export function SignUpPageClient() {
 
                   <button
                     type="button"
-                    onClick={() => setPathway("pn")}
+                    role="radio"
+                    aria-checked={currentPathway === "pn"}
+                    onClick={() => setValue("pathway", "pn", { shouldValidate: true })}
                     className={`flex flex-col text-left p-3 rounded-lg border transition-all ${
-                      pathway === "pn"
+                      currentPathway === "pn"
                         ? "border-secondary bg-secondary/10 ring-1 ring-secondary"
                         : "border-border bg-card hover:bg-muted/50"
                     }`}
@@ -267,13 +322,19 @@ export function SignUpPageClient() {
                       <span className="text-xs font-bold uppercase tracking-wider text-secondary">
                         NCLEX-PN
                       </span>
-                      {pathway === "pn" && <CheckCircle2 className="h-4 w-4 text-secondary" />}
+                      {currentPathway === "pn" && <CheckCircle2 className="h-4 w-4 text-secondary" />}
                     </div>
                     <span className="text-xs font-medium text-foreground mt-1">
                       Practical / Vocational
                     </span>
                   </button>
                 </div>
+                {errors.pathway && (
+                  <p className="flex items-center gap-1 text-xs text-destructive mt-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    <span>{errors.pathway.message}</span>
+                  </p>
+                )}
               </div>
 
               {/* Password */}
@@ -290,14 +351,15 @@ export function SignUpPageClient() {
                   </div>
                   <input
                     id="password"
-                    name="password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
                     placeholder="At least 8 characters"
-                    required
-                    className="w-full rounded-md border border-input bg-background pl-10 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors shadow-sm"
+                    aria-invalid={Boolean(errors.password)}
+                    aria-describedby="password-strength password-error"
+                    {...register("password")}
+                    className={`w-full rounded-md border bg-background pl-10 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors shadow-sm ${
+                      errors.password ? "border-destructive focus-visible:ring-destructive" : "border-input"
+                    }`}
                   />
                   <button
                     type="button"
@@ -312,9 +374,16 @@ export function SignUpPageClient() {
                     )}
                   </button>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Must be at least 8 characters long.
-                </p>
+
+                {/* zxcvbn password-strength meter & feedback */}
+                <PasswordStrengthIndicator password={currentPassword} id="password-strength" />
+
+                {errors.password && (
+                  <p id="password-error" className="flex items-center gap-1 text-xs text-destructive mt-1">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    <span>{errors.password.message}</span>
+                  </p>
+                )}
               </div>
 
               {/* Terms and Privacy Checkbox */}
@@ -322,8 +391,9 @@ export function SignUpPageClient() {
                 <label className="flex items-start gap-2.5 cursor-pointer text-xs text-muted-foreground select-none">
                   <input
                     type="checkbox"
-                    checked={agreeTerms}
-                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    aria-invalid={Boolean(errors.agreeTerms)}
+                    aria-describedby={errors.agreeTerms ? "terms-error" : undefined}
+                    {...register("agreeTerms")}
                     className="mt-0.5 h-4 w-4 rounded border-border text-primary focus:ring-ring shrink-0"
                   />
                   <span>
@@ -338,15 +408,21 @@ export function SignUpPageClient() {
                     .
                   </span>
                 </label>
+                {errors.agreeTerms && (
+                  <p id="terms-error" className="flex items-center gap-1 text-xs text-destructive mt-1.5 pl-6">
+                    <AlertCircle className="h-3 w-3 shrink-0" />
+                    <span>{errors.agreeTerms.message}</span>
+                  </p>
+                )}
               </div>
 
               {/* Submit Button */}
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isSubmitting}
                 className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-2.5 font-medium shadow-sm transition-all flex items-center justify-center gap-2 mt-2"
               >
-                {isLoading ? (
+                {isLoading || isSubmitting ? (
                   <span className="inline-flex items-center gap-2">
                     <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
                     Creating account…
