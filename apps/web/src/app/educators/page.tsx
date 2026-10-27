@@ -27,24 +27,24 @@ export default function EducatorsPage() {
           </div>
 
           <div className="mt-16 space-y-8">
-            <div className="rounded-xl border border-line bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-serif font-semibold text-ink">Practice and assessment tools</h2>
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <h2 className="text-lg font-serif font-semibold text-foreground">Practice and assessment tools</h2>
               <p className="mt-2 text-sm text-muted">
                 Assign original NCLEX-style questions and readiness assessments
                 to learners. Track completion and performance by topic.
               </p>
             </div>
 
-            <div className="rounded-xl border border-line bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-serif font-semibold text-ink">Progress reporting</h2>
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <h2 className="text-lg font-serif font-semibold text-foreground">Progress reporting</h2>
               <p className="mt-2 text-sm text-muted">
                 View learner accuracy by topic, question type, and time.
                 Identify weak areas and demonstrated strengths.
               </p>
             </div>
 
-            <div className="rounded-xl border border-line bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-serif font-semibold text-ink">Institutional enquiry</h2>
+            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <h2 className="text-lg font-serif font-semibold text-foreground">Institutional enquiry</h2>
               <p className="mt-2 text-sm text-muted">
                 Interested in group access or institutional licensing? Contact us
                 to discuss your needs.

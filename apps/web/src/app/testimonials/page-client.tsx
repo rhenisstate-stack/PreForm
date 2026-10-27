@@ -84,7 +84,7 @@ export function TestimonialsPageClient() {
 
 function BadgeInline({ pathway }: { pathway: "RN" | "PN" }) {
   return (
-    <span className="inline-flex items-center rounded-md border border-line bg-white px-2 py-0.5 text-xs font-semibold text-ink">
+    <span className="inline-flex items-center rounded-md border border-border bg-card px-2 py-0.5 text-xs font-semibold text-foreground">
       {pathway}
     </span>
   );

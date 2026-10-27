@@ -86,9 +86,9 @@ export function SubscriptionsPageClient() {
 
           <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {plans.map((plan) => (
-              <Card key={plan.name} className={`flex flex-col h-full relative ${plan.isFeatured ? "ring-2 ring-green" : ""}`}>
+              <Card key={plan.name} className={`flex flex-col h-full relative ${plan.isFeatured ? "ring-2 ring-secondary" : ""}`}>
                 {plan.isFeatured && (
-                  <Badge className="absolute top-4 left-1/2 -translate-x-1/2 rounded-md bg-green px-2 py-0.5 text-xs font-semibold text-white">
+                  <Badge className="absolute top-4 left-1/2 -translate-x-1/2 rounded-md bg-secondary px-2 py-0.5 text-xs font-semibold text-secondary-foreground">
                     Most popular
                   </Badge>
                 )}
@@ -116,7 +116,7 @@ export function SubscriptionsPageClient() {
                 <CardFooter>
                   <Link
                     href={plan.href}
-                    className="w-full inline-flex items-center justify-center rounded-md border border-line bg-white px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-accent"
+                    className="w-full inline-flex items-center justify-center rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                   >
                     Select plan <ArrowRight className="ml-2 h-3 w-3" />
                   </Link>
@@ -126,7 +126,7 @@ export function SubscriptionsPageClient() {
           </div>
 
           {programmes && programmes.length > 0 && (
-            <div className="mt-16 border-t border-line pt-8">
+            <div className="mt-16 border-t border-border pt-8">
               <h3 className="text-lg font-semibold text-ink mb-4">Available pathways</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {programmes.map((p: { code: string; displayName: string; isActive: boolean }) => (

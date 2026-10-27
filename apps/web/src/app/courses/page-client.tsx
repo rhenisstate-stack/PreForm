@@ -90,7 +90,7 @@ export function CoursesPageClient() {
           </div>
 
           {programmes && programmes.length > 0 && (
-            <div className="mt-16 border-t border-line pt-8">
+            <div className="mt-16 border-t border-border pt-8">
               <h3 className="text-lg font-semibold text-ink mb-4">Available pathways</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {programmes.map((p: { code: string; displayName: string; isActive: boolean }) => (
