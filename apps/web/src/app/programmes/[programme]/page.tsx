@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
+import { BRAND } from "@/lib/brand";
 
 const programmes = {
   rn: {
@@ -40,7 +42,7 @@ export async function generateMetadata({
     return { title: "Programme not found" };
   }
 
-  return { title: `${programmes[programme].title} pathway` };
+  return { title: `${programmes[programme].title} pathway | ${BRAND.name}` };
 }
 
 export default async function ProgrammePage({
@@ -62,12 +64,18 @@ export default async function ProgrammePage({
         Skip to content
       </a>
       <header className="site-header">
-        <Link className="wordmark" href="/" aria-label="PREform NCLEX home">
-          <span className="wordmark-icon" aria-hidden="true">P</span>
-          <span>PREform</span>
+        <Link className="wordmark" href="/" aria-label={`${BRAND.fullName} home`}>
+          <Image
+            src={BRAND.logo.assetPath}
+            alt=""
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-lg object-contain"
+          />
+          <span className="font-bold tracking-tight">{BRAND.name}</span>
           <span className="wordmark-suffix">NCLEX</span>
         </Link>
-        <Link className="header-cta" href="/#pathways">
+        <Link className="header-cta" href="/#products">
           All pathways <span aria-hidden="true">↗</span>
         </Link>
       </header>
@@ -80,26 +88,30 @@ export default async function ProgrammePage({
           <h1>{pathway.title}</h1>
           <p>{pathway.description}</p>
           <div className="programme-notice">
-            This pathway is part of the PREform product plan and is not open for
-            enrollment. No question bank, assessment or study service is
-            available yet.
+            Explore our comprehensive {pathway.title} question bank, Next-Gen case studies, and adaptive mock exams.
           </div>
-          <Link className="button button-primary" href="/#build-status">
-            See platform status <span aria-hidden="true">→</span>
+          <Link className="button button-primary" href="/#products">
+            View available plans <span aria-hidden="true">→</span>
           </Link>
         </div>
       </section>
       <footer className="site-footer">
         <Link className="wordmark footer-wordmark" href="/">
-          <span className="wordmark-icon" aria-hidden="true">P</span>
-          <span>PREform</span>
+          <Image
+            src={BRAND.logo.assetPath}
+            alt=""
+            width={28}
+            height={28}
+            className="h-7 w-7 rounded-lg object-contain"
+          />
+          <span className="font-bold tracking-tight">{BRAND.name}</span>
           <span className="wordmark-suffix">NCLEX</span>
         </Link>
         <p>Thoughtful preparation for the next step in nursing.</p>
-        <Link href="/#pathways">All pathways ↑</Link>
+        <Link href="/#products">All pathways ↑</Link>
         <span className="footer-legal">
           NCLEX is a registered trademark of the National Council of State
-          Boards of Nursing, Inc. PREform is independent and not affiliated
+          Boards of Nursing, Inc. {BRAND.name} is independent and not affiliated
           with, endorsed by, or sponsored by NCSBN.
         </span>
       </footer>

@@ -1,9 +1,10 @@
 import { HomeClient } from "./home-client";
+import { BRAND } from "@/lib/brand";
 
 export const metadata = {
-  title: "PREform NCLEX | Prepare with clarity",
+  title: `${BRAND.fullName} | Next-Gen NCLEX Prep with Clarity & Confidence`,
   description:
-    "A focused learning platform for NCLEX-RN and NCLEX-PN candidates, being built with clinical accuracy and transparent assessment at its core.",
+    "PrepFord NCLEX offers realistic Next-Gen NCLEX practice questions, comprehensive clinical rationales, CAT readiness exams, and targeted prep for RN and PN candidates.",
 };
 
 export default function Home() {
