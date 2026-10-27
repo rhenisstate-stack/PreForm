@@ -15,15 +15,15 @@ interface ResourceItem {
 const resources: ResourceItem[] = [
   {
     icon: <BookOpen className="h-5 w-5 text-secondary" />,
-    title: "Complete Course Catalogue",
+    title: "Nursing Study Guide & Notes",
     description:
-      "Explore structured preparation courses for NCLEX-RN and NCLEX-PN with adaptive practice, pharmacology modules, and CAT simulations.",
-    href: "/courses",
-    actionText: "Browse Courses",
+      "Core clinical notes organized across 7 nursing domains with high-yield pathophysiology takeaways, alerts, and priority actions.",
+    href: "/study-guide",
+    actionText: "Explore Study Guide",
   },
   {
     icon: <Newspaper className="h-5 w-5 text-secondary" />,
-    title: "Clinical Blog & Study Guides",
+    title: "Clinical Blog & Educator Guides",
     description:
       "Articles written by nursing educators breaking down the NGN Clinical Judgment Measurement Model, high-alert pharmacology, and exam strategy.",
     href: "/blog",

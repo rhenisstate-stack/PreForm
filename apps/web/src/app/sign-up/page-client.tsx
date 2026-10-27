@@ -16,12 +16,14 @@ import {
   ShieldCheck,
   GraduationCap,
   AlertCircle,
+  HeartPulse,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { PasswordStrengthIndicator } from "@/components/auth/password-strength-indicator";
 import { signUpSchema, type SignUpInput } from "@/lib/validation/auth";
 import { useAuth } from "@/lib/auth-context";
+import { BRAND } from "@/lib/brand";
 
 function getGoogleErrorMessage(errorParam: string | null): string | null {
   if (errorParam === "google_not_configured") {
@@ -94,106 +96,116 @@ export function SignUpPageClient() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4.5rem)] flex items-stretch bg-background">
-      <div className="mx-auto flex w-full max-w-7xl flex-col lg:grid lg:grid-cols-12">
-        {/* Left Information & Brand Panel (Archer Review inspired) */}
-        <div className="relative hidden lg:col-span-5 lg:flex lg:flex-col lg:justify-between bg-[#142B4A] p-10 xl:p-14 text-white overflow-hidden">
-          {/* Subtle decorative background glow */}
-          <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-[#0D9488]/20 blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-[#0D9488]/15 blur-3xl pointer-events-none" />
+    <div className="min-h-[calc(100vh-4rem)] w-full flex flex-col lg:grid lg:grid-cols-12 bg-background">
+      {/* Left Information & Brand Panel (Full-Height Clinical Split) */}
+      <div className="relative hidden lg:col-span-5 xl:col-span-5 lg:flex lg:flex-col lg:justify-between bg-slate-950 p-10 xl:p-14 text-white overflow-hidden">
+        {/* Background High-Resolution Nursing Photo Overlay */}
+        <div className="absolute inset-0 pointer-events-none opacity-20 mix-blend-luminosity overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/landing-page-nurse.jpg"
+            alt=""
+            className="w-full h-full object-cover object-center filter saturate-50"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#09111E] via-[#0E1B2D]/90 to-[#09111E]" />
+        </div>
 
-          {/* Top Brand Identity */}
-          <div className="relative z-10">
-            <Link href="/" className="inline-flex items-center gap-2.5 text-2xl font-serif font-bold text-white mb-12" aria-label="PrepFord home">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/prepford-logo.jpg"
-                alt="PrepFord logo"
-                className="h-9 w-9 rounded-lg object-contain shadow-md border border-white/20"
-                width={36}
-                height={36}
-              />
-              <span className="tracking-tight">PrepFord</span>
-            </Link>
+        {/* Subtle decorative background glow */}
+        <div className="absolute -top-24 -left-24 h-96 w-96 rounded-full bg-teal-500/20 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full bg-teal-500/15 blur-3xl pointer-events-none" />
 
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#0D9488]/20 border border-[#0D9488]/30 px-3 py-1 text-xs font-semibold text-[#14B8A6] mb-4">
-              <ShieldCheck className="h-3.5 w-3.5" />
-              Comprehensive Licensure Preparation
-            </span>
+        {/* Top Brand Identity */}
+        <div className="relative z-10">
+          <Link href="/" className="inline-flex items-center gap-2.5 text-2xl font-serif font-bold text-white mb-12 hover:opacity-90 transition-opacity" aria-label="PrepFord home">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={BRAND.logo.assetPath}
+              alt={BRAND.logo.alt}
+              className="h-9 w-9 rounded-lg object-contain shadow-md border border-white/20"
+              width={36}
+              height={36}
+            />
+            <span className="tracking-tight">{BRAND.name}</span>
+          </Link>
 
-            <h1 className="text-3xl xl:text-4xl font-serif font-semibold leading-tight text-white">
-              Structured preparation engineered for first-time pass rates.
-            </h1>
-
-            <p className="mt-4 text-base text-slate-300 leading-relaxed">
-              Join nursing students preparing for RN and PN licensure with rigorous Next Gen practice, adaptive performance tracking, and verified clinical rationales.
-            </p>
-
-            {/* Platform Highlights */}
-            <div className="mt-8 space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0D9488]/25 text-[#14B8A6]">
-                  <CheckCircle2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-white">Targeted Examination Pathways</h3>
-                  <p className="text-xs text-slate-300 mt-0.5">Custom question pools tailored specifically to either NCLEX-RN or NCLEX-PN.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0D9488]/25 text-[#14B8A6]">
-                  <CheckCircle2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-white">Clinical Judgment Mastery</h3>
-                  <p className="text-xs text-slate-300 mt-0.5">NGN item formats: matrix, bowtie, drop-down, and 6-question clinical case studies.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#0D9488]/25 text-[#14B8A6]">
-                  <CheckCircle2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-white">Readiness Predictors</h3>
-                  <p className="text-xs text-slate-300 mt-0.5">Benchmark your category performance before stepping into the testing center.</p>
-                </div>
-              </div>
-            </div>
+          <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/20 border border-teal-500/30 px-3.5 py-1 text-xs font-semibold text-teal-300 mb-4">
+            <HeartPulse className="h-3.5 w-3.5 animate-heartbeat text-teal-400" />
+            Comprehensive Licensure Preparation
           </div>
 
-          {/* Bottom Candidate Reassurance Card */}
-          <div className="relative z-10 mt-12 rounded-xl bg-white/5 border border-white/10 p-5 backdrop-blur-sm">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#0D9488] text-white">
-                <GraduationCap className="h-5 w-5" />
+          <h1 className="text-3xl xl:text-4xl font-serif font-semibold leading-tight text-white">
+            Structured preparation engineered for first-time pass rates.
+          </h1>
+
+          <p className="mt-4 text-base text-slate-300 leading-relaxed">
+            Join nursing students preparing for RN and PN licensure with rigorous Next Gen practice, adaptive performance tracking, and verified clinical rationales.
+          </p>
+
+          {/* Platform Highlights */}
+          <div className="mt-8 space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-500/25 text-teal-400">
+                <CheckCircle2 className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-white">Free Trial Included</p>
-                <p className="text-[11px] text-slate-300">Test sample questions immediately after registration.</p>
+                <h3 className="text-sm font-semibold text-white">Targeted Examination Pathways</h3>
+                <p className="text-xs text-slate-300 mt-0.5">Custom question pools tailored specifically to either NCLEX-RN or NCLEX-PN.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-500/25 text-teal-400">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Clinical Judgment Mastery</h3>
+                <p className="text-xs text-slate-300 mt-0.5">NGN item formats: matrix, bowtie, drop-down, and 6-question clinical case studies.</p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-teal-500/25 text-teal-400">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-white">Readiness Predictors</h3>
+                <p className="text-xs text-slate-300 mt-0.5">Benchmark your category performance before stepping into the testing center.</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Authentication Panel */}
-        <div className="flex flex-1 flex-col justify-center px-4 py-10 sm:px-8 md:px-12 lg:col-span-7 xl:px-16">
-          <div className="mx-auto w-full max-w-md">
-            {/* Mobile Header Branding */}
-            <div className="mb-8 lg:hidden text-center">
-              <Link href="/" className="inline-flex items-center gap-2 text-xl font-serif font-bold text-foreground" aria-label="PrepFord home">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src="/prepford-logo.jpg"
-                  alt="PrepFord logo"
-                  className="h-8 w-8 rounded-lg object-contain shadow-xs border border-border/50"
-                  width={32}
-                  height={32}
-                />
-                <span>PrepFord</span>
-              </Link>
+        {/* Bottom Candidate Reassurance Card */}
+        <div className="relative z-10 mt-12 rounded-2xl bg-white/5 border border-white/10 p-5 backdrop-blur-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-600 text-white">
+              <GraduationCap className="h-5 w-5" />
             </div>
+            <div>
+              <p className="text-xs font-semibold text-white">Free Trial Included</p>
+              <p className="text-[11px] text-slate-300">Test sample questions immediately after registration.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Authentication Panel (Full-Width Responsive) */}
+      <div className="flex flex-1 flex-col justify-center px-6 py-12 sm:px-12 md:px-16 lg:col-span-7 xl:col-span-7">
+        <div className="mx-auto w-full max-w-md">
+          {/* Mobile Header Branding */}
+          <div className="mb-8 lg:hidden text-center">
+            <Link href="/" className="inline-flex items-center gap-2 text-xl font-serif font-bold text-foreground" aria-label="PrepFord home">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={BRAND.logo.assetPath}
+                alt={BRAND.logo.alt}
+                className="h-8 w-8 rounded-lg object-contain shadow-xs border border-border/50"
+                width={32}
+                height={32}
+              />
+              <span>{BRAND.name}</span>
+            </Link>
+          </div>
 
             <div className="mb-6">
               <h2 className="text-2xl sm:text-3xl font-serif font-semibold tracking-tight text-foreground">
@@ -473,7 +485,6 @@ export function SignUpPageClient() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

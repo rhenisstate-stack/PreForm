@@ -22,12 +22,16 @@ describe("PublicFooter Component & Navigation Integrity", () => {
     expect(faqLink.getAttribute("href")).not.toBe(contactLinks[0].getAttribute("href"));
   });
 
-  it("links to the new Blog & Learning Hub", () => {
+  it("links to the new Blog & Learning Hub and Study Guide", () => {
     render(<PublicFooter />);
 
     const blogLink = screen.getByRole("link", { name: /blog & learning hub/i });
     expect(blogLink).toBeInTheDocument();
     expect(blogLink).toHaveAttribute("href", "/blog");
+
+    const studyGuideLink = screen.getByRole("link", { name: /study guide & notes/i });
+    expect(studyGuideLink).toBeInTheDocument();
+    expect(studyGuideLink).toHaveAttribute("href", "/study-guide");
   });
 
   it("links to legal pages with valid paths", () => {

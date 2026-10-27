@@ -2,7 +2,16 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, Sparkles, BookOpen, Play } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  BookOpen,
+  Play,
+  HeartPulse,
+  Activity,
+  ShieldCheck,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface HeroSlide {
@@ -93,20 +102,70 @@ export function HeroSection() {
   return (
     <section
       id="main-content"
-      className="relative pt-16 pb-20 px-4 sm:px-6 lg:pt-24 lg:pb-28 lg:px-8 overflow-hidden bg-background"
+      className="relative w-full overflow-hidden bg-gradient-to-b from-slate-950/80 via-slate-900/40 to-background text-foreground pt-14 pb-20 sm:pt-20 sm:pb-28"
       aria-label="PrepFord NCLEX Hero"
     >
-      <div className="mx-auto max-w-7xl">
+      {/* Background High-Resolution Nursing Photo Overlay */}
+      <div className="absolute inset-0 pointer-events-none opacity-20 dark:opacity-15 mix-blend-luminosity overflow-hidden">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/landing-page-nurse.jpg"
+          alt=""
+          className="w-full h-full object-cover object-center filter saturate-50"
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#09111E] via-[#0E1B2D]/85 to-background" />
+      </div>
+
+      {/* Animated Electrocardiogram (ECG) Heartbeat Line */}
+      <div className="absolute inset-x-0 top-1/4 pointer-events-none opacity-25 overflow-hidden flex justify-center">
+        <svg className="w-full max-w-6xl h-24" viewBox="0 0 1000 100" fill="none" preserveAspectRatio="none">
+          <path
+            d="M0,50 L250,50 L270,50 L280,30 L290,70 L300,10 L310,90 L320,50 L340,50 L600,50 L620,50 L630,30 L640,70 L650,10 L660,90 L670,50 L690,50 L1000,50"
+            stroke="#0D9488"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            className="animate-ecg"
+          />
+        </svg>
+      </div>
+
+      {/* Floating Healthcare Badges (Hidden on mobile) */}
+      <div className="hidden xl:flex items-center gap-3 absolute left-10 top-36 px-4 py-2.5 rounded-2xl bg-card/85 dark:bg-slate-900/80 backdrop-blur-md border border-teal-500/30 shadow-lg animate-float-slow z-20">
+        <div className="p-2 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400">
+          <HeartPulse className="h-5 w-5 animate-heartbeat" />
+        </div>
+        <div>
+          <p className="text-xs font-bold text-foreground">18 Question Formats</p>
+          <p className="text-[10px] text-muted-foreground">Bowtie, Matrix & Trend</p>
+        </div>
+      </div>
+
+      <div
+        className="hidden xl:flex items-center gap-3 absolute right-10 top-48 px-4 py-2.5 rounded-2xl bg-card/85 dark:bg-slate-900/80 backdrop-blur-md border border-teal-500/30 shadow-lg animate-float-slow z-20"
+        style={{ animationDelay: "1.8s" }}
+      >
+        <div className="p-2 rounded-xl bg-teal-500/15 text-teal-600 dark:text-teal-400">
+          <ShieldCheck className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-xs font-bold text-foreground">Authentic EHR Charts</p>
+          <p className="text-[10px] text-muted-foreground">Dynamic Lab Trends & Vitals</p>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Top Text Content */}
         <div className="text-center lg:max-w-4xl lg:mx-auto">
-          <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-secondary">
-            <span className="h-1.5 w-1.5 rounded-full bg-secondary" />
+          <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400 border border-teal-500/20">
+            <span className="h-2 w-2 rounded-full bg-teal-500 animate-pulse" />
             For NCLEX-RN and NCLEX-PN Candidates
-          </p>
-          <h1 className="mt-4 text-4xl font-serif font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
+          </div>
+
+          <h1 className="mt-5 text-4xl font-serif font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
             Prepare with clarity.{" "}
             <span className="block text-secondary italic">Progress with purpose.</span>
           </h1>
+
           <p className="mt-5 max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed lg:mx-auto lg:text-xl">
             A focused learning platform for future nurses—engineered with authentic Next Generation NCLEX case studies, comprehensive clinical rationales, and honest measures of test readiness.
           </p>
@@ -116,7 +175,7 @@ export function HeroSection() {
             <Button
               size="lg"
               asChild
-              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md px-8 py-6 text-base"
+              className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md px-8 py-6 text-base rounded-xl"
             >
               <Link href="#products">
                 <BookOpen className="mr-2 h-5 w-5" />
@@ -127,7 +186,7 @@ export function HeroSection() {
               variant="outline"
               size="lg"
               asChild
-              className="w-full sm:w-auto font-semibold px-8 py-6 text-base border-2"
+              className="w-full sm:w-auto font-semibold px-8 py-6 text-base border-2 rounded-xl bg-card/50 backdrop-blur-xs hover:bg-muted"
             >
               <Link href="#demo">
                 <Play className="mr-2 h-5 w-5 text-secondary fill-secondary/20" />
@@ -143,7 +202,7 @@ export function HeroSection() {
 
         {/* Interactive Hero Carousel */}
         <div
-          className="mt-12 lg:mt-16 relative rounded-2xl border border-border bg-card shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-secondary/50"
+          className="mt-12 lg:mt-16 relative rounded-3xl border border-border/80 bg-card/85 dark:bg-slate-900/75 backdrop-blur-md shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-secondary/50"
           tabIndex={0}
           role="region"
           aria-label="PrepFord Feature Carousel"
@@ -170,7 +229,7 @@ export function HeroSection() {
               <div className="pt-2">
                 <Button
                   asChild
-                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm"
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm rounded-xl"
                 >
                   <Link href={activeSlide.ctaHref}>
                     {activeSlide.ctaLabel}
