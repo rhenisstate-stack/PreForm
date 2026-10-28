@@ -353,3 +353,80 @@ public class ProfileImageServiceAndControllerTests : IClassFixture<WebApplicatio
         Assert.Equal(HttpStatusCode.Forbidden, forbiddenGet.StatusCode);
     }
 }
+
+public class SubscriptionsControllerTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+
+    public SubscriptionsControllerTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureServices(services =>
+            {
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+                if (descriptor != null) services.Remove(descriptor);
+                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestingSubscriptionsDb"));
+            });
+        });
+    }
+
+    [Fact]
+    public async Task GetActivePlans_ReturnsPlansAndHandlesLookup()
+    {
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.SubscriptionPlans.AddRange(
+                new SubscriptionPlan
+                {
+                    Id = "plan-rn-pro",
+                    Code = "nclex-rn-pro",
+                    Name = "NCLEX-RN Complete Preparation",
+                    PriceCents = 5900,
+                    Interval = SubscriptionInterval.Monthly,
+                    IsActive = true
+                },
+                new SubscriptionPlan
+                {
+                    Id = "plan-prep-premium",
+                    Code = "all-access",
+                    Name = "NCLEX-RN & PN All-Access",
+                    PriceCents = 8900,
+                    Interval = SubscriptionInterval.Monthly,
+                    IsActive = true
+                },
+                new SubscriptionPlan
+                {
+                    Id = "plan-archived",
+                    Code = "legacy-plan",
+                    Name = "Archived Plan",
+                    PriceCents = 1900,
+                    Interval = SubscriptionInterval.Monthly,
+                    IsActive = false
+                }
+            );
+            await db.SaveChangesAsync();
+        }
+
+        var client = _factory.CreateClient();
+
+        // 1. Get active plans
+        var response = await client.GetAsync("/api/v1/subscriptions");
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.True(body.GetProperty("success").GetBoolean());
+        var plans = body.GetProperty("plans");
+        Assert.True(plans.GetArrayLength() >= 2);
+
+        // 2. Lookup existing plan by code
+        var planRes = await client.GetAsync("/api/v1/subscriptions/all-access");
+        planRes.EnsureSuccessStatusCode();
+
+        // 3. Lookup non-existent plan
+        var missingRes = await client.GetAsync("/api/v1/subscriptions/non-existent-code");
+        Assert.Equal(HttpStatusCode.NotFound, missingRes.StatusCode);
+    }
+}
