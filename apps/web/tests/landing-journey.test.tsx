@@ -203,7 +203,7 @@ describe("Landing Page Information Architecture, Full-Width Heartbeat & SEO", ()
       absolute: "NCLEX-PN Exam Preparation | PrepFord",
     });
     expect(pnMetadata.description).toBe(
-      "Explore PrepFord's NCLEX-PN study resources, practice questions, and nursing learning tools."
+      "Explore PrepFord’s NCLEX-PN preparation resources, nursing study guides, practice tools, and available study plans to support your exam preparation."
     );
 
     expect(studyGuideMetadata.title).toEqual({

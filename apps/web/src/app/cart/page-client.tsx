@@ -134,9 +134,9 @@ export function CartPageClient() {
               </Button>
             </div>
 
-            <div className="mt-8 pt-8 border-t border-border flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <div className="mt-8 pt-8 flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="h-4 w-4 text-secondary" />
-              <span>All plans include our 100% Pass Guarantee and instant study portal access.</span>
+              <span>All plans include immediate study workspace and Study Guide access upon confirmation.</span>
             </div>
           </div>
         ) : (
@@ -167,7 +167,12 @@ export function CartPageClient() {
                           </Badge>
                           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
-                            {product.billingInterval === "month" ? "Monthly Access" : "One-Time Access"}
+                            {product.durationLabel ??
+                              (product.billingInterval === "month"
+                                ? "30-Day Monthly Access"
+                                : product.billingInterval === "quarter"
+                                  ? "90-Day Quarterly Access"
+                                  : "One-Time Access")}
                           </span>
                         </div>
 
@@ -325,7 +330,7 @@ export function CartPageClient() {
                     </div>
                     <div className="flex items-center gap-1.5">
                       <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
-                      <span>100% Pass Guarantee on all 90+ day plans</span>
+                      <span>Transparent pricing with no hidden fees</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Sparkles className="h-3.5 w-3.5 text-secondary shrink-0" />
