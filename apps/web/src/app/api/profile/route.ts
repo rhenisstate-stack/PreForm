@@ -13,7 +13,7 @@ interface CandidateSession {
   name?: string;
   displayName?: string;
   role?: string;
-  pathway?: "rn" | "pn";
+  pathway?: "rn" | "pn" | "both";
   picture?: string;
   provider?: string;
   targetExamDate?: string;

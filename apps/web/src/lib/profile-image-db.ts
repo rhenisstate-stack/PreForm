@@ -60,7 +60,7 @@ export interface StoredUserProfileRecord {
   userId: string;
   email: string;
   displayName: string;
-  pathway: "rn" | "pn";
+  pathway: "rn" | "pn" | "both";
   targetExamDate: string;
   activePlan: string;
   emailNotifications: boolean;
@@ -296,7 +296,7 @@ export function getUserProfileMeta(userId: string, email: string): StoredUserPro
     userId: row.user_id,
     email: row.email,
     displayName: row.display_name,
-    pathway: row.pathway === "pn" ? "pn" : "rn",
+    pathway: row.pathway === "both" ? "both" : row.pathway === "pn" ? "pn" : "rn",
     targetExamDate: row.target_exam_date,
     activePlan: row.active_plan,
     emailNotifications: Boolean(row.email_notifications),
@@ -313,7 +313,7 @@ export function upsertUserProfileMeta(input: {
   userId: string;
   email: string;
   displayName: string;
-  pathway: "rn" | "pn";
+  pathway: "rn" | "pn" | "both";
   targetExamDate?: string;
   activePlan?: string;
   emailNotifications?: boolean;

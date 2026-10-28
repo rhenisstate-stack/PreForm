@@ -719,6 +719,11 @@ export function DashboardClient() {
                   <Badge variant="outline" className="font-mono text-xs uppercase">
                     {pathwayLabel} Focus
                   </Badge>
+                  {user?.pathway === "both" && (
+                    <Badge className="bg-secondary/15 text-secondary border border-secondary/30 font-semibold text-xs">
+                      NCLEX-RN &amp; PN Dual Access
+                    </Badge>
+                  )}
                   {user.activePlan && (
                     <Badge className="bg-primary/10 text-primary dark:bg-teal-400/15 dark:text-teal-300 font-medium text-xs">
                       {user.activePlan}

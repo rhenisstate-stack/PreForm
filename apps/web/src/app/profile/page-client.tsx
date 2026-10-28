@@ -33,7 +33,7 @@ export function ProfilePageClient() {
 
   // Personal details state
   const [displayName, setDisplayName] = React.useState("");
-  const [pathway, setPathway] = React.useState<"rn" | "pn">("rn");
+  const [pathway, setPathway] = React.useState<"rn" | "pn" | "both">("rn");
   const [targetExamDate, setTargetExamDate] = React.useState("2026-11-30");
   const [activePlan, setActivePlan] = React.useState<string>("");
   const [profileSaving, setProfileSaving] = React.useState(false);
@@ -398,7 +398,7 @@ export function ProfilePageClient() {
                     {displayName || user.displayName || user.name}
                   </h1>
                   <Badge variant="secondary" className="text-xs font-semibold uppercase">
-                    NCLEX-{pathway.toUpperCase()} Candidate
+                    {pathway === "both" ? "NCLEX-RN & PN Dual Pathway" : `NCLEX-${pathway.toUpperCase()} Candidate`}
                   </Badge>
                   {user.provider === "google" && (
                     <Badge variant="outline" className="text-[11px] font-medium border-secondary/40 text-secondary">
@@ -657,11 +657,11 @@ export function ProfilePageClient() {
                 <label className="text-xs font-semibold text-foreground block">
                   Target Licensure Examination
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <button
                     type="button"
                     onClick={() => setPathway("rn")}
-                    className={`flex flex-col items-center justify-center p-4 rounded-xl border text-center transition-all ${
+                    className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border text-center transition-all ${
                       pathway === "rn"
                         ? "border-secondary bg-secondary/10 text-foreground ring-1 ring-secondary"
                         : "border-border bg-background text-muted-foreground hover:bg-muted"
@@ -673,7 +673,7 @@ export function ProfilePageClient() {
                   <button
                     type="button"
                     onClick={() => setPathway("pn")}
-                    className={`flex flex-col items-center justify-center p-4 rounded-xl border text-center transition-all ${
+                    className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border text-center transition-all ${
                       pathway === "pn"
                         ? "border-secondary bg-secondary/10 text-foreground ring-1 ring-secondary"
                         : "border-border bg-background text-muted-foreground hover:bg-muted"
@@ -681,6 +681,18 @@ export function ProfilePageClient() {
                   >
                     <span className="font-serif font-bold text-base">NCLEX-PN</span>
                     <span className="text-[11px] mt-0.5">Practical / Vocational Nurse</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPathway("both")}
+                    className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border text-center transition-all ${
+                      pathway === "both"
+                        ? "border-secondary bg-secondary/10 text-foreground ring-1 ring-secondary"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted"
+                    }`}
+                  >
+                    <span className="font-serif font-bold text-base">RN &amp; PN Dual</span>
+                    <span className="text-[11px] mt-0.5">All-Access Licensure</span>
                   </button>
                 </div>
               </div>
@@ -734,7 +746,7 @@ export function ProfilePageClient() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-serif font-bold text-foreground">
-                    {activePlan || `NCLEX-${pathway.toUpperCase()} Complete Preparation Plan`}
+                    {activePlan || (pathway === "both" ? "NCLEX-RN & PN All-Access Preparation Plan" : `NCLEX-${pathway.toUpperCase()} Complete Preparation Plan`)}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Access Window: Valid until <span className="font-semibold text-foreground">December 31, 2026</span>
@@ -750,7 +762,7 @@ export function ProfilePageClient() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>Original NCLEX-{pathway.toUpperCase()} question bank</span>
+                    <span>Original NCLEX-{pathway === "both" ? "RN & PN" : pathway.toUpperCase()} question bank</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />

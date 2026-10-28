@@ -113,14 +113,20 @@ export function CartPageClient() {
         )
         .join(" + ");
 
-      const primaryPathwayItem =
-        items.find((i) => i.product.planType !== "readiness") ?? items[0];
-      const nextPathway =
-        primaryPathwayItem?.product.pathway === "PN"
-          ? "pn"
-          : primaryPathwayItem?.product.pathway === "RN"
-            ? "rn"
-            : user?.pathway || "rn";
+      const hasBoth = items.some(
+        (i) =>
+          i.product.pathway === "Both" ||
+          (i.product.entitlements?.includes("rn") && i.product.entitlements?.includes("pn"))
+      );
+      const hasRN = items.some(
+        (i) => i.product.pathway === "RN" || i.product.entitlements?.includes("rn")
+      );
+      const hasPN = items.some(
+        (i) => i.product.pathway === "PN" || i.product.entitlements?.includes("pn")
+      );
+
+      const nextPathway: "both" | "rn" | "pn" =
+        hasBoth || (hasRN && hasPN) ? "both" : hasPN ? "pn" : "rn";
 
       try {
         await fetch("/api/profile", {

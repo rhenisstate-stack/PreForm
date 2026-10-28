@@ -1,5 +1,6 @@
 export interface Product {
   id: string;
+  slug?: string;
   name: string;
   description: string;
   audience?: string;
@@ -12,11 +13,20 @@ export interface Product {
   durationLabel?: string;
   features: string[];
   popular?: boolean;
+  // Admin-managed card appearance & governance properties
+  bgColour?: string;
+  accentColour?: string;
+  textColour?: string;
+  badgeText?: string;
+  displayOrder?: number;
+  isActive?: boolean;
+  entitlements?: ("rn" | "pn")[];
 }
 
 export const PRODUCTS: Product[] = [
   {
     id: "rn-pro",
+    slug: "nclex-rn-pro",
     name: "NCLEX-RN Complete Preparation",
     description:
       "Full question bank, readiness assessments, and progress tracking for registered nurse candidates.",
@@ -35,9 +45,14 @@ export const PRODUCTS: Product[] = [
       "Topic-level performance & accuracy tracking",
     ],
     popular: true,
+    badgeText: "Most Popular for RN",
+    displayOrder: 1,
+    isActive: true,
+    entitlements: ["rn"],
   },
   {
     id: "rn-pro-90",
+    slug: "nclex-rn-pro-90",
     name: "NCLEX-RN Complete Preparation (90-Day)",
     description:
       "90-day quarterly access to the full NCLEX-RN question bank, readiness assessments, Study Guide notes, and domain progress tracking.",
@@ -57,9 +72,14 @@ export const PRODUCTS: Product[] = [
       "Topic-level performance & accuracy tracking",
     ],
     popular: true,
+    badgeText: "Most Popular for RN",
+    displayOrder: 2,
+    isActive: true,
+    entitlements: ["rn"],
   },
   {
     id: "pn-pro",
+    slug: "nclex-pn-pro",
     name: "NCLEX-PN Complete Preparation",
     description:
       "Full question bank, readiness assessments, and progress tracking for practical/vocational nurse candidates.",
@@ -78,9 +98,14 @@ export const PRODUCTS: Product[] = [
       "Coordinated care & Client Needs progress tracking",
     ],
     popular: true,
+    badgeText: "Recommended for PN Candidates",
+    displayOrder: 3,
+    isActive: true,
+    entitlements: ["pn"],
   },
   {
     id: "pn-pro-90",
+    slug: "nclex-pn-pro-90",
     name: "NCLEX-PN Complete Preparation (90-Day)",
     description:
       "90-day quarterly access to the full NCLEX-PN question bank, readiness assessments, Study Guide notes, and progress tracking.",
@@ -100,9 +125,14 @@ export const PRODUCTS: Product[] = [
       "Coordinated care & Client Needs progress tracking",
     ],
     popular: true,
+    badgeText: "Recommended for PN Candidates",
+    displayOrder: 4,
+    isActive: true,
+    entitlements: ["pn"],
   },
   {
     id: "rn-starter",
+    slug: "nclex-rn-starter",
     name: "NCLEX-RN Starter Review",
     description:
       "Essential study tools and sample question bank for registered nurse licensure candidates.",
@@ -119,9 +149,13 @@ export const PRODUCTS: Product[] = [
       "7-domain Nursing Study Guide access",
       "Basic topic progress tracking",
     ],
+    displayOrder: 5,
+    isActive: true,
+    entitlements: ["rn"],
   },
   {
     id: "rn-starter-90",
+    slug: "nclex-rn-starter-90",
     name: "NCLEX-RN Starter Review (90-Day)",
     description:
       "90-day quarterly access to essential NCLEX-RN study tools, sample question practice, and clinical rationales.",
@@ -139,9 +173,13 @@ export const PRODUCTS: Product[] = [
       "7-domain Nursing Study Guide access",
       "Basic topic progress tracking",
     ],
+    displayOrder: 6,
+    isActive: true,
+    entitlements: ["rn"],
   },
   {
     id: "pn-starter",
+    slug: "nclex-pn-starter",
     name: "NCLEX-PN Starter Review",
     description:
       "Essential study tools and sample question bank for practical nurse candidates.",
@@ -158,9 +196,13 @@ export const PRODUCTS: Product[] = [
       "7-domain Nursing Study Guide & notes",
       "Basic topic progress tracking",
     ],
+    displayOrder: 7,
+    isActive: true,
+    entitlements: ["pn"],
   },
   {
     id: "pn-starter-90",
+    slug: "nclex-pn-starter-90",
     name: "NCLEX-PN Starter Review (90-Day)",
     description:
       "90-day quarterly access to essential NCLEX-PN study tools, sample question practice, and clinical rationales.",
@@ -178,9 +220,13 @@ export const PRODUCTS: Product[] = [
       "7-domain Nursing Study Guide & notes",
       "Basic topic progress tracking",
     ],
+    displayOrder: 8,
+    isActive: true,
+    entitlements: ["pn"],
   },
   {
     id: "prep-premium",
+    slug: "nclex-all-access",
     name: "NCLEX-RN & PN All-Access",
     description:
       "Comprehensive multi-pathway suite with both RN and PN question banks, clinical scenarios, and study plans.",
@@ -198,9 +244,14 @@ export const PRODUCTS: Product[] = [
       "Priority educator email support",
       "High-alert pharmacology & Study Guide notes",
     ],
+    badgeText: "Dual Pathway Suite",
+    displayOrder: 9,
+    isActive: true,
+    entitlements: ["rn", "pn"],
   },
   {
     id: "prep-premium-90",
+    slug: "nclex-all-access-90",
     name: "NCLEX-RN & PN All-Access (90-Day)",
     description:
       "90-day quarterly access to both NCLEX-PN and NCLEX-RN pathways, clinical scenarios, and priority support.",
@@ -219,9 +270,14 @@ export const PRODUCTS: Product[] = [
       "Priority educator email support",
       "High-alert pharmacology & Study Guide notes",
     ],
+    badgeText: "Best Value Dual Pathway",
+    displayOrder: 10,
+    isActive: true,
+    entitlements: ["rn", "pn"],
   },
   {
     id: "rn-readiness",
+    slug: "nclex-rn-readiness",
     name: "NCLEX-RN Readiness Assessment Pack",
     description:
       "3 full-length server-scored practice assessments with domain-level scoring reports.",
@@ -238,9 +294,13 @@ export const PRODUCTS: Product[] = [
       "Readiness performance summary",
       "Full rationale review for every question",
     ],
+    displayOrder: 11,
+    isActive: true,
+    entitlements: ["rn"],
   },
   {
     id: "pn-readiness",
+    slug: "nclex-pn-readiness",
     name: "NCLEX-PN Readiness Assessment Pack",
     description:
       "3 full-length practical nursing readiness assessments with Client Needs category scoring feedback.",
@@ -257,11 +317,14 @@ export const PRODUCTS: Product[] = [
       "Readiness performance summary",
       "Full rationale review for every question",
     ],
+    displayOrder: 12,
+    isActive: true,
+    entitlements: ["pn"],
   },
 ];
 
 export function getAllProducts(): Product[] {
-  return PRODUCTS;
+  return PRODUCTS.filter((p) => p.isActive !== false);
 }
 
 export function getProductById(id: string): Product | undefined {
@@ -272,8 +335,11 @@ export function getProductById(id: string): Product | undefined {
   if (normalizedId === "pro") return PRODUCTS.find((p) => p.id === "rn-pro");
   if (normalizedId === "starter") return PRODUCTS.find((p) => p.id === "rn-starter");
   if (normalizedId === "premium") return PRODUCTS.find((p) => p.id === "prep-premium");
+  if (normalizedId === "all-access") return PRODUCTS.find((p) => p.id === "prep-premium");
   if (normalizedId === "rn") return PRODUCTS.find((p) => p.id === "rn-pro");
   if (normalizedId === "pn") return PRODUCTS.find((p) => p.id === "pn-pro");
 
-  return PRODUCTS.find((p) => p.id.toLowerCase() === normalizedId);
+  return PRODUCTS.find(
+    (p) => p.id.toLowerCase() === normalizedId || (p.slug && p.slug.toLowerCase() === normalizedId)
+  );
 }
