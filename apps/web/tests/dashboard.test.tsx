@@ -275,10 +275,10 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
     expect(sidebar).toBeInTheDocument();
 
     // Verify navigation groups
-    expect(within(sidebar).getByText(/LEARN/i)).toBeInTheDocument();
-    expect(within(sidebar).getByText(/TEST BANK & ASSESSMENTS/i)).toBeInTheDocument();
-    expect(within(sidebar).getByText(/REPORTS/i)).toBeInTheDocument();
-    expect(within(sidebar).getByText(/ACCOUNT/i)).toBeInTheDocument();
+    expect(within(sidebar).getByText(/^Learn$/i)).toBeInTheDocument();
+    expect(within(sidebar).getByText(/^Test Bank & Assessments$/i)).toBeInTheDocument();
+    expect(within(sidebar).getByText(/^Reports$/i)).toBeInTheDocument();
+    expect(within(sidebar).getByText(/^Account$/i)).toBeInTheDocument();
 
     // Verify active report view highlight
     expect(within(sidebar).getByText("Previous Tests")).toBeInTheDocument();
@@ -407,7 +407,7 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
     const reviewModal = screen.getByTestId("modal-review-test");
     expect(reviewModal).toBeInTheDocument();
     expect(within(reviewModal).getByText(/Review: Tutored CAT 7/i)).toBeInTheDocument();
-    expect(within(reviewModal).getByText(/Clinical Rationale & Explanation/i)).toBeInTheDocument();
+    expect(within(reviewModal).getAllByText(/Clinical Rationale & Explanation/i).length).toBeGreaterThan(0);
 
     // Close review modal
     await user.click(within(reviewModal).getByRole("button", { name: /Close Review/i }));
@@ -460,8 +460,8 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
     // Verify question 1 is presented
     expect(within(createModal).getByText(/Question 1 of 5/i)).toBeInTheDocument();
 
-    // Submit test directly
-    const submitBtn = within(createModal).getByRole("button", { name: /Submit & Complete Test/i });
+    // Submit test using the Finish & Submit button
+    const submitBtn = within(createModal).getByRole("button", { name: /Finish & Submit/i });
     await user.click(submitBtn);
 
     // Review modal for the newly generated test should open

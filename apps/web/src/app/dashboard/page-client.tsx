@@ -2,10 +2,8 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  ArrowUpRight,
   BarChart2,
   Bell,
   BookOpen,
@@ -15,7 +13,6 @@ import {
   ClipboardCheck,
   Compass,
   FileQuestion,
-  FileSpreadsheet,
   FileText,
   GraduationCap,
   HeartPulse,
@@ -26,8 +23,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  RotateCcw,
-  Settings,
   ShieldCheck,
   ShoppingCart,
   Stethoscope,
@@ -46,9 +41,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
   CompletedAssessmentAttempt,
-  PerformanceTier,
-  QuestionReviewItem,
-  getPerformanceTier,
   getTierShortCode,
   getTierStyles,
   SAMPLE_BENCHMARK_ATTEMPTS,
@@ -96,12 +88,10 @@ function readStoredRecentActivity(): RecentStudyActivity | null {
 export function DashboardClient() {
   const auth = useAuth();
   const cart = useCart();
-  const router = useRouter();
 
   const user = auth?.user;
   const isLoading = auth?.isLoading ?? true;
   const isAuthenticated = auth?.isAuthenticated ?? false;
-  const logout = auth?.logout ?? (async () => {});
 
   const [selectedPathway, setSelectedPathway] = React.useState<"rn" | "pn" | null>(null);
   const [recentActivity, setRecentActivity] = React.useState<RecentStudyActivity | null>(
@@ -126,10 +116,15 @@ export function DashboardClient() {
   const [reviewModalAttempt, setReviewModalAttempt] = React.useState<CompletedAssessmentAttempt | null>(null);
   const [reportModalAttempt, setReportModalAttempt] = React.useState<CompletedAssessmentAttempt | null>(null);
 
-  // Stored learner attempts
-  const [storedAttempts, setStoredAttempts] = React.useState<CompletedAssessmentAttempt[]>(() =>
-    getStoredAttempts(user?.id)
-  );
+  // Refresh trigger for stored learner attempts
+  const [attemptRefreshKey, setAttemptRefreshKey] = React.useState<number>(0);
+
+  // Stored learner attempts computed from localStorage
+  const storedAttempts = React.useMemo(() => {
+    // attemptRefreshKey triggers re-reading when a new test attempt completes
+    void attemptRefreshKey;
+    return getStoredAttempts(user?.id);
+  }, [user?.id, attemptRefreshKey]);
 
   // Create test interactive form state
   const [createTestType, setCreateTestType] = React.useState<"tutored_cat" | "rat">("tutored_cat");
@@ -148,13 +143,6 @@ export function DashboardClient() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
-
-  // Update stored attempts when user changes
-  React.useEffect(() => {
-    if (user?.id) {
-      setStoredAttempts(getStoredAttempts(user.id));
-    }
-  }, [user?.id]);
 
   const activePathway: "rn" | "pn" = selectedPathway ?? (user?.pathway === "pn" ? "pn" : "rn");
   const pathwayLabel = activePathway === "pn" ? "NCLEX-PN" : "NCLEX-RN";
@@ -177,17 +165,6 @@ export function DashboardClient() {
     },
     []
   );
-
-  const clearRecentActivity = React.useCallback(() => {
-    setRecentActivity(null);
-    if (typeof window !== "undefined") {
-      try {
-        window.localStorage.removeItem(RECENT_ACTIVITY_STORAGE_KEY);
-      } catch {
-        // Ignore storage errors
-      }
-    }
-  }, []);
 
   // Determine current active attempts list based on tab & preview toggle
   const filteredAttempts = React.useMemo(() => {
@@ -221,7 +198,7 @@ export function DashboardClient() {
     });
 
     saveStoredAttempt(user?.id, completed);
-    setStoredAttempts(getStoredAttempts(user?.id));
+    setAttemptRefreshKey((k) => k + 1);
     setTestInProgress(false);
     setCreateModalOpen(false);
     setCurrentTestAnswers({});
@@ -1653,7 +1630,7 @@ export function DashboardClient() {
                     Question Count
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {[5, 20, 40, 65, 85].map((cnt) => (
+                    {[1, 5, 20, 40, 65, 85].map((cnt) => (
                       <button
                         key={cnt}
                         type="button"
@@ -1664,7 +1641,7 @@ export function DashboardClient() {
                             : "bg-muted text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {cnt} Questions {cnt === 5 ? "(Quick Demo)" : ""}
+                        {cnt} {cnt === 1 ? "Question (Quick Test)" : cnt === 5 ? "Questions (Quick Demo)" : "Questions"}
                       </button>
                     ))}
                   </div>
@@ -1768,25 +1745,35 @@ export function DashboardClient() {
                           <span>Previous</span>
                         </Button>
 
-                        {activeQuestionIndex < qSlice.length - 1 ? (
+                        <div className="flex items-center gap-2">
                           <Button
                             type="button"
-                            onClick={() => setActiveQuestionIndex((prev) => prev + 1)}
-                            className="bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-semibold"
-                          >
-                            <span>Next Question</span>
-                            <ChevronRight className="ml-1 h-3.5 w-3.5" />
-                          </Button>
-                        ) : (
-                          <Button
-                            type="button"
+                            variant="ghost"
                             onClick={handleCompleteTest}
-                            className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold"
+                            className="rounded-xl text-xs text-muted-foreground hover:text-foreground"
                           >
-                            <span>Submit & Complete Test</span>
-                            <CheckCircle2 className="ml-1.5 h-4 w-4" />
+                            Finish & Submit
                           </Button>
-                        )}
+                          {activeQuestionIndex < qSlice.length - 1 ? (
+                            <Button
+                              type="button"
+                              onClick={() => setActiveQuestionIndex((prev) => prev + 1)}
+                              className="bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-semibold"
+                            >
+                              <span>Next Question</span>
+                              <ChevronRight className="ml-1 h-3.5 w-3.5" />
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              onClick={handleCompleteTest}
+                              className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold"
+                            >
+                              <span>Submit & Complete Test</span>
+                              <CheckCircle2 className="ml-1.5 h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   );
