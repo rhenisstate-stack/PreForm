@@ -78,8 +78,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const exists = prev.some((i) => i.product.id === product.id);
       if (exists) return prev;
 
-      // If user is adding another plan for the same pathway, replace it so they don't buy duplicate subscriptions
-      const filtered = prev.filter((i) => i.product.pathway !== product.pathway || product.planType === "readiness");
+      // Standalone readiness assessment packs can be purchased alongside any subscription plan
+      if (product.planType === "readiness") {
+        return [...prev, { product, quantity: 1 }];
+      }
+
+      // If user is adding a recurring subscription plan, preserve any standalone readiness packs,
+      // and replace any overlapping subscription plan (same pathway or "Both" all-access bundle)
+      const filtered = prev.filter((i) => {
+        if (i.product.planType === "readiness") return true;
+        const overlapsPathway =
+          i.product.pathway === product.pathway ||
+          i.product.pathway === "Both" ||
+          product.pathway === "Both";
+        return !overlapsPathway;
+      });
       return [...filtered, { product, quantity: 1 }];
     });
 

@@ -482,7 +482,11 @@ export function SignUpPageClient() {
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link
-                  href="/sign-in"
+                  href={
+                    searchParams.get("from")
+                      ? `/sign-in?from=${encodeURIComponent(searchParams.get("from")!)}`
+                      : "/sign-in"
+                  }
                   className="font-semibold text-secondary hover:underline"
                 >
                   Sign in

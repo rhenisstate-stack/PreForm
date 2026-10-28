@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   experimental: {
     cpus: 1,
+    staticGenerationMaxConcurrency: 1,
+    staticGenerationMinPagesPerWorker: 100,
+    staticGenerationRetryCount: 5,
     turbopackPluginRuntimeStrategy: "forceWorkerThreads" as unknown as undefined,
   },
   turbopack: {

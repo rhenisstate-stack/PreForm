@@ -115,7 +115,14 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { displayName, pathway, targetExamDate, emailNotifications, studyReminders } = body;
+    const {
+      displayName,
+      pathway,
+      targetExamDate,
+      activePlan,
+      emailNotifications,
+      studyReminders,
+    } = body;
 
     const userId =
       sessionData.sub || sessionData.id || deriveCandidateIdFromEmail(sessionData.email);
@@ -126,7 +133,7 @@ export async function PUT(request: Request) {
       displayName: displayName || sessionData.displayName || sessionData.name || "Nursing Candidate",
       pathway: pathway || sessionData.pathway || "rn",
       targetExamDate: targetExamDate || sessionData.targetExamDate,
-      activePlan: sessionData.activePlan,
+      activePlan: activePlan || sessionData.activePlan,
       emailNotifications:
         emailNotifications !== undefined ? emailNotifications : sessionData.emailNotifications,
       studyReminders:
@@ -140,6 +147,7 @@ export async function PUT(request: Request) {
       name: savedRecord.displayName,
       pathway: savedRecord.pathway,
       targetExamDate: savedRecord.targetExamDate,
+      activePlan: savedRecord.activePlan,
       emailNotifications: savedRecord.emailNotifications,
       studyReminders: savedRecord.studyReminders,
       picture: savedRecord.pictureUrl || sessionData.picture,

@@ -31,7 +31,7 @@ export function CartPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const cart = useCart();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, refreshSession } = useAuth();
 
   const [promoCode, setPromoCode] = React.useState("");
   const [promoApplied, setPromoApplied] = React.useState<number | null>(null);
@@ -40,6 +40,20 @@ export function CartPageClient() {
   const [checkoutSuccess, setCheckoutSuccess] = React.useState(false);
 
   const { items, itemCount, subtotal, removeItem, clearCart, addItem } = cart;
+
+  const hasRecurringSubscription = items.some(
+    (item) => item.product.billingInterval !== "one-time"
+  );
+  const cartPathwayLabel =
+    items.length > 0
+      ? Array.from(
+          new Set(
+            items.map((item) =>
+              item.product.pathway === "Both" ? "RN & PN" : item.product.pathway
+            )
+          )
+        ).join(" + ")
+      : (user?.pathway || "RN").toUpperCase();
 
   // Process ?add=<productId> from query string
   React.useEffect(() => {
@@ -80,9 +94,50 @@ export function CartPageClient() {
     setIsCheckingOut(true);
   };
 
-  const handleConfirmCheckout = () => {
-    // In this phase, subscription entitlement is confirmed for candidate profile
+  const handleConfirmCheckout = async () => {
+    if (checkoutSuccess) return;
+    // In this phase, subscription or assessment pack entitlement is confirmed for candidate profile
     setCheckoutSuccess(true);
+
+    if (items.length > 0) {
+      const planSummary = items
+        .map(
+          ({ product }) =>
+            `${product.name} (${
+              product.durationLabel ??
+              (product.billingInterval === "month"
+                ? "30-Day Monthly Access"
+                : product.billingInterval === "quarter"
+                  ? "90-Day Quarterly Access"
+                  : "One-Time Access")
+            })`
+        )
+        .join(" + ");
+
+      const primaryPathwayItem =
+        items.find((i) => i.product.planType !== "readiness") ?? items[0];
+      const nextPathway =
+        primaryPathwayItem?.product.pathway === "PN"
+          ? "pn"
+          : primaryPathwayItem?.product.pathway === "RN"
+            ? "rn"
+            : user?.pathway || "rn";
+
+      try {
+        await fetch("/api/profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            activePlan: planSummary,
+            pathway: nextPathway,
+          }),
+        });
+        await refreshSession();
+      } catch {
+        // Proceed with client-side enrollment navigation if profile update endpoint is unreachable
+      }
+    }
+
     setTimeout(() => {
       clearCart();
       setIsCheckingOut(false);
@@ -118,7 +173,7 @@ export function CartPageClient() {
             </div>
             <h2 className="text-2xl font-serif font-semibold text-foreground">Your cart is currently empty</h2>
             <p className="mt-3 text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
-              Explore our NCLEX-RN and NCLEX-PN pathways to choose a preparation plan tailored to your exam target. Every plan includes original NGN questions, detailed rationales, and adaptive tests.
+              Explore our NCLEX-RN and NCLEX-PN pathways to choose a preparation plan tailored to your exam target. Every plan includes original NGN and practical nursing questions, detailed clinical rationales, and readiness assessments.
             </p>
 
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -160,10 +215,14 @@ export function CartPageClient() {
                       <div className="space-y-2 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline" className="font-semibold text-xs border-secondary/40 text-secondary">
-                            NCLEX-{product.pathway}
+                            {product.pathway === "Both" ? "NCLEX-RN & PN" : `NCLEX-${product.pathway}`}
                           </Badge>
                           <Badge variant="secondary" className="text-[11px] font-medium">
-                            {product.planType === "readiness" ? "Simulated Exam Pack" : "Full Subscription"}
+                            {product.planType === "readiness"
+                              ? "One-Time Assessment Pack"
+                              : product.billingInterval === "quarter"
+                                ? "90-Day Subscription"
+                                : "Monthly Subscription"}
                           </Badge>
                           <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                             <Clock className="h-3 w-3" />
@@ -200,12 +259,27 @@ export function CartPageClient() {
                       {/* Price & Remove Button */}
                       <div className="sm:text-right flex sm:flex-col items-center sm:items-end justify-between w-full sm:w-auto pt-4 sm:pt-0 border-t sm:border-t-0 border-border">
                         <div>
+                          {product.originalPrice && product.originalPrice > product.price && (
+                            <div className="text-xs text-muted-foreground line-through">
+                              ${product.originalPrice.toFixed(2)}
+                            </div>
+                          )}
                           <div className="text-2xl font-serif font-bold text-foreground">
                             ${product.price.toFixed(2)}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {product.currency} / {product.billingInterval === "month" ? "mo" : "pack"}
+                            {product.currency} /{" "}
+                            {product.billingInterval === "month"
+                              ? "mo"
+                              : product.billingInterval === "quarter"
+                                ? "90 days"
+                                : "one-time pack"}
                           </div>
+                          {product.savingsAmount && product.savingsAmount > 0 && (
+                            <div className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                              Save ${product.savingsAmount}
+                            </div>
+                          )}
                         </div>
 
                         <button
@@ -349,7 +423,9 @@ export function CartPageClient() {
         <DialogContent className="sm:max-w-md bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-xl font-serif text-foreground">
-              Confirm Subscription Checkout
+              {hasRecurringSubscription
+                ? "Confirm Subscription Checkout"
+                : "Confirm Assessment Pack Checkout"}
             </DialogTitle>
             <DialogDescription className="text-muted-foreground text-xs">
               Review your candidate study access order before finalizing.
@@ -368,7 +444,17 @@ export function CartPageClient() {
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Selected Pathway:</span>
-                <span className="font-semibold text-secondary uppercase">{user?.pathway || "RN"}</span>
+                <span className="font-semibold text-secondary uppercase">{cartPathwayLabel}</span>
+              </div>
+              <div className="border-t border-border pt-2 space-y-1.5">
+                {items.map(({ product }) => (
+                  <div key={product.id} className="flex justify-between text-foreground">
+                    <span>
+                      {product.name} ({product.billingInterval === "one-time" ? "One-Time" : product.billingInterval === "quarter" ? "90 Days" : "Monthly"})
+                    </span>
+                    <span className="font-semibold">${product.price.toFixed(2)}</span>
+                  </div>
+                ))}
               </div>
               <div className="border-t border-border pt-2 flex justify-between font-bold text-sm text-foreground">
                 <span>Total Amount:</span>
@@ -382,7 +468,8 @@ export function CartPageClient() {
                 <span>Payment Gateway Mode</span>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Stripe live payment integration is running in sandbox mode for Phase 4. Confirming will activate your study entitlement immediately on your PrepFord account without charging your card.
+                Stripe live payment integration is running in sandbox mode for Phase 4. Confirming will activate your{" "}
+                {hasRecurringSubscription ? "study plan entitlement" : "one-time assessment pack (non-recurring)"} immediately on your PrepFord account without charging your card.
               </p>
             </div>
 

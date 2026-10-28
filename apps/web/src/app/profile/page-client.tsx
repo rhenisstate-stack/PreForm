@@ -35,6 +35,7 @@ export function ProfilePageClient() {
   const [displayName, setDisplayName] = React.useState("");
   const [pathway, setPathway] = React.useState<"rn" | "pn">("rn");
   const [targetExamDate, setTargetExamDate] = React.useState("2026-11-30");
+  const [activePlan, setActivePlan] = React.useState<string>("");
   const [profileSaving, setProfileSaving] = React.useState(false);
   const [profileMessage, setProfileMessage] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -84,6 +85,7 @@ export function ProfilePageClient() {
             setDisplayName(data.profile.displayName || data.profile.name || "");
             setPathway(data.profile.pathway || "rn");
             if (data.profile.targetExamDate) setTargetExamDate(data.profile.targetExamDate);
+            if (data.profile.activePlan) setActivePlan(data.profile.activePlan);
             if (data.profile.studyReminders !== undefined) setStudyReminders(data.profile.studyReminders);
             if (data.profile.emailNotifications !== undefined) setEmailNotifications(data.profile.emailNotifications);
             setSavedPictureUrl(data.profile.picture || null);
@@ -357,7 +359,7 @@ export function ProfilePageClient() {
             <div>
               <p className="font-semibold text-sm">Study Access Activated Successfully!</p>
               <p className="text-xs text-green-800 dark:text-green-200 mt-0.5">
-                Your NCLEX preparation entitlement is now active on your account. You have full access to questions, CAT assessments, and clinical rationales.
+                Your NCLEX preparation entitlement is now active on your account. You have full access to practice questions, readiness assessments, Study Guide notes, and clinical rationales.
               </p>
             </div>
           </div>
@@ -732,14 +734,14 @@ export function ProfilePageClient() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-serif font-bold text-foreground">
-                    NCLEX-{pathway.toUpperCase()} Complete Preparation Plan
+                    {activePlan || `NCLEX-${pathway.toUpperCase()} Complete Preparation Plan`}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Access Window: Valid until <span className="font-semibold text-foreground">December 31, 2026</span>
                   </p>
                 </div>
-                <div className="text-2xl font-serif font-bold text-foreground">
-                  $59.00 <span className="text-xs font-sans text-muted-foreground font-normal">/ month</span>
+                <div className="text-sm font-semibold text-secondary">
+                  Active Entitlement
                 </div>
               </div>
 
@@ -748,11 +750,11 @@ export function ProfilePageClient() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>3,500+ NGN question items</span>
+                    <span>Original NCLEX-{pathway.toUpperCase()} question bank</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>6 full-length CAT mock tests</span>
+                    <span>Timed &amp; untimed readiness assessments</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
@@ -760,15 +762,15 @@ export function ProfilePageClient() {
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>Pharmacology review packs</span>
+                    <span>Pharmacology &amp; Physiological Adaptation review</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>100% Pass Guarantee</span>
+                    <span>Comprehensive Study Guide library</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>Detailed clinical rationales</span>
+                    <span>Detailed option-by-option rationales</span>
                   </div>
                 </div>
               </div>
