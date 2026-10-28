@@ -253,4 +253,219 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
     expect(rnBtn).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByText(/NCLEX-PN Focus/i)).toBeInTheDocument();
   });
+
+  it("renders persistent dark teal sidebar with grouped navigation and collapse control", async () => {
+    const user = userEvent.setup();
+    mockAuthState = {
+      user: {
+        id: "candidate-123",
+        email: "alex.rn@prepford.com",
+        name: "Alex",
+        displayName: "Alex",
+        role: "candidate",
+        pathway: "rn",
+      },
+      isAuthenticated: true,
+      isLoading: false,
+    };
+
+    render(<DashboardClient />);
+
+    const sidebar = screen.getByTestId("learner-sidebar");
+    expect(sidebar).toBeInTheDocument();
+
+    // Verify navigation groups
+    expect(within(sidebar).getByText(/LEARN/i)).toBeInTheDocument();
+    expect(within(sidebar).getByText(/TEST BANK & ASSESSMENTS/i)).toBeInTheDocument();
+    expect(within(sidebar).getByText(/REPORTS/i)).toBeInTheDocument();
+    expect(within(sidebar).getByText(/ACCOUNT/i)).toBeInTheDocument();
+
+    // Verify active report view highlight
+    expect(within(sidebar).getByText("Previous Tests")).toBeInTheDocument();
+    expect(within(sidebar).getByText("Active")).toBeInTheDocument();
+
+    // Verify prominent + Create Test Now button
+    const createBtn = screen.getByTestId("sidebar-create-test-btn");
+    expect(createBtn).toBeInTheDocument();
+
+    // Verify collapse toggle button
+    const collapseToggle = screen.getByTestId("sidebar-collapse-toggle");
+    expect(collapseToggle).toBeInTheDocument();
+    await user.click(collapseToggle);
+    expect(collapseToggle).toHaveAttribute("aria-label", "Expand sidebar");
+  });
+
+  it("renders compact top header with breadcrumbs, cart counter, and learner profile chip", () => {
+    mockAuthState = {
+      user: {
+        id: "candidate-123",
+        email: "alex.rn@prepford.com",
+        name: "Alex",
+        displayName: "Alex",
+        role: "candidate",
+        pathway: "rn",
+      },
+      isAuthenticated: true,
+      isLoading: false,
+    };
+    mockCartState = {
+      items: [{ id: "item-1", product: { id: "p-1", name: "RN Pro" } }],
+      itemCount: 1,
+      subtotal: 79,
+    };
+
+    render(<DashboardClient />);
+
+    const header = screen.getByTestId("dashboard-header");
+    expect(header).toBeInTheDocument();
+
+    const breadcrumbs = screen.getByTestId("dashboard-breadcrumbs");
+    expect(within(breadcrumbs).getByText("Previous Tests")).toBeInTheDocument();
+
+    const cartLink = screen.getByTestId("dashboard-cart-link");
+    expect(cartLink).toHaveAttribute("href", "/cart");
+    expect(within(cartLink).getByText("1")).toBeInTheDocument();
+
+    const accountMenu = screen.getByTestId("learner-account-menu");
+    expect(accountMenu).toHaveAttribute("href", "/profile");
+  });
+
+  it("handles honest zero-state and toggles the illustrative sample benchmark preview", async () => {
+    const user = userEvent.setup();
+    mockAuthState = {
+      user: {
+        id: "candidate-123",
+        email: "alex.rn@prepford.com",
+        name: "Alex",
+        displayName: "Alex",
+        role: "candidate",
+        pathway: "rn",
+      },
+      isAuthenticated: true,
+      isLoading: false,
+    };
+
+    render(<DashboardClient />);
+
+    // Honest zero-state when learner has no test attempts yet
+    expect(screen.getByText(/No Assessment Attempts Recorded Yet/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Start Your First Practice Test/i })).toBeInTheDocument();
+
+    // Toggle illustrative sample preview
+    const toggle = screen.getByTestId("toggle-sample-preview");
+    expect(toggle).toHaveAttribute("aria-checked", "false");
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute("aria-checked", "true");
+
+    // Clear disclosure banner must appear
+    expect(
+      screen.getByText(/SAMPLE BENCHMARK PREVIEW • Illustrative Reference Data/i)
+    ).toBeInTheDocument();
+
+    // Chart and historical table must now render with sample benchmark data
+    expect(screen.getByTestId("assessment-performance-chart")).toBeInTheDocument();
+    expect(screen.getByTestId("assessment-history-table")).toBeInTheDocument();
+
+    // Verify right-side performance tier key
+    expect(screen.getByTestId("performance-key-vh")).toBeInTheDocument();
+    expect(screen.getByTestId("performance-key-h")).toBeInTheDocument();
+    expect(screen.getByTestId("performance-key-b")).toBeInTheDocument();
+    expect(screen.getByTestId("performance-key-l")).toBeInTheDocument();
+
+    // Verify reference attempts in table (Tutored CAT 7 down to Tutored CAT 1)
+    const historyTable = screen.getByTestId("assessment-history-table");
+    expect(within(historyTable).getByText("Tutored CAT 7")).toBeInTheDocument();
+    expect(within(historyTable).getByText("Tutored CAT 6")).toBeInTheDocument();
+    expect(within(historyTable).getByText("Tutored CAT 1")).toBeInTheDocument();
+  });
+
+  it("opens Review Test and View Report modals for assessment attempts", async () => {
+    const user = userEvent.setup();
+    mockAuthState = {
+      user: {
+        id: "candidate-123",
+        email: "alex.rn@prepford.com",
+        name: "Alex",
+        displayName: "Alex",
+        role: "candidate",
+        pathway: "rn",
+      },
+      isAuthenticated: true,
+      isLoading: false,
+    };
+
+    render(<DashboardClient />);
+
+    // Enable sample preview to populate attempts
+    await user.click(screen.getByTestId("toggle-sample-preview"));
+
+    // Click Review Test for Tutored CAT 7
+    const reviewBtn = screen.getByTestId("btn-review-test-tcat-07");
+    await user.click(reviewBtn);
+
+    const reviewModal = screen.getByTestId("modal-review-test");
+    expect(reviewModal).toBeInTheDocument();
+    expect(within(reviewModal).getByText(/Review: Tutored CAT 7/i)).toBeInTheDocument();
+    expect(within(reviewModal).getByText(/Clinical Rationale & Explanation/i)).toBeInTheDocument();
+
+    // Close review modal
+    await user.click(within(reviewModal).getByRole("button", { name: /Close Review/i }));
+    expect(screen.queryByTestId("modal-review-test")).not.toBeInTheDocument();
+
+    // Click View Report for Tutored CAT 7
+    const reportBtn = screen.getByTestId("btn-view-report-tcat-07");
+    await user.click(reportBtn);
+
+    const reportModal = screen.getByTestId("modal-view-report");
+    expect(reportModal).toBeInTheDocument();
+    expect(within(reportModal).getByText(/Performance Report: Tutored CAT 7/i)).toBeInTheDocument();
+    expect(within(reportModal).getByText(/Client Needs Domain Mastery/i)).toBeInTheDocument();
+    expect(within(reportModal).getByText(/Targeted Next Study Steps/i)).toBeInTheDocument();
+
+    // Close report modal
+    await user.click(within(reportModal).getByRole("button", { name: /Done/i }));
+    expect(screen.queryByTestId("modal-view-report")).not.toBeInTheDocument();
+  });
+
+  it("launches the Create Test modal and records a real completed attempt", async () => {
+    const user = userEvent.setup();
+    mockAuthState = {
+      user: {
+        id: "candidate-123",
+        email: "alex.rn@prepford.com",
+        name: "Alex",
+        displayName: "Alex",
+        role: "candidate",
+        pathway: "rn",
+      },
+      isAuthenticated: true,
+      isLoading: false,
+    };
+
+    render(<DashboardClient />);
+
+    // Launch Create Test modal
+    const startTestBtn = screen.getByRole("button", { name: /Start Your First Practice Test/i });
+    await user.click(startTestBtn);
+
+    const createModal = screen.getByTestId("modal-create-test");
+    expect(createModal).toBeInTheDocument();
+    expect(within(createModal).getByText(/Create New Assessment Test/i)).toBeInTheDocument();
+
+    // Start test session
+    const startSessionBtn = within(createModal).getByRole("button", { name: /Start Test Session/i });
+    await user.click(startSessionBtn);
+
+    // Verify question 1 is presented
+    expect(within(createModal).getByText(/Question 1 of 5/i)).toBeInTheDocument();
+
+    // Submit test directly
+    const submitBtn = within(createModal).getByRole("button", { name: /Submit & Complete Test/i });
+    await user.click(submitBtn);
+
+    // Review modal for the newly generated test should open
+    expect(screen.getByTestId("modal-review-test")).toBeInTheDocument();
+    expect(screen.getByText(/Review: Tutored CAT 1/i)).toBeInTheDocument();
+  });
 });
