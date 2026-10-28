@@ -47,7 +47,7 @@ const footerColumns: FooterColumn[] = [
     links: [
       { label: "Terms and Conditions", href: "/terms-and-conditions" },
       { label: "Privacy Policy", href: "/privacy-policy" },
-      { label: "About PrepFord", href: "/" },
+      { label: "About PrepFord", href: "/about" },
     ],
   },
 ];
