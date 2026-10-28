@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Linkedin, Twitter, Youtube, Facebook } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 
@@ -75,6 +76,12 @@ const socialLinks = [
 ];
 
 export default function PublicFooter() {
+  const pathname = usePathname();
+
+  // The learner dashboard workspace uses its own dedicated application shell
+  if (pathname?.startsWith("/dashboard")) {
+    return null;
+  }
   const currentYear = 2026;
 
   return (

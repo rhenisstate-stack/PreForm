@@ -178,6 +178,11 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
     router.refresh();
   };
 
+  // The learner dashboard workspace uses its own dedicated application shell
+  if (pathname?.startsWith("/dashboard")) {
+    return null;
+  }
+
   return (
     <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-md shadow-xs">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
