@@ -36,7 +36,7 @@ export function SubjectPageClient({ category, subject }: Props) {
   return (
     <article className="w-full bg-background min-h-screen">
       {/* Subject Header */}
-      <section className="w-full bg-gradient-to-b from-teal-50/80 via-background to-background dark:from-teal-950/25 dark:via-background dark:to-background border-b border-border/60 pt-10 pb-12 px-4 sm:px-6 lg:px-8">
+      <section className="w-full bg-gradient-to-b from-teal-50/80 via-background to-background dark:from-teal-950/25 dark:via-background dark:to-background pt-10 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto space-y-5">
           {/* Breadcrumbs */}
           <nav aria-label="Breadcrumb">
@@ -78,7 +78,7 @@ export function SubjectPageClient({ category, subject }: Props) {
           <div className="flex items-center gap-3 flex-wrap">
             <Link
               href={`/study-guide/${category.slug}`}
-              className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 transition-colors"
+              className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 hover:bg-teal-500/20 transition-colors"
             >
               {category.title}
             </Link>
@@ -99,7 +99,7 @@ export function SubjectPageClient({ category, subject }: Props) {
             {subject.summary}
           </p>
 
-          <div className="pt-2 flex items-center justify-between border-t border-border/40 text-xs text-muted-foreground">
+          <div className="pt-2 flex items-center justify-between text-xs text-muted-foreground">
             <Link
               href={`/study-guide/${category.slug}`}
               className="inline-flex items-center gap-1.5 font-medium hover:text-foreground transition-colors"
@@ -148,7 +148,7 @@ export function SubjectPageClient({ category, subject }: Props) {
         {/* Detailed Sections */}
         <div className="space-y-10">
           {subject.sections.map((section: StudyGuideSection, index: number) => (
-            <div key={index} className="space-y-5 pb-8 border-b border-border/60 last:border-0">
+            <div key={index} className="space-y-5 pb-4">
               <h2 className="text-xl sm:text-2xl font-serif font-bold text-foreground">
                 {section.heading}
               </h2>
@@ -159,7 +159,7 @@ export function SubjectPageClient({ category, subject }: Props) {
 
               {/* Key points list */}
               {section.keyPoints && section.keyPoints.length > 0 && (
-                <div className="p-5 rounded-xl bg-card border border-border/60 space-y-2.5">
+                <div className="p-5 rounded-xl bg-card shadow-xs space-y-2.5">
                   <p className="text-xs font-bold uppercase tracking-wider text-foreground">
                     Essential Nursing Action Items:
                   </p>

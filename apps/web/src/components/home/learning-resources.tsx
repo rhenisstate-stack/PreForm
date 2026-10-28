@@ -57,7 +57,7 @@ const resources: ResourceItem[] = [
 
 export function LearningResources() {
   return (
-    <section id="resources" className="pt-20 pb-24 px-4 bg-muted/40 lg:pt-32 lg:pb-32 lg:px-8 border-t border-border">
+    <section id="resources" className="pt-20 pb-24 px-4 bg-muted/35 lg:pt-32 lg:pb-32 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-3xl lg:mx-auto">
           <p className="text-xs font-medium uppercase tracking-wider text-secondary">
@@ -73,7 +73,7 @@ export function LearningResources() {
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {resources.map((item) => (
-            <Card key={item.title} className="flex flex-col h-full border-border bg-card shadow-sm hover:shadow transition-shadow">
+            <Card key={item.title} className="flex flex-col h-full bg-card shadow-xs hover:shadow-md transition-shadow">
               <CardHeader className="pb-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary/15 mb-3">
                   {item.icon}

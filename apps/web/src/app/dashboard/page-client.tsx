@@ -148,7 +148,7 @@ export function DashboardClient() {
       <PersonalizedWelcome user={user} />
 
       {/* Pathway Selector & Status Bar */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-border/40">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-2">
         <div>
           <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground tracking-tight">
             Learning Workspace
@@ -185,7 +185,7 @@ export function DashboardClient() {
       </div>
 
       {/* Candidate Readiness Metrics (Open Canvas, No Boxed Borders) */}
-      <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 pb-8 border-b border-border/30">
+      <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4 rounded-2xl bg-card/65 p-6 shadow-xs">
         <div className="space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold uppercase tracking-wider">Questions Answered</span>
@@ -330,7 +330,7 @@ export function DashboardClient() {
       </div>
 
       {/* Clinical Notes & Study Guide Banner (Open Full-Width Integration) */}
-      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-5 px-6 rounded-2xl bg-teal-500/10 border border-teal-500/20">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 py-5 px-6 rounded-2xl bg-teal-500/10">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <BookOpen className="h-4 w-4 text-secondary" />
@@ -355,8 +355,8 @@ export function DashboardClient() {
       </div>
 
       {/* Curriculum Breakdown by Domain (Continuous Open Canvas) */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between pb-3 border-b border-border/40">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between pb-1">
           <div>
             <h2 className="text-xl font-serif font-bold text-foreground">
               Clinical Domain Mastery
@@ -370,11 +370,11 @@ export function DashboardClient() {
           </span>
         </div>
 
-        <div className="divide-y divide-border/40">
+        <div className="space-y-3">
           {subjects.map((sub) => {
             const pct = Math.round((sub.questionsCompleted / sub.questionsTotal) * 100);
             return (
-              <div key={sub.id} className="py-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div key={sub.id} className="rounded-xl bg-card/65 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xs">
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2.5">
                     <span className="text-base font-semibold text-foreground">{sub.title}</span>

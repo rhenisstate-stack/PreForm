@@ -115,7 +115,7 @@ export function CourseFinderQuiz() {
     const rec = recommendations[pathway] || recommendations.rn;
 
     return (
-      <section id="course-finder" className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8 border-t border-border">
+      <section id="course-finder" className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="text-center lg:max-w-2xl lg:mx-auto">
             <p className="text-xs font-medium uppercase tracking-wider text-secondary">
@@ -128,7 +128,7 @@ export function CourseFinderQuiz() {
               Based on your target pathway and preparation timeline, here is the suggested preparation option.
             </p>
 
-            <Card className="mt-8 border-secondary ring-1 ring-secondary/50 bg-card shadow-md text-left">
+            <Card className="mt-8 ring-2 ring-secondary/50 bg-card shadow-md text-left">
               <CardHeader>
                 <div className="flex items-center justify-between gap-2 mb-1">
                   <Badge className="bg-secondary text-secondary-foreground font-semibold text-xs">
@@ -170,7 +170,7 @@ export function CourseFinderQuiz() {
                   </Button>
                 </div>
               </CardContent>
-              <CardFooter className="pt-2 border-t border-border flex items-center justify-between">
+              <CardFooter className="pt-2 flex items-center justify-between">
                 <Link href="/subscriptions" className="text-xs text-secondary hover:underline font-medium">
                   Compare all available plans →
                 </Link>
@@ -193,7 +193,7 @@ export function CourseFinderQuiz() {
   const q = questions[currentStep];
 
   return (
-    <section id="course-finder" className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8 border-t border-border">
+    <section id="course-finder" className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-2xl lg:mx-auto">
           <p className="text-xs font-medium uppercase tracking-wider text-secondary">
@@ -209,7 +209,7 @@ export function CourseFinderQuiz() {
 
         <div className="mt-10 flex justify-center">
           <div className="w-full max-w-md">
-            <div className="w-full border-border rounded-full h-2 mb-3 bg-muted overflow-hidden">
+            <div className="w-full rounded-full h-2 mb-3 bg-muted overflow-hidden">
               <div
                 className="h-2 bg-secondary rounded-full transition-all duration-300"
                 style={{ width: `${progress}%` }}
@@ -221,7 +221,7 @@ export function CourseFinderQuiz() {
           </div>
         </div>
 
-        <Card className="mt-6 max-w-md mx-auto border-border bg-card shadow-sm">
+        <Card className="mt-6 max-w-md mx-auto bg-card shadow-md">
           <CardHeader className="pb-3">
             <CardTitle className="text-base sm:text-lg font-serif text-foreground">
               {q.question}
@@ -247,7 +247,7 @@ export function CourseFinderQuiz() {
               );
             })}
           </CardContent>
-          <CardFooter className="pt-4 border-t border-border flex justify-between">
+          <CardFooter className="pt-4 flex justify-between">
             {currentStep > 0 ? (
               <Button variant="outline" size="sm" onClick={goBack} className="text-xs">
                 Back

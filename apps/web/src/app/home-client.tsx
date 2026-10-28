@@ -53,7 +53,7 @@ function SubscriptionCards({
   programmes: Array<{ code: string; displayName: string; isActive: boolean }>;
 }) {
   return (
-    <section id="subscriptions" className="pt-20 pb-24 px-4 bg-card lg:pt-32 lg:pb-32 lg:px-8 border-y border-border">
+    <section id="subscriptions" className="pt-20 pb-24 px-4 bg-card/50 lg:pt-32 lg:pb-32 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-3xl lg:mx-auto">
           <p className="text-xs font-medium uppercase tracking-wider text-secondary">
@@ -75,7 +75,7 @@ function SubscriptionCards({
             const cartHref = `/cart?add=${planId}`;
 
             return (
-              <Card key={p.code} className="flex flex-col h-full border-border bg-card shadow-sm hover:shadow transition-shadow">
+              <Card key={p.code} className="flex flex-col h-full bg-card shadow-xs hover:shadow-md transition-shadow">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <Badge variant="outline" className="border-secondary/40 text-secondary font-bold text-xs">
@@ -104,7 +104,7 @@ function SubscriptionCards({
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter className="pt-4 border-t border-border flex flex-col sm:flex-row items-center gap-2.5">
+                <CardFooter className="pt-4 flex flex-col sm:flex-row items-center gap-2.5">
                   <Button asChild className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm">
                     <Link href={cartHref} className="flex items-center justify-center gap-1.5">
                       <ShoppingCart className="h-4 w-4" />

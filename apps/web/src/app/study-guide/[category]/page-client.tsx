@@ -51,7 +51,7 @@ export function CategoryPageClient({ category }: Props) {
   return (
     <div className="w-full bg-background min-h-screen">
       {/* Category Hero Banner */}
-      <section className="w-full bg-gradient-to-b from-teal-50/80 via-background to-background dark:from-teal-950/25 dark:via-background dark:to-background border-b border-border/60 pt-10 pb-14 px-4 sm:px-6 lg:px-8">
+      <section className="w-full bg-gradient-to-b from-teal-50/80 via-background to-background dark:from-teal-950/25 dark:via-background dark:to-background pt-10 pb-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Breadcrumbs */}
           <nav aria-label="Breadcrumb" className="mb-6">
@@ -81,7 +81,7 @@ export function CategoryPageClient({ category }: Props) {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-3 max-w-3xl">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-500/20">
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400">
                   {category.badge}
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -90,7 +90,7 @@ export function CategoryPageClient({ category }: Props) {
               </div>
 
               <div className="flex items-center gap-3.5">
-                <div className="p-3 rounded-2xl bg-card border border-border/60 shadow-xs">
+                <div className="p-3 rounded-2xl bg-card shadow-xs">
                   {getCategoryIcon(category.iconName)}
                 </div>
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-foreground">
@@ -106,7 +106,7 @@ export function CategoryPageClient({ category }: Props) {
             <div className="flex flex-col sm:flex-row gap-3 self-stretch md:self-auto">
               <Link
                 href="/study-guide"
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-border bg-card text-foreground text-xs font-medium hover:bg-muted transition-colors shadow-xs"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-card text-foreground text-xs font-medium hover:bg-muted transition-colors shadow-xs"
               >
                 <ArrowLeft className="h-3.5 w-3.5" />
                 <span>All Categories</span>
@@ -128,7 +128,7 @@ export function CategoryPageClient({ category }: Props) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Subject List (2 cols on large screen) */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between pb-2 border-b border-border/60">
+            <div className="flex items-center justify-between pb-1">
               <h2 className="text-lg font-serif font-bold text-foreground">
                 Clinical Study Topics ({category.subjects.length})
               </h2>
@@ -141,7 +141,7 @@ export function CategoryPageClient({ category }: Props) {
               {category.subjects.map((subject) => (
                 <article
                   key={subject.id}
-                  className="p-6 rounded-2xl bg-card/60 hover:bg-card border border-border/60 hover:border-teal-500/40 transition-all duration-200 shadow-xs hover:shadow-md space-y-4"
+                  className="p-6 rounded-2xl bg-card/75 hover:bg-card transition-all duration-200 shadow-xs hover:shadow-md space-y-4"
                 >
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1 font-medium text-teal-700 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-full border border-teal-500/20">

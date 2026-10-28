@@ -28,7 +28,7 @@ const testimonials: TestimonialProps[] = [
 
 export function TestimonialsPreview() {
   return (
-    <section id="testimonials-preview" className="pt-20 pb-24 px-4 bg-muted/50 lg:pt-32 lg:pb-32 lg:px-8 border-y border-border">
+    <section id="testimonials-preview" className="pt-20 pb-24 px-4 bg-muted/40 lg:pt-32 lg:pb-32 lg:px-8">
       <div className="mx-auto max-w-7xl">
         <div className="text-center max-w-2xl mx-auto">
           <Quote className="mx-auto h-8 w-8 text-secondary/60" aria-hidden="true" />
@@ -40,12 +40,12 @@ export function TestimonialsPreview() {
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-6">
           {testimonials.map((t) => (
-            <Card key={t.name} className="border-border bg-card shadow-sm">
+            <Card key={t.name} className="bg-card shadow-xs">
               <CardContent className="pt-6 pb-4">
                 <Quote className="mb-4 h-5 w-5 text-secondary/60" aria-hidden="true" />
                 <p className="text-sm text-foreground leading-relaxed">{t.content}</p>
               </CardContent>
-              <CardFooter className="pt-3 border-t border-border">
+              <CardFooter className="pt-3 flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-semibold text-foreground">{t.name}</span>
                     <span className="text-xs text-muted-foreground">&middot; {t.role}</span>

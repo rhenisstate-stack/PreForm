@@ -76,7 +76,7 @@ export function StudyGuideIndexClient() {
   return (
     <div className="w-full bg-background min-h-screen">
       {/* Full-width Hero Banner */}
-      <section className="w-full bg-gradient-to-b from-teal-50/80 via-background to-background dark:from-teal-950/25 dark:via-background dark:to-background border-b border-border/60 pt-12 pb-16 px-4 sm:px-6 lg:px-8">
+      <section className="w-full bg-gradient-to-b from-teal-50/80 via-background to-background dark:from-teal-950/25 dark:via-background dark:to-background pt-12 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Breadcrumbs */}
           <nav aria-label="Breadcrumb" className="mb-6">
@@ -96,7 +96,7 @@ export function StudyGuideIndexClient() {
           </nav>
 
           <div className="max-w-3xl space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 text-xs font-semibold tracking-wide uppercase border border-teal-500/20">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 text-xs font-semibold tracking-wide uppercase">
               <Sparkles className="h-3.5 w-3.5" />
               <span>PrepFord Nursing Study Notes</span>
             </div>
@@ -111,19 +111,19 @@ export function StudyGuideIndexClient() {
 
             {/* Quick Metrics */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
-              <div className="p-3 rounded-xl bg-card/60 border border-border/60">
+              <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
                 <p className="text-xl sm:text-2xl font-bold text-foreground">7</p>
                 <p className="text-xs text-muted-foreground">Clinical Domains</p>
               </div>
-              <div className="p-3 rounded-xl bg-card/60 border border-border/60">
+              <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
                 <p className="text-xl sm:text-2xl font-bold text-teal-700 dark:text-teal-400">{totalSubjects}+</p>
                 <p className="text-xs text-muted-foreground">High-Yield Topics</p>
               </div>
-              <div className="p-3 rounded-xl bg-card/60 border border-border/60">
+              <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
                 <p className="text-xl sm:text-2xl font-bold text-foreground">100%</p>
                 <p className="text-xs text-muted-foreground">Free Study Notes</p>
               </div>
-              <div className="p-3 rounded-xl bg-card/60 border border-border/60">
+              <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
                 <p className="text-xl sm:text-2xl font-bold text-teal-700 dark:text-teal-400">NGN</p>
                 <p className="text-xs text-muted-foreground">Clinical Judgment Cues</p>
               </div>
@@ -135,7 +135,7 @@ export function StudyGuideIndexClient() {
       {/* Main Content Area */}
       <section className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         {/* Search & Filter Bar */}
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pb-8 border-b border-border/60">
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 pb-6">
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
@@ -211,9 +211,9 @@ export function StudyGuideIndexClient() {
               return (
                 <div key={category.id} className="space-y-4">
                   {/* Category Header */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/40">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 rounded-xl bg-card border border-border/60 shadow-xs">
+                      <div className="p-2.5 rounded-xl bg-card shadow-xs">
                         {getCategoryIcon(category.iconName)}
                       </div>
                       <div>
@@ -221,7 +221,7 @@ export function StudyGuideIndexClient() {
                           <h2 className="text-xl font-bold font-serif text-foreground">
                             {category.title}
                           </h2>
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-500/20">
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400">
                             {category.badge}
                           </span>
                         </div>
@@ -246,11 +246,11 @@ export function StudyGuideIndexClient() {
                       <Link
                         key={subject.id}
                         href={`/study-guide/${category.slug}/${subject.slug}`}
-                        className="group flex flex-col justify-between p-5 rounded-2xl bg-card/60 hover:bg-card border border-border/60 hover:border-teal-500/40 transition-all duration-200 shadow-xs hover:shadow-md"
+                        className="group flex flex-col justify-between p-5 rounded-2xl bg-card/75 hover:bg-card transition-all duration-200 shadow-xs hover:shadow-md"
                       >
                         <div className="space-y-3">
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span className="inline-flex items-center gap-1 font-medium text-teal-700 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-full border border-teal-500/20">
+                            <span className="inline-flex items-center gap-1 font-medium text-teal-700 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-full">
                               {subject.difficulty}
                             </span>
                             <span className="inline-flex items-center gap-1">
@@ -268,7 +268,7 @@ export function StudyGuideIndexClient() {
                           </p>
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between text-xs font-medium text-teal-700 dark:text-teal-400">
+                        <div className="mt-4 pt-3 flex items-center justify-between text-xs font-medium text-teal-700 dark:text-teal-400">
                           <span>Read Study Notes</span>
                           <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </div>

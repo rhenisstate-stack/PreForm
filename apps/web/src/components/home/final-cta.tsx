@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 
 export function FinalCTA() {
   return (
-    <section id="try-now" className="pt-24 pb-32 px-4 lg:pt-32 lg:pb-32 lg:px-8 border-t border-border">
+    <section id="try-now" className="pt-20 pb-28 px-4 lg:pt-28 lg:pb-32 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <div className="relative rounded-xl overflow-hidden border border-border bg-gradient-to-br from-[#0F766E] via-[#115E59] to-[#142B4A] dark:from-[#0F293A] dark:via-[#0D3B38] dark:to-[#0B1220] shadow-lg">
+        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#0F766E] via-[#115E59] to-[#142B4A] dark:from-[#0F293A] dark:via-[#0D3B38] dark:to-[#0B1220] shadow-xl">
           <div className="relative px-6 py-16 lg:px-12 lg:py-24 text-center">
             <h2 className="text-3xl font-serif font-semibold tracking-tight text-white sm:text-4xl">
               Ready to begin?
