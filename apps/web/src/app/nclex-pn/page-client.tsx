@@ -1350,12 +1350,19 @@ export function NCLEXPNPageClient() {
                       disabled={Boolean(submittingPlanId)}
                       data-testid={`select-plan-${plan.id}`}
                       onClick={() => handleSelectProduct(plan.id)}
-                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-sm"
+                      className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-sm h-12 px-4 inline-flex items-center justify-center"
                     >
-                      <ShoppingCart className="mr-2 h-4 w-4" />
-                      {isSubmitting || isAdded
-                        ? "Adding to Cart..."
-                        : `Select ${plan.planType === "pro" ? "Complete Prep" : plan.planType === "starter" ? "Starter Review" : "All-Access"} — $${plan.price}`}
+                      <ShoppingCart className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />
+                      {isSubmitting || isAdded ? (
+                        <span>Adding to Cart...</span>
+                      ) : (
+                        <>
+                          <span className="truncate">
+                            Choose {plan.planType === "pro" ? "Complete Prep" : plan.planType === "starter" ? "Starter Review" : "All-Access"}
+                          </span>
+                          <span className="sr-only">for {plan.name} at ${plan.price} {plan.currency}</span>
+                        </>
+                      )}
                     </Button>
                     <p className="text-[11px] text-center text-muted-foreground">
                       Single-seat candidate license • Manage anytime in account settings
@@ -1535,12 +1542,17 @@ export function NCLEXPNPageClient() {
                     disabled={Boolean(submittingPlanId)}
                     data-testid="select-plan-pn-readiness"
                     onClick={() => handleSelectProduct(readinessPack.id)}
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-sm"
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-xl shadow-sm h-12 px-4 inline-flex items-center justify-center"
                   >
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    {submittingPlanId === readinessPack.id
-                      ? "Adding Pack..."
-                      : `Add Assessment Pack — $${readinessPack.price}`}
+                    <ShoppingCart className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />
+                    {submittingPlanId === readinessPack.id ? (
+                      <span>Adding Pack...</span>
+                    ) : (
+                      <>
+                        <span className="truncate">Add Assessment Pack</span>
+                        <span className="sr-only">for ${readinessPack.price}</span>
+                      </>
+                    )}
                   </Button>
 
                   <p className="text-[11px] text-muted-foreground flex items-center justify-center gap-1">

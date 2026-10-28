@@ -126,9 +126,12 @@ export function SignUpPageClient() {
               width={48}
               height={48}
             />
-            <span className="flex flex-col font-serif font-bold tracking-tight leading-[0.95] text-left">
-              <span className="text-lg text-teal-400">Prep</span>
-              <span className="text-lg text-white">Ford</span>
+            <span
+              data-testid="brand-wordmark-stacked"
+              className="flex flex-col font-serif tracking-tight font-bold leading-none text-left -space-y-0.5 sm:-space-y-1 justify-center"
+            >
+              <span className="text-lg leading-none text-teal-400">Prep</span>
+              <span className="text-lg leading-none text-white">Ford</span>
             </span>
           </Link>
 
@@ -207,9 +210,12 @@ export function SignUpPageClient() {
                 width={44}
                 height={44}
               />
-              <span className="flex flex-col font-serif font-bold tracking-tight leading-[0.95] text-left">
-                <span className="text-base text-secondary">Prep</span>
-                <span className="text-base text-foreground">Ford</span>
+              <span
+                data-testid="brand-wordmark-stacked-mobile"
+                className="flex flex-col font-serif tracking-tight font-bold leading-none text-left -space-y-0.5 justify-center"
+              >
+                <span className="text-base leading-none text-secondary">Prep</span>
+                <span className="text-base leading-none text-foreground">Ford</span>
               </span>
             </Link>
           </div>

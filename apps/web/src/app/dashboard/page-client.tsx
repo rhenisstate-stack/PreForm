@@ -347,14 +347,13 @@ export function DashboardClient() {
               height={40}
             />
             {!sidebarCollapsed && (
-              <div className="flex flex-col text-left">
-                <span className="font-serif font-bold text-lg text-white leading-tight tracking-tight">
-                  Prep
-                </span>
-                <span className="font-serif font-semibold text-xs text-teal-400 tracking-wider uppercase">
-                  Ford
-                </span>
-              </div>
+              <span
+                data-testid="brand-wordmark-stacked"
+                className="flex flex-col font-serif tracking-tight font-bold leading-none text-left -space-y-0.5 justify-center"
+              >
+                <span className="text-base sm:text-lg leading-none text-teal-300">Prep</span>
+                <span className="text-base sm:text-lg leading-none text-white">Ford</span>
+              </span>
             )}
           </Link>
 

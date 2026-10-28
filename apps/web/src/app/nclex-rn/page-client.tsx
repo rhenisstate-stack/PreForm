@@ -928,7 +928,7 @@ export function NCLEXRNPageClient() {
                         : "bg-card/90 text-card-foreground shadow-md ring-1 ring-border/60 hover:ring-border"
                   }`}
                 >
-                  <div>
+                  <div className="flex-1 flex flex-col">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <span className="text-xs font-semibold uppercase tracking-wider text-secondary">
                         {product.durationLabel ??
@@ -955,7 +955,7 @@ export function NCLEXRNPageClient() {
                       {product.name}
                     </h3>
 
-                    <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                    <p className="mt-2 text-xs sm:text-sm text-muted-foreground leading-relaxed min-h-[40px]">
                       {product.description}
                     </p>
 
@@ -987,7 +987,7 @@ export function NCLEXRNPageClient() {
                       </p>
                     )}
 
-                    <ul className="mt-6 space-y-3 text-sm text-foreground/90">
+                    <ul className="mt-6 space-y-3 text-sm text-foreground/90 flex-1">
                       {product.features.map((feature) => (
                         <li key={feature} className="flex items-start gap-2.5">
                           <CheckCircle2
@@ -1011,18 +1011,21 @@ export function NCLEXRNPageClient() {
                         setSelectedTier(tier);
                         handleSelectPlan(product.id);
                       }}
-                      className={`w-full h-12 rounded-xl font-semibold ${
+                      className={`w-full h-12 rounded-xl font-semibold px-4 inline-flex items-center justify-center ${
                         isRecommended
                           ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
                           : "bg-secondary text-secondary-foreground hover:bg-secondary/90"
                       }`}
                     >
                       {isSubmitting ? (
-                        "Adding to Cart..."
+                        <span>Adding to Cart...</span>
                       ) : (
                         <>
-                          <ShoppingCart className="mr-2 h-4 w-4" aria-hidden="true" />
-                          Select {product.name} — ${product.price}
+                          <ShoppingCart className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />
+                          <span className="truncate">
+                            Choose {tier === "pro" ? "Complete Prep" : tier === "starter" ? "Starter Review" : "All-Access"}
+                          </span>
+                          <span className="sr-only">for {product.name} at ${product.price}</span>
                         </>
                       )}
                     </Button>
@@ -2130,11 +2133,17 @@ export function NCLEXRNPageClient() {
                     data-testid="select-plan-rn-readiness"
                     disabled={Boolean(submittingPlanId)}
                     onClick={() => handleSelectPlan(readinessProduct.id)}
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-xl"
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold rounded-xl h-12 px-4 inline-flex items-center justify-center"
                   >
-                    {submittingPlanId === readinessProduct.id
-                      ? "Adding to Cart..."
-                      : `Add Readiness Pack — $${readinessProduct.price}`}
+                    {submittingPlanId === readinessProduct.id ? (
+                      <span>Adding to Cart...</span>
+                    ) : (
+                      <>
+                        <ShoppingCart className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span className="truncate">Add Readiness Pack</span>
+                        <span className="sr-only">for ${readinessProduct.price}</span>
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>

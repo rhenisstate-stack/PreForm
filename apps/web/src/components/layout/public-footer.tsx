@@ -104,9 +104,12 @@ export default function PublicFooter() {
                 width={44}
                 height={44}
               />
-              <span className="flex flex-col font-serif font-bold tracking-tight leading-[0.95] text-left">
-                <span className="text-base sm:text-lg text-secondary">Prep</span>
-                <span className="text-base sm:text-lg text-foreground">Ford</span>
+              <span
+                data-testid="brand-wordmark-stacked"
+                className="flex flex-col font-serif tracking-tight font-bold leading-none text-left -space-y-0.5 sm:-space-y-1 justify-center"
+              >
+                <span className="text-base sm:text-lg leading-none text-secondary">Prep</span>
+                <span className="text-base sm:text-lg leading-none text-foreground">Ford</span>
               </span>
             </Link>
 
