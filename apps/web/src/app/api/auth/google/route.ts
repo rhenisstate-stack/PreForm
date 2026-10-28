@@ -18,7 +18,7 @@ function sha256(plain: string): Buffer {
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const sourcePage = url.searchParams.get("source") === "sign-up" ? "sign-up" : "sign-in";
-  const defaultDestination = sourcePage === "sign-up" ? "/courses" : "/";
+  const defaultDestination = sourcePage === "sign-up" ? "/courses" : "/dashboard";
   const rawFrom = url.searchParams.get("from") || url.searchParams.get("returnUrl");
   const from = sanitizeReturnUrl(rawFrom, defaultDestination);
 

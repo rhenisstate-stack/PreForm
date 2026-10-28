@@ -94,61 +94,92 @@ export function evaluatePasswordStrength(password: string): PasswordStrengthResu
 
 const DISALLOWED_RETURN_PATH_PREFIXES = ["/sign-in", "/sign-up", "/api/auth"];
 
+function hasUnsafePathSequence(value: string): boolean {
+  if (
+    !value.startsWith("/") ||
+    value.startsWith("//") ||
+    value.startsWith("/\\") ||
+    value.includes("\\") ||
+    value.includes("://") ||
+    /[\u0000-\u001F\u007F]/.test(value)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function isDisallowedAuthPath(pathname: string): boolean {
+  const lowerPath = pathname.toLowerCase();
+  for (const prefix of DISALLOWED_RETURN_PATH_PREFIXES) {
+    if (
+      lowerPath === prefix ||
+      lowerPath.startsWith(`${prefix}/`) ||
+      lowerPath.startsWith(`${prefix}?`)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Validates and normalizes an internal post-authentication redirect path.
  * Prevents open-redirect vulnerabilities (external URLs, protocol-relative URLs,
- * backslash bypasses, non-HTTP schemes, control characters, and auth loops).
+ * backslash bypasses, encoded-path bypasses, non-HTTP schemes, control characters,
+ * and auth loops). Defaults to "/dashboard" for learner sign-in flows.
  */
 export function sanitizeReturnUrl(
   raw: string | null | undefined,
-  defaultPath: string = "/"
+  defaultPath: string = "/dashboard"
 ): string {
   if (!raw || typeof raw !== "string") {
     return defaultPath;
   }
 
   const trimmed = raw.trim();
-  if (!trimmed) {
+  if (!trimmed || hasUnsafePathSequence(trimmed)) {
     return defaultPath;
   }
 
-  // Allow only single-slash internal paths; reject protocol-relative ("//"),
-  // backslash ("/\"), scheme indicators ("://"), and control characters.
-  if (
-    !trimmed.startsWith("/") ||
-    trimmed.startsWith("//") ||
-    trimmed.startsWith("/\\") ||
-    trimmed.includes("\\") ||
-    trimmed.includes("://") ||
-    /[\u0000-\u001F\u007F]/.test(trimmed)
-  ) {
+  // Decode up to two times to detect single- or double-encoded bypasses (e.g. /%2f/evil.com, /%5cevil.com)
+  let decodedOnce: string;
+  let decodedTwice: string;
+  try {
+    decodedOnce = decodeURIComponent(trimmed);
+    decodedTwice = decodeURIComponent(decodedOnce);
+  } catch {
+    // Reject malformed percent-encoding sequences
+    return defaultPath;
+  }
+
+  if (hasUnsafePathSequence(decodedOnce) || hasUnsafePathSequence(decodedTwice)) {
     return defaultPath;
   }
 
   try {
     const base = "http://localhost";
     const parsed = new URL(trimmed, base);
+    const parsedDecoded = new URL(decodedOnce, base);
+
     if (
       parsed.origin !== base ||
+      parsedDecoded.origin !== base ||
       !parsed.pathname.startsWith("/") ||
-      parsed.pathname.startsWith("//")
+      parsed.pathname.startsWith("//") ||
+      !parsedDecoded.pathname.startsWith("/") ||
+      parsedDecoded.pathname.startsWith("//")
     ) {
       return defaultPath;
     }
 
-    const normalizedPathname = parsed.pathname;
-    const lowerPath = normalizedPathname.toLowerCase();
-    for (const prefix of DISALLOWED_RETURN_PATH_PREFIXES) {
-      if (
-        lowerPath === prefix ||
-        lowerPath.startsWith(`${prefix}/`) ||
-        lowerPath.startsWith(`${prefix}?`)
-      ) {
-        return defaultPath;
-      }
+    if (
+      isDisallowedAuthPath(parsed.pathname) ||
+      isDisallowedAuthPath(parsedDecoded.pathname)
+    ) {
+      return defaultPath;
     }
 
-    return `${normalizedPathname}${parsed.search}${parsed.hash}`;
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return defaultPath;
   }

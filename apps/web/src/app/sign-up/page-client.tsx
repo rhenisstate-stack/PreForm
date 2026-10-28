@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
 import { PasswordStrengthIndicator } from "@/components/auth/password-strength-indicator";
-import { signUpSchema, type SignUpInput } from "@/lib/validation/auth";
+import { signUpSchema, sanitizeReturnUrl, type SignUpInput } from "@/lib/validation/auth";
 import { useAuth } from "@/lib/auth-context";
 import { BRAND } from "@/lib/brand";
 
@@ -82,7 +82,8 @@ export function SignUpPageClient() {
     try {
       const result = await registerUser(data);
       if (result.success) {
-        const from = searchParams.get("from") || searchParams.get("returnUrl") || "/courses";
+        const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
+        const from = sanitizeReturnUrl(rawReturn, "/courses");
         router.push(from);
         router.refresh();
       } else {
@@ -482,11 +483,11 @@ export function SignUpPageClient() {
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
                 <Link
-                  href={
-                    searchParams.get("from")
-                      ? `/sign-in?from=${encodeURIComponent(searchParams.get("from")!)}`
-                      : "/sign-in"
-                  }
+                  href={(() => {
+                    const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
+                    const safeFrom = sanitizeReturnUrl(rawReturn, "");
+                    return safeFrom ? `/sign-in?from=${encodeURIComponent(safeFrom)}` : "/sign-in";
+                  })()}
                   className="font-semibold text-secondary hover:underline"
                 >
                   Sign in

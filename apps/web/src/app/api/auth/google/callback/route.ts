@@ -32,7 +32,7 @@ export async function GET(request: Request) {
   }
 
   const fallbackSource = storedState?.sourcePage === "sign-up" ? "sign-up" : "sign-in";
-  const defaultDestination = fallbackSource === "sign-up" ? "/courses" : "/";
+  const defaultDestination = fallbackSource === "sign-up" ? "/courses" : "/dashboard";
   const targetDestination = sanitizeReturnUrl(storedState?.from, defaultDestination);
 
   // Check for cancellation or provider errors

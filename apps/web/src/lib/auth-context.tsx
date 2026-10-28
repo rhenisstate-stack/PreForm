@@ -12,6 +12,8 @@ export interface AuthUser {
   pathway: "rn" | "pn";
   picture?: string;
   provider?: string;
+  activePlan?: string;
+  targetExamDate?: string;
 }
 
 export interface AuthContextType {

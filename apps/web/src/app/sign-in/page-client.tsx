@@ -75,7 +75,7 @@ export function SignInPageClient() {
       const result = await login(data);
       if (result.success) {
         const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
-        const targetDestination = sanitizeReturnUrl(rawReturn, "/");
+        const targetDestination = sanitizeReturnUrl(rawReturn, "/dashboard");
         router.push(targetDestination);
         router.refresh();
       } else {

@@ -17,7 +17,7 @@ export function GoogleAuthButton({
 }: GoogleAuthButtonProps) {
   const [isRedirecting, setIsRedirecting] = React.useState(false);
   const searchParams = useSearchParams();
-  const defaultDestination = source === "sign-up" ? "/courses" : "/";
+  const defaultDestination = source === "sign-up" ? "/courses" : "/dashboard";
   const rawFrom = from || searchParams.get("from") || searchParams.get("returnUrl");
   const effectiveFrom = sanitizeReturnUrl(rawFrom, defaultDestination);
 

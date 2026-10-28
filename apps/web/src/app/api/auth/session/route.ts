@@ -24,6 +24,8 @@ export async function GET() {
       pathway?: "rn" | "pn";
       picture?: string;
       provider?: string;
+      activePlan?: string;
+      targetExamDate?: string;
     } = {};
 
     try {
@@ -54,6 +56,8 @@ export async function GET() {
       pathway: dbMeta?.pathway || sessionData.pathway || "rn",
       picture: dbMeta?.pictureUrl || sessionData.picture,
       provider: sessionData.provider || "credentials",
+      activePlan: dbMeta?.activePlan || sessionData.activePlan || undefined,
+      targetExamDate: dbMeta?.targetExamDate || sessionData.targetExamDate || undefined,
     };
 
     return NextResponse.json({
