@@ -24,6 +24,11 @@ public class StreamJsonOutputFormatter : TextOutputFormatter
         SupportedEncodings.Add(Encoding.UTF8);
     }
 
+    public override bool CanWriteResult(OutputFormatterCanWriteContext context)
+    {
+        return true;
+    }
+
     public override async Task WriteResponseBodyAsync(OutputFormatterWriteContext context, Encoding selectedEncoding)
     {
         if (context.Object is null)

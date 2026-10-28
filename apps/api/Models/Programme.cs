@@ -3,7 +3,9 @@ namespace Preform.Api.Models;
 public enum ProgrammeCode
 {
     RN,
-    PN
+    PN,
+    TEST,
+    DUP
 }
 
 public class Programme

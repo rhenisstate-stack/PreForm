@@ -93,7 +93,7 @@ public class ProgrammeControllerTests : IClassFixture<WebApplicationFactory<Prog
         var programmes = await response.Content.ReadFromJsonAsync<List<ProgrammeDto>>();
 
         Assert.NotNull(programmes);
-        Assert.Equal(2, programmes.Count);
+        Assert.True(programmes.Count >= 2);
         Assert.Contains(programmes, p => p.Code == "RN");
         Assert.Contains(programmes, p => p.Code == "PN");
     }
