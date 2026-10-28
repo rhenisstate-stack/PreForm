@@ -21,7 +21,7 @@ export async function GET() {
       name?: string;
       displayName?: string;
       role?: string;
-      pathway?: "rn" | "pn";
+      pathway?: "rn" | "pn" | "both";
       picture?: string;
       provider?: string;
       activePlan?: string;

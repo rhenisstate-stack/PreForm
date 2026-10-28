@@ -34,7 +34,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import type { Product } from "@/lib/products";
-import { checkContrastRatio, isValidHexColor } from "@/lib/subscription-store";
+import { checkContrastRatio, isValidHexColor } from "@/lib/color-contrast";
 
 const adminNavItems = [
   { label: "Overview", href: "/admin", current: false },

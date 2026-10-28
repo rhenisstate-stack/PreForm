@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getAllSubscriptionPlans } from "@/lib/subscription-store";
 import { SubscriptionsPageClient } from "./page-client";
 
 export const metadata: Metadata = {
@@ -17,5 +18,12 @@ export const metadata: Metadata = {
 };
 
 export default function SubscriptionsPage() {
-  return <SubscriptionsPageClient />;
+  let initialPlans;
+  try {
+    initialPlans = getAllSubscriptionPlans(false);
+  } catch {
+    initialPlans = undefined;
+  }
+
+  return <SubscriptionsPageClient initialPlans={initialPlans} />;
 }
