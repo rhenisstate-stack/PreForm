@@ -14,10 +14,23 @@ interface SqliteDatabaseSync {
   close: () => void;
 }
 
-const requireNode = createRequire(import.meta.url);
-const { DatabaseSync } = requireNode("node:sqlite") as {
-  DatabaseSync: new (location: string) => SqliteDatabaseSync;
-};
+function loadSqliteDatabaseConstructor(): new (location: string) => SqliteDatabaseSync {
+  const procWithBuiltin = process as unknown as {
+    getBuiltinModule?: (id: string) => { DatabaseSync: new (location: string) => SqliteDatabaseSync } | undefined;
+  };
+  const moduleId = ["node", "sqlite"].join(":");
+  if (typeof procWithBuiltin.getBuiltinModule === "function") {
+    const mod = procWithBuiltin.getBuiltinModule(moduleId);
+    if (mod?.DatabaseSync) {
+      return mod.DatabaseSync;
+    }
+  }
+  const req = createRequire(path.join(process.cwd(), "package.json"));
+  const fallbackMod = req(moduleId) as {
+    DatabaseSync: new (location: string) => SqliteDatabaseSync;
+  };
+  return fallbackMod.DatabaseSync;
+}
 
 export const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB
 export const MIN_PROFILE_IMAGE_BYTES = 16;
@@ -151,6 +164,7 @@ function getDatabase(): SqliteDatabaseSync {
     }
   }
 
+  const DatabaseSync = loadSqliteDatabaseConstructor();
   const db = new DatabaseSync(targetPath);
   db.exec(`
     PRAGMA journal_mode = WAL;
