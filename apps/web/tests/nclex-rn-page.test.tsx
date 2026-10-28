@@ -172,7 +172,9 @@ describe("NCLEX-RN Page Transformation (/nclex-rn)", () => {
     const rationalePanel = screen.getByTestId("rn-sample-rationale-panel");
     expect(within(rationalePanel).getByText(/Option A is Correct/i)).toBeInTheDocument();
     expect(
-      within(rationalePanel).getByText(/Suspected pulmonary embolism/i)
+      within(rationalePanel).getByText(
+        /optimize ventilation-perfusion matching by elevating the head of the bed/i
+      )
     ).toBeInTheDocument();
 
     const resetBtn = within(questionSection).getByRole("button", {
@@ -215,7 +217,7 @@ describe("NCLEX-RN Page Transformation (/nclex-rn)", () => {
       within(studyGuideSection).getByTestId("rn-study-guide-card-pharmacology")
     ).toBeInTheDocument();
     expect(
-      within(studyGuideSection).getByTestId("rn-study-guide-card-leadership-management")
+      within(studyGuideSection).getByTestId("rn-study-guide-card-leadership-delegation")
     ).toBeInTheDocument();
   });
 
