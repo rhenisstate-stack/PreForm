@@ -13,6 +13,7 @@ import {
   deleteProfileImageBinary,
   getUserProfileMeta,
   upsertUserProfileMeta,
+  resetProfileDatabaseForTesting,
   MAX_PROFILE_IMAGE_BYTES,
 } from "@/lib/profile-image-db";
 import { GET, POST, DELETE } from "@/app/api/profile/image/route";
@@ -64,20 +65,23 @@ vi.mock("next/navigation", () => ({
 }));
 
 const mockRefreshSession = vi.fn();
+const mockLogout = vi.fn();
+const MOCK_AUTH_USER = {
+  id: "cand-ui-1",
+  email: "nurse.ui@prepford.com",
+  name: "Clara Barton",
+  displayName: "Clara Barton, RN",
+  role: "candidate",
+  pathway: "rn" as const,
+  picture: undefined,
+};
+
 vi.mock("@/lib/auth-context", () => ({
   useAuth: () => ({
-    user: {
-      id: "cand-ui-1",
-      email: "nurse.ui@prepford.com",
-      name: "Clara Barton",
-      displayName: "Clara Barton, RN",
-      role: "candidate",
-      pathway: "rn",
-      picture: undefined,
-    },
+    user: MOCK_AUTH_USER,
     isAuthenticated: true,
     isLoading: false,
-    logout: vi.fn(),
+    logout: mockLogout,
     refreshSession: mockRefreshSession,
   }),
 }));
@@ -88,6 +92,7 @@ describe("Profile Image Database Persistence & Security Validation", () => {
   beforeEach(() => {
     mockCookieStore = {};
     mockRefreshSession.mockClear();
+    resetProfileDatabaseForTesting();
   });
 
   it("verifies binary magic bytes and rejects disguised non-image files", () => {
@@ -99,53 +104,58 @@ describe("Profile Image Database Persistence & Security Validation", () => {
   });
 
   it("persists, replaces, and deletes binary image data in the database while keeping profile metadata lightweight", () => {
+    const userId = "usr-florence-1";
     const email = "persist.nurse@prepford.com";
     upsertUserProfileMeta({
+      userId,
       email,
       displayName: "Florence Nightingale",
       pathway: "rn",
     });
 
     // Initially no image
-    const initialMeta = getUserProfileMeta(email);
+    const initialMeta = getUserProfileMeta(userId, email);
     expect(initialMeta?.hasProfileImage).toBe(false);
     expect(initialMeta?.pictureUrl).toBeUndefined();
 
     // Save PNG binary
     const savedPng = saveProfileImageBinary({
-      email,
-      buffer: VALID_PNG_BYTES,
+      userId,
+      userEmail: email,
+      displayName: "Florence Nightingale",
+      imageBytes: new Uint8Array(VALID_PNG_BYTES),
     });
     expect(savedPng.contentType).toBe("image/png");
     expect(savedPng.sizeBytes).toBe(VALID_PNG_BYTES.byteLength);
-    expect(savedPng.pictureUrl).toContain("/api/profile/image?");
+    expect(savedPng.imageUrl).toContain("/api/profile/image?");
 
     // Metadata query reflects image presence without loading raw bytes
-    const metaAfterUpload = getUserProfileMeta(email);
+    const metaAfterUpload = getUserProfileMeta(userId, email);
     expect(metaAfterUpload?.hasProfileImage).toBe(true);
-    expect(metaAfterUpload?.pictureUrl).toBe(savedPng.pictureUrl);
+    expect(metaAfterUpload?.pictureUrl).toBe(savedPng.imageUrl);
 
     // Retrieve binary image from DB
-    const storedRecord = getProfileImageBinary({ email });
+    const storedRecord = getProfileImageBinary(userId, email);
     expect(storedRecord).not.toBeNull();
     expect(storedRecord?.contentType).toBe("image/png");
-    expect(Buffer.compare(storedRecord!.imageData, VALID_PNG_BYTES)).toBe(0);
+    expect(Buffer.compare(Buffer.from(storedRecord!.imageData), VALID_PNG_BYTES)).toBe(0);
 
     // Replace existing image with JPEG
     const savedJpeg = saveProfileImageBinary({
-      email,
-      buffer: VALID_JPEG_BYTES,
+      userId,
+      userEmail: email,
+      imageBytes: new Uint8Array(VALID_JPEG_BYTES),
     });
     expect(savedJpeg.contentType).toBe("image/jpeg");
-    const replacedRecord = getProfileImageBinary({ email });
+    const replacedRecord = getProfileImageBinary(userId, email);
     expect(replacedRecord?.contentType).toBe("image/jpeg");
-    expect(Buffer.compare(replacedRecord!.imageData, VALID_JPEG_BYTES)).toBe(0);
+    expect(Buffer.compare(Buffer.from(replacedRecord!.imageData), VALID_JPEG_BYTES)).toBe(0);
 
     // Delete image
-    const deleted = deleteProfileImageBinary(email);
+    const deleted = deleteProfileImageBinary(userId, email);
     expect(deleted).toBe(true);
-    expect(getProfileImageBinary({ email })).toBeNull();
-    expect(getUserProfileMeta(email)?.hasProfileImage).toBe(false);
+    expect(getProfileImageBinary(userId, email)).toBeNull();
+    expect(getUserProfileMeta(userId, email)?.hasProfileImage).toBe(false);
   });
 
   it("rejects oversized images exceeding the 2 MB limit", () => {
@@ -154,10 +164,11 @@ describe("Profile Image Database Persistence & Security Validation", () => {
 
     expect(() =>
       saveProfileImageBinary({
-        email: "oversize@prepford.com",
-        buffer: oversizedBuffer,
+        userId: "usr-oversize",
+        userEmail: "oversize@prepford.com",
+        imageBytes: new Uint8Array(oversizedBuffer),
       })
-    ).toThrow(/exceeds maximum allowed limit/i);
+    ).toThrow(/exceeds the maximum allowed size/i);
   });
 
   it("enforces authentication (401) and server-side ownership (403) on /api/profile/image", async () => {
@@ -170,17 +181,15 @@ describe("Profile Image Database Persistence & Security Validation", () => {
     const unauthRes = await POST(unauthReq);
     expect(unauthRes.status).toBe(401);
 
-    // Authenticated as Alice
-    mockCookieStore["prepford_session"] = encodeURIComponent(
-      JSON.stringify({
-        id: "alice-id",
-        email: "alice@prepford.com",
-        name: "Alice RN",
-        displayName: "Alice RN",
-        role: "candidate",
-        pathway: "rn",
-      })
-    );
+    // Authenticated as Alice via preform_session cookie
+    mockCookieStore["preform_session"] = JSON.stringify({
+      sub: "alice-id",
+      email: "alice@prepford.com",
+      name: "Alice RN",
+      displayName: "Alice RN",
+      role: "candidate",
+      pathway: "rn",
+    });
 
     // Alice attempts to upload on behalf of Bob -> 403 Forbidden
     const crossUserPostReq = new NextRequest(
@@ -204,7 +213,7 @@ describe("Profile Image Database Persistence & Security Validation", () => {
     expect(alicePostRes.status).toBe(200);
     const body = await alicePostRes.json();
     expect(body.success).toBe(true);
-    expect(body.pictureUrl).toContain("/api/profile/image?");
+    expect(body.picture).toContain("/api/profile/image?");
 
     // Alice fetches her own binary image -> 200 OK with image/png
     const aliceGetReq = new NextRequest("http://localhost:3000/api/profile/image", {
@@ -236,24 +245,24 @@ describe("Profile Image Database Persistence & Security Validation", () => {
         return {
           ok: true,
           json: async () => ({
-            authenticated: true,
-            user: {
+            success: true,
+            profile: {
               id: "cand-ui-1",
               email: "nurse.ui@prepford.com",
               name: "Clara Barton",
               displayName: "Clara Barton, RN",
               pathway: "rn",
-              picture: undefined,
+              picture: null,
             },
           }),
         };
       }
-      if (url === "/api/profile/image" && init?.method === "POST") {
+      if (url === "/api/profile/image" && (init?.method === "PUT" || init?.method === "POST")) {
         return {
           ok: true,
           json: async () => ({
             success: true,
-            pictureUrl: "/api/profile/image?uid=cand-ui-1&v=12345",
+            picture: "/api/profile/image?v=12345",
           }),
         };
       }
@@ -262,18 +271,13 @@ describe("Profile Image Database Persistence & Security Validation", () => {
           ok: true,
           json: async () => ({
             success: true,
-            pictureUrl: null,
+            picture: null,
           }),
         };
       }
       return { ok: true, json: async () => ({}) };
     });
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubGlobal("URL", {
-      ...URL,
-      createObjectURL: vi.fn(() => "blob:http://localhost:3000/preview-avatar"),
-      revokeObjectURL: vi.fn(),
-    });
 
     render(<ProfilePageClient />);
 
@@ -291,10 +295,8 @@ describe("Profile Image Database Persistence & Security Validation", () => {
     expect(await screen.findByTestId("profile-image-preview-notice")).toHaveTextContent(
       /clara-avatar\.png/i
     );
-    expect(screen.getByTestId("profile-avatar-image")).toHaveAttribute(
-      "src",
-      "blob:http://localhost:3000/preview-avatar"
-    );
+    const previewImg = await screen.findByTestId("profile-avatar-image");
+    expect(previewImg.getAttribute("src")).toContain("data:image/png;base64,");
 
     // Click Upload & Save Photo
     const uploadBtn = screen.getByTestId("upload-profile-image-btn");
@@ -309,7 +311,7 @@ describe("Profile Image Database Persistence & Security Validation", () => {
     // Persisted database URL is now rendered and Remove Photo button is available
     expect(screen.getByTestId("profile-avatar-image")).toHaveAttribute(
       "src",
-      "/api/profile/image?uid=cand-ui-1&v=12345"
+      "/api/profile/image?v=12345"
     );
 
     const removeBtn = screen.getByTestId("remove-profile-image-btn");
