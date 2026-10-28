@@ -2079,8 +2079,8 @@ export function DashboardClient() {
                 </span>
                 <p className="text-[11px] text-muted-foreground">
                   {reportModalAttempt.scorePercent >= 65
-                    ? "Exceeds NCLEX passing standard"
-                    : "Near passing standard; review domains below"}
+                    ? "Meets PrepFord 65% practice benchmark"
+                    : "Below 65% practice benchmark; targeted domain review recommended"}
                 </p>
               </div>
             </div>
