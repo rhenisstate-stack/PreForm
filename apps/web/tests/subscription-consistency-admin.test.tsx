@@ -134,7 +134,8 @@ describe("Color Contrast & WCAG Safeguards", () => {
 
 describe("Admin API Endpoints & RBAC Validation", () => {
   it("rejects unauthorized requests without session cookie with 401", async () => {
-    const res = await getAdminSubscriptions();
+    const unauthReq = new Request("http://localhost/api/admin/subscriptions");
+    const res = await getAdminSubscriptions(unauthReq);
     const json = await res.json();
     expect(res.status).toBe(401);
     expect(json.success).toBe(false);
@@ -277,7 +278,7 @@ describe("Admin API Endpoints & RBAC Validation", () => {
         cookie: adminCookie,
       },
     });
-    const adminGetRes = await getAdminSubscriptions();
+    const adminGetRes = await getAdminSubscriptions(adminGetReq);
     const adminGetJson = await adminGetRes.json();
     const archivedPlan = adminGetJson.plans.find((p: { id: string }) => p.id === planId);
     expect(archivedPlan).toBeDefined();
