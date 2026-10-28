@@ -17,16 +17,33 @@ interface AdminUserSession {
   [key: string]: unknown;
 }
 
-async function verifyAdminAuth() {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("preform_session");
-  if (!sessionCookie || !sessionCookie.value) {
+async function verifyAdminAuth(request?: Request) {
+  let sessionCookieValue: string | undefined;
+
+  try {
+    const cookieStore = await cookies();
+    sessionCookieValue = cookieStore.get("preform_session")?.value;
+  } catch {
+    // cookies() unavailable outside request scope
+  }
+
+  if (!sessionCookieValue && request) {
+    const cookieHeader = request.headers.get("cookie");
+    if (cookieHeader) {
+      const match = cookieHeader.match(/preform_session=([^;]+)/);
+      if (match) {
+        sessionCookieValue = decodeURIComponent(match[1]);
+      }
+    }
+  }
+
+  if (!sessionCookieValue) {
     return { authorized: false, status: 401, error: "Authentication required" };
   }
 
   let session: AdminUserSession = {};
   try {
-    session = JSON.parse(sessionCookie.value);
+    session = JSON.parse(sessionCookieValue);
   } catch {
     return { authorized: false, status: 401, error: "Invalid session format" };
   }
@@ -48,7 +65,7 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verifyAdminAuth();
+  const auth = await verifyAdminAuth(request);
   if (!auth.authorized) {
     return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
   }
@@ -66,7 +83,7 @@ export async function PUT(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verifyAdminAuth();
+  const auth = await verifyAdminAuth(request);
   if (!auth.authorized) {
     return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
   }
@@ -181,7 +198,7 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await verifyAdminAuth();
+  const auth = await verifyAdminAuth(request);
   if (!auth.authorized) {
     return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
   }
