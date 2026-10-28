@@ -96,7 +96,7 @@ export function SignInPageClient() {
         <div className="absolute inset-0 pointer-events-none opacity-20 mix-blend-luminosity overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/landing-page-nurse.jpg"
+            src="/images/illustrations/prepford-landing-hero.png"
             alt=""
             className="w-full h-full object-cover object-center filter saturate-50"
           />

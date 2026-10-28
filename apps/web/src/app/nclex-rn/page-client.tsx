@@ -735,14 +735,14 @@ export function NCLEXRNPageClient() {
                 />
 
                 {/* Main nursing image blended naturally */}
-                <div className="relative overflow-hidden rounded-[2rem] bg-muted/40 shadow-2xl">
+                <div className="relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xl">
                   <Image
-                    src="/landing-page-nurse.jpg"
+                    src="/images/illustrations/prepford-rn-pathway-card.png"
                     alt="Registered nurse candidate reviewing acute care clinical notes and NCLEX-RN practice scenarios"
                     width={640}
                     height={720}
                     priority
-                    className="h-[380px] sm:h-[440px] w-full object-cover object-top"
+                    className="h-[380px] sm:h-[440px] w-full object-contain sm:object-cover object-center"
                   />
                   <div
                     aria-hidden="true"

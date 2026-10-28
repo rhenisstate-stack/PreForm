@@ -28,7 +28,7 @@ const NURSING_PATHWAYS: NursingPathwayData[] = [
     audience: "Registered Nurse preparation (BSN & ADN candidates)",
     description:
       "Built for future Registered Nurses preparing to evaluate complex client cues, prioritize acute interventions, and master Next Generation NCLEX clinical judgment.",
-    imageSrc: "/image1.jpg",
+    imageSrc: "/images/illustrations/prepford-rn-pathway-card.png",
     imageAlt: "NCLEX-RN candidate engaging in clinical judgment simulation",
     features: [
       "3,500+ original NGN-style practice questions",
@@ -47,7 +47,7 @@ const NURSING_PATHWAYS: NursingPathwayData[] = [
     audience: "Practical / Vocational Nurse preparation (LPN & LVN candidates)",
     description:
       "Designed for future Practical and Vocational Nurses focusing on focused client data collection, safe medication administration, and coordinated clinical care.",
-    imageSrc: "/image2.jpg",
+    imageSrc: "/images/illustrations/prepford-pn-pathway-card.png",
     imageAlt: "NCLEX-PN candidate reviewing patient charts and medication safety",
     features: [
       "2,800+ practical nursing practice questions",

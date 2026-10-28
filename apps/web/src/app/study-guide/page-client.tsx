@@ -95,37 +95,50 @@ export function StudyGuideIndexClient() {
             </ol>
           </nav>
 
-          <div className="max-w-3xl space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 text-xs font-semibold tracking-wide uppercase">
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>PrepFord Nursing Study Notes</span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+            <div className="lg:col-span-7 space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 text-xs font-semibold tracking-wide uppercase">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>PrepFord Nursing Study Notes</span>
+              </div>
+
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-foreground tracking-tight leading-tight">
+                Clinical Nursing Notes & High-Yield NCLEX Study Guide
+              </h1>
+
+              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
+                Condensed, evidence-based study notes organized by core nursing domains. Master pathophysiology, high-alert pharmacology, diagnostic labs, and prioritized interventions to ace the Next Generation NCLEX®.
+              </p>
+
+              {/* Quick Metrics */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
+                <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">7</p>
+                  <p className="text-xs text-muted-foreground">Clinical Domains</p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
+                  <p className="text-xl sm:text-2xl font-bold text-teal-700 dark:text-teal-400">{totalSubjects}+</p>
+                  <p className="text-xs text-muted-foreground">High-Yield Topics</p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
+                  <p className="text-xl sm:text-2xl font-bold text-foreground">100%</p>
+                  <p className="text-xs text-muted-foreground">Free Study Notes</p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
+                  <p className="text-xl sm:text-2xl font-bold text-teal-700 dark:text-teal-400">NGN</p>
+                  <p className="text-xs text-muted-foreground">Clinical Judgment Cues</p>
+                </div>
+              </div>
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-foreground tracking-tight leading-tight">
-              Clinical Nursing Notes & High-Yield NCLEX Study Guide
-            </h1>
-
-            <p className="text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Condensed, evidence-based study notes organized by core nursing domains. Master pathophysiology, high-alert pharmacology, diagnostic labs, and prioritized interventions to ace the Next Generation NCLEX®.
-            </p>
-
-            {/* Quick Metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4">
-              <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
-                <p className="text-xl sm:text-2xl font-bold text-foreground">7</p>
-                <p className="text-xs text-muted-foreground">Clinical Domains</p>
-              </div>
-              <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
-                <p className="text-xl sm:text-2xl font-bold text-teal-700 dark:text-teal-400">{totalSubjects}+</p>
-                <p className="text-xs text-muted-foreground">High-Yield Topics</p>
-              </div>
-              <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
-                <p className="text-xl sm:text-2xl font-bold text-foreground">100%</p>
-                <p className="text-xs text-muted-foreground">Free Study Notes</p>
-              </div>
-              <div className="p-3.5 rounded-xl bg-card/80 shadow-xs">
-                <p className="text-xl sm:text-2xl font-bold text-teal-700 dark:text-teal-400">NGN</p>
-                <p className="text-xs text-muted-foreground">Clinical Judgment Cues</p>
+            <div className="lg:col-span-5 hidden lg:block">
+              <div className="relative rounded-3xl overflow-hidden shadow-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/illustrations/prepford-study-guide-overview.png"
+                  alt="PrepFord Clinical Nursing Notes & High-Yield NCLEX Study Guide"
+                  className="w-full h-auto object-contain"
+                />
               </div>
             </div>
           </div>

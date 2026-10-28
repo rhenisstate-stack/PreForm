@@ -131,7 +131,7 @@ const PN_SHOWCASE_FEATURES: FeatureShowcaseItem[] = [
     ],
     ctaLabel: "Browse PN Practice Courses",
     ctaHref: "/courses?programme=PN",
-    imageSrc: "/image6.jpg",
+    imageSrc: "/images/illustrations/prepford-ehr-unfolding-case.png",
     imageAlt: "NCLEX-PN candidate reviewing a clinical scenario and vital signs",
   },
   {
@@ -148,7 +148,7 @@ const PN_SHOWCASE_FEATURES: FeatureShowcaseItem[] = [
     ],
     ctaLabel: "Try the Sample Question Above",
     ctaHref: "#pn-question-experience",
-    imageSrc: "/image5.jpg",
+    imageSrc: "/images/illustrations/prepford-pathophysiology-rationales.png",
     imageAlt: "Detailed nursing answer rationale and distractor breakdown",
   },
   {
@@ -165,7 +165,7 @@ const PN_SHOWCASE_FEATURES: FeatureShowcaseItem[] = [
     ],
     ctaLabel: "Open the Nursing Study Guide",
     ctaHref: "/study-guide",
-    imageSrc: "/image4.jpg",
+    imageSrc: "/images/illustrations/prepford-study-guide-overview.png",
     imageAlt: "PrepFord Nursing Study Guide and pharmacology notes",
   },
   {
@@ -182,7 +182,7 @@ const PN_SHOWCASE_FEATURES: FeatureShowcaseItem[] = [
     ],
     ctaLabel: "View Student Workspace",
     ctaHref: "/dashboard",
-    imageSrc: "/image8.jpg",
+    imageSrc: "/images/illustrations/prepford-readiness-analytics.png",
     imageAlt: "PrepFord student workspace displaying NCLEX-PN domain progress",
   },
 ];
@@ -547,24 +547,20 @@ export function NCLEXPNPageClient() {
                   aria-hidden="true"
                   className="absolute -inset-4 rounded-[2.5rem] bg-gradient-to-tr from-teal-500/20 via-primary/10 to-transparent blur-2xl pointer-events-none select-none"
                 />
-                <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-slate-900/90">
+                <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src="/image2.jpg"
+                    src="/images/illustrations/prepford-pn-pathway-card.png"
                     alt="Practical nursing student reviewing patient care charts and medication safety notes"
                     data-testid="pn-hero-image"
-                    className="w-full h-[340px] sm:h-[420px] lg:h-[460px] object-cover object-center"
-                  />
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent pointer-events-none"
+                    className="w-full h-[340px] sm:h-[420px] lg:h-[460px] object-contain sm:object-cover object-center"
                   />
                   <div className="absolute bottom-5 left-5 right-5 flex flex-wrap items-center justify-between gap-2 text-xs text-white/95">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/75 backdrop-blur-md px-3.5 py-1.5 font-semibold">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 font-semibold text-slate-100">
                       <Stethoscope className="h-3.5 w-3.5 text-teal-300" />
                       Focused on LPN / LVN Clinical Scope
                     </span>
-                    <span className="rounded-full bg-teal-500/25 backdrop-blur-md px-3 py-1 font-mono text-[11px] text-teal-200">
+                    <span className="rounded-full bg-teal-600/90 backdrop-blur-md px-3 py-1 font-mono text-[11px] text-white font-semibold">
                       Coordinated Care • Safety • Pharmacology
                     </span>
                   </div>
@@ -965,12 +961,12 @@ export function NCLEXPNPageClient() {
                 When a practice question highlights a topic you need to review, PrepFord&apos;s Nursing Study Guide gives you structured subject notes organized by clinical domain—complete with key takeaways, pharmacology warnings, and priority nursing alerts.
               </p>
 
-              <div className="rounded-3xl overflow-hidden shadow-lg bg-slate-900">
+              <div className="rounded-3xl overflow-hidden shadow-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/image7.jpg"
+                  src="/images/illustrations/prepford-study-guide-overview.png"
                   alt="Practical nursing candidate studying clinical notes and pharmacology guides"
-                  className="w-full h-60 sm:h-64 object-cover"
+                  className="w-full h-60 sm:h-64 object-contain sm:object-cover"
                   loading="lazy"
                 />
               </div>

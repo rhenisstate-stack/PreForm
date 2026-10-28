@@ -167,18 +167,13 @@ export function HeroSection() {
               />
 
               {/* Integrated Nursing Image Surface */}
-              <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-slate-900/90">
+              <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src="/landing-page-nurse.jpg"
-                  alt="Nursing candidate preparing for NCLEX licensure with PrepFord"
+                  src="/images/illustrations/prepford-landing-hero.png"
+                  alt="Nursing candidate preparing for NCLEX licensure with PrepFord digital learning workspace"
                   data-testid="hero-nurse-image"
-                  className="w-full h-[340px] sm:h-[420px] lg:h-[460px] object-cover object-center"
-                />
-                {/* Soft edge feathering so the image blends harmoniously with the hero background */}
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent pointer-events-none"
+                  className="w-full h-[340px] sm:h-[420px] lg:h-[460px] object-contain sm:object-cover object-center"
                 />
               </div>
             </div>

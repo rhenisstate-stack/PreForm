@@ -1099,8 +1099,13 @@ export function DashboardClient() {
             ) : (
               /* Honest Empty State When No Attempts Exist */
               <div className="rounded-2xl border border-dashed border-border p-8 text-center bg-card/50 space-y-4">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
-                  <ClipboardCheck className="h-7 w-7" />
+                <div className="mx-auto max-w-[180px] overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs p-1">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/illustrations/prepford-empty-recent-activity.png"
+                    alt="Ready to begin NCLEX practice"
+                    className="w-full h-auto object-contain"
+                  />
                 </div>
                 <div className="max-w-md mx-auto space-y-2">
                   <h3 className="text-lg font-serif font-bold text-foreground">

@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  ShoppingCart,
   Trash2,
   ShieldCheck,
   CheckCircle2,
@@ -168,8 +167,13 @@ export function CartPageClient() {
         {items.length === 0 ? (
           /* Empty Cart State */
           <div className="mx-auto max-w-2xl rounded-2xl border border-dashed border-border bg-card p-12 text-center shadow-sm">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-secondary/10 border border-secondary/20 text-secondary mb-6">
-              <ShoppingCart className="h-10 w-10 text-secondary" />
+            <div className="mx-auto max-w-[200px] overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs p-1 mb-6">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/images/illustrations/prepford-empty-recent-activity.png"
+                alt="Empty study plan cart"
+                className="w-full h-auto object-contain"
+              />
             </div>
             <h2 className="text-2xl font-serif font-semibold text-foreground">Your cart is currently empty</h2>
             <p className="mt-3 text-muted-foreground text-sm max-w-md mx-auto leading-relaxed">
