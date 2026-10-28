@@ -131,11 +131,8 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
   const { logout } = useAuth();
   const displayName = user.displayName || user.name || "Candidate";
   const initial = displayName.charAt(0).toUpperCase();
-  const [imgError, setImgError] = React.useState(false);
-
-  React.useEffect(() => {
-    setImgError(false);
-  }, [user.picture]);
+  const [failedPictureUrl, setFailedPictureUrl] = React.useState<string | null>(null);
+  const showAvatarImage = Boolean(user.picture && failedPictureUrl !== user.picture);
 
   const handleLogout = async () => {
     await logout();
@@ -150,12 +147,12 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
           className="flex items-center gap-2 rounded-full bg-muted/60 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="User profile menu"
         >
-          {user.picture && !imgError ? (
+          {showAvatarImage && user.picture ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={user.picture}
               alt={`${displayName} profile avatar`}
-              onError={() => setImgError(true)}
+              onError={() => setFailedPictureUrl(user.picture ?? null)}
               className="h-7 w-7 rounded-full object-cover ring-2 ring-secondary/30"
             />
           ) : (

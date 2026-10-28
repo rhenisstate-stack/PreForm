@@ -179,5 +179,19 @@ describe("Landing Page User Journey & Product Discovery", () => {
     expect(badgeContainer).not.toBeNull();
     expect(badgeContainer?.className).toContain("pointer-events-none");
     expect(badgeContainer?.className).toContain("z-10");
+
+    // Two-sided Archer Review-inspired layout: left-aligned copy/CTAs on left, nursing image & left-to-right ECG on right
+    const leftCol = within(heroSection).getByTestId("hero-left-column");
+    expect(leftCol.className).toContain("text-left");
+    expect(leftCol.className).toContain("lg:col-span-6");
+
+    const rightCol = within(heroSection).getByTestId("hero-right-column");
+    expect(rightCol.className).toContain("lg:col-span-6");
+
+    const nurseImage = within(rightCol).getByTestId("hero-nurse-image");
+    expect(nurseImage).toHaveAttribute("src", "/landing-page-nurse.jpg");
+
+    const ecgPulsePath = within(rightCol).getByTestId("hero-ecg-pulse-ltr");
+    expect(ecgPulsePath.getAttribute("class")).toContain("motion-safe:animate-ecg-ltr");
   });
 });

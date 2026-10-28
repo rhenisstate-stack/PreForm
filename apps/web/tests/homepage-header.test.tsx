@@ -50,9 +50,18 @@ describe("Homepage header integration", () => {
     // Header is present
     expect(header).toBeInTheDocument();
 
-    // Logo and homepage link
+    // Logo and homepage link with larger mark and two-line stacked wordmark (Prep above Ford)
     const logoLink = within(header).getByRole("link", { name: /^PrepFord home$/i });
     expect(logoLink).toBeInTheDocument();
+
+    const logoMark = within(logoLink).getByTestId("brand-logo-mark");
+    expect(logoMark.className).toContain("h-11");
+    expect(logoMark.className).toContain("w-11");
+
+    const stackedWordmark = within(logoLink).getByTestId("brand-wordmark-stacked");
+    expect(stackedWordmark.className).toContain("flex-col");
+    expect(within(stackedWordmark).getByText("Prep")).toBeInTheDocument();
+    expect(within(stackedWordmark).getByText("Ford")).toBeInTheDocument();
 
     // Main navigation links are visible in header
     expect(within(header).getByText("NCLEX-RN")).toBeInTheDocument();

@@ -1,7 +1,23 @@
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
-import { DatabaseSync } from "node:sqlite";
+
+interface SqliteStatementSync {
+  run: (...params: unknown[]) => { changes: number | bigint; lastInsertRowid: number | bigint };
+  get: (...params: unknown[]) => unknown;
+}
+
+interface SqliteDatabaseSync {
+  exec: (sql: string) => void;
+  prepare: (sql: string) => SqliteStatementSync;
+  close: () => void;
+}
+
+const requireNode = createRequire(import.meta.url);
+const { DatabaseSync } = requireNode("node:sqlite") as {
+  DatabaseSync: new (location: string) => SqliteDatabaseSync;
+};
 
 export const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024; // 2 MB
 export const MIN_PROFILE_IMAGE_BYTES = 16;
@@ -108,7 +124,7 @@ export function detectVerifiedImageMimeType(bytes: Uint8Array): SupportedImageMi
   return null;
 }
 
-let dbInstance: DatabaseSync | null = null;
+let dbInstance: SqliteDatabaseSync | null = null;
 let currentDbPath: string | null = null;
 
 function resolveDatabasePath(): string {
@@ -122,7 +138,7 @@ function resolveDatabasePath(): string {
   return path.join(dataDir, "prepford.sqlite");
 }
 
-function getDatabase(): DatabaseSync {
+function getDatabase(): SqliteDatabaseSync {
   const targetPath = resolveDatabasePath();
   if (dbInstance && currentDbPath === targetPath) {
     return dbInstance;

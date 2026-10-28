@@ -121,7 +121,11 @@ async function handleUpload(request: NextRequest) {
     const targetUserParam =
       request.nextUrl.searchParams.get("userId") ||
       request.headers.get("x-target-user-id");
-    if (targetUserParam && targetUserParam !== auth.userId) {
+    const targetEmailParam = request.nextUrl.searchParams.get("email");
+    if (
+      (targetUserParam && targetUserParam !== auth.userId) ||
+      (targetEmailParam && targetEmailParam.trim().toLowerCase() !== auth.email)
+    ) {
       return NextResponse.json(
         { success: false, error: "Forbidden: you may only update your own profile image." },
         { status: 403 }
