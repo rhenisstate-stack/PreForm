@@ -341,7 +341,7 @@ describe("NCLEX-RN Page Transformation (/nclex-rn)", () => {
     expect(d).toContain("C ");
     expect(d).toContain("L ");
     expect(pulsePath).toHaveAttribute("pathLength", "1000");
-    expect(pulsePath).toHaveAttribute("stroke-dasharray", "260 740");
+    expect(pulsePath).toHaveAttribute("stroke-dasharray", "220 280");
   });
 
   it("exports accurate SEO metadata for /nclex-rn", () => {

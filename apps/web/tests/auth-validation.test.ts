@@ -118,11 +118,13 @@ describe("Authentication Validation Schemas", () => {
   });
 
   describe("sanitizeReturnUrl", () => {
-    it("defaults to / when input is missing, empty, or whitespace", () => {
-      expect(sanitizeReturnUrl(undefined)).toBe("/");
-      expect(sanitizeReturnUrl(null)).toBe("/");
-      expect(sanitizeReturnUrl("")).toBe("/");
-      expect(sanitizeReturnUrl("   ")).toBe("/");
+    it("defaults to /dashboard when input is missing, empty, or whitespace", () => {
+      expect(sanitizeReturnUrl(undefined)).toBe("/dashboard");
+      expect(sanitizeReturnUrl(null)).toBe("/dashboard");
+      expect(sanitizeReturnUrl("")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("   ")).toBe("/dashboard");
+      // Explicit custom fallback
+      expect(sanitizeReturnUrl(undefined, "/courses")).toBe("/courses");
     });
 
     it("preserves safe internal application paths and query/hash parameters", () => {
@@ -135,21 +137,29 @@ describe("Authentication Validation Schemas", () => {
     });
 
     it("rejects external origins, protocol-relative URLs, backslash bypasses, and non-HTTP schemes", () => {
-      expect(sanitizeReturnUrl("https://evil.example.com")).toBe("/");
-      expect(sanitizeReturnUrl("http://evil.example.com/cart")).toBe("/");
-      expect(sanitizeReturnUrl("//evil.example.com")).toBe("/");
-      expect(sanitizeReturnUrl("///evil.example.com")).toBe("/");
-      expect(sanitizeReturnUrl("/\\evil.example.com")).toBe("/");
-      expect(sanitizeReturnUrl("/cart\\@evil.example.com")).toBe("/");
-      expect(sanitizeReturnUrl("javascript:alert(1)")).toBe("/");
-      expect(sanitizeReturnUrl("data:text/html,<script>alert(1)</script>")).toBe("/");
+      expect(sanitizeReturnUrl("https://evil.example.com")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("http://evil.example.com/cart")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("//evil.example.com")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("///evil.example.com")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("/\\evil.example.com")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("/cart\\@evil.example.com")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("javascript:alert(1)")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("data:text/html,<script>alert(1)</script>")).toBe("/dashboard");
+    });
+
+    it("rejects single- and double-encoded path bypasses and malformed percent-encodings", () => {
+      expect(sanitizeReturnUrl("/%2f/evil.example.com")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("/%5cevil.example.com")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("/%2f%2fevil.example.com")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("/%252f/evil.example.com")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("/%E0%A4%A")).toBe("/dashboard");
     });
 
     it("rejects auth-loop paths such as /sign-in, /sign-up, and /api/auth", () => {
-      expect(sanitizeReturnUrl("/sign-in")).toBe("/");
-      expect(sanitizeReturnUrl("/sign-in?from=/cart")).toBe("/");
-      expect(sanitizeReturnUrl("/sign-up")).toBe("/");
-      expect(sanitizeReturnUrl("/api/auth/google")).toBe("/");
+      expect(sanitizeReturnUrl("/sign-in")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("/sign-in?from=/cart")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("/sign-up")).toBe("/dashboard");
+      expect(sanitizeReturnUrl("/api/auth/google")).toBe("/dashboard");
     });
   });
 });

@@ -27,7 +27,7 @@ vi.mock("@/lib/auth-context", () => ({
     isAuthenticated: false,
     isLoading: false,
     login: mockLogin,
-    register: vi.fn(),
+    registerUser: vi.fn(),
     logout: vi.fn(),
     refreshSession: vi.fn(),
   }),
@@ -41,7 +41,7 @@ describe("SignInPageClient login redirect and open-redirect protection", () => {
     currentSearchParams = new URLSearchParams();
   });
 
-  it("redirects to the homepage (/) by default after a successful login", async () => {
+  it("redirects to the learner dashboard (/dashboard) by default after a successful login", async () => {
     mockLogin.mockResolvedValueOnce({ success: true });
     const user = userEvent.setup();
 
@@ -53,18 +53,18 @@ describe("SignInPageClient login redirect and open-redirect protection", () => {
 
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledTimes(1);
-      expect(mockPush).toHaveBeenCalledWith("/");
+      expect(mockPush).toHaveBeenCalledWith("/dashboard");
     });
 
     const googleBtn = screen.getByRole("button", { name: /Continue with Google/i });
     expect(googleBtn).toHaveAttribute(
       "href",
-      "/api/auth/google?source=sign-in&from=%2F"
+      "/api/auth/google?source=sign-in&from=%2Fdashboard"
     );
   });
 
   it("preserves a valid internal return destination such as ?from=/cart", async () => {
-    currentSearchParams = new URLSearchParams("from=/cart?add=rn-pro-quarter");
+    currentSearchParams = new URLSearchParams("from=/cart?add=rn-pro-90");
     mockLogin.mockResolvedValueOnce({ success: true });
     const user = userEvent.setup();
 
@@ -75,11 +75,11 @@ describe("SignInPageClient login redirect and open-redirect protection", () => {
     await user.click(screen.getByRole("button", { name: /^Sign in$/i }));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/cart?add=rn-pro-quarter");
+      expect(mockPush).toHaveBeenCalledWith("/cart?add=rn-pro-90");
     });
   });
 
-  it("rejects external or protocol-relative redirect URLs and falls back to /", async () => {
+  it("rejects external, protocol-relative, and backslash redirect URLs and falls back to /dashboard", async () => {
     currentSearchParams = new URLSearchParams("from=//malicious.example.com/phish");
     mockLogin.mockResolvedValueOnce({ success: true });
     const user = userEvent.setup();
@@ -91,14 +91,30 @@ describe("SignInPageClient login redirect and open-redirect protection", () => {
     await user.click(screen.getByRole("button", { name: /^Sign in$/i }));
 
     await waitFor(() => {
-      expect(mockPush).toHaveBeenCalledWith("/");
+      expect(mockPush).toHaveBeenCalledWith("/dashboard");
     });
 
     const googleBtn = screen.getByRole("button", { name: /Continue with Google/i });
     expect(googleBtn).toHaveAttribute(
       "href",
-      "/api/auth/google?source=sign-in&from=%2F"
+      "/api/auth/google?source=sign-in&from=%2Fdashboard"
     );
+  });
+
+  it("rejects encoded-path bypasses (e.g. /%2f/evil.com) and falls back to /dashboard", async () => {
+    currentSearchParams = new URLSearchParams("from=/%2f/evil.example.com");
+    mockLogin.mockResolvedValueOnce({ success: true });
+    const user = userEvent.setup();
+
+    render(<SignInPageClient />);
+
+    await user.type(screen.getByLabelText(/Email address/i), "nurse@prepford.com");
+    await user.type(screen.getByLabelText(/^Password$/i), "ValidPassword123!");
+    await user.click(screen.getByRole("button", { name: /^Sign in$/i }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/dashboard");
+    });
   });
 
   it("does not redirect when authentication fails and shows the error banner", async () => {

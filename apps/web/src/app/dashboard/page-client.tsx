@@ -68,11 +68,9 @@ export function DashboardClient() {
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
   const [selectedPathway, setSelectedPathway] = React.useState<"rn" | "pn" | null>(null);
-  const [recentActivity, setRecentActivity] = React.useState<RecentStudyActivity | null>(null);
-
-  React.useEffect(() => {
-    setRecentActivity(readStoredRecentActivity());
-  }, []);
+  const [recentActivity, setRecentActivity] = React.useState<RecentStudyActivity | null>(
+    () => readStoredRecentActivity()
+  );
 
   const activePathway: "rn" | "pn" = selectedPathway ?? (user?.pathway === "pn" ? "pn" : "rn");
   const pathwayLabel = activePathway === "pn" ? "NCLEX-PN" : "NCLEX-RN";
@@ -735,7 +733,7 @@ export function DashboardClient() {
                       {category.subjects.length === 1 ? "Subject Guide" : "Subject Guides"}
                     </span>
                     <span className="text-[11px] font-mono text-muted-foreground">
-                      {category.examWeight}
+                      {category.badge}
                     </span>
                   </div>
                   <h3 className="font-serif text-base font-bold text-foreground">
