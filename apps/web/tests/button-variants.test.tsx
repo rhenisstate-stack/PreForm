@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 describe("Button Component Variants & Contrast", () => {
@@ -53,7 +54,18 @@ describe("Button Component Variants & Contrast", () => {
     render(<Button disabled>Disabled Action</Button>);
     const btn = screen.getByRole("button", { name: /disabled action/i });
     expect(btn).toBeDisabled();
-    expect(btn.className).toContain("disabled:opacity-50");
+    expect(btn.className).toContain("disabled:opacity-60");
     expect(btn.className).toContain("disabled:pointer-events-none");
+  });
+
+  it("preserves semantic contrast classes when rendered asChild with a Next Link", () => {
+    render(
+      <Button asChild variant="secondary">
+        <Link href="/study-guide">Open Study Guide</Link>
+      </Button>
+    );
+    const link = screen.getByRole("link", { name: /open study guide/i });
+    expect(link.className).toContain("bg-secondary");
+    expect(link.className).toContain("text-secondary-foreground");
   });
 });

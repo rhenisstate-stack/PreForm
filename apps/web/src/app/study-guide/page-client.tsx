@@ -76,7 +76,7 @@ export function StudyGuideIndexClient() {
   return (
     <div className="w-full bg-background min-h-screen">
       {/* Full-width Hero Banner */}
-      <section className="w-full bg-gradient-to-b from-teal-950/20 via-background to-background border-b border-border/60 pt-12 pb-16 px-4 sm:px-6 lg:px-8">
+      <section className="w-full bg-gradient-to-b from-teal-50/80 via-background to-background dark:from-teal-950/25 dark:via-background dark:to-background border-b border-border/60 pt-12 pb-16 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Breadcrumbs */}
           <nav aria-label="Breadcrumb" className="mb-6">
@@ -96,7 +96,7 @@ export function StudyGuideIndexClient() {
           </nav>
 
           <div className="max-w-3xl space-y-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 text-xs font-semibold tracking-wide uppercase border border-teal-500/20">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 text-xs font-semibold tracking-wide uppercase border border-teal-500/20">
               <Sparkles className="h-3.5 w-3.5" />
               <span>PrepFord Nursing Study Notes</span>
             </div>
@@ -116,7 +116,7 @@ export function StudyGuideIndexClient() {
                 <p className="text-xs text-muted-foreground">Clinical Domains</p>
               </div>
               <div className="p-3 rounded-xl bg-card/60 border border-border/60">
-                <p className="text-xl sm:text-2xl font-bold text-teal-600 dark:text-teal-400">{totalSubjects}+</p>
+                <p className="text-xl sm:text-2xl font-bold text-teal-700 dark:text-teal-400">{totalSubjects}+</p>
                 <p className="text-xs text-muted-foreground">High-Yield Topics</p>
               </div>
               <div className="p-3 rounded-xl bg-card/60 border border-border/60">
@@ -124,7 +124,7 @@ export function StudyGuideIndexClient() {
                 <p className="text-xs text-muted-foreground">Free Study Notes</p>
               </div>
               <div className="p-3 rounded-xl bg-card/60 border border-border/60">
-                <p className="text-xl sm:text-2xl font-bold text-teal-600 dark:text-teal-400">NGN</p>
+                <p className="text-xl sm:text-2xl font-bold text-teal-700 dark:text-teal-400">NGN</p>
                 <p className="text-xs text-muted-foreground">Clinical Judgment Cues</p>
               </div>
             </div>
@@ -153,7 +153,7 @@ export function StudyGuideIndexClient() {
               onClick={() => setSelectedFilter("all")}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                 selectedFilter === "all"
-                  ? "bg-teal-600 text-white"
+                  ? "bg-secondary text-secondary-foreground font-semibold"
                   : "bg-muted text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -163,7 +163,7 @@ export function StudyGuideIndexClient() {
               onClick={() => setSelectedFilter("high-yield")}
               className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                 selectedFilter === "high-yield"
-                  ? "bg-teal-600 text-white"
+                  ? "bg-secondary text-secondary-foreground font-semibold"
                   : "bg-muted text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -175,7 +175,7 @@ export function StudyGuideIndexClient() {
                 onClick={() => setSelectedFilter(cat.slug)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                   selectedFilter === cat.slug
-                    ? "bg-teal-600 text-white"
+                    ? "bg-secondary text-secondary-foreground font-semibold"
                     : "bg-muted text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -199,7 +199,7 @@ export function StudyGuideIndexClient() {
                   setSearchQuery("");
                   setSelectedFilter("all");
                 }}
-                className="mt-4 px-4 py-2 text-xs font-medium rounded-md bg-teal-600 text-white hover:bg-teal-700 transition-colors"
+                className="mt-4 px-4 py-2 text-xs font-semibold rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-colors"
               >
                 Reset Search
               </button>
@@ -221,7 +221,7 @@ export function StudyGuideIndexClient() {
                           <h2 className="text-xl font-bold font-serif text-foreground">
                             {category.title}
                           </h2>
-                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+                          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-500/20">
                             {category.badge}
                           </span>
                         </div>
@@ -233,7 +233,7 @@ export function StudyGuideIndexClient() {
 
                     <Link
                       href={`/study-guide/${category.slug}`}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline group self-start sm:self-center"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-teal-700 dark:text-teal-400 hover:underline group self-start sm:self-center"
                     >
                       <span>View category overview ({category.subjects.length} topics)</span>
                       <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -250,7 +250,7 @@ export function StudyGuideIndexClient() {
                       >
                         <div className="space-y-3">
                           <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span className="inline-flex items-center gap-1 font-medium text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-full border border-teal-500/20">
+                            <span className="inline-flex items-center gap-1 font-medium text-teal-700 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-full border border-teal-500/20">
                               {subject.difficulty}
                             </span>
                             <span className="inline-flex items-center gap-1">
@@ -259,7 +259,7 @@ export function StudyGuideIndexClient() {
                             </span>
                           </div>
 
-                          <h3 className="text-base font-semibold text-foreground group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors line-clamp-2">
+                          <h3 className="text-base font-semibold text-foreground group-hover:text-teal-700 dark:group-hover:text-teal-400 transition-colors line-clamp-2">
                             {subject.title}
                           </h3>
 
@@ -268,7 +268,7 @@ export function StudyGuideIndexClient() {
                           </p>
                         </div>
 
-                        <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between text-xs font-medium text-teal-600 dark:text-teal-400">
+                        <div className="mt-4 pt-3 border-t border-border/40 flex items-center justify-between text-xs font-medium text-teal-700 dark:text-teal-400">
                           <span>Read Study Notes</span>
                           <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                         </div>
@@ -282,9 +282,9 @@ export function StudyGuideIndexClient() {
         </div>
 
         {/* Bottom Banner: Practice Question CTA */}
-        <div className="mt-8 p-8 rounded-3xl bg-gradient-to-r from-teal-950/40 via-teal-900/20 to-card border border-teal-500/30 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="mt-8 p-8 rounded-3xl bg-gradient-to-r from-teal-50/90 via-teal-50/40 to-card dark:from-teal-950/40 dark:via-teal-900/20 dark:to-card border border-teal-500/30 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold text-teal-700 dark:text-teal-400 uppercase tracking-wider">
               <GraduationCap className="h-4 w-4" />
               <span>Next Generation NCLEX Preparation</span>
             </div>
@@ -298,7 +298,7 @@ export function StudyGuideIndexClient() {
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
             <Link
               href="/courses?type=practice"
-              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-teal-600 text-white font-medium text-sm hover:bg-teal-700 transition-colors shadow-sm text-center"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl bg-secondary text-secondary-foreground font-semibold text-sm hover:bg-secondary/90 transition-colors shadow-sm text-center"
             >
               Try Practice Questions
             </Link>

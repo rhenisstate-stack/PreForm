@@ -36,7 +36,7 @@ export function SubjectPageClient({ category, subject }: Props) {
   return (
     <article className="w-full bg-background min-h-screen">
       {/* Subject Header */}
-      <section className="w-full bg-gradient-to-b from-teal-950/20 via-background to-background border-b border-border/60 pt-10 pb-12 px-4 sm:px-6 lg:px-8">
+      <section className="w-full bg-gradient-to-b from-teal-50/80 via-background to-background dark:from-teal-950/25 dark:via-background dark:to-background border-b border-border/60 pt-10 pb-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto space-y-5">
           {/* Breadcrumbs */}
           <nav aria-label="Breadcrumb">
@@ -78,7 +78,7 @@ export function SubjectPageClient({ category, subject }: Props) {
           <div className="flex items-center gap-3 flex-wrap">
             <Link
               href={`/study-guide/${category.slug}`}
-              className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 transition-colors"
+              className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 transition-colors"
             >
               {category.title}
             </Link>
@@ -253,7 +253,7 @@ export function SubjectPageClient({ category, subject }: Props) {
           </div>
           <Link
             href="/courses?type=practice"
-            className="shrink-0 px-5 py-2.5 rounded-xl bg-teal-600 text-white font-medium text-xs hover:bg-teal-700 transition-colors shadow-sm"
+            className="shrink-0 px-5 py-2.5 rounded-xl bg-secondary text-secondary-foreground font-semibold text-xs hover:bg-secondary/90 transition-colors shadow-sm"
           >
             Practice Next Gen Questions
           </Link>

@@ -215,7 +215,7 @@ export function ProfilePageClient() {
         <div className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
             <div className="flex items-center gap-5">
-              <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-secondary text-white font-serif font-bold text-2xl sm:text-3xl shadow-inner">
+              <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-secondary text-secondary-foreground font-serif font-bold text-2xl sm:text-3xl shadow-inner">
                 {userInitial}
               </div>
               <div className="space-y-1">

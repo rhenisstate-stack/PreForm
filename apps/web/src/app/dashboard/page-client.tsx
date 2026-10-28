@@ -208,13 +208,13 @@ export function DashboardClient() {
         <div className="space-y-2">
           <div className="flex items-center justify-between text-muted-foreground">
             <span className="text-xs font-semibold uppercase tracking-wider">Overall Accuracy</span>
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <CheckCircle2 className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />
           </div>
           <p className="text-3xl font-serif font-bold text-foreground">
             {overallAccuracy}%
           </p>
           <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-emerald-600" />
+            <TrendingUp className="h-3 w-3 text-emerald-700 dark:text-emerald-400" />
             <span>+4.2% above peer average</span>
           </p>
         </div>
@@ -306,7 +306,7 @@ export function DashboardClient() {
 
           <div className="flex flex-col justify-between py-1 space-y-4">
             <div className="space-y-2.5">
-              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+              <div className="h-10 w-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-700 dark:text-amber-400">
                 <RotateCcw className="h-5 w-5" />
               </div>
               <h3 className="font-serif font-semibold text-foreground text-xl">
@@ -319,7 +319,7 @@ export function DashboardClient() {
             <div className="pt-2">
               <Link
                 href="/courses"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 hover:underline transition-colors"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline transition-colors"
               >
                 <span>Review 48 Missed Concepts</span>
                 <ArrowRight className="h-3.5 w-3.5" />

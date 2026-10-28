@@ -51,7 +51,7 @@ export function CategoryPageClient({ category }: Props) {
   return (
     <div className="w-full bg-background min-h-screen">
       {/* Category Hero Banner */}
-      <section className="w-full bg-gradient-to-b from-teal-950/25 via-background to-background border-b border-border/60 pt-10 pb-14 px-4 sm:px-6 lg:px-8">
+      <section className="w-full bg-gradient-to-b from-teal-50/80 via-background to-background dark:from-teal-950/25 dark:via-background dark:to-background border-b border-border/60 pt-10 pb-14 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           {/* Breadcrumbs */}
           <nav aria-label="Breadcrumb" className="mb-6">
@@ -81,7 +81,7 @@ export function CategoryPageClient({ category }: Props) {
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div className="space-y-3 max-w-3xl">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20">
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-500/20">
                   {category.badge}
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -113,7 +113,7 @@ export function CategoryPageClient({ category }: Props) {
               </Link>
               <Link
                 href="/courses?type=practice"
-                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-teal-600 text-white text-xs font-medium hover:bg-teal-700 transition-colors shadow-xs"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-secondary text-secondary-foreground text-xs font-semibold hover:bg-secondary/90 transition-colors shadow-xs"
               >
                 <span>Practice Questions</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -144,7 +144,7 @@ export function CategoryPageClient({ category }: Props) {
                   className="p-6 rounded-2xl bg-card/60 hover:bg-card border border-border/60 hover:border-teal-500/40 transition-all duration-200 shadow-xs hover:shadow-md space-y-4"
                 >
                   <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1 font-medium text-teal-600 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-full border border-teal-500/20">
+                    <span className="inline-flex items-center gap-1 font-medium text-teal-700 dark:text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded-full border border-teal-500/20">
                       {subject.difficulty}
                     </span>
                     <span className="inline-flex items-center gap-1">
@@ -154,7 +154,7 @@ export function CategoryPageClient({ category }: Props) {
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-serif font-bold text-foreground hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
+                    <h3 className="text-xl font-serif font-bold text-foreground hover:text-teal-700 dark:hover:text-teal-400 transition-colors">
                       <Link href={`/study-guide/${category.slug}/${subject.slug}`}>
                         {subject.title}
                       </Link>
@@ -168,7 +168,7 @@ export function CategoryPageClient({ category }: Props) {
                   {subject.clinicalKeyTakeaways && subject.clinicalKeyTakeaways.length > 0 && (
                     <div className="p-3.5 rounded-xl bg-muted/40 border border-border/40 space-y-2">
                       <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
+                        <CheckCircle2 className="h-3.5 w-3.5 text-teal-700 dark:text-teal-400" />
                         <span>High-Yield Clinical Takeaways:</span>
                       </p>
                       <ul className="space-y-1 text-xs text-muted-foreground">
@@ -188,7 +188,7 @@ export function CategoryPageClient({ category }: Props) {
                     </span>
                     <Link
                       href={`/study-guide/${category.slug}/${subject.slug}`}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-teal-600/10 hover:bg-teal-600 text-teal-600 dark:text-teal-400 hover:text-white text-xs font-semibold transition-all group"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-secondary/10 hover:bg-secondary text-teal-700 dark:text-teal-400 hover:text-secondary-foreground text-xs font-semibold transition-all group"
                     >
                       <span>Read Full Notes</span>
                       <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
@@ -221,8 +221,8 @@ export function CategoryPageClient({ category }: Props) {
               </nav>
             </div>
 
-            <div className="p-5 rounded-2xl bg-gradient-to-br from-teal-950/40 to-card border border-teal-500/30 shadow-xs space-y-3">
-              <div className="flex items-center gap-2 text-teal-600 dark:text-teal-400">
+            <div className="p-5 rounded-2xl bg-gradient-to-br from-teal-50/90 to-card dark:from-teal-950/40 dark:to-card border border-teal-500/30 shadow-xs space-y-3">
+              <div className="flex items-center gap-2 text-teal-700 dark:text-teal-400">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-xs font-bold uppercase tracking-wide">NCLEX Preparation Tip</span>
               </div>
@@ -231,7 +231,7 @@ export function CategoryPageClient({ category }: Props) {
               </p>
               <Link
                 href="/courses"
-                className="inline-flex items-center gap-1 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline pt-1"
+                className="inline-flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-400 hover:underline pt-1"
               >
                 <span>Browse PrepFord Q-Bank</span>
                 <ChevronRight className="h-3 w-3" />

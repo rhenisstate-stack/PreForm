@@ -153,8 +153,31 @@ describe("Landing Page User Journey & Product Discovery", () => {
 
     const buyNow = screen.getByRole("link", { name: /^Buy Now$/i });
     expect(buyNow).toHaveAttribute("href", "/cart?add=rn-pro");
+    expect(buyNow.className).toContain("bg-white");
+    expect(buyNow.className).toContain("text-[#142B4A]");
 
     const tryNow = screen.getByRole("link", { name: /^Try Now$/i });
     expect(tryNow).toHaveAttribute("href", "/sign-up");
+    expect(tryNow.className).toContain("text-white");
+  });
+
+  it("enforces hero stacking order (z-20 content over z-0/z-10 pointer-events-none decorative layers) and theme-aware light/dark gradients", () => {
+    render(<HomeClient />);
+
+    const heroSection = screen.getByRole("region", { name: /PrepFord NCLEX Hero/i });
+    expect(heroSection.className).toContain("from-slate-100/95");
+    expect(heroSection.className).toContain("dark:from-slate-950");
+
+    // Foreground content container has z-20
+    const heading = screen.getByRole("heading", { level: 1, name: /Prepare with clarity/i });
+    const foregroundWrapper = heading.closest(".z-20");
+    expect(foregroundWrapper).not.toBeNull();
+
+    // Decorative floating badges have pointer-events-none and z-10 (below z-20 content)
+    const badgeText = within(heroSection).getByText(/18 Question Formats/i);
+    const badgeContainer = badgeText.closest("[aria-hidden='true']");
+    expect(badgeContainer).not.toBeNull();
+    expect(badgeContainer?.className).toContain("pointer-events-none");
+    expect(badgeContainer?.className).toContain("z-10");
   });
 });

@@ -183,7 +183,7 @@ export function ExamPathwayCards() {
                       / {p.interval}
                     </span>
                   </div>
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-sm">
+                  <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-sm">
                     Verified Plan
                   </span>
                 </div>

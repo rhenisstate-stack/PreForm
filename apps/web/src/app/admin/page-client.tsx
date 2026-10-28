@@ -189,7 +189,7 @@ export function AdminOverviewClient() {
           <div className="flex items-center gap-3">
             <Link
               href="/admin/question-types"
-              className="inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-2 text-xs font-semibold text-white shadow-xs hover:bg-secondary/90 transition-colors"
+              className="inline-flex items-center gap-2 rounded-xl bg-secondary px-4 py-2 text-xs font-semibold text-secondary-foreground shadow-xs hover:bg-secondary/90 transition-colors"
             >
               <Layers className="h-3.5 w-3.5" />
               View 18 Question Types
@@ -214,7 +214,7 @@ export function AdminOverviewClient() {
             <p className="text-2xl font-serif font-bold text-foreground">
               1,280
             </p>
-            <p className="mt-2 text-xs text-emerald-600 flex items-center gap-1">
+            <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" />
               94% active study engagements
             </p>
@@ -241,7 +241,7 @@ export function AdminOverviewClient() {
             <p className="text-2xl font-serif font-bold text-foreground">
               14
             </p>
-            <p className="mt-2 text-xs text-amber-600 font-medium">
+            <p className="mt-2 text-xs text-amber-700 dark:text-amber-400 font-medium">
               Awaiting nurse educator approval
             </p>
           </div>
@@ -315,7 +315,7 @@ export function AdminOverviewClient() {
         <div className="rounded-2xl border border-secondary/30 bg-linear-to-r from-secondary/10 via-card to-background p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-white font-mono">
+              <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-mono">
                 18 Formats Verified
               </span>
               <h3 className="text-base font-serif font-semibold text-foreground">
