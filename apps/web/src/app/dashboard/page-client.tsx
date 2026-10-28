@@ -130,8 +130,9 @@ export function DashboardClient() {
   const [createTestType, setCreateTestType] = React.useState<"tutored_cat" | "rat">("tutored_cat");
   const [testQuestionCount, setTestQuestionCount] = React.useState<number>(5);
   const [testInProgress, setTestInProgress] = React.useState<boolean>(false);
-  const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number>>({});
+  const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number | number[]>>({});
   const [activeQuestionIndex, setActiveQuestionIndex] = React.useState<number>(0);
+  const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
 
   // Close mobile drawer on Escape key
   React.useEffect(() => {
@@ -182,29 +183,50 @@ export function DashboardClient() {
     return source;
   }, [storedAttempts, showSamplePreview, activeTab]);
 
-  // Handle submitting a completed test in the test simulator
+  // Handle submitting a completed test in the test simulator with debounce and double-submit protection
   const handleCompleteTest = () => {
-    const formattedAnswers = Object.entries(currentTestAnswers).map(([qIdx, optIdx]) => ({
-      questionIndex: Number(qIdx),
-      selectedOptionIndex: optIdx,
-    }));
+    if (isSubmittingTest) return;
+    setIsSubmittingTest(true);
+    try {
+      const qSlice: typeof CLINICAL_QUESTION_BANK = [];
+      for (let i = 0; i < testQuestionCount; i++) {
+        qSlice.push(CLINICAL_QUESTION_BANK[i % CLINICAL_QUESTION_BANK.length]);
+      }
 
-    const nextAttemptNumber = storedAttempts.filter((a) => a.type === createTestType).length + 1;
-    const completed = createCompletedAttempt({
-      testType: createTestType,
-      attemptNumber: nextAttemptNumber,
-      questionCount: testQuestionCount,
-      userAnswers: formattedAnswers,
-    });
+      const formattedAnswers = qSlice.map((q, idx) => {
+        const ans = currentTestAnswers[idx];
+        if (q.questionType === "multi_select") {
+          return {
+            questionIndex: idx,
+            selectedOptionIndices: Array.isArray(ans) ? ans : typeof ans === "number" ? [ans] : [],
+          };
+        } else {
+          return {
+            questionIndex: idx,
+            selectedOptionIndex: typeof ans === "number" ? ans : -1,
+          };
+        }
+      });
 
-    saveStoredAttempt(user?.id, completed);
-    setAttemptRefreshKey((k) => k + 1);
-    setTestInProgress(false);
-    setCreateModalOpen(false);
-    setCurrentTestAnswers({});
-    setActiveQuestionIndex(0);
-    // Open review modal immediately for the new attempt
-    setReviewModalAttempt(completed);
+      const nextAttemptNumber = storedAttempts.filter((a) => a.type === createTestType).length + 1;
+      const completed = createCompletedAttempt({
+        testType: createTestType,
+        attemptNumber: nextAttemptNumber,
+        questionCount: testQuestionCount,
+        userAnswers: formattedAnswers,
+      });
+
+      saveStoredAttempt(user?.id, completed);
+      setAttemptRefreshKey((k) => k + 1);
+      setTestInProgress(false);
+      setCreateModalOpen(false);
+      setCurrentTestAnswers({});
+      setActiveQuestionIndex(0);
+      // Open review modal immediately for the new attempt
+      setReviewModalAttempt(completed);
+    } finally {
+      setIsSubmittingTest(false);
+    }
   };
 
   if (isLoading) {
@@ -256,7 +278,8 @@ export function DashboardClient() {
   const plotHeight = chartHeight - paddingYTop - paddingYBottom;
 
   const getYCoord = (score: number) => {
-    return paddingYTop + plotHeight - (score / 100) * plotHeight;
+    const validScore = typeof score === "number" && !isNaN(score) ? Math.max(0, Math.min(100, score)) : 0;
+    return paddingYTop + plotHeight - (validScore / 100) * plotHeight;
   };
 
   const getXCoord = (index: number, count: number) => {
@@ -272,11 +295,11 @@ export function DashboardClient() {
   }));
 
   const chartPathD =
-    chartPoints.length > 0
+    chartPoints.length > 1
       ? chartPoints.reduce((acc, pt, idx) => (idx === 0 ? `M ${pt.x} ${pt.y}` : `${acc} L ${pt.x} ${pt.y}`), "")
       : "";
 
-  const benchmarkY = getYCoord(65); // 65% standard passing threshold
+  const benchmarkY = getYCoord(65); // 65% PrepFord practice benchmark reference line
 
   return (
     <div
@@ -889,7 +912,7 @@ export function DashboardClient() {
                       <span>Assessment Performance Trend</span>
                     </h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Sequential CAT performance versus the NCLEX passing standard
+                      Sequential CAT performance versus the PrepFord 65% benchmark
                     </p>
                   </div>
 
@@ -966,7 +989,7 @@ export function DashboardClient() {
                       );
                     })}
 
-                    {/* Benchmark line at 65% (Borderline Passing Standard) */}
+                    {/* Benchmark line at 65% (PrepFord Practice Benchmark Reference Line) */}
                     <line
                       x1={paddingX}
                       y1={benchmarkY}
@@ -984,7 +1007,7 @@ export function DashboardClient() {
                       fontSize="10"
                       fontWeight="600"
                     >
-                      Passing Benchmark (65%)
+                      Practice Benchmark (65%)
                     </text>
 
                     {/* Trend Line Path */}
@@ -1623,7 +1646,7 @@ export function DashboardClient() {
                     >
                       <p className="font-bold text-sm text-foreground">Readiness Test (RAT)</p>
                       <p className="text-xs mt-1 leading-snug">
-                        Standardized exam format testing multi-domain pass likelihood.
+                        Standardized exam format testing multi-domain clinical readiness.
                       </p>
                     </button>
                   </div>
@@ -1687,20 +1710,33 @@ export function DashboardClient() {
               /* Active Test Taking Step */
               <div className="space-y-5">
                 {(() => {
-                  const qSlice = CLINICAL_QUESTION_BANK.slice(
-                    0,
-                    Math.min(testQuestionCount, CLINICAL_QUESTION_BANK.length)
-                  );
+                  const qSlice: typeof CLINICAL_QUESTION_BANK = [];
+                  for (let i = 0; i < testQuestionCount; i++) {
+                    qSlice.push(CLINICAL_QUESTION_BANK[i % CLINICAL_QUESTION_BANK.length]);
+                  }
                   const activeQ = qSlice[activeQuestionIndex] || qSlice[0];
-                  const selectedOpt = currentTestAnswers[activeQuestionIndex];
+                  const isMultiSelect = activeQ.questionType === "multi_select";
+                  const selectedVal = currentTestAnswers[activeQuestionIndex];
+                  const selectedIndices: number[] = Array.isArray(selectedVal)
+                    ? selectedVal
+                    : typeof selectedVal === "number"
+                    ? [selectedVal]
+                    : [];
 
                   return (
                     <div className="space-y-4">
                       {/* Domain Badge & Progress */}
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-mono px-2 py-0.5 rounded bg-teal-500/10 text-teal-700 dark:text-teal-300 font-semibold">
-                          {activeQ.domain}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono px-2 py-0.5 rounded bg-teal-500/10 text-teal-700 dark:text-teal-300 font-semibold">
+                            {activeQ.domain}
+                          </span>
+                          {isMultiSelect && (
+                            <span className="font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-700 dark:text-sky-300 font-semibold text-[11px]">
+                              Select All That Apply (SATA)
+                            </span>
+                          )}
+                        </div>
                         <span className="text-muted-foreground font-mono">
                           {activeQuestionIndex + 1} / {qSlice.length}
                         </span>
@@ -1713,28 +1749,56 @@ export function DashboardClient() {
 
                       {/* Options */}
                       <div className="space-y-2 pt-2">
-                        {activeQ.options.map((opt, optIdx) => (
-                          <button
-                            key={optIdx}
-                            type="button"
-                            onClick={() =>
-                              setCurrentTestAnswers((prev) => ({
-                                ...prev,
-                                [activeQuestionIndex]: optIdx,
-                              }))
-                            }
-                            className={`w-full p-3.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all flex items-start gap-3 ${
-                              selectedOpt === optIdx
-                                ? "border-teal-500 bg-teal-500/10 text-foreground ring-1 ring-teal-500"
-                                : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
-                            }`}
-                          >
-                            <span className="h-5 w-5 rounded-full border border-current flex items-center justify-center text-[10px] shrink-0 font-mono">
-                              {String.fromCharCode(65 + optIdx)}
-                            </span>
-                            <span className="flex-1">{opt}</span>
-                          </button>
-                        ))}
+                        {activeQ.options.map((opt, optIdx) => {
+                          const isSelected = selectedIndices.includes(optIdx);
+
+                          return (
+                            <button
+                              key={optIdx}
+                              type="button"
+                              onClick={() => {
+                                if (isMultiSelect) {
+                                  setCurrentTestAnswers((prev) => {
+                                    const cur = prev[activeQuestionIndex];
+                                    const curArr = Array.isArray(cur)
+                                      ? cur
+                                      : typeof cur === "number"
+                                      ? [cur]
+                                      : [];
+                                    const nextArr = curArr.includes(optIdx)
+                                      ? curArr.filter((i) => i !== optIdx)
+                                      : [...curArr, optIdx].sort((a, b) => a - b);
+                                    return {
+                                      ...prev,
+                                      [activeQuestionIndex]: nextArr,
+                                    };
+                                  });
+                                } else {
+                                  setCurrentTestAnswers((prev) => ({
+                                    ...prev,
+                                    [activeQuestionIndex]: optIdx,
+                                  }));
+                                }
+                              }}
+                              className={`w-full p-3.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all flex items-start gap-3 ${
+                                isSelected
+                                  ? "border-teal-500 bg-teal-500/10 text-foreground ring-1 ring-teal-500"
+                                  : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                              }`}
+                            >
+                              <span
+                                className={`h-5 w-5 ${
+                                  isMultiSelect ? "rounded-md" : "rounded-full"
+                                } border border-current flex items-center justify-center text-[10px] shrink-0 font-mono ${
+                                  isSelected ? "bg-teal-600 text-white border-teal-600 font-bold" : ""
+                                }`}
+                              >
+                                {isSelected && isMultiSelect ? "✓" : String.fromCharCode(65 + optIdx)}
+                              </span>
+                              <span className="flex-1">{opt}</span>
+                            </button>
+                          );
+                        })}
                       </div>
 
                       {/* Question Navigation Controls */}
@@ -1754,6 +1818,7 @@ export function DashboardClient() {
                           <Button
                             type="button"
                             variant="ghost"
+                            disabled={isSubmittingTest}
                             onClick={handleCompleteTest}
                             className="rounded-xl text-xs text-muted-foreground hover:text-foreground"
                           >
@@ -1771,6 +1836,7 @@ export function DashboardClient() {
                           ) : (
                             <Button
                               type="button"
+                              disabled={isSubmittingTest}
                               onClick={handleCompleteTest}
                               className="bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold"
                             >
@@ -1827,86 +1893,121 @@ export function DashboardClient() {
 
             {/* Questions List */}
             <div className="space-y-6">
-              {reviewModalAttempt.questions.map((q) => (
-                <div
-                  key={q.id}
-                  className="rounded-xl border border-border p-4 space-y-3 bg-muted/20"
-                >
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-foreground font-mono">
-                      Question #{q.questionNumber}
-                    </span>
-                    <span
-                      className={`inline-flex items-center gap-1 font-semibold ${
-                        q.isCorrect ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-                      }`}
-                    >
-                      {q.isCorrect ? (
-                        <>
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          <span>Correct</span>
-                        </>
-                      ) : (
-                        <>
-                          <XCircle className="h-3.5 w-3.5" />
-                          <span>Incorrect</span>
-                        </>
-                      )}
-                    </span>
-                  </div>
+              {reviewModalAttempt.questions.map((q) => {
+                const isMulti = q.questionType === "multi_select";
 
-                  <p className="text-sm font-medium text-foreground leading-relaxed">
-                    {q.stem}
-                  </p>
+                return (
+                  <div
+                    key={q.id}
+                    className="rounded-xl border border-border p-4 space-y-3 bg-muted/20"
+                  >
+                    <div className="flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-foreground font-mono">
+                          Question #{q.questionNumber}
+                        </span>
+                        {isMulti && (
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-700 dark:text-sky-300 font-semibold">
+                            Select All That Apply (SATA)
+                          </span>
+                        )}
+                      </div>
+                      <span
+                        className={`inline-flex items-center gap-1 font-semibold ${
+                          q.isUnanswered
+                            ? "text-amber-600 dark:text-amber-400"
+                            : q.isCorrect
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : "text-rose-600 dark:text-rose-400"
+                        }`}
+                      >
+                        {q.isUnanswered ? (
+                          <>
+                            <Info className="h-3.5 w-3.5" />
+                            <span>Unanswered / Skipped</span>
+                          </>
+                        ) : q.isCorrect ? (
+                          <>
+                            <CheckCircle2 className="h-3.5 w-3.5" />
+                            <span>Correct</span>
+                          </>
+                        ) : (
+                          <>
+                            <XCircle className="h-3.5 w-3.5" />
+                            <span>Incorrect</span>
+                          </>
+                        )}
+                      </span>
+                    </div>
 
-                  <div className="space-y-1.5 pt-1">
-                    {q.options.map((opt, optIdx) => {
-                      const isUserChoice = q.userAnswerIndex === optIdx;
-                      const isCorrectChoice = q.correctAnswerIndex === optIdx;
-
-                      let optClass = "border-border bg-background text-muted-foreground";
-                      if (isCorrectChoice) {
-                        optClass = "border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 font-semibold";
-                      } else if (isUserChoice && !isCorrectChoice) {
-                        optClass = "border-rose-500 bg-rose-500/10 text-rose-800 dark:text-rose-200 line-through";
-                      }
-
-                      return (
-                        <div
-                          key={optIdx}
-                          className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${optClass}`}
-                        >
-                          <div className="flex items-center gap-2">
-                            <span className="h-4 w-4 rounded-full border border-current flex items-center justify-center text-[10px] font-mono shrink-0">
-                              {String.fromCharCode(65 + optIdx)}
-                            </span>
-                            <span>{opt}</span>
-                          </div>
-                          {isCorrectChoice && (
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                              Correct Key
-                            </span>
-                          )}
-                          {isUserChoice && !isCorrectChoice && (
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
-                              Your Selection
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Clinical Rationale Box */}
-                  <div className="rounded-lg bg-teal-500/10 border border-teal-500/20 p-3 text-xs text-slate-800 dark:text-slate-200 space-y-1">
-                    <p className="font-bold text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
-                      <Info className="h-3.5 w-3.5" />
-                      <span>Clinical Rationale & Explanation</span>
+                    <p className="text-sm font-medium text-foreground leading-relaxed">
+                      {q.stem}
                     </p>
-                    <p className="leading-relaxed">{q.rationale}</p>
+
+                    <div className="space-y-1.5 pt-1">
+                      {q.options.map((opt, optIdx) => {
+                        const isUserChoice = isMulti
+                          ? (q.userAnswerIndices ?? []).includes(optIdx)
+                          : q.userAnswerIndex === optIdx;
+                        const isCorrectChoice = isMulti
+                          ? (q.correctAnswerIndices ?? []).includes(optIdx)
+                          : q.correctAnswerIndex === optIdx;
+
+                        let optClass = "border-border bg-background text-muted-foreground";
+                        if (isCorrectChoice && isUserChoice) {
+                          optClass = "border-emerald-500 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 font-semibold";
+                        } else if (isCorrectChoice && !isUserChoice) {
+                          optClass = "border-emerald-500/60 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300";
+                        } else if (isUserChoice && !isCorrectChoice) {
+                          optClass = "border-rose-500 bg-rose-500/10 text-rose-800 dark:text-rose-200 line-through";
+                        }
+
+                        return (
+                          <div
+                            key={optIdx}
+                            className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${optClass}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`h-4 w-4 ${
+                                  isMulti ? "rounded-xs" : "rounded-full"
+                                } border border-current flex items-center justify-center text-[10px] font-mono shrink-0`}
+                              >
+                                {isUserChoice && isMulti ? "✓" : String.fromCharCode(65 + optIdx)}
+                              </span>
+                              <span>{opt}</span>
+                            </div>
+                            {isCorrectChoice && isUserChoice && (
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                                Correct Key • Selected
+                              </span>
+                            )}
+                            {isCorrectChoice && !isUserChoice && (
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                                Correct Key
+                              </span>
+                            )}
+                            {isUserChoice && !isCorrectChoice && (
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                                Your Selection
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Clinical Rationale Box */}
+                    <div className="rounded-lg bg-teal-500/10 border border-teal-500/20 p-3 text-xs text-slate-800 dark:text-slate-200 space-y-1">
+                      <p className="font-bold text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
+                        <Info className="h-3.5 w-3.5" />
+                        <span>Clinical Rationale & Explanation</span>
+                      </p>
+                      <p className="leading-relaxed">{q.rationale}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="flex justify-end pt-2 border-t border-border">
