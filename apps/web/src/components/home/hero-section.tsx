@@ -10,6 +10,8 @@ import {
   Play,
   HeartPulse,
   ShieldCheck,
+  Activity,
+  CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 

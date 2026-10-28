@@ -123,7 +123,7 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
 }
 
 interface ProfileMenuProps {
-  user: { displayName?: string; role?: string; email?: string; name?: string };
+  user: { displayName?: string; role?: string; email?: string; name?: string; picture?: string };
 }
 
 export function ProfileMenu({ user }: ProfileMenuProps) {
@@ -131,6 +131,11 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
   const { logout } = useAuth();
   const displayName = user.displayName || user.name || "Candidate";
   const initial = displayName.charAt(0).toUpperCase();
+  const [imgError, setImgError] = React.useState(false);
+
+  React.useEffect(() => {
+    setImgError(false);
+  }, [user.picture]);
 
   const handleLogout = async () => {
     await logout();
@@ -142,12 +147,22 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
-          className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          className="flex items-center gap-2 rounded-full bg-muted/60 px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="User profile menu"
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-bold">
-            {initial}
-          </span>
+          {user.picture && !imgError ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={user.picture}
+              alt={`${displayName} profile avatar`}
+              onError={() => setImgError(true)}
+              className="h-7 w-7 rounded-full object-cover ring-2 ring-secondary/30"
+            />
+          ) : (
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-bold">
+              {initial}
+            </span>
+          )}
           <span className="hidden sm:inline font-medium">{displayName}</span>
         </button>
       </DropdownMenuTrigger>

@@ -1,5 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import {
+  deriveCandidateIdFromEmail,
+  getUserProfileMeta,
+  upsertUserProfileMeta,
+} from "@/lib/profile-image-db";
 
 interface CandidateSession {
   sub?: string;
@@ -40,18 +45,43 @@ export async function GET() {
       return NextResponse.json({ success: false, error: "Session missing email" }, { status: 401 });
     }
 
+    const userId =
+      sessionData.sub || sessionData.id || deriveCandidateIdFromEmail(sessionData.email);
+    const dbMeta = getUserProfileMeta(userId, sessionData.email);
+
+    const resolvedName =
+      dbMeta?.displayName ||
+      sessionData.displayName ||
+      sessionData.name ||
+      "Nursing Candidate";
+
     const profile = {
-      id: sessionData.sub || sessionData.id || "candidate-1",
+      id: dbMeta?.userId || userId,
       email: sessionData.email,
-      name: sessionData.name || sessionData.displayName || "Nursing Candidate",
-      displayName: sessionData.displayName || sessionData.name || "Nursing Candidate",
+      name: resolvedName,
+      displayName: resolvedName,
       role: sessionData.role || "candidate",
-      pathway: sessionData.pathway || "rn",
-      targetExamDate: sessionData.targetExamDate || "2026-11-30",
-      activePlan: sessionData.activePlan || "NCLEX-RN Complete Preparation Plan",
+      pathway: dbMeta?.pathway || sessionData.pathway || "rn",
+      targetExamDate: dbMeta?.targetExamDate || sessionData.targetExamDate || "2026-11-30",
+      activePlan:
+        dbMeta?.activePlan ||
+        sessionData.activePlan ||
+        "NCLEX-RN Complete Preparation Plan",
       provider: sessionData.provider || "credentials",
-      emailNotifications: sessionData.emailNotifications !== undefined ? sessionData.emailNotifications : true,
-      studyReminders: sessionData.studyReminders !== undefined ? sessionData.studyReminders : true,
+      emailNotifications:
+        dbMeta !== null
+          ? dbMeta.emailNotifications
+          : sessionData.emailNotifications !== undefined
+            ? sessionData.emailNotifications
+            : true,
+      studyReminders:
+        dbMeta !== null
+          ? dbMeta.studyReminders
+          : sessionData.studyReminders !== undefined
+            ? sessionData.studyReminders
+            : true,
+      hasProfileImage: dbMeta?.hasProfileImage ?? Boolean(sessionData.picture),
+      picture: dbMeta?.pictureUrl || sessionData.picture,
     };
 
     return NextResponse.json({ success: true, profile });
@@ -80,17 +110,39 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: false, error: "Invalid session" }, { status: 401 });
     }
 
+    if (!sessionData.email) {
+      return NextResponse.json({ success: false, error: "Session missing email" }, { status: 401 });
+    }
+
     const body = await request.json();
     const { displayName, pathway, targetExamDate, emailNotifications, studyReminders } = body;
 
-    const updatedSession: CandidateSession = {
-      ...sessionData,
-      displayName: displayName || sessionData.displayName,
-      name: displayName || sessionData.name,
+    const userId =
+      sessionData.sub || sessionData.id || deriveCandidateIdFromEmail(sessionData.email);
+
+    const savedRecord = upsertUserProfileMeta({
+      userId,
+      email: sessionData.email,
+      displayName: displayName || sessionData.displayName || sessionData.name || "Nursing Candidate",
       pathway: pathway || sessionData.pathway || "rn",
       targetExamDate: targetExamDate || sessionData.targetExamDate,
-      emailNotifications: emailNotifications !== undefined ? emailNotifications : sessionData.emailNotifications,
-      studyReminders: studyReminders !== undefined ? studyReminders : sessionData.studyReminders,
+      activePlan: sessionData.activePlan,
+      emailNotifications:
+        emailNotifications !== undefined ? emailNotifications : sessionData.emailNotifications,
+      studyReminders:
+        studyReminders !== undefined ? studyReminders : sessionData.studyReminders,
+    });
+
+    const updatedSession: CandidateSession = {
+      ...sessionData,
+      sub: savedRecord.userId,
+      displayName: savedRecord.displayName,
+      name: savedRecord.displayName,
+      pathway: savedRecord.pathway,
+      targetExamDate: savedRecord.targetExamDate,
+      emailNotifications: savedRecord.emailNotifications,
+      studyReminders: savedRecord.studyReminders,
+      picture: savedRecord.pictureUrl || sessionData.picture,
       updatedAt: new Date().toISOString(),
     };
 
@@ -105,17 +157,19 @@ export async function PUT(request: Request) {
     return NextResponse.json({
       success: true,
       profile: {
-        id: updatedSession.sub || updatedSession.id || "candidate-1",
-        email: updatedSession.email,
-        name: updatedSession.name,
-        displayName: updatedSession.displayName,
+        id: savedRecord.userId,
+        email: sessionData.email,
+        name: savedRecord.displayName,
+        displayName: savedRecord.displayName,
         role: updatedSession.role || "candidate",
-        pathway: updatedSession.pathway || "rn",
-        targetExamDate: updatedSession.targetExamDate,
-        activePlan: updatedSession.activePlan || "NCLEX-RN Complete Preparation Plan",
+        pathway: savedRecord.pathway,
+        targetExamDate: savedRecord.targetExamDate,
+        activePlan: savedRecord.activePlan,
         provider: updatedSession.provider || "credentials",
-        emailNotifications: updatedSession.emailNotifications,
-        studyReminders: updatedSession.studyReminders,
+        emailNotifications: savedRecord.emailNotifications,
+        studyReminders: savedRecord.studyReminders,
+        hasProfileImage: savedRecord.hasProfileImage,
+        picture: savedRecord.pictureUrl || updatedSession.picture,
       },
     });
   } catch (err) {

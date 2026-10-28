@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { signInSchema } from "@/lib/validation/auth";
+import {
+  deriveCandidateIdFromEmail,
+  getUserProfileMeta,
+} from "@/lib/profile-image-db";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,18 +26,25 @@ export async function POST(request: NextRequest) {
 
     // Format display name from email (e.g. jane.doe@example.com -> Jane Doe)
     const rawName = email.split("@")[0].replace(/[._-]/g, " ");
-    const displayName = rawName
+    const defaultDisplayName = rawName
       .split(" ")
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ");
 
+    const userId = deriveCandidateIdFromEmail(email);
+    const dbMeta = getUserProfileMeta(userId, email);
+    const displayName = dbMeta?.displayName || defaultDisplayName;
+    const pathway = dbMeta?.pathway || ("rn" as const);
+    const picture = dbMeta?.pictureUrl;
+
     const sessionPayload = {
-      sub: `prf_usr_${Date.now().toString(36)}`,
+      sub: dbMeta?.userId || userId,
       email,
       name: displayName,
       displayName,
       role: "candidate",
-      pathway: "rn" as const,
+      pathway,
+      picture,
       provider: "credentials",
       createdAt: new Date().toISOString(),
     };
@@ -54,9 +65,11 @@ export async function POST(request: NextRequest) {
       user: {
         id: sessionPayload.sub,
         email: sessionPayload.email,
+        name: sessionPayload.displayName,
         displayName: sessionPayload.displayName,
         role: sessionPayload.role,
         pathway: sessionPayload.pathway,
+        picture: sessionPayload.picture,
       },
     });
   } catch (err) {

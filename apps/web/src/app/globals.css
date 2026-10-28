@@ -988,9 +988,21 @@ p {
   50% { opacity: 0.75; transform: scale(1.04); }
 }
 
-@keyframes ecgPulse {
-  0% { stroke-dashoffset: 1000; }
-  100% { stroke-dashoffset: 0; }
+@keyframes ecgPulseLeftToRight {
+  0% {
+    stroke-dashoffset: 220;
+    opacity: 0.4;
+  }
+  15% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: -780;
+    opacity: 0.4;
+  }
 }
 
 .animate-heartbeat {
@@ -1005,10 +1017,11 @@ p {
   animation: pulseGlow 3.5s ease-in-out infinite;
 }
 
-.animate-ecg {
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
-  animation: ecgPulse 4s linear infinite;
+.animate-ecg,
+.animate-ecg-ltr {
+  stroke-dasharray: 220 780;
+  stroke-dashoffset: 220;
+  animation: ecgPulseLeftToRight 3.2s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

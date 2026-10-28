@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { signUpSchema } from "@/lib/validation/auth";
+import {
+  deriveCandidateIdFromEmail,
+  upsertUserProfileMeta,
+} from "@/lib/profile-image-db";
 
 export async function POST(request: NextRequest) {
   try {
@@ -20,13 +24,22 @@ export async function POST(request: NextRequest) {
 
     const { fullName, email, pathway } = result.data;
 
-    const sessionPayload = {
-      sub: `prf_usr_${Date.now().toString(36)}`,
+    const userId = deriveCandidateIdFromEmail(email);
+    const savedRecord = upsertUserProfileMeta({
+      userId,
       email,
-      name: fullName,
       displayName: fullName,
-      role: "candidate",
       pathway,
+    });
+
+    const sessionPayload = {
+      sub: savedRecord.userId,
+      email,
+      name: savedRecord.displayName,
+      displayName: savedRecord.displayName,
+      role: "candidate",
+      pathway: savedRecord.pathway,
+      picture: savedRecord.pictureUrl,
       provider: "credentials",
       createdAt: new Date().toISOString(),
     };
@@ -45,9 +58,11 @@ export async function POST(request: NextRequest) {
       user: {
         id: sessionPayload.sub,
         email: sessionPayload.email,
+        name: sessionPayload.displayName,
         displayName: sessionPayload.displayName,
         role: sessionPayload.role,
         pathway: sessionPayload.pathway,
+        picture: sessionPayload.picture,
       },
     });
   } catch (err) {

@@ -1,5 +1,9 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import {
+  deriveCandidateIdFromEmail,
+  getUserProfileMeta,
+} from "@/lib/profile-image-db";
 
 export async function GET() {
   try {
@@ -32,14 +36,23 @@ export async function GET() {
       return NextResponse.json({ authenticated: false, user: null });
     }
 
+    const userId =
+      sessionData.sub || sessionData.id || deriveCandidateIdFromEmail(sessionData.email);
+    const dbMeta = getUserProfileMeta(userId, sessionData.email);
+    const resolvedName =
+      dbMeta?.displayName ||
+      sessionData.displayName ||
+      sessionData.name ||
+      "Nursing Candidate";
+
     const user = {
-      id: sessionData.sub || sessionData.id || "candidate-1",
+      id: dbMeta?.userId || userId,
       email: sessionData.email,
-      name: sessionData.name || sessionData.displayName || "Nursing Candidate",
-      displayName: sessionData.displayName || sessionData.name || "Nursing Candidate",
+      name: resolvedName,
+      displayName: resolvedName,
       role: sessionData.role || "candidate",
-      pathway: sessionData.pathway || "rn",
-      picture: sessionData.picture,
+      pathway: dbMeta?.pathway || sessionData.pathway || "rn",
+      picture: dbMeta?.pictureUrl || sessionData.picture,
       provider: sessionData.provider || "credentials",
     };
 
