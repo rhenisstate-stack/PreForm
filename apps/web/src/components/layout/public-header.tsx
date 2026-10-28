@@ -3,7 +3,22 @@
 import * as React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, ChevronDown, User, ShoppingCart, BookOpen, CreditCard, LogOut } from "lucide-react";
+import {
+  Menu,
+  X,
+  ChevronDown,
+  User,
+  ShoppingCart,
+  BookOpen,
+  CreditCard,
+  LogOut,
+  Quote,
+  Newspaper,
+  GraduationCap,
+  Mail,
+  Layers,
+  HelpCircle,
+} from "lucide-react";
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -27,6 +42,7 @@ type NavLink = {
   href: string;
   description?: string;
   badge?: string;
+  icon?: React.ComponentType<{ className?: string }>;
 };
 
 type DesktopNavItem = {
@@ -91,10 +107,41 @@ const desktopNav: DesktopNavItem[] = [
     ],
   },
   {
-    id: "testimonials",
-    label: "Testimonials",
-    href: "/testimonials",
-    activePrefixes: ["/testimonials"],
+    id: "more",
+    label: "More",
+    activePrefixes: ["/testimonials", "/blog", "/about", "/contact"],
+    items: [
+      {
+        label: "Testimonials",
+        href: "/testimonials",
+        description: "Student experiences, feedback, and success stories.",
+        icon: Quote,
+      },
+      {
+        label: "Blog",
+        href: "/blog",
+        description: "NCLEX preparation articles, study strategies, and educational resources.",
+        icon: Newspaper,
+      },
+      {
+        label: "Study Guides",
+        href: "/study-guide",
+        description: "Explore 7 core nursing domains, clinical cheat sheets, and high-yield notes.",
+        icon: BookOpen,
+      },
+      {
+        label: "About PrepFord",
+        href: "/about",
+        description: "Our nurse educator team, clinical pedagogy, and platform mission.",
+        icon: GraduationCap,
+      },
+      {
+        label: "Contact",
+        href: "/contact",
+        description: "Get in touch with our team for questions, guidance, or support.",
+        icon: Mail,
+      },
+    ],
   },
 ];
 
@@ -112,13 +159,15 @@ const mobileNursingLinks: NavLink[] = [
 ];
 
 const mobileNavLinks: NavLink[] = [
-  { label: "Study Guide & Notes", href: "/study-guide" },
-  { label: "Products & Pricing", href: "/subscriptions" },
-  { label: "All Courses", href: "/courses" },
-  { label: "Testimonials", href: "/testimonials" },
-  { label: "Platform Features", href: "/features" },
-  { label: "FAQ", href: "/faq" },
-  { label: "Contact Us", href: "/contact" },
+  { label: "Study Guide & Notes", href: "/study-guide", icon: BookOpen },
+  { label: "Products & Pricing", href: "/subscriptions", icon: CreditCard },
+  { label: "All Courses", href: "/courses", icon: Layers },
+  { label: "Testimonials", href: "/testimonials", icon: Quote },
+  { label: "Blog", href: "/blog", icon: Newspaper },
+  { label: "Platform Features", href: "/features", icon: Layers },
+  { label: "About PrepFord", href: "/about", icon: GraduationCap },
+  { label: "FAQ", href: "/faq", icon: HelpCircle },
+  { label: "Contact Us", href: "/contact", icon: Mail },
 ];
 
 export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
