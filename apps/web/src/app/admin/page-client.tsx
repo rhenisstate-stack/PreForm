@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Plus,
+  CreditCard,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { BrandedLoading } from "@/components/layout/branded-loading";
@@ -25,6 +26,7 @@ import { formatRoleTitle } from "@/components/layout/personalized-welcome";
 
 const adminNavItems = [
   { label: "Overview", href: "/admin", icon: LayoutDashboard, current: true },
+  { label: "Subscription Plans", href: "/admin/subscriptions", icon: CreditCard, current: false },
   { label: "Programmes & Courses", href: "/admin/programmes", icon: GraduationCap, current: false },
   { label: "Question-Type Registry (18)", href: "/admin/question-types", icon: Layers, current: false },
   { label: "Question Repository", href: "/admin/questions", icon: FileQuestion, current: false },
