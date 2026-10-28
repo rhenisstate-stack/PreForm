@@ -258,3 +258,98 @@ public class ProgrammeServiceTests
         await Assert.ThrowsAsync<InvalidOperationException>(() => service.CreateProgrammeAsync(request));
     }
 }
+
+public class ProfileImageServiceAndControllerTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+
+    private static readonly byte[] ValidPngBytes = new byte[]
+    {
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01
+    };
+
+    private static readonly byte[] ValidJpegBytes = new byte[]
+    {
+        0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46,
+        0x49, 0x46, 0x00, 0x01, 0x01, 0x01, 0x00, 0x48,
+        0x00, 0x48, 0x00, 0x00, 0xFF, 0xD9
+    };
+
+    public ProfileImageServiceAndControllerTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureServices(services =>
+            {
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+                if (descriptor != null) services.Remove(descriptor);
+                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestingProfileImageDb"));
+            });
+        });
+    }
+
+    [Fact]
+    public async Task UploadGetReplaceAndDeleteProfileImage_PersistsInDatabase()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", "user-101");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", "jane.candidate@nursing.edu");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Name", "Jane Candidate");
+
+        // 1. Upload valid PNG
+        var putResponse = await client.PutAsync("/api/v1/profile/image", new ByteArrayContent(ValidPngBytes));
+        putResponse.EnsureSuccessStatusCode();
+
+        // 2. Retrieve binary image
+        var getResponse = await client.GetAsync("/api/v1/profile/image");
+        getResponse.EnsureSuccessStatusCode();
+        Assert.Equal("image/png", getResponse.Content.Headers.ContentType?.MediaType);
+        var retrievedBytes = await getResponse.Content.ReadAsByteArrayAsync();
+        Assert.Equal(ValidPngBytes, retrievedBytes);
+
+        // 3. Replace with valid JPEG
+        var replaceResponse = await client.PutAsync("/api/v1/profile/image", new ByteArrayContent(ValidJpegBytes));
+        replaceResponse.EnsureSuccessStatusCode();
+
+        var getReplaced = await client.GetAsync("/api/v1/profile/image");
+        getReplaced.EnsureSuccessStatusCode();
+        Assert.Equal("image/jpeg", getReplaced.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(ValidJpegBytes, await getReplaced.Content.ReadAsByteArrayAsync());
+
+        // 4. Delete image
+        var deleteResponse = await client.DeleteAsync("/api/v1/profile/image");
+        deleteResponse.EnsureSuccessStatusCode();
+
+        var getAfterDelete = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.NotFound, getAfterDelete.StatusCode);
+    }
+
+    [Fact]
+    public async Task UploadInvalidFormatOrOversized_ReturnsBadRequest()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", "user-102");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", "alex@nursing.edu");
+
+        var invalidSvgOrHtml = System.Text.Encoding.UTF8.GetBytes("<svg onload='alert(1)'></svg>");
+        var badFormatRes = await client.PutAsync("/api/v1/profile/image", new ByteArrayContent(invalidSvgOrHtml));
+        Assert.Equal(HttpStatusCode.BadRequest, badFormatRes.StatusCode);
+    }
+
+    [Fact]
+    public async Task UploadOrGetForAnotherUser_ReturnsForbidden()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", "user-101");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", "jane@nursing.edu");
+
+        var forbiddenPut = await client.PutAsync("/api/v1/profile/image?targetUserId=user-999", new ByteArrayContent(ValidPngBytes));
+        Assert.Equal(HttpStatusCode.Forbidden, forbiddenPut.StatusCode);
+
+        var forbiddenGet = await client.GetAsync("/api/v1/profile/image?userId=user-999");
+        Assert.Equal(HttpStatusCode.Forbidden, forbiddenGet.StatusCode);
+    }
+}
