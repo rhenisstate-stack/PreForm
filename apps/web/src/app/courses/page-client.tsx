@@ -5,6 +5,9 @@ import { ArrowRight } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useProgrammes } from "@/hooks/use-api";
+import { FreeDemoSection } from "@/components/home/free-demo-section";
+import { CourseFinderQuiz } from "@/components/home/course-finder";
+import { LearningResources } from "@/components/home/learning-resources";
 
 interface CourseCardProps {
   title: string;
@@ -50,22 +53,22 @@ export function CoursesPageClient() {
 
   return (
     <>
-      <section className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
+      <section className="pt-20 pb-24 px-4 lg:pt-28 lg:pb-28 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="text-center lg:max-w-3xl lg:mx-auto">
             <p className="text-xs font-medium uppercase tracking-wider text-secondary">
               Course catalogue
             </p>
-            <h2 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
+            <h1 className="mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl">
               Choose your preparation
-            </h2>
+            </h1>
             <p className="mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg">
               Select the pathway that matches your licensure exam. Each course
               includes original questions, detailed rationales, and progress tracking.
             </p>
           </div>
 
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {courses.map((c) => (
               <Card key={c.title} className="flex flex-col h-full">
                 <CardHeader>
@@ -74,7 +77,7 @@ export function CoursesPageClient() {
                   </div>
                   <CardTitle className="mt-2 text-lg">{c.title}</CardTitle>
                 </CardHeader>
-                <CardContent className="pt-0">
+                <CardContent className="pt-0 flex-1">
                   <p className="text-sm text-muted-foreground">{c.description}</p>
                 </CardContent>
                 <CardFooter>
@@ -90,8 +93,8 @@ export function CoursesPageClient() {
           </div>
 
           {programmes && programmes.length > 0 && (
-            <div className="mt-16 border-t border-border pt-8">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Available pathways</h3>
+            <div className="mt-16 pt-8">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Available pathways</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {programmes.map((p: { code: string; displayName: string; isActive: boolean }) => (
                   <Card key={p.code}>
@@ -118,6 +121,10 @@ export function CoursesPageClient() {
           )}
         </div>
       </section>
+
+      <FreeDemoSection />
+      <CourseFinderQuiz />
+      <LearningResources />
     </>
   );
 }

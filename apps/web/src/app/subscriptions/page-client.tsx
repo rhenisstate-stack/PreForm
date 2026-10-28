@@ -5,6 +5,8 @@ import { ArrowRight } from "lucide-react";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useProgrammes } from "@/hooks/use-api";
+import { CourseFinderQuiz } from "@/components/home/course-finder";
+import { FAQPreview } from "@/components/home/faq-preview";
 
 interface PlanCardProps {
   name: string;
@@ -68,7 +70,7 @@ export function SubscriptionsPageClient() {
 
   return (
     <>
-      <section className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
+      <section className="pt-20 pb-24 px-4 lg:pt-28 lg:pb-28 lg:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="text-center lg:max-w-3xl lg:mx-auto">
             <p className="text-xs font-medium uppercase tracking-wider text-secondary">
@@ -126,8 +128,8 @@ export function SubscriptionsPageClient() {
           </div>
 
           {programmes && programmes.length > 0 && (
-            <div className="mt-16 border-t border-border pt-8">
-              <h3 className="text-lg font-semibold text-foreground mb-4">Available pathways</h3>
+            <div className="mt-16 pt-8">
+              <h2 className="text-lg font-semibold text-foreground mb-4">Available pathways</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {programmes.map((p: { code: string; displayName: string; isActive: boolean }) => (
                   <Card key={p.code}>
@@ -154,6 +156,9 @@ export function SubscriptionsPageClient() {
           )}
         </div>
       </section>
+
+      <CourseFinderQuiz />
+      <FAQPreview />
     </>
   );
 }

@@ -27,7 +27,7 @@ export default function EducatorsPage() {
           </div>
 
           <div className="mt-16 space-y-8">
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <div className="rounded-2xl bg-card p-6 shadow-sm">
               <h2 className="text-lg font-serif font-semibold text-foreground">Practice and assessment tools</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Assign original NCLEX-style questions and readiness assessments
@@ -35,7 +35,7 @@ export default function EducatorsPage() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <div className="rounded-2xl bg-card p-6 shadow-sm">
               <h2 className="text-lg font-serif font-semibold text-foreground">Progress reporting</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 View learner accuracy by topic, question type, and time.
@@ -43,7 +43,7 @@ export default function EducatorsPage() {
               </p>
             </div>
 
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+            <div className="rounded-2xl bg-card p-6 shadow-sm">
               <h2 className="text-lg font-serif font-semibold text-foreground">Institutional enquiry</h2>
               <p className="mt-2 text-sm text-muted-foreground">
                 Interested in group access or institutional licensing? Contact us

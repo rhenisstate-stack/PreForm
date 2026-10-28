@@ -1,170 +1,136 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, CheckCircle2, Clock } from "lucide-react";
+import { ArrowRight, CheckCircle2, ShieldCheck, Stethoscope } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-interface ProductCardData {
+interface NursingPathwayData {
   id: string;
-  code: string;
+  code: "RN" | "PN";
   title: string;
   audience: string;
   description: string;
-  price: number;
-  interval: string;
-  duration: string;
-  popular?: boolean;
   imageSrc: string;
   imageAlt: string;
   features: string[];
   detailsHref: string;
-  cartHref: string;
+  ctaLabel: string;
+  plansHref: string;
 }
 
-const products: ProductCardData[] = [
+const NURSING_PATHWAYS: NursingPathwayData[] = [
   {
-    id: "rn-pro",
+    id: "nclex-rn-pathway",
     code: "RN",
-    title: "NCLEX-RN Complete Preparation",
-    audience: "Registered Nurse preparation",
+    title: "NCLEX-RN Exam Preparation",
+    audience: "Registered Nurse preparation (BSN & ADN candidates)",
     description:
-      "Comprehensive licensure preparation aligning with the NCSBN Clinical Judgment Measurement Model, CAT simulation, and verified rationales.",
-    price: 59,
-    interval: "month",
-    duration: "Monthly Access",
-    popular: true,
+      "Built for future Registered Nurses preparing to evaluate complex client cues, prioritize acute interventions, and master Next Generation NCLEX clinical judgment.",
     imageSrc: "/image1.jpg",
-    imageAlt: "NCLEX-RN candidate engaging in clinical simulation",
+    imageAlt: "NCLEX-RN candidate engaging in clinical judgment simulation",
     features: [
-      "3,500+ original NGN-style questions",
-      "Detailed clinical answer rationales",
-      "6 full-length adaptive CAT mock tests",
-      "Clinical judgment measurement analytics",
+      "3,500+ original NGN-style practice questions",
+      "Unfolding 6-part clinical case studies with EHR tabs",
+      "Step-by-step pathophysiologic & distractor rationales",
+      "Full-length adaptive CAT mock exams & readiness tracking",
     ],
     detailsHref: "/nclex-rn",
-    cartHref: "/cart?add=rn-pro",
+    ctaLabel: "Explore NCLEX-RN",
+    plansHref: "/subscriptions?programme=RN",
   },
   {
-    id: "pn-pro",
+    id: "nclex-pn-pathway",
     code: "PN",
-    title: "NCLEX-PN Complete Preparation",
-    audience: "Practical / Vocational Nurse preparation",
+    title: "NCLEX-PN Exam Preparation",
+    audience: "Practical / Vocational Nurse preparation (LPN & LVN candidates)",
     description:
-      "Targeted preparation for practical and vocational licensure, emphasizing patient assignment, vital sign evaluation, and safe medication practices.",
-    price: 59,
-    interval: "month",
-    duration: "Monthly Access",
+      "Designed for future Practical and Vocational Nurses focusing on focused client data collection, safe medication administration, and coordinated clinical care.",
     imageSrc: "/image2.jpg",
-    imageAlt: "NCLEX-PN candidate reviewing clinical charts",
+    imageAlt: "NCLEX-PN candidate reviewing patient charts and medication safety",
     features: [
-      "2,800+ practical nursing questions",
-      "Detailed clinical answer rationales",
-      "Adaptive CAT simulation exams",
-      "Coordinated care & reporting analytics",
+      "2,800+ practical nursing practice questions",
+      "Focused data collection & patient safety case scenarios",
+      "Clear clinical rationales for every answer option",
+      "Adaptive CAT simulation exams & topic proficiency analytics",
     ],
     detailsHref: "/nclex-pn",
-    cartHref: "/cart?add=pn-pro",
-  },
-  {
-    id: "prep-premium",
-    code: "ALL-ACCESS",
-    title: "NCLEX-RN & PN All-Access",
-    audience: "Comprehensive & Dual Licensure Preparation",
-    description:
-      "Full access to both examination pathways, including unfolding multi-step case studies, high-alert pharmacology modules, and priority review.",
-    price: 89,
-    interval: "month",
-    duration: "Monthly Access",
-    imageSrc: "/image3.jpg",
-    imageAlt: "Healthcare study team working on advanced pharmacology case studies",
-    features: [
-      "Full question bank (RN & PN tracks)",
-      "Unfolding 6-part NGN case studies",
-      "Personalized daily study routine",
-      "Priority educator email support",
-    ],
-    detailsHref: "/subscriptions",
-    cartHref: "/cart?add=prep-premium",
+    ctaLabel: "Explore NCLEX-PN",
+    plansHref: "/subscriptions?programme=PN",
   },
 ];
 
 export function ExamPathwayCards() {
   return (
-    <section id="products" className="scroll-mt-20 pt-20 pb-24 px-4 lg:pt-28 lg:pb-32 lg:px-8 bg-card/40">
-      <div className="mx-auto max-w-7xl">
+    <section
+      id="nursing-pathways"
+      aria-labelledby="nursing-pathways-heading"
+      className="scroll-mt-20 pt-20 pb-24 px-4 sm:px-6 lg:pt-28 lg:pb-28 lg:px-8 bg-background"
+    >
+      <div id="products" className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-3xl lg:mx-auto">
           <p className="text-xs font-semibold uppercase tracking-wider text-secondary">
-            Product &amp; Pathway Discovery
+            Choose Your Nursing Exam Path
           </p>
-          <h2 className="mt-3 text-3xl font-serif font-bold tracking-tight text-foreground sm:text-4xl">
-            PrepFord NCLEX Preparation Products
+          <h2
+            id="nursing-pathways-heading"
+            className="mt-3 text-3xl font-serif font-bold tracking-tight text-foreground sm:text-4xl"
+          >
+            Focused Preparation for NCLEX-RN &amp; NCLEX-PN
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-xl mx-auto">
-            Every PrepFord preparation plan delivers authentic NCSBN-aligned questions, transparent scoring, and actionable clinical rationales.
+          <p className="mt-4 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+            Select your nursing licensure pathway to access exam-specific practice questions, clinical judgment case studies, and structured study tools.
           </p>
         </div>
 
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products.map((p) => (
+        <div className="mt-14 grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+          {NURSING_PATHWAYS.map((pathway) => (
             <Card
-              key={p.id}
-              className={`flex flex-col h-full relative transition-shadow hover:shadow-lg overflow-hidden bg-card ${
-                p.popular ? "ring-2 ring-secondary/80" : "shadow-sm"
-              }`}
+              key={pathway.id}
+              data-testid={`pathway-card-${pathway.code.toLowerCase()}`}
+              className="flex flex-col h-full relative transition-all duration-300 hover:shadow-xl overflow-hidden bg-card rounded-3xl shadow-md"
             >
-              {p.popular && (
-                <Badge className="absolute top-3 right-3 z-10 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground shadow-sm">
-                  Most Popular
-                </Badge>
-              )}
-
-              {/* Product Header Image */}
-              <div className="relative h-48 w-full overflow-hidden bg-muted">
+              {/* Pathway Image Header */}
+              <div className="relative h-56 sm:h-64 w-full overflow-hidden bg-muted">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
-                  src={p.imageSrc}
-                  alt={p.imageAlt}
-                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                  src={pathway.imageSrc}
+                  alt={pathway.imageAlt}
+                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-card via-card/25 to-transparent" />
                 <Badge
                   variant="outline"
-                  className="absolute bottom-3 left-3 bg-card/90 backdrop-blur-xs border-secondary/40 text-secondary font-bold text-xs"
+                  className="absolute bottom-4 left-6 bg-card/95 backdrop-blur-xs border-secondary/30 text-secondary font-bold text-xs px-3 py-1 rounded-full"
                 >
-                  {p.code} Pathway
+                  <Stethoscope className="mr-1.5 h-3.5 w-3.5" />
+                  NCLEX-{pathway.code} Pathway
                 </Badge>
               </div>
 
-              <CardHeader className="pb-3 pt-2">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    {p.duration}
-                  </span>
-                </div>
-                <CardTitle className="text-xl font-serif font-bold text-foreground">
-                  {p.title}
+              <CardHeader className="px-6 sm:px-8 pb-3 pt-4">
+                <CardTitle className="text-2xl sm:text-3xl font-serif font-bold text-foreground">
+                  {pathway.title}
                 </CardTitle>
-                <CardDescription className="text-xs text-secondary font-medium">
-                  {p.audience}
+                <CardDescription className="text-xs sm:text-sm text-secondary font-semibold mt-1">
+                  {pathway.audience}
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="pt-0 flex-1 space-y-4">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {p.description}
+              <CardContent className="px-6 sm:px-8 pt-0 flex-1 space-y-5">
+                <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+                  {pathway.description}
                 </p>
 
-                <div className="pt-2">
-                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider block mb-2">
-                    Key Features Included:
+                <div className="pt-1">
+                  <span className="text-xs font-semibold text-foreground uppercase tracking-wider block mb-3">
+                    What&apos;s Included for NCLEX-{pathway.code}:
                   </span>
-                  <ul className="space-y-2">
-                    {p.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <ul className="space-y-2.5">
+                    {pathway.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2.5 text-xs sm:text-sm text-foreground/90">
                         <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                         <span>{feature}</span>
                       </li>
@@ -173,46 +139,42 @@ export function ExamPathwayCards() {
                 </div>
               </CardContent>
 
-              <CardFooter className="pt-4 flex flex-col gap-3">
-                <div className="flex items-baseline justify-between w-full">
-                  <div>
-                    <span className="text-3xl font-serif font-bold text-foreground">
-                      ${p.price}
-                    </span>
-                    <span className="text-xs text-muted-foreground ml-1">
-                      / {p.interval}
-                    </span>
-                  </div>
-                  <span className="text-xs text-emerald-700 dark:text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-sm">
-                    Verified Plan
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 w-full">
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs font-medium"
-                  >
-                    <Link href={p.detailsHref}>
-                      {p.code === "ALL-ACCESS" ? "Explore Subscriptions" : "Explore Course Details"}
-                    </Link>
-                  </Button>
-                  <Button
-                    asChild
-                    size="sm"
-                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold text-xs shadow-xs"
-                  >
-                    <Link href={p.cartHref}>
-                      <ShoppingCart className="mr-1 h-3.5 w-3.5" />
-                      Enroll Now — ${p.price}
-                    </Link>
-                  </Button>
-                </div>
+              <CardFooter className="px-6 sm:px-8 pt-6 pb-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <Button
+                  asChild
+                  size="lg"
+                  className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm rounded-xl"
+                >
+                  <Link href={pathway.detailsHref}>
+                    {pathway.ctaLabel}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="w-full sm:w-auto font-semibold rounded-xl"
+                >
+                  <Link href={pathway.plansHref}>View {pathway.code} Plans</Link>
+                </Button>
               </CardFooter>
             </Card>
           ))}
+        </div>
+
+        <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <ShieldCheck className="h-4 w-4 text-secondary" />
+            Looking for combined RN &amp; PN access or institutional options?
+          </span>
+          <Link
+            href="/subscriptions"
+            className="inline-flex items-center gap-1 font-semibold text-secondary hover:underline"
+          >
+            Compare all preparation plans
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
         </div>
       </div>
     </section>

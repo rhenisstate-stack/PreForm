@@ -63,7 +63,7 @@ export default function FeaturesPage() {
 
           <div className="mt-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((f) => (
-              <div key={f.title} className="rounded-xl border border-border bg-card p-6 shadow-sm">
+              <div key={f.title} className="rounded-2xl bg-card p-6 shadow-sm">
                 <div className="flex shrink-0 items-center justify-center rounded-md bg-secondary/15 p-3 text-secondary mb-4" aria-hidden="true">
                   <span className="text-sm font-bold">{f.icon}</span>
                 </div>
