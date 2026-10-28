@@ -292,7 +292,7 @@ export function StudyGuideIndexClient() {
               Test your recall with realistic Next Gen practice items
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              Every study note maps to our 18 clinical question types including Bowtie, Extended Drag-and-Drop, Matrix, and Trend items.
+              Every study note connects directly to clinical scenario practice questions with option-by-option correct and distractor rationales.
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">

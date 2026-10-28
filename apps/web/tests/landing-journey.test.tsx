@@ -176,12 +176,13 @@ describe("Landing Page Information Architecture, Full-Width Heartbeat & SEO", ()
     await user.click(screen.getByRole("button", { name: /Next Question/i }));
     await user.click(screen.getByRole("button", { name: /1 to 3 months/i }));
     await user.click(screen.getByRole("button", { name: /Next Question/i }));
-    await user.click(screen.getByRole("button", { name: /Adaptive CAT simulation/i }));
+    await user.click(screen.getByRole("button", { name: /Timed readiness assessments/i }));
     await user.click(screen.getByRole("button", { name: /Next Question/i }));
     await user.click(screen.getByRole("button", { name: /Pharmacology/i }));
     await user.click(screen.getByRole("button", { name: /View Recommendation/i }));
 
     expect(screen.getByText(/Your Tailored Study Plan/i)).toBeInTheDocument();
+    expect(screen.getByText(/NCLEX-RN Complete Preparation \(90-Day\)/i)).toBeInTheDocument();
   });
 
   it("configures accurate SEO metadata for public routes and noindex for private routes", () => {

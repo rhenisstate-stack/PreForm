@@ -248,7 +248,7 @@ export function SubjectPageClient({ category, subject }: Props) {
               Ready to test this topic on Next Gen NCLEX items?
             </h3>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Access clinical case studies, Bowtie questions, and complete rationale breakdowns.
+              Access clinical scenario questions, readiness assessments, and complete option-by-option rationale breakdowns.
             </p>
           </div>
           <Link

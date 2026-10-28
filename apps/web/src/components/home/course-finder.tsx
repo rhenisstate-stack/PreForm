@@ -6,6 +6,7 @@ import { ArrowRight, ShoppingCart, RefreshCw, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useCart } from "@/lib/cart-context";
 
 interface QuizQuestion {
   id: string;
@@ -36,7 +37,7 @@ const questions: QuizQuestion[] = [
     id: "support",
     question: "What style of study support helps you most?",
     options: [
-      { id: "cat", label: "Adaptive CAT simulation exams & score prediction" },
+      { id: "readiness", label: "Timed readiness assessments & Client Needs domain scoring" },
       { id: "rationales", label: "In-depth clinical rationales for every question" },
       { id: "ngn", label: "Unfolding NGN case studies & clinical decision-making" },
     ],
@@ -53,31 +54,72 @@ const questions: QuizQuestion[] = [
   },
 ];
 
-const recommendations: Record<
-  string,
-  { title: string; planName: string; price: number; description: string; href: string; cartHref: string }
-> = {
-  rn: {
-    title: "NCLEX-RN Comprehensive Pro Pathway",
-    planName: "NCLEX-RN Complete Preparation",
-    price: 59,
-    description:
-      "Recommended based on your registered nurse examination target. Includes full RN question bank access, 3 readiness assessments, and complete clinical reasoning rationales.",
-    href: "/nclex-rn",
-    cartHref: "/cart?add=rn-pro",
-  },
-  pn: {
-    title: "NCLEX-PN Complete Preparation Pathway",
-    planName: "NCLEX-PN Complete Preparation",
-    price: 59,
-    description:
-      "Recommended based on your practical/vocational nurse target. Includes full PN question bank access, coordinated care analytics, and topic-level readiness assessments.",
-    href: "/nclex-pn",
-    cartHref: "/cart?add=pn-pro",
-  },
-};
+interface QuizRecommendation {
+  productId: string;
+  title: string;
+  planName: string;
+  price: number;
+  intervalLabel: string;
+  description: string;
+  href: string;
+  cartHref: string;
+}
+
+function getRecommendation(pathway: string, timeline: string): QuizRecommendation {
+  const isQuarterly = timeline !== "1";
+  if (pathway === "pn") {
+    return isQuarterly
+      ? {
+          productId: "pn-pro-90",
+          title: "NCLEX-PN Complete Preparation (90-Day)",
+          planName: "NCLEX-PN Complete Preparation (90-Day)",
+          price: 149,
+          intervalLabel: "90 days (Save $28)",
+          description:
+            "Recommended for your practical/vocational nurse target and multi-month timeline. Includes 90-day access to the full PN question bank, 3 readiness assessments, and 7-domain Study Guide notes.",
+          href: "/nclex-pn",
+          cartHref: "/cart?add=pn-pro-90",
+        }
+      : {
+          productId: "pn-pro",
+          title: "NCLEX-PN Complete Preparation Pathway",
+          planName: "NCLEX-PN Complete Preparation",
+          price: 59,
+          intervalLabel: "month",
+          description:
+            "Recommended for your practical/vocational nurse target and 30-day timeline. Includes full PN question bank access, coordinated care analytics, and 3 readiness assessments.",
+          href: "/nclex-pn",
+          cartHref: "/cart?add=pn-pro",
+        };
+  }
+
+  return isQuarterly
+    ? {
+        productId: "rn-pro-90",
+        title: "NCLEX-RN Complete Preparation (90-Day)",
+        planName: "NCLEX-RN Complete Preparation (90-Day)",
+        price: 149,
+        intervalLabel: "90 days (Save $28)",
+        description:
+          "Recommended based on your registered nurse target and multi-month timeline. Includes 90-day access to the full RN question bank, 3 readiness assessments, and complete clinical rationales.",
+        href: "/nclex-rn",
+        cartHref: "/cart?add=rn-pro-90",
+      }
+    : {
+        productId: "rn-pro",
+        title: "NCLEX-RN Comprehensive Pro Pathway",
+        planName: "NCLEX-RN Complete Preparation",
+        price: 59,
+        intervalLabel: "month",
+        description:
+          "Recommended based on your registered nurse examination target and 30-day timeline. Includes full RN question bank access, 3 readiness assessments, and complete clinical reasoning rationales.",
+        href: "/nclex-rn",
+        cartHref: "/cart?add=rn-pro",
+      };
+}
 
 export function CourseFinderQuiz() {
+  const { addItem } = useCart();
   const [currentStep, setCurrentStep] = React.useState(0);
   const [answers, setAnswers] = React.useState<Record<string, string>>({});
   const [completed, setCompleted] = React.useState(false);
@@ -112,7 +154,8 @@ export function CourseFinderQuiz() {
 
   if (completed) {
     const pathway = answers.pathway || "rn";
-    const rec = recommendations[pathway] || recommendations.rn;
+    const timeline = answers.timeline || "3";
+    const rec = getRecommendation(pathway, timeline);
 
     return (
       <section id="course-finder" className="pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8">
@@ -135,7 +178,7 @@ export function CourseFinderQuiz() {
                     Recommended Plan
                   </Badge>
                   <span className="text-xl font-serif font-bold text-foreground">
-                    ${rec.price} <span className="text-xs font-sans text-muted-foreground font-normal">/ month</span>
+                    ${rec.price} <span className="text-xs font-sans text-muted-foreground font-normal">/ {rec.intervalLabel}</span>
                   </span>
                 </div>
                 <CardTitle className="text-xl font-serif text-foreground">{rec.title}</CardTitle>
@@ -157,9 +200,13 @@ export function CourseFinderQuiz() {
 
                 <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
                   <Button asChild size="lg" className="w-full sm:flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-sm">
-                    <Link href={rec.cartHref} className="flex items-center justify-center gap-2">
+                    <Link
+                      href={rec.cartHref}
+                      onClick={() => addItem(rec.productId)}
+                      className="flex items-center justify-center gap-2"
+                    >
                       <ShoppingCart className="h-4 w-4" />
-                      <span>Add to Cart — ${rec.price}/mo</span>
+                      <span>Add to Cart — ${rec.price}</span>
                     </Link>
                   </Button>
                   <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">

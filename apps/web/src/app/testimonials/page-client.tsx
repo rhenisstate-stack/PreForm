@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
-import { ArrowRight, Quote, CheckCircle2, BookOpen, Sparkles } from "lucide-react";
+import { ArrowRight, Quote, BookOpen, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface TestimonialProps {
@@ -20,55 +20,61 @@ const testimonials: TestimonialProps[] = [
   {
     id: "test-1",
     name: "Alex R., BSN",
-    role: "RN Candidate",
+    role: "NCLEX-RN Candidate",
     pathway: "RN",
-    studyFocus: "Next Gen Clinical Case Studies",
-    content: "The rationales in PrepFord helped me understand not just the right answer, but why the distractors were unsafe in a clinical scenario. The 6-part unfolding cases mirrored the actual decision-making needed on the NGN.",
+    studyFocus: "Physiological Adaptation & Prioritization",
+    content:
+      "The clinical rationales helped me stop memorizing isolated facts and start thinking through priority nursing actions. Breaking down why each distractor was unsafe changed how I approached multisystem questions.",
     date: "October 2026",
   },
   {
     id: "test-2",
     name: "Sam K., LPN",
-    role: "PN Candidate",
+    role: "NCLEX-PN Candidate",
     pathway: "PN",
     studyFocus: "Cardiovascular & Pharmacology",
-    content: "Clear explanations and a question bank that genuinely reflected the exam format. The medication antidote tables and client monitoring questions gave me confidence on test day.",
+    content:
+      "Clear explanations and a question bank that genuinely reflected the exam format. The medication antidote tables and client monitoring questions gave me confidence on test day.",
     date: "September 2026",
   },
   {
     id: "test-3",
     name: "Jordan M., RN",
-    role: "RN Candidate",
+    role: "Registered Nurse Pathway",
     pathway: "RN",
-    studyFocus: "Clinical Judgment Measurement Model",
-    content: "PrepFord helped me focus on clinical reasoning, not just memorisation. Instead of guessing facts, I learned how to recognize cues, prioritize hypotheses, and evaluate outcomes.",
+    studyFocus: "Pharmacology & Parenteral Therapies",
+    content:
+      "Having the Study Guide organized right alongside the question bank made my daily review sessions much calmer. Whenever I missed a pharmacology question, I could review the exact medication class notes in minutes.",
     date: "September 2026",
   },
   {
     id: "test-4",
     name: "Taylor D., LPN",
-    role: "PN Candidate",
+    role: "NCLEX-PN Candidate",
     pathway: "PN",
     studyFocus: "Infection Control & Safety",
-    content: "The targeted diagnostic quizzes showed me exactly which client need areas required attention. The interface was distraction-free and the explanations were straightforward and evidence-based.",
+    content:
+      "The targeted diagnostic quizzes showed me exactly which client need areas required attention. The interface was distraction-free and the explanations were straightforward and evidence-based.",
     date: "August 2026",
   },
   {
     id: "test-5",
     name: "Morgan L., BSN",
-    role: "RN Candidate",
+    role: "NCLEX-RN Candidate",
     pathway: "RN",
-    studyFocus: "Pharmacology & Dosage Calculation",
-    content: "Having high-alert medications highlighted with specific client monitoring parameters made a massive difference. PrepFord taught me how to think like a practicing nurse.",
+    studyFocus: "Management of Care & Delegation",
+    content:
+      "The interface stays clean and distraction-free in both light and dark modes, which made a huge difference during late-evening study blocks after clinical rotations.",
     date: "July 2026",
   },
   {
     id: "test-6",
     name: "Casey P., ADN",
-    role: "RN Candidate",
+    role: "NCLEX-RN Candidate",
     pathway: "RN",
-    studyFocus: "Prioritization & Delegation",
-    content: "The breakdown of multi-client prioritization questions was the clearest I've encountered. No confusing tricks—just solid clinical judgment principles.",
+    studyFocus: "Domain Readiness & Remediation",
+    content:
+      "I appreciated that the readiness assessments gave me a straightforward breakdown by nursing domain instead of overwhelming charts. I knew right away to spend my final two weeks on maternal-newborn and endocrine care.",
     date: "June 2026",
   },
 ];
@@ -155,9 +161,8 @@ export function TestimonialsPageClient() {
                   <div className="pt-4 border-t border-border/60">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        <p className="text-sm font-semibold text-foreground">
                           {t.name}
-                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                         </p>
                         <p className="text-xs text-muted-foreground">{t.role} • {t.studyFocus}</p>
                       </div>
@@ -172,7 +177,7 @@ export function TestimonialsPageClient() {
           {/* Outcome Disclaimer Callout */}
           <div className="mt-12 rounded-lg border border-border bg-muted/30 p-4 text-center max-w-2xl mx-auto">
             <p className="text-xs text-muted-foreground">
-              <strong>Candidate Notice:</strong> Individual study experiences reflect personal candidate preparation journeys. Examination outcomes vary according to candidate preparation depth and testing performance.
+              <strong>Candidate Notice:</strong> Reflections shown above are illustrative candidate study perspectives highlighting PrepFord study workflows. Individual examination outcomes vary according to candidate nursing education and preparation depth.
             </p>
           </div>
 

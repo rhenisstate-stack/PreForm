@@ -39,6 +39,7 @@ vi.mock("@/lib/auth-context", () => ({
 
 import { NCLEXRNPageClient } from "@/app/nclex-rn/page-client";
 import { metadata as rnMetadata } from "@/app/nclex-rn/page";
+import { STUDY_GUIDE_CATEGORIES, getCategoryBySlug, getSubjectBySlugs } from "@/lib/study-guide-data";
 
 describe("NCLEX-RN Page Transformation (/nclex-rn)", () => {
   beforeEach(() => {
@@ -206,19 +207,38 @@ describe("NCLEX-RN Page Transformation (/nclex-rn)", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders all 7 Nursing Study Guide domains with working category and subject links", () => {
+  it("renders all 7 Nursing Study Guide domains with working category and subject links and accurate topic counts", () => {
     render(<NCLEXRNPageClient />);
 
     const studyGuideSection = screen.getByTestId("rn-study-guide-integration");
-    expect(
-      within(studyGuideSection).getByTestId("rn-study-guide-card-medical-surgical")
-    ).toBeInTheDocument();
-    expect(
-      within(studyGuideSection).getByTestId("rn-study-guide-card-pharmacology")
-    ).toBeInTheDocument();
-    expect(
-      within(studyGuideSection).getByTestId("rn-study-guide-card-leadership-delegation")
-    ).toBeInTheDocument();
+    for (const cat of STUDY_GUIDE_CATEGORIES) {
+      const card = within(studyGuideSection).getByTestId(`rn-study-guide-card-${cat.slug}`);
+      expect(card).toBeInTheDocument();
+      expect(getCategoryBySlug(cat.slug)).toBeDefined();
+
+      for (const subj of cat.subjects.slice(0, 3)) {
+        expect(getSubjectBySlugs(cat.slug, subj.slug)).toBeDefined();
+        const subjLink = within(card).getByRole("link", { name: subj.title });
+        expect(subjLink).toHaveAttribute("href", `/study-guide/${cat.slug}/${subj.slug}`);
+      }
+    }
+
+    expect(within(studyGuideSection).queryByText("1 Subject Guides")).not.toBeInTheDocument();
+    expect(screen.queryByText(/22 structured subject guides/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Adaptive CAT/i)).not.toBeInTheDocument();
+  });
+
+  it("does not duplicate Section 14 candidate reflections inside Section 4", () => {
+    render(<NCLEXRNPageClient />);
+
+    const progressSection = screen.getByTestId("rn-student-progress");
+    const testimonialsSection = screen.getByTestId("rn-testimonials");
+
+    expect(within(progressSection).queryByText(/Alex R\., BSN/i)).not.toBeInTheDocument();
+    expect(within(testimonialsSection).getByText(/Alex R\., BSN/i)).toBeInTheDocument();
+    expect(within(testimonialsSection).getByText(/Jordan M\., RN/i)).toBeInTheDocument();
+    expect(within(testimonialsSection).getByText(/Morgan L\., BSN/i)).toBeInTheDocument();
+    expect(within(testimonialsSection).getByText(/Casey P\., ADN/i)).toBeInTheDocument();
   });
 
   it("supports the standalone NCLEX-RN Readiness Assessment Pack ($39) checkout handoff", async () => {

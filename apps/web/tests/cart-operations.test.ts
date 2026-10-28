@@ -102,6 +102,52 @@ describe("Canonical Product Catalog & Cart Operations", () => {
       billingInterval: "one-time",
       durationLabel: "One-Time Assessment Pack",
     });
+
+    const rnStarter = getProductById("rn-starter");
+    expect(rnStarter).toMatchObject({
+      id: "rn-starter",
+      pathway: "RN",
+      planType: "starter",
+      price: 29,
+      billingInterval: "month",
+      durationLabel: "30-Day Monthly Access",
+    });
+
+    const rnStarter90 = getProductById("rn-starter-90");
+    expect(rnStarter90).toMatchObject({
+      id: "rn-starter-90",
+      pathway: "RN",
+      planType: "starter",
+      price: 75,
+      originalPrice: 87,
+      billingInterval: "quarter",
+      durationLabel: "90-Day Quarterly Access",
+    });
+    expect(rnStarter!.price * 3).toBe(rnStarter90!.originalPrice);
+    expect(rnStarter90!.originalPrice! - rnStarter90!.price).toBe(12);
+
+    const rnPro90 = getProductById("rn-pro-90");
+    expect(rnPro90).toMatchObject({
+      id: "rn-pro-90",
+      pathway: "RN",
+      planType: "pro",
+      price: 149,
+      originalPrice: 177,
+      billingInterval: "quarter",
+      durationLabel: "90-Day Quarterly Access",
+    });
+    expect(59 * 3).toBe(rnPro90!.originalPrice);
+    expect(rnPro90!.originalPrice! - rnPro90!.price).toBe(28);
+
+    const rnReadiness = getProductById("rn-readiness");
+    expect(rnReadiness).toMatchObject({
+      id: "rn-readiness",
+      pathway: "RN",
+      planType: "readiness",
+      price: 39,
+      billingInterval: "one-time",
+      durationLabel: "One-Time Assessment Pack",
+    });
   });
 
   it("resolves plan aliases accurately for query param routing and rejects unknown product IDs", () => {
