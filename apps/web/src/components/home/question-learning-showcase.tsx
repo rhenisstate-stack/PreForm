@@ -98,7 +98,7 @@ export function QuestionLearningShowcase() {
   const currentStep = LEARNING_STEPS[activeStep];
 
   return (
-    <section className="py-20 px-4 sm:px-6 lg:py-28 lg:px-8 bg-card/50 border-t border-border">
+    <section className="py-20 px-4 sm:px-6 lg:py-28 lg:px-8 bg-card/50">
       <div className="mx-auto max-w-7xl">
         {/* Section Header */}
         <div className="text-center lg:max-w-3xl lg:mx-auto">
@@ -134,7 +134,7 @@ export function QuestionLearningShowcase() {
 
         {/* Showcase Interactive Carousel Box */}
         <div
-          className="mt-8 rounded-2xl border border-border bg-card shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-secondary/50"
+          className="mt-8 rounded-3xl bg-card shadow-xl overflow-hidden focus:outline-none focus:ring-2 focus:ring-secondary/50"
           tabIndex={0}
           role="region"
           aria-label="Question Learning Carousel"
@@ -172,7 +172,7 @@ export function QuestionLearningShowcase() {
               </div>
 
               {/* Navigation Controls */}
-              <div className="pt-6 border-t border-border flex items-center justify-between">
+              <div className="pt-6 flex items-center justify-between">
                 <div className="flex items-center gap-1.5" role="tablist" aria-label="Step carousel indicators">
                   {LEARNING_STEPS.map((step, idx) => (
                     <button
@@ -192,14 +192,14 @@ export function QuestionLearningShowcase() {
                   <button
                     onClick={handlePrev}
                     aria-label="Previous step"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-foreground hover:bg-muted transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/70 text-foreground hover:bg-muted transition-colors"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
                   <button
                     onClick={handleNext}
                     aria-label="Next step"
-                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-foreground hover:bg-muted transition-colors"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted/70 text-foreground hover:bg-muted transition-colors"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>

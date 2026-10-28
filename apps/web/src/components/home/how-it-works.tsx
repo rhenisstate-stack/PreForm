@@ -55,8 +55,8 @@ export function HowItWorks() {
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-8">
           {steps.map((s) => (
-            <div key={s.number} className="flex flex-col gap-4">
-              <div className="flex shrink-0 items-center justify-center rounded-full border border-border bg-card p-1 text-foreground font-serif font-bold text-xl">
+            <div key={s.number} className="flex flex-col gap-4 rounded-2xl bg-card/60 p-6 shadow-xs">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-secondary/15 text-secondary font-serif font-bold text-lg">
                 {s.number}
               </div>
               <div>

@@ -80,7 +80,7 @@ export function FreeDemoSection() {
   };
 
   return (
-    <section id="demo" className="scroll-mt-20 py-20 px-4 sm:px-6 lg:py-28 lg:px-8 bg-background border-t border-border">
+    <section id="demo" className="scroll-mt-20 py-20 px-4 sm:px-6 lg:py-28 lg:px-8 bg-background">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="text-center lg:max-w-3xl lg:mx-auto">
@@ -98,9 +98,9 @@ export function FreeDemoSection() {
 
         {/* Demo Question Interactive Container */}
         <div className="mt-12 max-w-4xl mx-auto">
-          <Card className="border-border bg-card shadow-lg overflow-hidden">
+          <Card className="bg-card shadow-lg overflow-hidden">
             {/* Case EHR Header */}
-            <div className="bg-muted/70 px-6 py-4 border-b border-border flex flex-wrap items-center justify-between gap-3">
+            <div className="bg-muted/70 px-6 py-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-secondary" />
                 <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
@@ -114,31 +114,31 @@ export function FreeDemoSection() {
 
             <CardContent className="p-6 sm:p-8 space-y-6">
               {/* Clinical Scenario Box */}
-              <div className="rounded-xl border border-secondary/20 bg-secondary/5 p-5 space-y-4">
+              <div className="rounded-xl bg-secondary/5 p-5 space-y-4">
                 <p className="text-sm sm:text-base text-foreground leading-relaxed">
                   {SAMPLE_QUESTION.scenario}
                 </p>
 
                 {/* Vitals Grid */}
-                <div className="pt-2 border-t border-secondary/15">
+                <div className="pt-2">
                   <div className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-secondary mb-2">
                     <Activity className="h-3.5 w-3.5" />
                     <span>Bedside Vitals Assessment:</span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    <div className="bg-background/80 p-2 rounded-md border border-border">
+                    <div className="bg-background/80 p-2.5 rounded-lg">
                       <span className="text-muted-foreground block text-[11px]">Heart Rate:</span>
                       <span className="font-semibold text-foreground">{SAMPLE_QUESTION.vitals.hr}</span>
                     </div>
-                    <div className="bg-background/80 p-2 rounded-md border border-border">
+                    <div className="bg-background/80 p-2.5 rounded-lg">
                       <span className="text-muted-foreground block text-[11px]">Blood Pressure:</span>
                       <span className="font-semibold text-foreground">{SAMPLE_QUESTION.vitals.bp}</span>
                     </div>
-                    <div className="bg-background/80 p-2 rounded-md border border-border">
+                    <div className="bg-background/80 p-2.5 rounded-lg">
                       <span className="text-muted-foreground block text-[11px]">Respirations:</span>
                       <span className="font-semibold text-destructive">{SAMPLE_QUESTION.vitals.rr}</span>
                     </div>
-                    <div className="bg-background/80 p-2 rounded-md border border-border">
+                    <div className="bg-background/80 p-2.5 rounded-lg">
                       <span className="text-muted-foreground block text-[11px]">SpO2 Saturation:</span>
                       <span className="font-semibold text-destructive">{SAMPLE_QUESTION.vitals.spo2}</span>
                     </div>
@@ -208,7 +208,7 @@ export function FreeDemoSection() {
               </div>
 
               {/* Action Controls */}
-              <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-border">
+              <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                 {!isSubmitted ? (
                   <Button
                     onClick={handleSubmit}

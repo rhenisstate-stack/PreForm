@@ -92,7 +92,7 @@ const products: ProductCardData[] = [
 
 export function ExamPathwayCards() {
   return (
-    <section id="products" className="scroll-mt-20 pt-20 pb-24 px-4 lg:pt-28 lg:pb-32 lg:px-8 bg-card/40 border-t border-border">
+    <section id="products" className="scroll-mt-20 pt-20 pb-24 px-4 lg:pt-28 lg:pb-32 lg:px-8 bg-card/40">
       <div className="mx-auto max-w-7xl">
         <div className="text-center lg:max-w-3xl lg:mx-auto">
           <p className="text-xs font-semibold uppercase tracking-wider text-secondary">
@@ -111,7 +111,7 @@ export function ExamPathwayCards() {
             <Card
               key={p.id}
               className={`flex flex-col h-full relative transition-shadow hover:shadow-lg overflow-hidden bg-card ${
-                p.popular ? "border-secondary ring-1 ring-secondary" : "border-border"
+                p.popular ? "ring-2 ring-secondary/80" : "shadow-sm"
               }`}
             >
               {p.popular && (
@@ -158,7 +158,7 @@ export function ExamPathwayCards() {
                   {p.description}
                 </p>
 
-                <div className="pt-2 border-t border-border/60">
+                <div className="pt-2">
                   <span className="text-xs font-semibold text-foreground uppercase tracking-wider block mb-2">
                     Key Features Included:
                   </span>
@@ -173,7 +173,7 @@ export function ExamPathwayCards() {
                 </div>
               </CardContent>
 
-              <CardFooter className="pt-4 border-t border-border flex flex-col gap-3">
+              <CardFooter className="pt-4 flex flex-col gap-3">
                 <div className="flex items-baseline justify-between w-full">
                   <div>
                     <span className="text-3xl font-serif font-bold text-foreground">
