@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { sanitizeReturnUrl } from "@/lib/validation/auth";
 
 interface StoredOAuthState {
   state: string;
@@ -30,8 +31,9 @@ export async function GET(request: Request) {
     }
   }
 
-  const fallbackSource = storedState?.sourcePage || "sign-in";
-  const targetDestination = storedState?.from?.startsWith("/") ? storedState.from : "/courses";
+  const fallbackSource = storedState?.sourcePage === "sign-up" ? "sign-up" : "sign-in";
+  const defaultDestination = fallbackSource === "sign-up" ? "/courses" : "/";
+  const targetDestination = sanitizeReturnUrl(storedState?.from, defaultDestination);
 
   // Check for cancellation or provider errors
   if (error) {

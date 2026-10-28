@@ -91,3 +91,65 @@ export function evaluatePasswordStrength(password: string): PasswordStrengthResu
     suggestions: result.feedback.suggestions || [],
   };
 }
+
+const DISALLOWED_RETURN_PATH_PREFIXES = ["/sign-in", "/sign-up", "/api/auth"];
+
+/**
+ * Validates and normalizes an internal post-authentication redirect path.
+ * Prevents open-redirect vulnerabilities (external URLs, protocol-relative URLs,
+ * backslash bypasses, non-HTTP schemes, control characters, and auth loops).
+ */
+export function sanitizeReturnUrl(
+  raw: string | null | undefined,
+  defaultPath: string = "/"
+): string {
+  if (!raw || typeof raw !== "string") {
+    return defaultPath;
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return defaultPath;
+  }
+
+  // Allow only single-slash internal paths; reject protocol-relative ("//"),
+  // backslash ("/\"), scheme indicators ("://"), and control characters.
+  if (
+    !trimmed.startsWith("/") ||
+    trimmed.startsWith("//") ||
+    trimmed.startsWith("/\\") ||
+    trimmed.includes("\\") ||
+    trimmed.includes("://") ||
+    /[\u0000-\u001F\u007F]/.test(trimmed)
+  ) {
+    return defaultPath;
+  }
+
+  try {
+    const base = "http://localhost";
+    const parsed = new URL(trimmed, base);
+    if (
+      parsed.origin !== base ||
+      !parsed.pathname.startsWith("/") ||
+      parsed.pathname.startsWith("//")
+    ) {
+      return defaultPath;
+    }
+
+    const normalizedPathname = parsed.pathname;
+    const lowerPath = normalizedPathname.toLowerCase();
+    for (const prefix of DISALLOWED_RETURN_PATH_PREFIXES) {
+      if (
+        lowerPath === prefix ||
+        lowerPath.startsWith(`${prefix}/`) ||
+        lowerPath.startsWith(`${prefix}?`)
+      ) {
+        return defaultPath;
+      }
+    }
+
+    return `${normalizedPathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return defaultPath;
+  }
+}

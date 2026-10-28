@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GoogleAuthButton } from "@/components/auth/google-auth-button";
-import { signInSchema, type SignInInput } from "@/lib/validation/auth";
+import { signInSchema, sanitizeReturnUrl, type SignInInput } from "@/lib/validation/auth";
 import { useAuth } from "@/lib/auth-context";
 import { BRAND } from "@/lib/brand";
 
@@ -74,8 +74,9 @@ export function SignInPageClient() {
     try {
       const result = await login(data);
       if (result.success) {
-        const from = searchParams.get("from") || searchParams.get("returnUrl") || "/courses";
-        router.push(from);
+        const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
+        const targetDestination = sanitizeReturnUrl(rawReturn, "/");
+        router.push(targetDestination);
         router.refresh();
       } else {
         setErrorMessage(result.error || "Failed to sign in. Please verify your credentials.");
@@ -366,11 +367,11 @@ export function SignInPageClient() {
               <p className="text-sm text-muted-foreground">
                 Don&rsquo;t have an account yet?{" "}
                 <Link
-                  href={
-                    searchParams.get("from")
-                      ? `/sign-up?from=${encodeURIComponent(searchParams.get("from")!)}`
-                      : "/sign-up"
-                  }
+                  href={(() => {
+                    const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
+                    const safeFrom = sanitizeReturnUrl(rawReturn, "");
+                    return safeFrom ? `/sign-up?from=${encodeURIComponent(safeFrom)}` : "/sign-up";
+                  })()}
                   className="font-semibold text-secondary hover:underline"
                 >
                   Create an account

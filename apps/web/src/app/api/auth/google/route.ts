@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { cookies } from "next/headers";
+import { sanitizeReturnUrl } from "@/lib/validation/auth";
 
 function base64UrlEncode(buffer: Buffer): string {
   return buffer
@@ -16,8 +17,10 @@ function sha256(plain: string): Buffer {
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const from = url.searchParams.get("from") || "/courses";
-  const sourcePage = url.searchParams.get("source") || "sign-in";
+  const sourcePage = url.searchParams.get("source") === "sign-up" ? "sign-up" : "sign-in";
+  const defaultDestination = sourcePage === "sign-up" ? "/courses" : "/";
+  const rawFrom = url.searchParams.get("from") || url.searchParams.get("returnUrl");
+  const from = sanitizeReturnUrl(rawFrom, defaultDestination);
 
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET;

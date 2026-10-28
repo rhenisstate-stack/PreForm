@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useSearchParams } from "next/navigation";
+import { sanitizeReturnUrl } from "@/lib/validation/auth";
 
 interface GoogleAuthButtonProps {
   source?: "sign-in" | "sign-up";
@@ -16,7 +17,9 @@ export function GoogleAuthButton({
 }: GoogleAuthButtonProps) {
   const [isRedirecting, setIsRedirecting] = React.useState(false);
   const searchParams = useSearchParams();
-  const effectiveFrom = from || searchParams.get("from") || "/courses";
+  const defaultDestination = source === "sign-up" ? "/courses" : "/";
+  const rawFrom = from || searchParams.get("from") || searchParams.get("returnUrl");
+  const effectiveFrom = sanitizeReturnUrl(rawFrom, defaultDestination);
 
   const handleGoogleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (isRedirecting) {
