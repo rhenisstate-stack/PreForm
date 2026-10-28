@@ -26,13 +26,14 @@ vi.mock("@/lib/cart-context", () => ({
   }),
 }));
 
-vi.mock("@/lib/auth/session-context", () => ({
-  useSession: () => ({
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: () => ({
     user: null,
-    status: "unauthenticated",
     isAuthenticated: false,
-    refreshSession: vi.fn(),
-    signOut: vi.fn(),
+    isLoading: false,
+    login: vi.fn(),
+    logout: vi.fn(),
+    refreshProfile: vi.fn(),
   }),
 }));
 

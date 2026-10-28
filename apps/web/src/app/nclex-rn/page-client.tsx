@@ -9,27 +9,21 @@ import {
   ArrowRight,
   Stethoscope,
   BookOpen,
-  ShieldCheck,
   HeartPulse,
   ClipboardCheck,
   BarChart3,
   FileText,
-  Sparkles,
   Check,
-  HelpCircle,
   ChevronDown,
   RotateCcw,
   AlertCircle,
   Compass,
-  Award,
-  Layers,
-  Activity,
   ShoppingCart,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/lib/cart-context";
-import { useSession } from "@/lib/auth/session-context";
+import { useAuth } from "@/lib/auth-context";
 import { getProductById, type Product } from "@/lib/products";
 import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
 import { BRAND } from "@/lib/brand";
@@ -37,6 +31,19 @@ import { CourseFinderQuiz } from "@/components/home/course-finder";
 
 type BillingDuration = "month" | "quarter";
 type RnTierKey = "starter" | "pro" | "premium";
+
+const PLAN_IDS_BY_DURATION: Record<BillingDuration, Record<RnTierKey, string>> = {
+  month: {
+    starter: "rn-starter",
+    pro: "rn-pro",
+    premium: "prep-premium",
+  },
+  quarter: {
+    starter: "rn-starter-90",
+    pro: "rn-pro-90",
+    premium: "prep-premium-90",
+  },
+};
 
 interface SampleOption {
   id: string;
@@ -284,7 +291,7 @@ const RN_FAQ_ITEMS = [
 export function NCLEXRNPageClient() {
   const router = useRouter();
   const { addItem } = useCart();
-  const { isAuthenticated } = useSession();
+  const { isAuthenticated } = useAuth();
 
   // Section 2: Interactive product & duration selector state
   const [selectedDuration, setSelectedDuration] = React.useState<BillingDuration>("quarter");
@@ -302,21 +309,8 @@ export function NCLEXRNPageClient() {
   // Section 16: FAQ open item state
   const [openFaqId, setOpenFaqId] = React.useState<string | null>(RN_FAQ_ITEMS[0].id);
 
-  const planIdsByDuration: Record<BillingDuration, Record<RnTierKey, string>> = {
-    month: {
-      starter: "rn-starter",
-      pro: "rn-pro",
-      premium: "prep-premium",
-    },
-    quarter: {
-      starter: "rn-starter-90",
-      pro: "rn-pro-90",
-      premium: "prep-premium-90",
-    },
-  };
-
   const activePlans = React.useMemo(() => {
-    const ids = planIdsByDuration[selectedDuration];
+    const ids = PLAN_IDS_BY_DURATION[selectedDuration];
     return (["starter", "pro", "premium"] as RnTierKey[])
       .map((tier) => ({
         tier,
@@ -326,7 +320,7 @@ export function NCLEXRNPageClient() {
   }, [selectedDuration]);
 
   const activeSelectedProduct = React.useMemo(() => {
-    const id = planIdsByDuration[selectedDuration][selectedTier];
+    const id = PLAN_IDS_BY_DURATION[selectedDuration][selectedTier];
     return getProductById(id) ?? getProductById("rn-pro");
   }, [selectedDuration, selectedTier]);
 
@@ -469,7 +463,7 @@ export function NCLEXRNPageClient() {
             <div className="lg:col-span-7 space-y-6 text-left">
               <div className="inline-flex items-center gap-3 rounded-full bg-secondary/10 px-4 py-1.5 text-xs font-semibold text-secondary ring-1 ring-secondary/20">
                 <Image
-                  src={BRAND.logo}
+                  src={BRAND.logo.assetPath}
                   alt=""
                   width={22}
                   height={22}
@@ -1730,7 +1724,7 @@ export function NCLEXRNPageClient() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between gap-2">
                     <Badge variant="outline" className="text-xs text-secondary border-secondary/30">
-                      {category.examWeight}
+                      {category.badge}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
                       {category.subjects.length} Subject Guides

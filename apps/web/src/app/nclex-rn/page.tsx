@@ -20,10 +20,10 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: BRAND.logo,
-        width: 512,
-        height: 512,
-        alt: "PrepFord NCLEX-RN Exam Preparation",
+        url: BRAND.logo.assetPath,
+        width: BRAND.logo.width,
+        height: BRAND.logo.height,
+        alt: BRAND.logo.alt,
       },
     ],
   },
@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     title: "NCLEX-RN Exam Preparation | PrepFord",
     description:
       "Explore PrepFord's NCLEX-RN study resources, nursing notes, practice tools, and available study plans to support your exam preparation.",
-    images: [BRAND.logo],
+    images: [BRAND.logo.assetPath],
   },
 };
 
