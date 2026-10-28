@@ -990,18 +990,10 @@ p {
 
 @keyframes ecgPulseLeftToRight {
   0% {
-    stroke-dashoffset: 220;
-    opacity: 0.4;
-  }
-  15% {
-    opacity: 1;
-  }
-  85% {
-    opacity: 1;
+    stroke-dashoffset: 1000;
   }
   100% {
-    stroke-dashoffset: -780;
-    opacity: 0.4;
+    stroke-dashoffset: 0;
   }
 }
 
@@ -1019,12 +1011,19 @@ p {
 
 .animate-ecg,
 .animate-ecg-ltr {
-  stroke-dasharray: 220 780;
-  stroke-dashoffset: 220;
-  animation: ecgPulseLeftToRight 3.2s linear infinite;
+  stroke-dasharray: 260 740;
+  stroke-dashoffset: 1000;
+  animation: ecgPulseLeftToRight 4.2s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .animate-ecg,
+  .animate-ecg-ltr {
+    stroke-dasharray: none !important;
+    stroke-dashoffset: 0 !important;
+    animation: none !important;
+  }
+
   *,
   *::before,
   *::after {

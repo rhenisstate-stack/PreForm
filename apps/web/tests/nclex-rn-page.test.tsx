@@ -258,6 +258,9 @@ describe("NCLEX-RN Page Transformation (/nclex-rn)", () => {
     render(<NCLEXRNPageClient />);
 
     const faqSection = screen.getByTestId("rn-faq-section");
+    const faqButtons = within(faqSection).getAllByRole("button");
+    expect(faqButtons.length).toBe(16);
+
     const firstFaqBtn = within(faqSection).getByRole("button", {
       name: /What resources are included in PrepFord's NCLEX-RN preparation platform\?/i,
     });
@@ -271,6 +274,74 @@ describe("NCLEX-RN Page Transformation (/nclex-rn)", () => {
     await user.click(secondFaqBtn);
     expect(secondFaqBtn).toHaveAttribute("aria-expanded", "true");
     expect(firstFaqBtn).toHaveAttribute("aria-expanded", "false");
+
+    // Verify dynamic pricing and transparent operational disclosures in the expanded FAQ set
+    const savingsFaqBtn = within(faqSection).getByRole("button", {
+      name: /How is the 90-day quarterly price and saving calculated\?/i,
+    });
+    await user.click(savingsFaqBtn);
+    expect(
+      within(faqSection).getByText(
+        /Starter Review is \$75 instead of \$87 \(saving \$12\), Complete Preparation is \$149 instead of \$177 \(saving \$28\), and RN & PN All-Access is \$229 instead of \$267 \(saving \$38\)/i
+      )
+    ).toBeVisible();
+
+    const disclaimerFaqBtn = within(faqSection).getByRole("button", {
+      name: /What should users know about exam outcomes and pass guarantees\?/i,
+    });
+    await user.click(disclaimerFaqBtn);
+    expect(
+      within(faqSection).getByText(
+        /PrepFord does not offer pass guarantees, pass-rate promises, or official exam score predictions/i
+      )
+    ).toBeVisible();
+  });
+
+  it("updates the quarterly duration savings badge dynamically from products.ts and supports keyboard arrow navigation", async () => {
+    const user = userEvent.setup();
+    render(<NCLEXRNPageClient />);
+
+    const monthBtn = screen.getByTestId("rn-duration-toggle-month");
+    const quarterBtn = screen.getByTestId("rn-duration-toggle-quarter");
+    const savingsBadge = screen.getByTestId("rn-duration-quarterly-savings");
+
+    // Default selected tier is "pro" ($177 - $149 = $28 savings)
+    expect(savingsBadge).toHaveTextContent("Save $28");
+    expect(quarterBtn).toHaveTextContent("90-Day Quarterly Access");
+    expect(quarterBtn).not.toHaveTextContent("Save up to $38");
+
+    // Clicking Starter card updates dynamic quarterly savings badge to $12 ($87 - $75)
+    await user.click(screen.getByTestId("rn-plan-card-starter"));
+    expect(savingsBadge).toHaveTextContent("Save $12");
+
+    // Clicking Premium All-Access card updates dynamic quarterly savings badge to $38 ($267 - $229)
+    await user.click(screen.getByTestId("rn-plan-card-premium"));
+    expect(savingsBadge).toHaveTextContent("Save $38");
+
+    // Keyboard ArrowLeft/ArrowRight navigation toggles between quarterly and monthly access
+    quarterBtn.focus();
+    await user.keyboard("{ArrowLeft}");
+    expect(monthBtn).toHaveAttribute("aria-pressed", "true");
+    expect(quarterBtn).toHaveAttribute("aria-pressed", "false");
+
+    await user.keyboard("{ArrowRight}");
+    expect(quarterBtn).toHaveAttribute("aria-pressed", "true");
+    expect(monthBtn).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("renders a healthy resting sinus ECG waveform with P wave, narrow QRS complex, and T wave curves", () => {
+    render(<NCLEXRNPageClient />);
+
+    const baselinePath = screen.getByTestId("rn-hero-ecg-baseline");
+    const pulsePath = screen.getByTestId("rn-hero-ecg-pulse-ltr");
+
+    const d = baselinePath.getAttribute("d") ?? "";
+    expect(d).toBe(pulsePath.getAttribute("d"));
+    // Contains smooth cubic Bezier curves for rounded P and T waves and sharp L segments for narrow QRS
+    expect(d).toContain("C ");
+    expect(d).toContain("L ");
+    expect(pulsePath).toHaveAttribute("pathLength", "1000");
+    expect(pulsePath).toHaveAttribute("stroke-dasharray", "260 740");
   });
 
   it("exports accurate SEO metadata for /nclex-rn", () => {

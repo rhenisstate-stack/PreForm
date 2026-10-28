@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { signInSchema, signUpSchema, MIN_PASSWORD_LENGTH } from "@/lib/validation/auth";
+import {
+  signInSchema,
+  signUpSchema,
+  sanitizeReturnUrl,
+  MIN_PASSWORD_LENGTH,
+} from "@/lib/validation/auth";
 
 describe("Authentication Validation Schemas", () => {
   describe("signInSchema", () => {
@@ -109,6 +114,42 @@ describe("Authentication Validation Schemas", () => {
       if (!result.success) {
         expect(result.error.flatten().fieldErrors.agreeTerms).toBeDefined();
       }
+    });
+  });
+
+  describe("sanitizeReturnUrl", () => {
+    it("defaults to / when input is missing, empty, or whitespace", () => {
+      expect(sanitizeReturnUrl(undefined)).toBe("/");
+      expect(sanitizeReturnUrl(null)).toBe("/");
+      expect(sanitizeReturnUrl("")).toBe("/");
+      expect(sanitizeReturnUrl("   ")).toBe("/");
+    });
+
+    it("preserves safe internal application paths and query/hash parameters", () => {
+      expect(sanitizeReturnUrl("/")).toBe("/");
+      expect(sanitizeReturnUrl("/cart")).toBe("/cart");
+      expect(sanitizeReturnUrl("/cart?add=rn-pro-quarter")).toBe("/cart?add=rn-pro-quarter");
+      expect(sanitizeReturnUrl("/nclex-rn#rn-study-plans")).toBe("/nclex-rn#rn-study-plans");
+      expect(sanitizeReturnUrl("/study-guide/pharmacology")).toBe("/study-guide/pharmacology");
+      expect(sanitizeReturnUrl("/dashboard")).toBe("/dashboard");
+    });
+
+    it("rejects external origins, protocol-relative URLs, backslash bypasses, and non-HTTP schemes", () => {
+      expect(sanitizeReturnUrl("https://evil.example.com")).toBe("/");
+      expect(sanitizeReturnUrl("http://evil.example.com/cart")).toBe("/");
+      expect(sanitizeReturnUrl("//evil.example.com")).toBe("/");
+      expect(sanitizeReturnUrl("///evil.example.com")).toBe("/");
+      expect(sanitizeReturnUrl("/\\evil.example.com")).toBe("/");
+      expect(sanitizeReturnUrl("/cart\\@evil.example.com")).toBe("/");
+      expect(sanitizeReturnUrl("javascript:alert(1)")).toBe("/");
+      expect(sanitizeReturnUrl("data:text/html,<script>alert(1)</script>")).toBe("/");
+    });
+
+    it("rejects auth-loop paths such as /sign-in, /sign-up, and /api/auth", () => {
+      expect(sanitizeReturnUrl("/sign-in")).toBe("/");
+      expect(sanitizeReturnUrl("/sign-in?from=/cart")).toBe("/");
+      expect(sanitizeReturnUrl("/sign-up")).toBe("/");
+      expect(sanitizeReturnUrl("/api/auth/google")).toBe("/");
     });
   });
 });

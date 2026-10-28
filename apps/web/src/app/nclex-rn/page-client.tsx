@@ -237,56 +237,184 @@ const RN_TESTIMONIALS = [
   },
 ];
 
-const RN_FAQ_ITEMS = [
-  {
-    id: "faq-rn-what-is-included",
-    question: "What resources are included in PrepFord's NCLEX-RN preparation platform?",
-    answer:
-      "PrepFord provides an NCLEX-RN practice question bank with clinical vignettes, option-by-option correct and distractor rationales, a 7-domain Nursing Study Guide with 10 structured subject guides, timed readiness assessments, and a Student Workspace that tracks your accuracy across Client Needs categories.",
-  },
-  {
-    id: "faq-rn-plans-difference",
-    question: "How do NCLEX-RN Starter Review, Complete Preparation (Pro), and RN & PN All-Access differ?",
-    answer:
-      "NCLEX-RN Starter Review ($29/month or $75/quarter) provides foundational RN practice questions, answer rationales, 7-domain Study Guide access, and basic topic progress tracking. NCLEX-RN Complete Preparation ($59/month or $149/quarter) unlocks the full NCLEX-RN question bank, full-length practice exams, 3 readiness assessments, and topic-level accuracy tracking. NCLEX-RN & PN All-Access ($89/month or $229/quarter) includes both RN and PN question banks, multi-step clinical scenario items, and priority educator email support.",
-  },
-  {
-    id: "faq-rn-durations",
-    question: "Can I choose between 30-day monthly and 90-day quarterly access durations?",
-    answer:
-      "Yes. Every PrepFord NCLEX-RN tier is available in either a 30-Day Monthly Access option or a 90-Day Quarterly Access option. Choosing the 90-day quarterly duration saves between $12 and $38 compared to three separate 30-day monthly renewals.",
-  },
-  {
-    id: "faq-rn-readiness-pack",
-    question: "What is the standalone NCLEX-RN Readiness Assessment Pack?",
-    answer:
-      "The NCLEX-RN Readiness Assessment Pack ($39 one-time access) is designed for candidates who want to benchmark their readiness with 3 timed, full-length RN practice assessments, a Client Needs domain score report, and complete post-exam rationale review without a recurring subscription.",
-  },
-  {
-    id: "faq-rn-ngn-clinical-judgment",
-    question: "How does PrepFord support Next Generation NCLEX (NGN) clinical judgment?",
-    answer:
-      "PrepFord structures its questions and Study Guide notes around the six cognitive steps of the NCSBN Clinical Judgment Measurement Model: recognizing cues from vital signs and lab trends, analyzing cues, prioritizing hypotheses, generating solutions, taking priority nursing action, and evaluating outcomes.",
-  },
-  {
-    id: "faq-rn-study-guide-free",
-    question: "Can I browse the Nursing Study Guide and try a sample RN question before purchasing a plan?",
-    answer:
-      "Yes. You can try the interactive NCLEX-RN clinical scenario question directly on this page, explore our 7-domain Nursing Study Guide at /study-guide, and use the 4-question Course Recommendation Quiz to find the right plan before heading to checkout.",
-  },
-  {
-    id: "faq-rn-checkout-activation",
-    question: "How do checkout and study plan activation work?",
-    answer:
-      "When you select a study plan or the Readiness Assessment Pack on this page, your chosen configuration is added to your PrepFord Cart (/cart). After completing checkout via Stripe or Paystack (or developer sandbox activation in local environments), your entitlements are immediately linked to your account in the Student Workspace (/dashboard).",
-  },
-  {
-    id: "faq-rn-support",
-    question: "Where can I get help with my account, billing, or nursing content questions?",
-    answer:
-      "You can reach our academic and technical support team anytime through the Contact Support page (/contact) or review additional platform guidance on our FAQ page (/faq).",
-  },
-];
+function buildHealthySinusEcgPath(): string {
+  const baselineY = 62;
+  const cycleWidth = 360;
+  const cycles = 4;
+  const segments: string[] = [`M 0 ${baselineY}`];
+
+  for (let i = 0; i < cycles; i++) {
+    const x0 = i * cycleWidth;
+    // Isoelectric baseline lead-in before P wave
+    const pStart = x0 + 55;
+    // P wave: smooth rounded atrial depolarization dome (duration 28u, peak y=51)
+    const pPeak = pStart + 14;
+    const pEnd = pStart + 28;
+    // PR segment: brief AV nodal conduction pause at baseline (16u)
+    const qStart = pEnd + 16;
+    // QRS complex: narrow, crisp ventricular depolarization (22u total)
+    const qDip = qStart + 4;
+    const rPeak = qStart + 10;
+    const sDip = qStart + 16;
+    const jPoint = qStart + 22;
+    // ST segment: flat isoelectric segment (20u)
+    const tStart = jPoint + 20;
+    // T wave: smooth, slightly asymmetric ventricular repolarization dome (44u, peak y=43)
+    const tPeak = tStart + 24;
+    const tEnd = tStart + 44;
+    // TP baseline interval (diastole) to end of cardiac cycle
+    const cycleEnd = x0 + cycleWidth;
+
+    segments.push(
+      `L ${pStart} ${baselineY}`,
+      `C ${pStart + 5} ${baselineY}, ${pPeak - 6} 51, ${pPeak} 51`,
+      `C ${pPeak + 6} 51, ${pEnd - 5} ${baselineY}, ${pEnd} ${baselineY}`,
+      `L ${qStart} ${baselineY}`,
+      `L ${qDip} 69`,
+      `L ${rPeak} 14`,
+      `L ${sDip} 80`,
+      `L ${jPoint} ${baselineY}`,
+      `L ${tStart} ${baselineY}`,
+      `C ${tStart + 8} ${baselineY}, ${tPeak - 9} 43, ${tPeak} 43`,
+      `C ${tPeak + 8} 43, ${tEnd - 6} ${baselineY}, ${tEnd} ${baselineY}`,
+      `L ${cycleEnd} ${baselineY}`
+    );
+  }
+
+  return segments.join(" ");
+}
+
+const RN_HERO_HEALTHY_ECG_PATH = buildHealthySinusEcgPath();
+
+function buildRnFaqItems() {
+  const starterMonth = getProductById("rn-starter");
+  const starterQuarter = getProductById("rn-starter-quarter");
+  const proMonth = getProductById("rn-pro");
+  const proQuarter = getProductById("rn-pro-quarter");
+  const bundleMonth = getProductById("rn-pn-bundle");
+  const bundleQuarter = getProductById("rn-pn-bundle-quarter");
+  const readiness = getProductById("rn-readiness");
+
+  const starterMonthlyPrice = starterMonth?.price ?? 29;
+  const starterQuarterlyPrice = starterQuarter?.price ?? 75;
+  const starterQuarterlyOriginal = starterQuarter?.originalPrice ?? starterMonthlyPrice * 3;
+  const starterSavings = starterQuarterlyOriginal - starterQuarterlyPrice;
+
+  const proMonthlyPrice = proMonth?.price ?? 59;
+  const proQuarterlyPrice = proQuarter?.price ?? 149;
+  const proQuarterlyOriginal = proQuarter?.originalPrice ?? proMonthlyPrice * 3;
+  const proSavings = proQuarterlyOriginal - proQuarterlyPrice;
+
+  const bundleMonthlyPrice = bundleMonth?.price ?? 89;
+  const bundleQuarterlyPrice = bundleQuarter?.price ?? 229;
+  const bundleQuarterlyOriginal = bundleQuarter?.originalPrice ?? bundleMonthlyPrice * 3;
+  const bundleSavings = bundleQuarterlyOriginal - bundleQuarterlyPrice;
+
+  const readinessPrice = readiness?.price ?? 39;
+
+  const domainCount = STUDY_GUIDE_CATEGORIES.length;
+  const totalSubjectCount = STUDY_GUIDE_CATEGORIES.reduce(
+    (sum, cat) => sum + cat.subjects.length,
+    0
+  );
+  const domainTitles = STUDY_GUIDE_CATEGORIES.map((cat) => cat.title).join(", ");
+
+  return [
+    {
+      id: "faq-rn-what-is-included",
+      question: "What resources are included in PrepFord's NCLEX-RN preparation platform?",
+      answer: `PrepFord's NCLEX-RN preparation platform brings together an RN clinical practice question bank with option-by-option rationales, a ${domainCount}-domain Nursing Study Guide covering ${totalSubjectCount} structured subject guides, timed readiness assessment packs, and a Student Workspace for organizing your exam review.`,
+    },
+    {
+      id: "faq-rn-plans-difference",
+      question:
+        "How do NCLEX-RN Starter Review, Complete Preparation (Pro), and RN & PN All-Access differ?",
+      answer: `${starterMonth?.name ?? "NCLEX-RN Starter Review"} ($${starterMonthlyPrice}/month or $${starterQuarterlyPrice}/quarter) includes foundational RN practice questions, full answer rationales, ${domainCount}-domain Study Guide access, and basic topic progress tracking. ${proMonth?.name ?? "NCLEX-RN Complete Preparation"} ($${proMonthlyPrice}/month or $${proQuarterlyPrice}/quarter) adds the full NCLEX-RN question bank, full-length practice exams, 3 readiness assessments, and topic-level accuracy tracking. ${bundleMonth?.name ?? "NCLEX-RN & PN All-Access"} ($${bundleMonthlyPrice}/month or $${bundleQuarterlyPrice}/quarter) includes both RN and PN question banks, multi-step clinical scenario items, and priority educator email support.`,
+    },
+    {
+      id: "faq-rn-durations",
+      question: "What is the difference between 30-day monthly and 90-day quarterly access?",
+      answer:
+        "Both durations provide identical feature access within your chosen tier. The 30-Day Monthly Access option is tailored for candidates in their final 2 to 4 weeks before exam day, while the 90-Day Quarterly Access option provides a full three-month study window at a lower effective monthly rate.",
+    },
+    {
+      id: "faq-rn-quarterly-savings",
+      question: "How is the 90-day quarterly price and saving calculated?",
+      answer: `Each 90-day quarterly plan is compared directly against three consecutive 30-day monthly terms in the PrepFord catalog: Starter Review is $${starterQuarterlyPrice} instead of $${starterQuarterlyOriginal} (saving $${starterSavings}), Complete Preparation is $${proQuarterlyPrice} instead of $${proQuarterlyOriginal} (saving $${proSavings}), and RN & PN All-Access is $${bundleQuarterlyPrice} instead of $${bundleQuarterlyOriginal} (saving $${bundleSavings}).`,
+    },
+    {
+      id: "faq-rn-all-access-bundle",
+      question: "What does the NCLEX-RN & PN All-Access plan cover?",
+      answer: `The ${bundleMonth?.name ?? "NCLEX-RN & PN All-Access"} plan ($${bundleMonthlyPrice}/month or $${bundleQuarterlyPrice}/quarter) is designed for bridge-program students (LPN-to-RN/BSN), dual-pathway cohorts, and nursing tutors who want simultaneous access to both the NCLEX-RN and NCLEX-PN question banks, Study Guide notes, readiness assessments, and priority educator email support.`,
+    },
+    {
+      id: "faq-rn-readiness-pack",
+      question: "What is the NCLEX-RN Readiness Assessment Pack, and how is it purchased?",
+      answer: `The ${readiness?.name ?? "NCLEX-RN Readiness Assessment Pack"} is a standalone $${readinessPrice} one-time purchase that includes 3 timed, full-length RN readiness assessments, a Client Needs domain score breakdown, and complete post-exam rationale review. You can add it directly to your cart from this page without purchasing a monthly or quarterly plan.`,
+    },
+    {
+      id: "faq-rn-study-guide-domains",
+      question: "What nursing domains are included in the Study Guide?",
+      answer: `The PrepFord Nursing Study Guide at /study-guide organizes ${totalSubjectCount} clinical subject guides across ${domainCount} core nursing domains: ${domainTitles}. You can browse the domain hubs and clinical review notes directly in your browser.`,
+    },
+    {
+      id: "faq-rn-questions-rationales",
+      question: "How do the clinical practice questions and answer rationales work?",
+      answer:
+        "Each practice item presents a patient scenario with relevant vital signs, laboratory findings, or bedside observations. After you submit your answer, PrepFord displays the physiological and safety rationale for the correct nursing intervention alongside clear explanations of why each distractor option is unsafe, premature, or lower priority.",
+    },
+    {
+      id: "faq-rn-ngn-clinical-judgment",
+      question: "How does PrepFord support clinical judgment and NGN preparation?",
+      answer:
+        "PrepFord structures its clinical vignettes and Study Guide notes around the six cognitive steps of the NCSBN Clinical Judgment Measurement Model: recognizing cues, analyzing cues, prioritizing hypotheses, generating solutions, taking priority nursing action, and evaluating patient outcomes.",
+    },
+    {
+      id: "faq-rn-progress-tracking",
+      question: "How can students track their study progress?",
+      answer:
+        "Signed-in learners can open the Student Workspace (/dashboard) to view active plan entitlements and Client Needs domain mastery benchmarks. Note that the dashboard currently displays sample domain benchmark data to preview the workspace layout while live per-question telemetry and backend assessment history are in active development.",
+    },
+    {
+      id: "faq-rn-checkout-activation",
+      question: "How does access begin after selecting a study plan?",
+      answer:
+        "Selecting any study plan or the Readiness Assessment Pack adds that exact catalog item to your PrepFord Cart (/cart). Proceeding through Checkout (/checkout) currently uses Phase 4 developer sandbox entitlement activation—your selected plan is linked immediately to your signed-in account in the Student Workspace (/dashboard) without charging a live payment card.",
+    },
+    {
+      id: "faq-rn-cart-pending-payment",
+      question: "What happens if an item remains in the cart or payment has not been completed?",
+      answer:
+        "Your selected plan stays saved in your browser's PrepFord Cart (/cart) so you can review your selection, switch between 30-day and 90-day durations, or sign in before completing checkout. Plan entitlements are only activated on your account once checkout confirmation is completed.",
+    },
+    {
+      id: "faq-rn-account-access",
+      question: "How can users access their account after logging in?",
+      answer:
+        "After signing in at /sign-in, you are returned to the PrepFord homepage (/)—or to the specific internal page you were visiting, such as /cart—with authenticated navigation in the top header giving you direct access to your Dashboard (/dashboard), Courses (/courses), Study Guide (/study-guide), and Profile (/profile).",
+    },
+    {
+      id: "faq-rn-troubleshooting-auth",
+      question: "What should a user do if access or sign-in is not working?",
+      answer:
+        "First, confirm that you are using the email address associated with your PrepFord account and that cookies and local storage are enabled in your browser. If a newly selected plan does not appear on /dashboard, verify that checkout was completed at /checkout or reach out to our team via /contact.",
+    },
+    {
+      id: "faq-rn-support",
+      question: "How can users contact support?",
+      answer:
+        "You can reach our academic and technical support team anytime through the Contact Support page (/contact) for help with study plans, account access, or nursing content questions, or browse general platform questions at /faq.",
+    },
+    {
+      id: "faq-rn-exam-outcomes-disclaimer",
+      question: "What should users know about exam outcomes and pass guarantees?",
+      answer:
+        "PrepFord is an independent nursing education resource and is not affiliated with or endorsed by NCSBN. Individual NCLEX-RN outcomes depend on each candidate's accredited nursing education and clinical preparation; PrepFord does not offer pass guarantees, pass-rate promises, or official exam score predictions.",
+    },
+  ];
+}
+
+const RN_FAQ_ITEMS = buildRnFaqItems();
 
 export function NCLEXRNPageClient() {
   const router = useRouter();
@@ -323,6 +451,43 @@ export function NCLEXRNPageClient() {
     const id = PLAN_IDS_BY_DURATION[selectedDuration][selectedTier];
     return getProductById(id) ?? getProductById("rn-pro");
   }, [selectedDuration, selectedTier]);
+
+  const activeQuarterlySavings = React.useMemo(() => {
+    const quarterlyId = PLAN_IDS_BY_DURATION.quarter[selectedTier];
+    const quarterlyProduct = getProductById(quarterlyId);
+    if (
+      quarterlyProduct &&
+      typeof quarterlyProduct.originalPrice === "number" &&
+      quarterlyProduct.originalPrice > quarterlyProduct.price
+    ) {
+      return quarterlyProduct.originalPrice - quarterlyProduct.price;
+    }
+    return null;
+  }, [selectedTier]);
+
+  const handleDurationKeyDown = React.useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "Home" || e.key === "End") {
+        e.preventDefault();
+        const nextDuration: BillingDuration =
+          e.key === "Home"
+            ? "month"
+            : e.key === "End"
+              ? "quarter"
+              : selectedDuration === "month"
+                ? "quarter"
+                : "month";
+        setSelectedDuration(nextDuration);
+        const targetTestId =
+          nextDuration === "month" ? "rn-duration-toggle-month" : "rn-duration-toggle-quarter";
+        const targetBtn = document.querySelector<HTMLButtonElement>(
+          `[data-testid="${targetTestId}"]`
+        );
+        targetBtn?.focus();
+      }
+    },
+    [selectedDuration]
+  );
 
   const readinessProduct = React.useMemo(() => getProductById("rn-readiness"), []);
 
@@ -412,33 +577,35 @@ export function NCLEXRNPageClient() {
         <div
           data-testid="rn-hero-heartbeat"
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-4 z-10 w-full overflow-hidden select-none opacity-80 dark:opacity-90"
+          className="pointer-events-none absolute inset-x-0 bottom-3 sm:bottom-4 z-10 w-full overflow-hidden select-none opacity-85 dark:opacity-95"
         >
           <svg
             viewBox="0 0 1440 96"
             fill="none"
             preserveAspectRatio="none"
-            className="h-14 sm:h-16 lg:h-20 w-full"
+            className="h-14 sm:h-16 lg:h-20 w-full block"
           >
             <defs>
               <linearGradient id="rn-ecg-baseline-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="var(--secondary)" stopOpacity="0.08" />
-                <stop offset="25%" stopColor="var(--secondary)" stopOpacity="0.28" />
-                <stop offset="50%" stopColor="var(--secondary)" stopOpacity="0.4" />
-                <stop offset="75%" stopColor="var(--secondary)" stopOpacity="0.28" />
-                <stop offset="100%" stopColor="var(--secondary)" stopOpacity="0.08" />
+                <stop offset="0%" stopColor="var(--secondary)" stopOpacity="0" />
+                <stop offset="8%" stopColor="var(--secondary)" stopOpacity="0.22" />
+                <stop offset="50%" stopColor="var(--secondary)" stopOpacity="0.34" />
+                <stop offset="92%" stopColor="var(--secondary)" stopOpacity="0.22" />
+                <stop offset="100%" stopColor="var(--secondary)" stopOpacity="0" />
               </linearGradient>
               <linearGradient id="rn-ecg-pulse-grad" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%" stopColor="var(--secondary)" stopOpacity="0" />
-                <stop offset="35%" stopColor="var(--secondary)" stopOpacity="0.45" />
-                <stop offset="80%" stopColor="var(--secondary)" stopOpacity="0.95" />
-                <stop offset="100%" stopColor="var(--accent)" stopOpacity="1" />
+                <stop offset="6%" stopColor="var(--secondary)" stopOpacity="0.7" />
+                <stop offset="50%" stopColor="var(--secondary)" stopOpacity="0.95" />
+                <stop offset="94%" stopColor="var(--accent)" stopOpacity="0.85" />
+                <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
               </linearGradient>
             </defs>
 
             <path
               data-testid="rn-hero-ecg-baseline"
-              d="M 0 56 L 140 56 L 165 44 L 185 56 L 215 56 L 230 70 L 250 14 L 270 82 L 290 56 L 325 38 L 355 56 L 560 56 L 585 44 L 605 56 L 635 56 L 650 70 L 670 14 L 690 82 L 710 56 L 745 38 L 775 56 L 980 56 L 1005 44 L 1025 56 L 1055 56 L 1070 70 L 1090 14 L 1110 82 L 1130 56 L 1165 38 L 1195 56 L 1440 56"
+              d={RN_HERO_HEALTHY_ECG_PATH}
+              pathLength={1000}
               stroke="url(#rn-ecg-baseline-grad)"
               strokeWidth="2"
               strokeLinecap="round"
@@ -446,14 +613,14 @@ export function NCLEXRNPageClient() {
             />
             <path
               data-testid="rn-hero-ecg-pulse-ltr"
-              d="M 0 56 L 140 56 L 165 44 L 185 56 L 215 56 L 230 70 L 250 14 L 270 82 L 290 56 L 325 38 L 355 56 L 560 56 L 585 44 L 605 56 L 635 56 L 650 70 L 670 14 L 690 82 L 710 56 L 745 38 L 775 56 L 980 56 L 1005 44 L 1025 56 L 1055 56 L 1070 70 L 1090 14 L 1110 82 L 1130 56 L 1165 38 L 1195 56 L 1440 56"
+              d={RN_HERO_HEALTHY_ECG_PATH}
               stroke="url(#rn-ecg-pulse-grad)"
-              strokeWidth="3.25"
+              strokeWidth="3"
               strokeLinecap="round"
               strokeLinejoin="round"
               pathLength={1000}
-              strokeDasharray="220 780"
-              className="motion-safe:animate-ecg-ltr"
+              strokeDasharray="260 740"
+              className="drop-shadow-[0_0_6px_rgba(13,148,136,0.4)] dark:drop-shadow-[0_0_8px_rgba(45,212,191,0.65)] motion-safe:animate-ecg-ltr"
             />
           </svg>
         </div>
@@ -651,49 +818,79 @@ export function NCLEXRNPageClient() {
             </div>
 
             {/* Step 1: Access Duration Selector */}
-            <div className="w-full sm:w-auto">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <div className="w-full lg:w-auto">
+              <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 1. Select Access Duration
               </p>
               <div
                 role="group"
                 aria-label="Select access duration"
-                className="inline-flex w-full sm:w-auto rounded-2xl bg-background p-1.5 shadow-sm ring-1 ring-border/70"
+                className="flex flex-col sm:inline-flex sm:flex-row w-full sm:w-auto gap-1.5 rounded-2xl bg-card/95 p-1.5 shadow-sm ring-1 ring-border"
               >
                 <button
                   type="button"
                   data-testid="rn-duration-toggle-month"
                   aria-pressed={selectedDuration === "month"}
                   onClick={() => setSelectedDuration("month")}
-                  className={`flex-1 sm:flex-initial rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all ${
+                  onKeyDown={handleDurationKeyDown}
+                  className={`group relative inline-flex items-center justify-center sm:justify-start gap-2.5 rounded-xl px-4 py-2.5 text-xs sm:text-sm transition-all motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                     selectedDuration === "month"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-primary text-primary-foreground font-bold shadow-sm ring-1 ring-primary/80"
+                      : "bg-transparent text-muted-foreground font-medium hover:bg-muted/60 hover:text-foreground"
                   }`}
                 >
-                  30-Day Monthly Access
+                  <span
+                    aria-hidden="true"
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors motion-reduce:transition-none ${
+                      selectedDuration === "month"
+                        ? "border-primary-foreground/90 bg-primary-foreground/20 text-primary-foreground"
+                        : "border-muted-foreground/40 bg-background/60"
+                    }`}
+                  >
+                    {selectedDuration === "month" && (
+                      <CheckCircle2 className="h-3 w-3 stroke-[2.5]" />
+                    )}
+                  </span>
+                  <span>30-Day Monthly Access</span>
                 </button>
+
                 <button
                   type="button"
                   data-testid="rn-duration-toggle-quarter"
                   aria-pressed={selectedDuration === "quarter"}
                   onClick={() => setSelectedDuration("quarter")}
-                  className={`flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs sm:text-sm font-semibold transition-all ${
+                  onKeyDown={handleDurationKeyDown}
+                  className={`group relative inline-flex flex-wrap items-center justify-center sm:justify-start gap-2.5 rounded-xl px-4 py-2.5 text-xs sm:text-sm transition-all motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary focus-visible:ring-offset-2 focus-visible:ring-offset-background ${
                     selectedDuration === "quarter"
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
+                      ? "bg-primary text-primary-foreground font-bold shadow-sm ring-1 ring-primary/80"
+                      : "bg-transparent text-muted-foreground font-medium hover:bg-muted/60 hover:text-foreground"
                   }`}
                 >
-                  <span>90-Day Quarterly Access</span>
                   <span
-                    className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+                    aria-hidden="true"
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-colors motion-reduce:transition-none ${
                       selectedDuration === "quarter"
-                        ? "bg-secondary text-secondary-foreground"
-                        : "bg-secondary/15 text-secondary"
+                        ? "border-primary-foreground/90 bg-primary-foreground/20 text-primary-foreground"
+                        : "border-muted-foreground/40 bg-background/60"
                     }`}
                   >
-                    Save up to $38
+                    {selectedDuration === "quarter" && (
+                      <CheckCircle2 className="h-3 w-3 stroke-[2.5]" />
+                    )}
                   </span>
+                  <span>90-Day Quarterly Access</span>
+                  {activeQuarterlySavings !== null && (
+                    <span
+                      data-testid="rn-duration-quarterly-savings"
+                      className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-tight transition-colors motion-reduce:transition-none ${
+                        selectedDuration === "quarter"
+                          ? "bg-secondary text-secondary-foreground shadow-2xs"
+                          : "bg-secondary/15 text-secondary ring-1 ring-secondary/25"
+                      }`}
+                    >
+                      Save ${activeQuarterlySavings}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>
