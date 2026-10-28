@@ -50,7 +50,7 @@ export function SubscriptionsPageClient({ initialPlans }: SubscriptionsPageClien
 
   // Filter plans based on active pathway and interval
   const displayedPlans = React.useMemo(() => {
-    let filtered = plans.filter((p) => {
+    const filtered = plans.filter((p) => {
       if (pathwayFilter === "all") return true;
       if (pathwayFilter === "Both") return p.pathway === "Both";
       return p.pathway === pathwayFilter || p.pathway === "Both";

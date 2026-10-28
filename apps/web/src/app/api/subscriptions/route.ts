@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAllSubscriptionPlans } from "@/lib/subscription-store";
 
-export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {

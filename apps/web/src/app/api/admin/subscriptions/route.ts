@@ -8,7 +8,6 @@ import {
   type PlanMutationInput,
 } from "@/lib/subscription-store";
 
-export const dynamic = "force-dynamic";
 
 interface AdminUserSession {
   role?: string;

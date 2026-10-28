@@ -15,7 +15,6 @@ import {
   AlertCircle,
   Eye,
   RefreshCw,
-  Sparkles,
   ArrowLeft,
   ShoppingCart,
 } from "lucide-react";
@@ -88,7 +87,6 @@ export function AdminSubscriptionsClient() {
   const [pathwayFilter, setPathwayFilter] = React.useState<"all" | "RN" | "PN" | "Both">("all");
 
   const loadPlans = React.useCallback(async () => {
-    setLoadingPlans(true);
     try {
       const res = await fetch("/api/admin/subscriptions");
       const data = await res.json();
@@ -105,10 +103,30 @@ export function AdminSubscriptionsClient() {
   }, []);
 
   React.useEffect(() => {
-    if (isAuthenticated) {
-      loadPlans();
-    }
-  }, [isAuthenticated, loadPlans]);
+    let isMounted = true;
+    if (!isAuthenticated) return;
+
+    fetch("/api/admin/subscriptions")
+      .then((res) => res.json())
+      .then((data) => {
+        if (!isMounted) return;
+        if (data.success && Array.isArray(data.plans)) {
+          setPlans(data.plans);
+        } else {
+          setFeedbackMessage({ type: "error", text: data.error || "Failed to load subscription plans" });
+        }
+        setLoadingPlans(false);
+      })
+      .catch(() => {
+        if (!isMounted) return;
+        setFeedbackMessage({ type: "error", text: "Network error loading subscription plans" });
+        setLoadingPlans(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthenticated]);
 
   if (isLoading) {
     return <BrandedLoading message="Verifying administrative credentials..." fullScreen />;
