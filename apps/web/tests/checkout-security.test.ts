@@ -144,6 +144,6 @@ describe("Phase 3 — Checkout Security & Payment Lifecycle Remediation", () => 
     // Profile record in database reflects authoritative dual access
     const savedMeta = getUserProfileMeta(candidateUserId, candidateEmail);
     expect(savedMeta?.pathway).toBe("both");
-    expect(savedMeta?.activePlan).toContain("PrepFord Premium Complete Access");
+    expect(savedMeta?.activePlan).toContain("All-Access");
   });
 });
