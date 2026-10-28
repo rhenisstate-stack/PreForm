@@ -5,6 +5,10 @@ import { ProfilePageClient } from "./page-client";
 export const metadata: Metadata = {
   title: "Candidate Profile & Study Access | PrepFord NCLEX",
   description: "Manage your NCLEX candidate credentials, pathway target, active subscriptions, and account security.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function ProfilePage() {

@@ -1,10 +1,23 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { StudyGuideIndexClient } from "./page-client";
 
-export const metadata = {
-  title: "PrepFord Study Guide & Clinical Nursing Notes | NCLEX-RN & NCLEX-PN",
+export const metadata: Metadata = {
+  title: {
+    absolute: "Nursing Study Guide & Notes | PrepFord",
+  },
   description:
-    "Free clinical nursing study notes and high-yield NCLEX revision guides organized by category: Med-Surg, Pharmacology, Maternal-Newborn, Pediatrics, Mental Health, Fundamentals, and Delegation.",
+    "Browse PrepFord's available nursing study notes and subject-based learning resources.",
+  alternates: {
+    canonical: "/study-guide",
+  },
+  openGraph: {
+    title: "Nursing Study Guide & Notes | PrepFord",
+    description:
+      "Browse PrepFord's available nursing study notes and subject-based learning resources.",
+    url: "/study-guide",
+    type: "website",
+  },
 };
 
 export default function StudyGuidePage() {

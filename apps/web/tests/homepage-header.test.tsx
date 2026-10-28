@@ -43,11 +43,10 @@ const renderHeader = (props?: { user?: { displayName: string; role: string; emai
   };
 };
 
-describe("Homepage header integration", () => {
-  it("renders the PrepFord header on the homepage", () => {
+describe("Homepage header integration & Nursing dropdown navigation", () => {
+  it("renders the PrepFord header with prominent logo, stacked wordmark, and top-level navigation", () => {
     const { header } = renderHeader();
 
-    // Header is present
     expect(header).toBeInTheDocument();
 
     // Logo and homepage link with larger mark and two-line stacked wordmark (Prep above Ford)
@@ -57,130 +56,120 @@ describe("Homepage header integration", () => {
     const logoMark = within(logoLink).getByTestId("brand-logo-mark");
     expect(logoMark.className).toContain("h-11");
     expect(logoMark.className).toContain("w-11");
+    expect(logoMark).toHaveAttribute("src", "/prepford-logo.png");
 
     const stackedWordmark = within(logoLink).getByTestId("brand-wordmark-stacked");
     expect(stackedWordmark.className).toContain("flex-col");
     expect(within(stackedWordmark).getByText("Prep")).toBeInTheDocument();
     expect(within(stackedWordmark).getByText("Ford")).toBeInTheDocument();
 
-    // Main navigation links are visible in header
-    expect(within(header).getByText("NCLEX-RN")).toBeInTheDocument();
-    expect(within(header).getByText("NCLEX-PN")).toBeInTheDocument();
-    expect(within(header).getByText("Courses")).toBeInTheDocument();
-    expect(within(header).getByText("Study Guide")).toBeInTheDocument();
-    expect(within(header).getByText("More")).toBeInTheDocument();
+    // Main top-level navigation items are visible in header
+    expect(within(header).getByRole("button", { name: /^Nursing$/i })).toBeInTheDocument();
+    expect(within(header).getByRole("link", { name: "Study Guide" })).toBeInTheDocument();
+    expect(within(header).getByRole("link", { name: "Products & Pricing" })).toBeInTheDocument();
+    expect(within(header).getByRole("link", { name: "Testimonials" })).toBeInTheDocument();
   });
 
-  it("renders main content below the header", () => {
-    render(
-      <>
-        <PublicHeader />
-        <main id="main-content">
-          <HomeClient />
-        </main>
-      </>
-    );
+  it("renders main content below the header with Archer-inspired hero and Nursing pathway discovery", () => {
+    renderHeader();
 
-    // Hero heading from homepage (scoped to main content, not header)
-    expect(screen.getByText(/prepare with clarity/i)).toBeInTheDocument();
+    // Hero heading from homepage
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Prepare for NCLEX with greater clarity and confidence\./i,
+      })
+    ).toBeInTheDocument();
 
     // Pathway cards in main content
-    expect(screen.getByText("Registered Nurse preparation")).toBeInTheDocument();
-    expect(screen.getByText("Practical / Vocational Nurse preparation")).toBeInTheDocument();
+    expect(screen.getByText(/Registered Nurse preparation \(BSN & ADN candidates\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Practical \/ Vocational Nurse preparation \(LPN & LVN candidates\)/i)).toBeInTheDocument();
   });
 
   it("does not duplicate the header", () => {
-    render(
-      <>
-        <PublicHeader />
-        <main id="main-content">
-          <HomeClient />
-        </main>
-      </>
-    );
+    renderHeader();
 
     const headers = screen.getAllByRole("banner");
     expect(headers).toHaveLength(1);
   });
 
-  it("opens and closes the NCLEX-RN dropdown without duplicates", () => {
+  it("groups NCLEX-RN and NCLEX-PN under the unified Nursing dropdown and closes on Escape or route click", () => {
     const { header } = renderHeader();
 
-    // Direct navigation link exists
-    const rnLink = within(header).getByRole("link", { name: "NCLEX-RN" });
-    expect(rnLink).toHaveAttribute("href", "/nclex-rn");
+    const nursingTrigger = within(header).getByRole("button", { name: /^Nursing$/i });
+    expect(nursingTrigger).toHaveAttribute("aria-expanded", "false");
 
-    const rnTrigger = within(header).getByRole("button", { name: /NCLEX-RN/i });
-    expect(rnTrigger).toBeInTheDocument();
-    expect(rnTrigger).toHaveAttribute("aria-expanded", "false");
+    // Click to open Nursing dropdown
+    fireEvent.click(nursingTrigger);
+    expect(nursingTrigger).toHaveAttribute("aria-expanded", "true");
 
-    // Click to open dropdown
-    fireEvent.click(rnTrigger);
+    // Verify NCLEX-RN and NCLEX-PN links inside Nursing dropdown
+    const rnLinks = within(header).getAllByRole("link", { name: /NCLEX-RN/i });
+    expect(rnLinks).toHaveLength(1);
+    expect(rnLinks[0]).toHaveAttribute("href", "/nclex-rn");
 
-    // Dropdown should be open
-    expect(rnTrigger).toHaveAttribute("aria-expanded", "true");
+    const pnLinks = within(header).getAllByRole("link", { name: /NCLEX-PN/i });
+    expect(pnLinks).toHaveLength(1);
+    expect(pnLinks[0]).toHaveAttribute("href", "/nclex-pn");
 
-    // Each sub-item must appear exactly once (no 4x duplication)
-    expect(within(header).getAllByRole("link", { name: "RN Overview" })).toHaveLength(1);
-    expect(within(header).getAllByRole("link", { name: "RN Courses" })).toHaveLength(1);
-    expect(within(header).getAllByRole("link", { name: "RN Preparation Plans" })).toHaveLength(1);
-    expect(within(header).getAllByRole("link", { name: "Try RN Questions" })).toHaveLength(1);
+    // Press Escape to close dropdown
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(nursingTrigger).toHaveAttribute("aria-expanded", "false");
+
+    // Reopen and click an item to verify route selection closes the menu
+    fireEvent.click(nursingTrigger);
+    expect(nursingTrigger).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(within(header).getByRole("link", { name: /NCLEX-RN/i }));
+    expect(nursingTrigger).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("opens and closes the NCLEX-PN dropdown without duplicates", () => {
+  it("opens and closes the Study Guide dropdown with all 7 nursing study domains", () => {
     const { header } = renderHeader();
 
-    const pnLink = within(header).getByRole("link", { name: "NCLEX-PN" });
-    expect(pnLink).toHaveAttribute("href", "/nclex-pn");
+    const studyGuideLink = within(header).getByRole("link", { name: "Study Guide" });
+    expect(studyGuideLink).toHaveAttribute("href", "/study-guide");
 
-    const pnTrigger = within(header).getByRole("button", { name: /NCLEX-PN/i });
-    expect(pnTrigger).toBeInTheDocument();
-    expect(pnTrigger).toHaveAttribute("aria-expanded", "false");
+    const studyGuideTrigger = within(header).getByRole("button", { name: /Open Study Guide menu/i });
+    expect(studyGuideTrigger).toHaveAttribute("aria-expanded", "false");
 
-    fireEvent.click(pnTrigger);
-    expect(pnTrigger).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(studyGuideTrigger);
+    expect(studyGuideTrigger).toHaveAttribute("aria-expanded", "true");
 
-    expect(within(header).getAllByRole("link", { name: "PN Overview" })).toHaveLength(1);
-    expect(within(header).getAllByRole("link", { name: "PN Courses" })).toHaveLength(1);
-    expect(within(header).getAllByRole("link", { name: "PN Preparation Plans" })).toHaveLength(1);
-    expect(within(header).getAllByRole("link", { name: "Try PN Questions" })).toHaveLength(1);
+    expect(within(header).getByRole("link", { name: "All Study Guides" })).toHaveAttribute("href", "/study-guide");
+    expect(within(header).getByRole("link", { name: "Medical-Surgical Nursing" })).toHaveAttribute("href", "/study-guide/medical-surgical");
+    expect(within(header).getByRole("link", { name: "Pharmacology & Medication Safety" })).toHaveAttribute("href", "/study-guide/pharmacology");
+    expect(within(header).getByRole("link", { name: "Leadership & Delegation" })).toHaveAttribute("href", "/study-guide/leadership-delegation");
   });
 
-  it("opens and closes the Courses dropdown without duplicates", () => {
+  it("opens and closes the Products & Pricing dropdown without duplicates", () => {
     const { header } = renderHeader();
 
-    const coursesLink = within(header).getByRole("link", { name: "Courses" });
-    expect(coursesLink).toHaveAttribute("href", "/courses");
+    const productsLink = within(header).getByRole("link", { name: "Products & Pricing" });
+    expect(productsLink).toHaveAttribute("href", "/subscriptions");
 
-    const coursesTrigger = within(header).getByRole("button", { name: /Courses/i });
-    expect(coursesTrigger).toBeInTheDocument();
-    expect(coursesTrigger).toHaveAttribute("aria-expanded", "false");
+    const productsTrigger = within(header).getByRole("button", { name: /Open Products & Pricing menu/i });
+    expect(productsTrigger).toHaveAttribute("aria-expanded", "false");
 
-    fireEvent.click(coursesTrigger);
-    expect(coursesTrigger).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(productsTrigger);
+    expect(productsTrigger).toHaveAttribute("aria-expanded", "true");
 
-    expect(within(header).getAllByRole("link", { name: "All Courses" })).toHaveLength(1);
     expect(within(header).getAllByRole("link", { name: "Compare Subscription Plans" })).toHaveLength(1);
+    expect(within(header).getAllByRole("link", { name: "All Courses & Question Banks" })).toHaveLength(1);
     expect(within(header).getAllByRole("link", { name: "Free Sample Questions" })).toHaveLength(1);
   });
 
-  it("opens and closes the More dropdown without duplicates", () => {
+  it("renders mobile navigation drawer with grouped NCLEX-RN and NCLEX-PN links", () => {
     const { header } = renderHeader();
 
-    const moreTrigger = within(header).getByRole("button", { name: /More/i });
-    expect(moreTrigger).toBeInTheDocument();
-    expect(moreTrigger).toHaveAttribute("aria-expanded", "false");
+    const mobileToggle = within(header).getByRole("button", { name: /Open menu/i });
+    fireEvent.click(mobileToggle);
 
-    fireEvent.click(moreTrigger);
-
-    expect(moreTrigger).toHaveAttribute("aria-expanded", "true");
-
-    // Sub-items appear exactly once
-    expect(within(header).getAllByRole("link", { name: "Our Features" })).toHaveLength(1);
-    expect(within(header).getAllByRole("link", { name: "For Educators" })).toHaveLength(1);
-    expect(within(header).getAllByRole("link", { name: "Testimonials" })).toHaveLength(1);
-    expect(within(header).getAllByRole("link", { name: "FAQ" })).toHaveLength(1);
-    expect(within(header).getAllByRole("link", { name: "Contact Us" })).toHaveLength(1);
+    const drawer = within(header).getByTestId("mobile-navigation-drawer");
+    expect(drawer).toBeInTheDocument();
+    expect(within(drawer).getByText("Nursing Exam Prep")).toBeInTheDocument();
+    expect(within(drawer).getByRole("link", { name: /NCLEX-RN/i })).toHaveAttribute("href", "/nclex-rn");
+    expect(within(drawer).getByRole("link", { name: /NCLEX-PN/i })).toHaveAttribute("href", "/nclex-pn");
+    expect(within(drawer).getByRole("link", { name: /Study Guide & Notes/i })).toHaveAttribute("href", "/study-guide");
   });
 
   it("does not show Buy Now in the header", () => {

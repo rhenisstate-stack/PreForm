@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import * as React from "react";
 
 // Mock next-themes
@@ -16,13 +16,20 @@ vi.mock("next-themes", () => ({
 import PublicHeader from "@/components/layout/public-header";
 
 describe("Auth-Aware PublicHeader Component", () => {
-  it("renders public navigation items and NO cart/notification/profile for unauthenticated visitors", () => {
+  it("renders public navigation items including the Nursing dropdown and NO cart/notification/profile for unauthenticated visitors", () => {
     render(<PublicHeader />);
 
-    // 1. Navigation links
-    expect(screen.getByRole("link", { name: "NCLEX-RN" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "NCLEX-PN" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Courses" })).toBeInTheDocument();
+    // 1. Top-level navigation items
+    const nursingTrigger = screen.getByRole("button", { name: /^Nursing$/i });
+    expect(nursingTrigger).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Study Guide" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Products & Pricing" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Testimonials" })).toBeInTheDocument();
+
+    // Open Nursing dropdown and verify NCLEX-RN & NCLEX-PN entries
+    fireEvent.click(nursingTrigger);
+    expect(screen.getByRole("link", { name: /NCLEX-RN/i })).toHaveAttribute("href", "/nclex-rn");
+    expect(screen.getByRole("link", { name: /NCLEX-PN/i })).toHaveAttribute("href", "/nclex-pn");
 
     // 2. Theme switcher exists
     expect(screen.getByRole("button", { name: /Change theme/i })).toBeInTheDocument();

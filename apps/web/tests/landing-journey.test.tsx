@@ -32,64 +32,71 @@ vi.mock("@tanstack/react-query", async (importOriginal) => {
 });
 
 import { HomeClient } from "@/app/home-client";
+import { CoursesPageClient } from "@/app/courses/page-client";
+import { metadata as homeMetadata } from "@/app/page";
+import { metadata as rnMetadata } from "@/app/nclex-rn/page";
+import { metadata as pnMetadata } from "@/app/nclex-pn/page";
+import { metadata as studyGuideMetadata } from "@/app/study-guide/page";
+import { metadata as profileMetadata } from "@/app/profile/page";
+import { metadata as adminMetadata } from "@/app/admin/page";
 
-describe("Landing Page User Journey & Product Discovery", () => {
-  it("renders Hero section with View Products and Try Free CTAs and carousel", () => {
+describe("Landing Page Information Architecture, Full-Width Heartbeat & SEO", () => {
+  it("renders Hero section with Archer-inspired copy, Explore NCLEX Prep & Explore Study Guide CTAs, and full-width left-to-right heartbeat", () => {
     render(<HomeClient />);
 
-    expect(screen.getByText(/Prepare with clarity/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Prepare for NCLEX with greater clarity and confidence\./i,
+      })
+    ).toBeInTheDocument();
 
-    const viewProductsBtns = screen.getAllByRole("link", { name: /^View Products$/i });
-    expect(viewProductsBtns[0]).toHaveAttribute("href", "#products");
+    expect(
+      screen.getByText(
+        /Practice nursing questions, strengthen your understanding with rationales, and organize your preparation with PrepFord's available study resources\./i
+      )
+    ).toBeInTheDocument();
 
-    const tryFreeBtn = screen.getByRole("link", { name: /^Try Free$/i });
-    expect(tryFreeBtn).toHaveAttribute("href", "#demo");
+    const explorePrepBtn = screen.getByRole("link", { name: /Explore NCLEX Prep/i });
+    expect(explorePrepBtn).toHaveAttribute("href", "#nursing-pathways");
 
-    // Carousel buttons
-    expect(screen.getByRole("button", { name: /Previous slide/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Next slide/i })).toBeInTheDocument();
+    const exploreStudyGuideBtn = screen.getByRole("link", { name: /Explore Study Guide/i });
+    expect(exploreStudyGuideBtn).toHaveAttribute("href", "/study-guide");
+
+    // Full-width heartbeat line spans across the hero section
+    const fullwidthHeartbeat = screen.getByTestId("hero-fullwidth-heartbeat");
+    expect(fullwidthHeartbeat).toBeInTheDocument();
+    expect(fullwidthHeartbeat.className).toContain("inset-x-0");
+    expect(fullwidthHeartbeat.className).toContain("w-full");
+    expect(fullwidthHeartbeat.className).toContain("pointer-events-none");
+
+    const baselinePath = within(fullwidthHeartbeat).getByTestId("hero-ecg-baseline");
+    expect(baselinePath).toBeInTheDocument();
+
+    const pulsePath = within(fullwidthHeartbeat).getByTestId("hero-ecg-pulse-ltr");
+    expect(pulsePath).toBeInTheDocument();
+    expect(pulsePath.getAttribute("class")).toContain("motion-safe:animate-ecg-ltr");
   });
 
-  it("renders Product & Pathway Discovery cards with verified prices and distinct detail/cart CTAs", () => {
+  it("renders Course Discovery cards for NCLEX-RN and NCLEX-PN directly after the hero", () => {
     render(<HomeClient />);
 
-    const detailLinks = screen.getAllByRole("link", { name: /Explore Course Details/i });
-    expect(detailLinks.length).toBeGreaterThanOrEqual(2);
-    expect(detailLinks[0]).toHaveAttribute("href", "/nclex-rn");
-    expect(detailLinks[1]).toHaveAttribute("href", "/nclex-pn");
+    const rnCard = screen.getByTestId("pathway-card-rn");
+    expect(within(rnCard).getByText("NCLEX-RN Exam Preparation")).toBeInTheDocument();
+    expect(within(rnCard).getByRole("link", { name: /Explore NCLEX-RN/i })).toHaveAttribute(
+      "href",
+      "/nclex-rn"
+    );
 
-    const enroll59Links = screen.getAllByRole("link", { name: /Enroll Now — \$59/i });
-    expect(enroll59Links[0]).toHaveAttribute("href", "/cart?add=rn-pro");
-    expect(enroll59Links[1]).toHaveAttribute("href", "/cart?add=pn-pro");
-
-    const allAccessEnroll = screen.getByRole("link", { name: /Enroll Now — \$89/i });
-    expect(allAccessEnroll).toHaveAttribute("href", "/cart?add=prep-premium");
+    const pnCard = screen.getByTestId("pathway-card-pn");
+    expect(within(pnCard).getByText("NCLEX-PN Exam Preparation")).toBeInTheDocument();
+    expect(within(pnCard).getByRole("link", { name: /Explore NCLEX-PN/i })).toHaveAttribute(
+      "href",
+      "/nclex-pn"
+    );
   });
 
-  it("renders the interactive Free Demo section and evaluates candidate clinical responses", async () => {
-    const user = userEvent.setup();
-    render(<HomeClient />);
-
-    expect(screen.getByText(/Try PrepFord Free/i)).toBeInTheDocument();
-
-    const correctOption = screen.getByRole("radio", {
-      name: /Elevate the head of the bed to high-Fowler's and initiate supplemental oxygen/i,
-    });
-    expect(correctOption).toBeInTheDocument();
-
-    // Select the correct option
-    await user.click(correctOption);
-
-    // Submit answer
-    const submitBtn = screen.getByRole("button", { name: /Submit Clinical Response/i });
-    await user.click(submitBtn);
-
-    // Verify rationale displays
-    expect(screen.getByText(/Applying the ABC \(Airway, Breathing, Circulation\) framework/i)).toBeInTheDocument();
-    expect(screen.getByText(/Clinical Judgment Takeaway/i)).toBeInTheDocument();
-  });
-
-  it("renders the Question-Learning Showcase inspired by UWorld with step carousel", () => {
+  it("renders the Question-Learning Showcase with step carousel", () => {
     render(<HomeClient />);
 
     expect(
@@ -102,96 +109,111 @@ describe("Landing Page User Journey & Product Discovery", () => {
     expect(screen.getAllByRole("tab", { name: /4\. Readiness Insights/i })[0]).toBeInTheDocument();
   });
 
-  it("completes the course recommendation quiz and renders direct purchase and pathway CTAs", async () => {
-    const user = userEvent.setup();
+  it("renders the Study Guide & Nursing Notes preview linking to real Study Guide categories and topics", () => {
     render(<HomeClient />);
 
-    // Step 1: Select NCLEX-RN
-    const rnOption = screen.getByRole("button", { name: /NCLEX-RN \(Registered Nurse\)/i });
-    await user.click(rnOption);
-    const nextBtn = screen.getByRole("button", { name: /Next Question/i });
-    await user.click(nextBtn);
+    expect(
+      screen.getByRole("heading", {
+        name: /High-Yield Clinical Notes Organized by Nursing Subject/i,
+      })
+    ).toBeInTheDocument();
 
-    // Step 2: Select Timeline
-    const timelineOption = screen.getByRole("button", { name: /1 to 3 months/i });
-    await user.click(timelineOption);
+    expect(screen.getByRole("link", { name: /Open Full Study Guide/i })).toHaveAttribute(
+      "href",
+      "/study-guide"
+    );
+
+    const medSurgCard = screen.getByTestId("study-guide-preview-medical-surgical");
+    expect(within(medSurgCard).getByRole("link", { name: /Browse Med-Surg Notes/i })).toHaveAttribute(
+      "href",
+      "/study-guide/medical-surgical"
+    );
+
+    const pharmCard = screen.getByTestId("study-guide-preview-pharmacology");
+    expect(within(pharmCard).getByRole("link", { name: /Browse Pharmacology Notes/i })).toHaveAttribute(
+      "href",
+      "/study-guide/pharmacology"
+    );
+  });
+
+  it("renders Final CTA with clear actions for NCLEX-RN, NCLEX-PN, and Study Guide", () => {
+    render(<HomeClient />);
+
+    const finalSection = document.getElementById("try-now")!;
+    expect(finalSection).not.toBeNull();
+
+    expect(within(finalSection).getByRole("link", { name: /Explore NCLEX-RN/i })).toHaveAttribute(
+      "href",
+      "/nclex-rn"
+    );
+    expect(within(finalSection).getByRole("link", { name: /Explore NCLEX-PN/i })).toHaveAttribute(
+      "href",
+      "/nclex-pn"
+    );
+    expect(within(finalSection).getByRole("link", { name: /Open Study Guide/i })).toHaveAttribute(
+      "href",
+      "/study-guide"
+    );
+  });
+
+  it("preserves interactive Free Demo and Course Recommendation Quiz on the dedicated Courses page", async () => {
+    const user = userEvent.setup();
+    render(<CoursesPageClient />);
+
+    // Interactive Free Demo question evaluation
+    expect(screen.getByText(/Try PrepFord Free/i)).toBeInTheDocument();
+    const correctOption = screen.getByRole("radio", {
+      name: /Elevate the head of the bed to high-Fowler's and initiate supplemental oxygen/i,
+    });
+    await user.click(correctOption);
+    await user.click(screen.getByRole("button", { name: /Submit Clinical Response/i }));
+    expect(
+      screen.getByText(/Applying the ABC \(Airway, Breathing, Circulation\) framework/i)
+    ).toBeInTheDocument();
+
+    // Interactive Course Recommendation Quiz
+    await user.click(screen.getByRole("button", { name: /NCLEX-RN \(Registered Nurse\)/i }));
     await user.click(screen.getByRole("button", { name: /Next Question/i }));
-
-    // Step 3: Select Support Style
-    const supportOption = screen.getByRole("button", { name: /Adaptive CAT simulation/i });
-    await user.click(supportOption);
+    await user.click(screen.getByRole("button", { name: /1 to 3 months/i }));
     await user.click(screen.getByRole("button", { name: /Next Question/i }));
-
-    // Step 4: Select Focus
-    const focusOption = screen.getByRole("button", { name: /Pharmacology/i });
-    await user.click(focusOption);
+    await user.click(screen.getByRole("button", { name: /Adaptive CAT simulation/i }));
+    await user.click(screen.getByRole("button", { name: /Next Question/i }));
+    await user.click(screen.getByRole("button", { name: /Pharmacology/i }));
     await user.click(screen.getByRole("button", { name: /View Recommendation/i }));
 
-    // Verify Recommendation Card
-    const recHeading = screen.getByText(/Your Tailored Study Plan/i);
-    expect(recHeading).toBeInTheDocument();
-
-    const addToCartBtn = screen.getByRole("link", { name: /Add to Cart — \$59\/mo/i });
-    expect(addToCartBtn).toHaveAttribute("href", "/cart?add=rn-pro");
-
-    const quizContainer = recHeading.closest("section")!;
-    const explorePathwayBtn = within(quizContainer).getByRole("link", { name: /Explore Pathway/i });
-    expect(explorePathwayBtn).toHaveAttribute("href", "/nclex-rn");
+    expect(screen.getByText(/Your Tailored Study Plan/i)).toBeInTheDocument();
   });
 
-  it("renders Learning & Resources section with real destinations for catalog, blog, practice, and support", () => {
-    render(<HomeClient />);
+  it("configures accurate SEO metadata for public routes and noindex for private routes", () => {
+    expect(homeMetadata.title).toEqual({
+      absolute: "PrepFord | NCLEX-RN & NCLEX-PN Exam Preparation",
+    });
+    expect(homeMetadata.description).toBe(
+      "Prepare for the NCLEX-RN and NCLEX-PN with PrepFord's available nursing practice questions, study notes, and learning resources."
+    );
 
-    expect(screen.getByRole("link", { name: /Browse Courses/i })).toHaveAttribute("href", "/courses");
-    expect(screen.getByRole("link", { name: /Read Study Articles/i })).toHaveAttribute("href", "/blog");
-    expect(screen.getByRole("link", { name: /Try Sample Questions/i })).toHaveAttribute("href", "/courses?type=practice");
-    expect(screen.getByRole("link", { name: /Contact Support/i })).toHaveAttribute("href", "/contact");
-  });
+    expect(rnMetadata.title).toEqual({
+      absolute: "NCLEX-RN Exam Preparation | PrepFord",
+    });
+    expect(rnMetadata.description).toBe(
+      "Explore PrepFord's NCLEX-RN study resources, practice questions, and nursing learning tools."
+    );
 
-  it("renders Final CTA with Buy Now routing directly to cart and Try Now to sign-up", () => {
-    render(<HomeClient />);
+    expect(pnMetadata.title).toEqual({
+      absolute: "NCLEX-PN Exam Preparation | PrepFord",
+    });
+    expect(pnMetadata.description).toBe(
+      "Explore PrepFord's NCLEX-PN study resources, practice questions, and nursing learning tools."
+    );
 
-    const buyNow = screen.getByRole("link", { name: /^Buy Now$/i });
-    expect(buyNow).toHaveAttribute("href", "/cart?add=rn-pro");
-    expect(buyNow.className).toContain("bg-white");
-    expect(buyNow.className).toContain("text-[#142B4A]");
+    expect(studyGuideMetadata.title).toEqual({
+      absolute: "Nursing Study Guide & Notes | PrepFord",
+    });
+    expect(studyGuideMetadata.description).toBe(
+      "Browse PrepFord's available nursing study notes and subject-based learning resources."
+    );
 
-    const tryNow = screen.getByRole("link", { name: /^Try Now$/i });
-    expect(tryNow).toHaveAttribute("href", "/sign-up");
-    expect(tryNow.className).toContain("text-white");
-  });
-
-  it("enforces hero stacking order (z-20 content over z-0/z-10 pointer-events-none decorative layers) and theme-aware light/dark gradients", () => {
-    render(<HomeClient />);
-
-    const heroSection = screen.getByRole("region", { name: /PrepFord NCLEX Hero/i });
-    expect(heroSection.className).toContain("from-slate-100/95");
-    expect(heroSection.className).toContain("dark:from-slate-950");
-
-    // Foreground content container has z-20
-    const heading = screen.getByRole("heading", { level: 1, name: /Prepare with clarity/i });
-    const foregroundWrapper = heading.closest(".z-20");
-    expect(foregroundWrapper).not.toBeNull();
-
-    // Decorative floating badges have pointer-events-none and z-10 (below z-20 content)
-    const badgeText = within(heroSection).getByText(/18 Question Formats/i);
-    const badgeContainer = badgeText.closest("[aria-hidden='true']");
-    expect(badgeContainer).not.toBeNull();
-    expect(badgeContainer?.className).toContain("pointer-events-none");
-    expect(badgeContainer?.className).toContain("z-10");
-
-    // Two-sided Archer Review-inspired layout: left-aligned copy/CTAs on left, nursing image & left-to-right ECG on right
-    const leftCol = within(heroSection).getByTestId("hero-left-column");
-    expect(leftCol.className).toContain("text-left");
-    expect(leftCol.className).toContain("lg:col-span-6");
-
-    const rightCol = within(heroSection).getByTestId("hero-right-column");
-    expect(rightCol.className).toContain("lg:col-span-6");
-
-    const nurseImage = within(rightCol).getByTestId("hero-nurse-image");
-    expect(nurseImage).toHaveAttribute("src", "/landing-page-nurse.jpg");
-
-    const ecgPulsePath = within(rightCol).getByTestId("hero-ecg-pulse-ltr");
-    expect(ecgPulsePath.getAttribute("class")).toContain("motion-safe:animate-ecg-ltr");
+    expect(profileMetadata.robots).toEqual({ index: false, follow: false });
+    expect(adminMetadata.robots).toEqual({ index: false, follow: false });
   });
 });

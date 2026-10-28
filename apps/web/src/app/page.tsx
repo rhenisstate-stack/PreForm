@@ -1,10 +1,22 @@
+import type { Metadata } from "next";
 import { HomeClient } from "./home-client";
-import { BRAND } from "@/lib/brand";
 
-export const metadata = {
-  title: `${BRAND.fullName} | Next-Gen NCLEX Prep with Clarity & Confidence`,
+export const metadata: Metadata = {
+  title: {
+    absolute: "PrepFord | NCLEX-RN & NCLEX-PN Exam Preparation",
+  },
   description:
-    "PrepFord NCLEX offers realistic Next-Gen NCLEX practice questions, comprehensive clinical rationales, CAT readiness exams, and targeted prep for RN and PN candidates.",
+    "Prepare for the NCLEX-RN and NCLEX-PN with PrepFord's available nursing practice questions, study notes, and learning resources.",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    title: "PrepFord | NCLEX-RN & NCLEX-PN Exam Preparation",
+    description:
+      "Prepare for the NCLEX-RN and NCLEX-PN with PrepFord's available nursing practice questions, study notes, and learning resources.",
+    url: "/",
+    type: "website",
+  },
 };
 
 export default function Home() {
