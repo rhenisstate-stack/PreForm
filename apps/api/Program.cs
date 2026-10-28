@@ -8,6 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddScoped<IProgrammeService, ProgrammeService>();
+builder.Services.AddScoped<IProfileImageService, ProfileImageService>();
 
 // CORS for the Next.js frontend (WEB_ORIGIN, default http://localhost:3000)
 var webOrigin = builder.Configuration["WEB_ORIGIN"] ?? "http://localhost:3000";

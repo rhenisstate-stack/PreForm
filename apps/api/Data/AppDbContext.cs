@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
 
     // Identity & RBAC
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserProfileImage> UserProfileImages => Set<UserProfileImage>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
@@ -92,6 +93,22 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(u => u.Email).IsUnique();
             entity.HasIndex(u => u.IsActive);
+        });
+
+        // UserProfileImage (Binary BLOB / bytea storage separated from routine User queries)
+        modelBuilder.Entity<UserProfileImage>(entity =>
+        {
+            entity.ToTable("UserProfileImages", "public");
+            entity.HasKey(upi => upi.Id);
+            entity.Property(upi => upi.ImageData).IsRequired().HasColumnType("bytea");
+            entity.Property(upi => upi.ContentType).IsRequired().HasMaxLength(64);
+            entity.Property(upi => upi.Sha256Hash).IsRequired().HasMaxLength(64);
+            entity.HasIndex(upi => upi.UserId).IsUnique();
+            entity.HasIndex(upi => upi.UserEmail).IsUnique();
+            entity.HasOne(upi => upi.User)
+                  .WithOne(u => u.ProfileImage)
+                  .HasForeignKey<UserProfileImage>(upi => upi.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Permission Indexes

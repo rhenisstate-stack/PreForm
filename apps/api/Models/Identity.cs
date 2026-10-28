@@ -26,11 +26,48 @@ public class User
 
     public bool IsActive { get; set; } = true;
 
+    public bool HasProfileImage { get; set; } = false;
+    public DateTime? ProfileImageUpdatedAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
+    public UserProfileImage? ProfileImage { get; set; }
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+}
+
+[Table("UserProfileImages", Schema = "public")]
+public class UserProfileImage
+{
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    [Required]
+    [MaxLength(128)]
+    public string UserId { get; set; } = string.Empty;
+    public User User { get; set; } = null!;
+
+    [Required]
+    [EmailAddress]
+    [MaxLength(256)]
+    public string UserEmail { get; set; } = string.Empty;
+
+    [Required]
+    public byte[] ImageData { get; set; } = Array.Empty<byte>();
+
+    [Required]
+    [MaxLength(64)]
+    public string ContentType { get; set; } = "image/png";
+
+    public int SizeBytes { get; set; }
+
+    [Required]
+    [MaxLength(64)]
+    public string Sha256Hash { get; set; } = string.Empty;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
 [Table("Roles", Schema = "public")]
