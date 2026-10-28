@@ -109,27 +109,28 @@ export function AdminOverviewClient() {
   return (
     <div className="flex min-h-screen">
       {/* Administrative Sidebar */}
-      <aside className="hidden lg:flex w-64 flex-col border-r border-border bg-card p-4 space-y-6">
-        <div className="flex items-center gap-2.5 px-2">
+      <aside className="hidden lg:flex w-64 flex-col bg-card p-4 space-y-6 shadow-xs">
+        <div className="flex items-center gap-3 px-2">
           <Image
             src={BRAND.logo.assetPath}
             alt={BRAND.logo.alt}
-            width={32}
-            height={32}
-            className="h-8 w-8 rounded-lg object-contain border border-border"
+            width={44}
+            height={44}
+            className="h-11 w-11 rounded-xl object-contain shrink-0"
           />
           <div>
-            <span className="font-serif font-bold text-foreground text-lg leading-none">
-              {BRAND.name}
+            <span className="flex flex-col font-serif font-bold tracking-tight leading-[0.95]">
+              <span className="text-base text-secondary">Prep</span>
+              <span className="text-base text-foreground">Ford</span>
             </span>
-            <span className="block text-[10px] font-mono uppercase tracking-widest text-secondary font-semibold">
+            <span className="block text-[10px] font-mono uppercase tracking-widest text-secondary font-semibold mt-0.5">
               Admin Workspace
             </span>
           </div>
         </div>
 
         {/* User Pill */}
-        <div className="rounded-xl border border-border bg-muted/40 p-3 space-y-1">
+        <div className="rounded-xl bg-muted/45 p-3 space-y-1">
           <p className="text-xs font-semibold text-foreground truncate">
             {user.displayName || user.name}
           </p>

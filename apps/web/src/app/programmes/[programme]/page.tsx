@@ -68,11 +68,14 @@ export default async function ProgrammePage({
           <Image
             src={BRAND.logo.assetPath}
             alt=""
-            width={32}
-            height={32}
-            className="h-8 w-8 rounded-lg object-contain"
+            width={44}
+            height={44}
+            className="h-11 w-11 rounded-xl object-contain"
           />
-          <span className="font-bold tracking-tight">{BRAND.name}</span>
+          <span className="flex flex-col font-serif font-bold tracking-tight leading-[0.95] text-left">
+            <span className="text-base text-secondary">Prep</span>
+            <span className="text-base text-foreground">Ford</span>
+          </span>
           <span className="wordmark-suffix">NCLEX</span>
         </Link>
         <Link className="header-cta" href="/#products">
@@ -100,11 +103,14 @@ export default async function ProgrammePage({
           <Image
             src={BRAND.logo.assetPath}
             alt=""
-            width={28}
-            height={28}
-            className="h-7 w-7 rounded-lg object-contain"
+            width={40}
+            height={40}
+            className="h-10 w-10 rounded-xl object-contain"
           />
-          <span className="font-bold tracking-tight">{BRAND.name}</span>
+          <span className="flex flex-col font-serif font-bold tracking-tight leading-[0.95] text-left">
+            <span className="text-sm text-secondary">Prep</span>
+            <span className="text-sm text-foreground">Ford</span>
+          </span>
           <span className="wordmark-suffix">NCLEX</span>
         </Link>
         <p>Thoughtful preparation for the next step in nursing.</p>

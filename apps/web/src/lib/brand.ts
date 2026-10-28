@@ -6,6 +6,7 @@
 export const BRAND = {
   name: "PrepFord",
   fullName: "PrepFord",
+  wordmarkLines: ["Prep", "Ford"] as const,
   tagline: "Prepare with clarity",
   description:
     "A focused learning platform for NCLEX-RN and NCLEX-PN candidates, built with clinical accuracy and transparent assessment at its core.",

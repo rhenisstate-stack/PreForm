@@ -108,16 +108,19 @@ export function SignInPageClient() {
 
         {/* Top Brand Identity */}
         <div className="relative z-10">
-          <Link href="/" className="inline-flex items-center gap-2.5 text-2xl font-serif font-bold text-white mb-12 hover:opacity-90 transition-opacity" aria-label="PrepFord home">
+          <Link href="/" className="inline-flex items-center gap-3 text-2xl font-serif font-bold text-white mb-12 hover:opacity-90 transition-opacity" aria-label="PrepFord home">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={BRAND.logo.assetPath}
               alt={BRAND.logo.alt}
-              className="h-9 w-9 rounded-lg object-contain shadow-md border border-white/20"
-              width={36}
-              height={36}
+              className="h-12 w-12 rounded-xl object-contain shadow-md shrink-0"
+              width={48}
+              height={48}
             />
-            <span className="tracking-tight">{BRAND.name}</span>
+            <span className="flex flex-col font-serif font-bold tracking-tight leading-[0.95] text-left">
+              <span className="text-lg text-teal-400">Prep</span>
+              <span className="text-lg text-white">Ford</span>
+            </span>
           </Link>
 
           <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/20 border border-teal-500/30 px-3.5 py-1 text-xs font-semibold text-teal-300 mb-4">
@@ -186,16 +189,19 @@ export function SignInPageClient() {
         <div className="mx-auto w-full max-w-md">
           {/* Mobile Header Branding */}
           <div className="mb-8 lg:hidden text-center">
-            <Link href="/" className="inline-flex items-center gap-2 text-xl font-serif font-bold text-foreground" aria-label="PrepFord home">
+            <Link href="/" className="inline-flex items-center gap-3 text-xl font-serif font-bold text-foreground" aria-label="PrepFord home">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={BRAND.logo.assetPath}
                 alt={BRAND.logo.alt}
-                className="h-8 w-8 rounded-lg object-contain shadow-xs border border-border/50"
-                width={32}
-                height={32}
+                className="h-11 w-11 rounded-xl object-contain shrink-0"
+                width={44}
+                height={44}
               />
-              <span>{BRAND.name}</span>
+              <span className="flex flex-col font-serif font-bold tracking-tight leading-[0.95] text-left">
+                <span className="text-base text-secondary">Prep</span>
+                <span className="text-base text-foreground">Ford</span>
+              </span>
             </Link>
           </div>
 

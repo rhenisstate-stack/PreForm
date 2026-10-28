@@ -30,27 +30,28 @@ export function BrandedLoading({
     >
       <div className="relative mb-6 flex items-center justify-center">
         {/* Glow backdrop ring */}
-        <div className="absolute h-24 w-24 rounded-2xl bg-secondary/15 blur-xl motion-safe:animate-pulse" />
+        <div className="absolute h-28 w-28 rounded-3xl bg-secondary/15 blur-xl motion-safe:animate-pulse" />
         
         {/* PrepFord Verified Brand Logo */}
-        <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl border border-border bg-card p-2 shadow-lg">
+        <div className="relative flex h-24 w-24 items-center justify-center rounded-2xl bg-card p-2 shadow-lg">
           <Image
             src={BRAND.logo.assetPath}
             alt={BRAND.logo.alt}
-            width={72}
-            height={72}
+            width={88}
+            height={88}
             priority
             className="h-full w-full rounded-xl object-contain"
           />
         </div>
       </div>
 
-      {/* Brand Title */}
+      {/* Brand Title (Stacked Two-Line Wordmark: Prep above Ford) */}
       <div className="text-center">
-        <h2 className="text-xl font-serif font-bold text-foreground tracking-tight">
-          {BRAND.name}
+        <h2 className="inline-flex flex-col items-center font-serif font-bold tracking-tight leading-[0.95]">
+          <span className="text-xl text-secondary">Prep</span>
+          <span className="text-xl text-foreground">Ford</span>
         </h2>
-        <p className="mt-1 text-sm text-muted-foreground font-medium">
+        <p className="mt-2 text-sm text-muted-foreground font-medium">
           {message}
         </p>
       </div>

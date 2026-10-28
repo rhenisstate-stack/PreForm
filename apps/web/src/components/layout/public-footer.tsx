@@ -78,7 +78,7 @@ export default function PublicFooter() {
   const currentYear = 2026;
 
   return (
-    <footer className="border-t border-border bg-card text-card-foreground">
+    <footer className="bg-card text-card-foreground">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         {/* Top Section: Brand Overview & Link Grid */}
         <div className="grid grid-cols-1 gap-10 lg:grid-cols-12 lg:gap-8">
@@ -86,19 +86,20 @@ export default function PublicFooter() {
           <div className="lg:col-span-4 space-y-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-2.5 text-xl font-serif font-semibold text-foreground hover:opacity-90 transition-opacity"
+              className="inline-flex items-center gap-3 text-xl font-serif font-semibold text-foreground hover:opacity-90 transition-opacity"
               aria-label={`${BRAND.fullName} home`}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={BRAND.logo.assetPath}
                 alt={BRAND.logo.alt}
-                className="h-8 w-8 rounded-lg object-contain shadow-xs border border-border/50"
-                width={32}
-                height={32}
+                className="h-11 w-11 rounded-xl object-contain shrink-0"
+                width={44}
+                height={44}
               />
-              <span className="font-bold tracking-tight text-foreground font-serif">
-                {BRAND.name}
+              <span className="flex flex-col font-serif font-bold tracking-tight leading-[0.95] text-left">
+                <span className="text-base sm:text-lg text-secondary">Prep</span>
+                <span className="text-base sm:text-lg text-foreground">Ford</span>
               </span>
             </Link>
 
@@ -156,8 +157,8 @@ export default function PublicFooter() {
         </div>
 
         {/* Bottom Section: Trademark Disclaimer & Copyright */}
-        <div className="mt-12 border-t border-border pt-8 space-y-4">
-          <div className="rounded-lg bg-muted/40 p-4 border border-border/60">
+        <div className="mt-12 pt-6 space-y-4">
+          <div className="rounded-xl bg-muted/45 p-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
               <strong className="text-foreground">Official Examination Disclaimer: </strong>
               {BRAND.fullName} is an independent test preparation and educational platform. NCLEX-RN® and NCLEX-PN® are registered trademarks of the National Council of State Boards of Nursing, Inc. (NCSBN). {BRAND.fullName} is not affiliated with, sponsored by, or endorsed by the National Council of State Boards of Nursing, Inc. Diagnostic readiness indicators are signals based on practice performance and do not guarantee an official examination pass result.

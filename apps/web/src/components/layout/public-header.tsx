@@ -132,23 +132,28 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-card/90 backdrop-blur-md">
+    <header className="sticky top-0 z-40 bg-card/92 backdrop-blur-md shadow-xs">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="flex items-center gap-2.5 text-xl font-serif font-semibold text-foreground transition-opacity hover:opacity-90"
+          className="flex items-center gap-3 text-xl font-serif font-semibold text-foreground transition-opacity hover:opacity-90"
           aria-label={`${BRAND.fullName} home`}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={BRAND.logo.assetPath}
             alt={BRAND.logo.alt}
-            className="h-8 w-8 rounded-lg object-contain shadow-xs border border-border/50"
-            width={32}
-            height={32}
+            data-testid="brand-logo-mark"
+            className="h-11 w-11 sm:h-12 sm:w-12 rounded-xl object-contain shrink-0"
+            width={48}
+            height={48}
           />
-          <span className="font-serif tracking-tight font-bold text-foreground">
-            {BRAND.name}
+          <span
+            data-testid="brand-wordmark-stacked"
+            className="flex flex-col font-serif tracking-tight font-bold leading-[0.95] text-left"
+          >
+            <span className="text-base sm:text-lg text-secondary">Prep</span>
+            <span className="text-base sm:text-lg text-foreground">Ford</span>
           </span>
         </Link>
 
@@ -238,7 +243,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
       </div>
 
       {mobileMenuOpen && (
-        <div className="lg:hidden border-t border-border bg-card px-4 py-5">
+        <div className="lg:hidden bg-card px-4 py-5 shadow-md">
           <div className="space-y-1">
             {mobileNavLinks.map((item) => {
               const isActive = pathname === item.href;
@@ -259,7 +264,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
             })}
           </div>
 
-          <div className="mt-5 pt-5 border-t border-border">
+          <div className="mt-5 pt-4">
             {isAuthed && currentUser ? (
               <div className="space-y-3">
                 <div className="px-3 py-1 text-sm font-medium text-muted-foreground">
