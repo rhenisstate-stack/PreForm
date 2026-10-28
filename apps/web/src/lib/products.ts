@@ -37,6 +37,28 @@ export const PRODUCTS: Product[] = [
     popular: true,
   },
   {
+    id: "rn-pro-90",
+    name: "NCLEX-RN Complete Preparation (90-Day)",
+    description:
+      "90-day quarterly access to the full NCLEX-RN question bank, readiness assessments, Study Guide notes, and domain progress tracking.",
+    audience: "Registered Nurse (RN) candidates following a 1 to 3 month structured study schedule.",
+    pathway: "RN",
+    planType: "pro",
+    price: 149,
+    originalPrice: 177,
+    currency: "USD",
+    billingInterval: "quarter",
+    durationLabel: "90-Day Quarterly Access",
+    features: [
+      "Full NCLEX-RN practice question bank (90 days)",
+      "Detailed clinical & distractor answer rationales",
+      "7-domain Nursing Study Guide & clinical notes",
+      "3 readiness assessments included",
+      "Topic-level performance & accuracy tracking",
+    ],
+    popular: true,
+  },
+  {
     id: "pn-pro",
     name: "NCLEX-PN Complete Preparation",
     description:
@@ -93,6 +115,26 @@ export const PRODUCTS: Product[] = [
     durationLabel: "30-Day Monthly Access",
     features: [
       "Access to foundational RN practice questions",
+      "Detailed answer rationales",
+      "7-domain Nursing Study Guide access",
+      "Basic topic progress tracking",
+    ],
+  },
+  {
+    id: "rn-starter-90",
+    name: "NCLEX-RN Starter Review (90-Day)",
+    description:
+      "90-day quarterly access to essential NCLEX-RN study tools, sample question practice, and clinical rationales.",
+    audience: "RN candidates building foundational nursing knowledge over a full academic term.",
+    pathway: "RN",
+    planType: "starter",
+    price: 75,
+    originalPrice: 87,
+    currency: "USD",
+    billingInterval: "quarter",
+    durationLabel: "90-Day Quarterly Access",
+    features: [
+      "Access to foundational RN practice questions (90 days)",
       "Detailed answer rationales",
       "7-domain Nursing Study Guide access",
       "Basic topic progress tracking",

@@ -62,7 +62,7 @@ const recommendations: Record<
     planName: "NCLEX-RN Complete Preparation",
     price: 59,
     description:
-      "Recommended based on your registered nurse examination target. Includes 3,500+ NGN-style questions, 6 CAT simulation tests, and complete clinical reasoning rationales.",
+      "Recommended based on your registered nurse examination target. Includes full RN question bank access, 3 readiness assessments, and complete clinical reasoning rationales.",
     href: "/nclex-rn",
     cartHref: "/cart?add=rn-pro",
   },
@@ -71,7 +71,7 @@ const recommendations: Record<
     planName: "NCLEX-PN Complete Preparation",
     price: 59,
     description:
-      "Recommended based on your practical/vocational nurse target. Includes 2,800+ PN questions, coordinated care analytics, and topic-level readiness assessments.",
+      "Recommended based on your practical/vocational nurse target. Includes full PN question bank access, coordinated care analytics, and topic-level readiness assessments.",
     href: "/nclex-pn",
     cartHref: "/cart?add=pn-pro",
   },
@@ -147,11 +147,11 @@ export function CourseFinderQuiz() {
                 <div className="rounded-lg bg-muted/60 p-3 text-xs space-y-1.5 text-muted-foreground">
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />
-                    <span>Includes full access to question bank and adaptive CAT testing</span>
+                    <span>Includes full access to question bank and readiness assessments</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" />
-                    <span>100% Pass Guarantee on all 90+ day subscriptions</span>
+                    <span>Includes 7-domain Nursing Study Guide &amp; option-by-option rationales</span>
                   </div>
                 </div>
 
