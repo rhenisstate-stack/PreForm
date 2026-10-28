@@ -1010,15 +1010,18 @@ p {
 }
 
 .animate-ecg,
-.animate-ecg-ltr {
-  stroke-dasharray: 260 740;
+.animate-ecg-ltr,
+.motion-safe\:animate-ecg-ltr {
+  stroke-dasharray: 220 280;
   stroke-dashoffset: 1000;
-  animation: ecgPulseLeftToRight 4.2s linear infinite;
+  animation: ecgPulseLeftToRight 3.6s linear infinite;
+  will-change: stroke-dashoffset;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .animate-ecg,
-  .animate-ecg-ltr {
+  .animate-ecg-ltr,
+  .motion-safe\:animate-ecg-ltr {
     stroke-dasharray: none !important;
     stroke-dashoffset: 0 !important;
     animation: none !important;

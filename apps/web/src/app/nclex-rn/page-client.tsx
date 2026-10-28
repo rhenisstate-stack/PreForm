@@ -288,11 +288,11 @@ const RN_HERO_HEALTHY_ECG_PATH = buildHealthySinusEcgPath();
 
 function buildRnFaqItems() {
   const starterMonth = getProductById("rn-starter");
-  const starterQuarter = getProductById("rn-starter-quarter");
+  const starterQuarter = getProductById("rn-starter-90");
   const proMonth = getProductById("rn-pro");
-  const proQuarter = getProductById("rn-pro-quarter");
-  const bundleMonth = getProductById("rn-pn-bundle");
-  const bundleQuarter = getProductById("rn-pn-bundle-quarter");
+  const proQuarter = getProductById("rn-pro-90");
+  const bundleMonth = getProductById("prep-premium");
+  const bundleQuarter = getProductById("prep-premium-90");
   const readiness = getProductById("rn-readiness");
 
   const starterMonthlyPrice = starterMonth?.price ?? 29;
@@ -373,13 +373,13 @@ function buildRnFaqItems() {
       id: "faq-rn-progress-tracking",
       question: "How can students track their study progress?",
       answer:
-        "Signed-in learners can open the Student Workspace (/dashboard) to view active plan entitlements and Client Needs domain mastery benchmarks. Note that the dashboard currently displays sample domain benchmark data to preview the workspace layout while live per-question telemetry and backend assessment history are in active development.",
+        "Signed-in learners can open the Learner Dashboard (/dashboard) to resume their most recent study activity, switch between NCLEX-RN and NCLEX-PN pathways, and view active plan status. Note that server-synced question bank telemetry and scored readiness assessment history are in active backend development, so personal accuracy percentages are not displayed until live attempt data is connected.",
     },
     {
       id: "faq-rn-checkout-activation",
       question: "How does access begin after selecting a study plan?",
       answer:
-        "Selecting any study plan or the Readiness Assessment Pack adds that exact catalog item to your PrepFord Cart (/cart). Proceeding through Checkout (/checkout) currently uses Phase 4 developer sandbox entitlement activation—your selected plan is linked immediately to your signed-in account in the Student Workspace (/dashboard) without charging a live payment card.",
+        "Selecting any study plan or the Readiness Assessment Pack adds that exact catalog item to your PrepFord Cart (/cart). Proceeding through Checkout currently uses Phase 4 developer sandbox entitlement activation—your selected plan is linked immediately to your signed-in account in the Learner Dashboard (/dashboard) and Profile (/profile) without charging a live payment card.",
     },
     {
       id: "faq-rn-cart-pending-payment",
@@ -391,7 +391,7 @@ function buildRnFaqItems() {
       id: "faq-rn-account-access",
       question: "How can users access their account after logging in?",
       answer:
-        "After signing in at /sign-in, you are returned to the PrepFord homepage (/)—or to the specific internal page you were visiting, such as /cart—with authenticated navigation in the top header giving you direct access to your Dashboard (/dashboard), Courses (/courses), Study Guide (/study-guide), and Profile (/profile).",
+        "After signing in at /sign-in, you land directly on the authenticated Learner Dashboard (/dashboard)—or on the specific internal page you requested, such as /cart—with top-header navigation giving you direct access to Study Guides (/study-guide), Courses (/courses), Cart (/cart), and Profile (/profile).",
     },
     {
       id: "faq-rn-troubleshooting-auth",
@@ -577,7 +577,7 @@ export function NCLEXRNPageClient() {
         <div
           data-testid="rn-hero-heartbeat"
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-3 sm:bottom-4 z-10 w-full overflow-hidden select-none opacity-85 dark:opacity-95"
+          className="pointer-events-none absolute inset-x-0 bottom-3 sm:bottom-5 z-10 w-full overflow-hidden select-none"
         >
           <svg
             viewBox="0 0 1440 96"
@@ -586,42 +586,40 @@ export function NCLEXRNPageClient() {
             className="h-14 sm:h-16 lg:h-20 w-full block"
           >
             <defs>
-              <linearGradient id="rn-ecg-baseline-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="var(--secondary)" stopOpacity="0" />
-                <stop offset="8%" stopColor="var(--secondary)" stopOpacity="0.22" />
-                <stop offset="50%" stopColor="var(--secondary)" stopOpacity="0.34" />
-                <stop offset="92%" stopColor="var(--secondary)" stopOpacity="0.22" />
-                <stop offset="100%" stopColor="var(--secondary)" stopOpacity="0" />
+              <linearGradient id="rn-ecg-edge-fade" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="white" stopOpacity="0" />
+                <stop offset="5%" stopColor="white" stopOpacity="1" />
+                <stop offset="95%" stopColor="white" stopOpacity="1" />
+                <stop offset="100%" stopColor="white" stopOpacity="0" />
               </linearGradient>
-              <linearGradient id="rn-ecg-pulse-grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%" stopColor="var(--secondary)" stopOpacity="0" />
-                <stop offset="6%" stopColor="var(--secondary)" stopOpacity="0.7" />
-                <stop offset="50%" stopColor="var(--secondary)" stopOpacity="0.95" />
-                <stop offset="94%" stopColor="var(--accent)" stopOpacity="0.85" />
-                <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
-              </linearGradient>
+              <mask id="rn-ecg-edge-mask">
+                <rect x="0" y="0" width="1440" height="96" fill="url(#rn-ecg-edge-fade)" />
+              </mask>
             </defs>
 
-            <path
-              data-testid="rn-hero-ecg-baseline"
-              d={RN_HERO_HEALTHY_ECG_PATH}
-              pathLength={1000}
-              stroke="url(#rn-ecg-baseline-grad)"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              data-testid="rn-hero-ecg-pulse-ltr"
-              d={RN_HERO_HEALTHY_ECG_PATH}
-              stroke="url(#rn-ecg-pulse-grad)"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              pathLength={1000}
-              strokeDasharray="260 740"
-              className="drop-shadow-[0_0_6px_rgba(13,148,136,0.4)] dark:drop-shadow-[0_0_8px_rgba(45,212,191,0.65)] motion-safe:animate-ecg-ltr"
-            />
+            <g mask="url(#rn-ecg-edge-mask)">
+              <path
+                data-testid="rn-hero-ecg-baseline"
+                d={RN_HERO_HEALTHY_ECG_PATH}
+                pathLength={1000}
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="text-teal-700/25 dark:text-teal-400/25"
+              />
+              <path
+                data-testid="rn-hero-ecg-pulse-ltr"
+                d={RN_HERO_HEALTHY_ECG_PATH}
+                pathLength={1000}
+                stroke="currentColor"
+                strokeWidth="3.25"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray="220 280"
+                className="text-teal-600 dark:text-teal-300 drop-shadow-[0_0_8px_rgba(13,148,136,0.55)] dark:drop-shadow-[0_0_10px_rgba(45,212,191,0.85)] animate-ecg-ltr motion-safe:animate-ecg-ltr"
+              />
+            </g>
           </svg>
         </div>
 
@@ -962,7 +960,7 @@ export function NCLEXRNPageClient() {
                     </p>
 
                     {/* Dynamic Price Display */}
-                    <div className="mt-6 flex items-baseline gap-2">
+                    <div className="mt-6 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
                       <span
                         data-testid={`rn-plan-price-${tier}`}
                         className="font-serif text-4xl font-bold tracking-tight text-foreground"
@@ -973,7 +971,7 @@ export function NCLEXRNPageClient() {
                         USD / {product.billingInterval === "quarter" ? "90 days" : "30 days"}
                       </span>
                       {product.originalPrice && (
-                        <span className="ml-1 text-xs text-muted-foreground line-through">
+                        <span className="text-xs text-muted-foreground line-through">
                           ${product.originalPrice}
                         </span>
                       )}
@@ -985,15 +983,8 @@ export function NCLEXRNPageClient() {
                       </p>
                     ) : (
                       <p className="mt-1.5 text-xs text-muted-foreground">
-                        Flexible 30-day access • Switch to 90-day quarterly above to save
+                        30-day access • Switch to 90-day quarterly above to compare savings
                       </p>
-                    )}
-
-                    {product.audience && (
-                      <div className="mt-5 rounded-2xl bg-muted/50 p-3 text-xs text-muted-foreground">
-                        <span className="font-semibold text-foreground">Best for: </span>
-                        {product.audience}
-                      </div>
                     )}
 
                     <ul className="mt-6 space-y-3 text-sm text-foreground/90">
