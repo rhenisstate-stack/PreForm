@@ -157,6 +157,7 @@ export {
   validateSubscriptionColors,
   evaluateWcagContrast,
 };
+export const getSubscriptionPlanByIdOrSlug = getSubscriptionPlanById;
 
 export interface PlanRow {
   id: string;

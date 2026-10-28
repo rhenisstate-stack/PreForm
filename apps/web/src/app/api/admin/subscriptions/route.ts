@@ -47,11 +47,15 @@ async function verifyAdminAuth(request?: Request) {
     return { authorized: false, status: 401, error: "Invalid session format" };
   }
 
-  const role = (session.role || "").toLowerCase();
-  const isPrivileged =
-    role.includes("admin") ||
-    role.includes("manager") ||
-    role.includes("superadmin");
+  const role = (session.role || "").trim().toLowerCase();
+  const allowedAdminRoles = new Set([
+    "admin",
+    "superadmin",
+    "administrator",
+    "manager",
+    "content_manager",
+  ]);
+  const isPrivileged = allowedAdminRoles.has(role);
 
   if (!isPrivileged) {
     return { authorized: false, status: 403, error: "Administrative privilege required" };

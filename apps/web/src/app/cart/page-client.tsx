@@ -460,7 +460,8 @@ export function CartPageClient() {
                 <span>Authoritative Checkout Security</span>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Order details are verified against authoritative plan records. Transactions are processed securely via server-validated session tokens.
+                Order details are verified against authoritative plan records. Confirming will activate your{" "}
+                {hasRecurringSubscription ? "study plan entitlement" : "one-time assessment pack (non-recurring)"} securely via server session authorization.
               </p>
             </div>
 

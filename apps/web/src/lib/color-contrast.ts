@@ -91,11 +91,11 @@ export function evaluateWcagContrast(
   let message = `Contrast ratio is ${ratio.toFixed(2)}:1.`;
   if (!passesWcagAA) {
     if (category === "normal") {
-      message = `Insufficient contrast (${ratio.toFixed(2)}:1). WCAG AA requires at least 4.5:1 for standard body and badge text (3.0:1 only qualifies for large headings >= 24px or 18.5px bold).`;
+      message = `Insufficient color contrast (${ratio.toFixed(2)}:1). WCAG AA requires at least 4.5:1 for standard body and badge text (3.0:1 only qualifies for large headings >= 24px or 18.5px bold).`;
     } else if (category === "large") {
-      message = `Insufficient contrast (${ratio.toFixed(2)}:1). WCAG AA requires at least 3.0:1 for large text (>= 24px or 18.5px bold).`;
+      message = `Insufficient color contrast (${ratio.toFixed(2)}:1). WCAG AA requires at least 3.0:1 for large text (>= 24px or 18.5px bold).`;
     } else {
-      message = `Insufficient contrast (${ratio.toFixed(2)}:1). WCAG AA requires at least 3.0:1 for graphical UI components and interactive borders.`;
+      message = `Insufficient color contrast (${ratio.toFixed(2)}:1). WCAG AA requires at least 3.0:1 for graphical UI components and interactive borders.`;
     }
   } else if (passesWcagAAA) {
     message += " Meets WCAG Level AAA criteria.";

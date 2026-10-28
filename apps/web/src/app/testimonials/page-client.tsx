@@ -94,14 +94,19 @@ export function TestimonialsPageClient() {
         <div className="mx-auto max-w-4xl text-center">
           <div className="inline-flex items-center gap-1.5 rounded-full bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary mb-4">
             <Sparkles className="h-3.5 w-3.5" />
-            <span>Candidate Reflections</span>
+            <span>Illustrative Study Scenarios</span>
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold tracking-tight text-foreground">
-            What Nursing Candidates Say About PrepFord
+            Candidate Learning Reflections &amp; Workflows
           </h1>
           <p className="mt-4 text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl mx-auto">
-            Authentic feedback from nursing candidates who used PrepFord’s structured clinical rationales and NGN case studies to prepare for licensure.
+            Representative study scenarios and clinical reflections illustrating how nursing candidates leverage PrepFord’s structured rationales and NGN case studies.
           </p>
+
+          {/* Marketing & Provenance Disclosure Safeguard */}
+          <div className="mt-6 mx-auto max-w-2xl rounded-xl border border-secondary/20 bg-secondary/5 p-3.5 text-xs text-muted-foreground leading-relaxed text-left">
+            <strong className="text-foreground font-semibold">Transparency Notice:</strong> The profiles below reflect representative clinical study workflows and learning journeys. Live verified student reviews will be published as our initial post-examination survey cohorts conclude. Individual examination performance depends on dedicated study and comprehensive nursing clinical knowledge.
+          </div>
 
           {/* Pathway Filter Controls */}
           <div className="mt-8 flex items-center justify-center gap-2">
@@ -113,7 +118,7 @@ export function TestimonialsPageClient() {
                   : "bg-muted text-muted-foreground hover:bg-muted/80"
               }`}
             >
-              All Testimonials ({testimonials.length})
+              All Scenarios ({testimonials.length})
             </button>
             <button
               onClick={() => setSelectedFilter("RN")}
