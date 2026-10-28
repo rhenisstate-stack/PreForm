@@ -3,17 +3,15 @@
 import * as React from "react";
 import Link from "next/link";
 import {
-  GraduationCap,
   ShieldCheck,
   Stethoscope,
   HeartPulse,
-  BookOpen,
   ArrowRight,
   CheckCircle2,
   Layers,
   Sparkles,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export function AboutPageClient() {

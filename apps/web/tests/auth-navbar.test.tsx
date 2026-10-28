@@ -24,7 +24,13 @@ describe("Auth-Aware PublicHeader Component", () => {
     expect(nursingTrigger).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Study Guide" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Products & Pricing" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Testimonials" })).toBeInTheDocument();
+    const moreTrigger = screen.getByRole("button", { name: /^More$/i });
+    expect(moreTrigger).toBeInTheDocument();
+
+    // Open More dropdown and verify Testimonials & Blog entries
+    fireEvent.click(moreTrigger);
+    expect(screen.getByRole("link", { name: /Testimonials/i })).toHaveAttribute("href", "/testimonials");
+    expect(screen.getByRole("link", { name: /Blog/i })).toHaveAttribute("href", "/blog");
 
     // Open Nursing dropdown and verify NCLEX-RN & NCLEX-PN entries
     fireEvent.click(nursingTrigger);

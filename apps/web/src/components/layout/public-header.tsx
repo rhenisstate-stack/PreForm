@@ -324,7 +324,13 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                       </NavigationMenuTrigger>
                     )}
                     <NavigationMenuContent
-                      className={item.id === "nursing" ? "w-80 min-w-[20rem] p-2.5" : "w-64 min-w-[16rem] p-2"}
+                      className={
+                        item.id === "nursing"
+                          ? "w-80 min-w-[20rem] p-2.5"
+                          : item.id === "more"
+                          ? "w-80 min-w-[20rem] p-2.5 right-0 left-auto"
+                          : "w-64 min-w-[16rem] p-2"
+                      }
                     >
                       <div className="space-y-1">
                         {item.items.map((subItem) => {
@@ -341,19 +347,26 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                                     : "text-popover-foreground hover:bg-muted/80 hover:text-foreground"
                                 }`}
                               >
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="text-sm font-semibold">{subItem.label}</span>
-                                  {subItem.badge && (
-                                    <span className="rounded-full bg-secondary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary">
-                                      {subItem.badge}
-                                    </span>
+                                <div className="flex items-start gap-3">
+                                  {subItem.icon && (
+                                    <subItem.icon className="h-4 w-4 shrink-0 text-secondary mt-0.5" aria-hidden="true" />
                                   )}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="text-sm font-semibold">{subItem.label}</span>
+                                      {subItem.badge && (
+                                        <span className="rounded-full bg-secondary/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary">
+                                          {subItem.badge}
+                                        </span>
+                                      )}
+                                    </div>
+                                    {subItem.description && (
+                                      <p className="mt-1 text-xs text-muted-foreground leading-snug font-normal">
+                                        {subItem.description}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                                {subItem.description && (
-                                  <p className="mt-1 text-xs text-muted-foreground leading-snug font-normal">
-                                    {subItem.description}
-                                  </p>
-                                )}
                               </Link>
                             </NavigationMenuLink>
                           );
@@ -459,7 +472,10 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                       : "text-foreground hover:bg-muted"
                   }`}
                 >
-                  {item.label}
+                  <div className="flex items-center gap-2.5">
+                    {item.icon && <item.icon className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />}
+                    <span>{item.label}</span>
+                  </div>
                 </Link>
               );
             })}

@@ -67,7 +67,7 @@ describe("Homepage header integration & Nursing dropdown navigation", () => {
     expect(within(header).getByRole("button", { name: /^Nursing$/i })).toBeInTheDocument();
     expect(within(header).getByRole("link", { name: "Study Guide" })).toBeInTheDocument();
     expect(within(header).getByRole("link", { name: "Products & Pricing" })).toBeInTheDocument();
-    expect(within(header).getByRole("link", { name: "Testimonials" })).toBeInTheDocument();
+    expect(within(header).getByRole("button", { name: /^More$/i })).toBeInTheDocument();
   });
 
   it("renders main content below the header with Archer-inspired hero and Nursing pathway discovery", () => {
@@ -237,5 +237,27 @@ describe("Homepage header integration & Nursing dropdown navigation", () => {
     expect(
       within(header).queryByRole("link", { name: /Create account/i })
     ).not.toBeInTheDocument();
+  });
+
+  it("groups Testimonials, Blog, Study Guides, About PrepFord, and Contact under More dropdown and closes on Escape", () => {
+    const { header } = renderHeader();
+
+    const moreTrigger = within(header).getByRole("button", { name: /^More$/i });
+    expect(moreTrigger).toBeInTheDocument();
+    expect(moreTrigger).toHaveAttribute("aria-expanded", "false");
+
+    // Click to open More dropdown
+    fireEvent.click(moreTrigger);
+    expect(moreTrigger).toHaveAttribute("aria-expanded", "true");
+
+    // Verify all 5 items inside More dropdown
+    expect(within(header).getByRole("link", { name: /Testimonials/i })).toHaveAttribute("href", "/testimonials");
+    expect(within(header).getByRole("link", { name: /Blog/i })).toHaveAttribute("href", "/blog");
+    expect(within(header).getByRole("link", { name: /About PrepFord/i })).toHaveAttribute("href", "/about");
+    expect(within(header).getByRole("link", { name: /Contact/i })).toHaveAttribute("href", "/contact");
+
+    // Close on Escape
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(moreTrigger).toHaveAttribute("aria-expanded", "false");
   });
 });
