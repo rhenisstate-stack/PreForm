@@ -145,8 +145,18 @@ function getDatabase(): SqliteDatabaseSync {
   return db;
 }
 
-import { isValidHexColor, checkContrastRatio } from "./color-contrast";
-export { isValidHexColor, checkContrastRatio };
+import {
+  isValidHexColor,
+  checkContrastRatio,
+  validateSubscriptionColors,
+  evaluateWcagContrast,
+} from "./color-contrast";
+export {
+  isValidHexColor,
+  checkContrastRatio,
+  validateSubscriptionColors,
+  evaluateWcagContrast,
+};
 
 export interface PlanRow {
   id: string;

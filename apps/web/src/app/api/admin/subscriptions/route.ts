@@ -5,6 +5,7 @@ import {
   createSubscriptionPlan,
   isValidHexColor,
   checkContrastRatio,
+  validateSubscriptionColors,
   type PlanMutationInput,
 } from "@/lib/subscription-store";
 
@@ -147,30 +148,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "Features must be an array of strings" }, { status: 400 });
     }
 
-    // Color and Contrast Validation Safeguards
-    if (bgColour && !isValidHexColor(bgColour)) {
-      return NextResponse.json({ success: false, error: "Background color must be a valid hex color code (e.g. #FFFFFF)" }, { status: 400 });
-    }
+    // Color and Contrast Validation Safeguards (WCAG AA: 4.5:1 for body/badge text, 3.0:1 for graphical UI)
+    const colorValidation = validateSubscriptionColors({
+      bgColour,
+      textColour,
+      accentColour,
+    });
 
-    if (accentColour && !isValidHexColor(accentColour)) {
-      return NextResponse.json({ success: false, error: "Accent color must be a valid hex color code" }, { status: 400 });
-    }
-
-    if (textColour && !isValidHexColor(textColour)) {
-      return NextResponse.json({ success: false, error: "Text color must be a valid hex color code" }, { status: 400 });
-    }
-
-    if (bgColour && textColour) {
-      const contrast = checkContrastRatio(bgColour, textColour);
-      if (contrast < 3.0) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Insufficient color contrast (${contrast.toFixed(1)}:1). Must be at least 3.0:1 for accessibility safety.`,
-          },
-          { status: 400 }
-        );
-      }
+    if (!colorValidation.isValid) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: colorValidation.errors[0] || "Invalid color or insufficient contrast ratio",
+          contrastErrors: colorValidation.errors,
+          textContrastRatio: colorValidation.textContrastRatio,
+          accentContrastRatio: colorValidation.accentContrastRatio,
+        },
+        { status: 400 }
+      );
     }
 
     const planInput: PlanMutationInput = {

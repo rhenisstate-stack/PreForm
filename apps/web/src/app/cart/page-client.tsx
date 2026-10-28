@@ -7,6 +7,7 @@ import {
   Trash2,
   ShieldCheck,
   CheckCircle2,
+  AlertCircle,
   Clock,
   Sparkles,
   Lock,
@@ -37,6 +38,7 @@ export function CartPageClient() {
   const [promoError, setPromoError] = React.useState<string | null>(null);
   const [isCheckingOut, setIsCheckingOut] = React.useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = React.useState(false);
+  const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
 
   const { items, itemCount, subtotal, removeItem, clearCart, addItem } = cart;
 
@@ -95,59 +97,39 @@ export function CartPageClient() {
 
   const handleConfirmCheckout = async () => {
     if (checkoutSuccess) return;
-    // In this phase, subscription or assessment pack entitlement is confirmed for candidate profile
+    setCheckoutError(null);
     setCheckoutSuccess(true);
 
-    if (items.length > 0) {
-      const planSummary = items
-        .map(
-          ({ product }) =>
-            `${product.name} (${
-              product.durationLabel ??
-              (product.billingInterval === "month"
-                ? "30-Day Monthly Access"
-                : product.billingInterval === "quarter"
-                  ? "90-Day Quarterly Access"
-                  : "One-Time Access")
-            })`
-        )
-        .join(" + ");
-
-      const hasBoth = items.some(
-        (i) =>
-          i.product.pathway === "Both" ||
-          (i.product.entitlements?.includes("rn") && i.product.entitlements?.includes("pn"))
-      );
-      const hasRN = items.some(
-        (i) => i.product.pathway === "RN" || i.product.entitlements?.includes("rn")
-      );
-      const hasPN = items.some(
-        (i) => i.product.pathway === "PN" || i.product.entitlements?.includes("pn")
-      );
-
-      const nextPathway: "both" | "rn" | "pn" =
-        hasBoth || (hasRN && hasPN) ? "both" : hasPN ? "pn" : "rn";
-
-      try {
-        await fetch("/api/profile", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            activePlan: planSummary,
-            pathway: nextPathway,
-          }),
-        });
-        await refreshSession();
-      } catch {
-        // Proceed with client-side enrollment navigation if profile update endpoint is unreachable
-      }
+    const primaryItem = items[0];
+    if (!primaryItem) {
+      setIsCheckingOut(false);
+      setCheckoutSuccess(false);
+      return;
     }
 
-    setTimeout(() => {
-      clearCart();
-      setIsCheckingOut(false);
-      router.push("/profile?enrolled=true");
-    }, 1200);
+    try {
+      const res = await fetch("/api/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: primaryItem.product.slug || primaryItem.product.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        await refreshSession();
+        clearCart();
+        setIsCheckingOut(false);
+        router.push(data.checkoutUrl || "/profile?enrolled=true");
+      } else {
+        setCheckoutSuccess(false);
+        setCheckoutError(data.error || "Checkout could not be processed.");
+      }
+    } catch {
+      setCheckoutSuccess(false);
+      setCheckoutError("Failed to communicate with the checkout service. Please try again.");
+    }
   };
 
   return (
@@ -475,18 +457,24 @@ export function CartPageClient() {
             <div className="rounded-md border border-secondary/30 bg-secondary/10 p-3 text-xs text-foreground space-y-1">
               <div className="font-semibold flex items-center gap-1.5 text-secondary">
                 <ShieldCheck className="h-4 w-4" />
-                <span>Payment Gateway Mode</span>
+                <span>Authoritative Checkout Security</span>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Stripe live payment integration is running in sandbox mode for Phase 4. Confirming will activate your{" "}
-                {hasRecurringSubscription ? "study plan entitlement" : "one-time assessment pack (non-recurring)"} immediately on your PrepFord account without charging your card.
+                Order details are verified against authoritative plan records. Transactions are processed securely via server-validated session tokens.
               </p>
             </div>
 
-            {checkoutSuccess && (
+            {checkoutError && (
+              <div className="flex items-center gap-2 p-3 rounded-md bg-destructive/10 border border-destructive/20 text-destructive text-xs font-medium">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{checkoutError}</span>
+              </div>
+            )}
+
+            {checkoutSuccess && !checkoutError && (
               <div className="flex items-center gap-2 p-3 rounded-md bg-green-500/10 border border-green-500/20 text-green-700 dark:text-green-300 text-xs font-medium">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <span>Order confirmed! Launching candidate profile...</span>
+                <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                <span>Order verified! Launching candidate profile...</span>
               </div>
             )}
           </div>

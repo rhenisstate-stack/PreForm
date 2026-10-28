@@ -6,6 +6,7 @@ import {
   archiveSubscriptionPlan,
   isValidHexColor,
   checkContrastRatio,
+  validateSubscriptionColors,
   type PlanMutationInput,
 } from "@/lib/subscription-store";
 
@@ -150,17 +151,24 @@ export async function PUT(
 
     const effectiveBg = bgColour || existing.bgColour;
     const effectiveText = textColour || existing.textColour;
-    if (effectiveBg && effectiveText) {
-      const contrast = checkContrastRatio(effectiveBg, effectiveText);
-      if (contrast < 3.0) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Insufficient color contrast (${contrast.toFixed(1)}:1). Must be at least 3.0:1 for accessibility safety.`,
-          },
-          { status: 400 }
-        );
-      }
+    const effectiveAccent = accentColour || existing.accentColour;
+    const colorValidation = validateSubscriptionColors({
+      bgColour: effectiveBg,
+      textColour: effectiveText,
+      accentColour: effectiveAccent,
+    });
+
+    if (!colorValidation.isValid) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: colorValidation.errors[0] || "Invalid color or insufficient contrast ratio",
+          contrastErrors: colorValidation.errors,
+          textContrastRatio: colorValidation.textContrastRatio,
+          accentContrastRatio: colorValidation.accentContrastRatio,
+        },
+        { status: 400 }
+      );
     }
 
     const updates: Partial<PlanMutationInput> = {

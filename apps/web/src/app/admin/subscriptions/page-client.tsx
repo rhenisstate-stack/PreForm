@@ -33,7 +33,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import type { Product } from "@/lib/products";
-import { checkContrastRatio, isValidHexColor } from "@/lib/color-contrast";
+import {
+  checkContrastRatio,
+  isValidHexColor,
+  validateSubscriptionColors,
+} from "@/lib/color-contrast";
 
 const adminNavItems = [
   { label: "Overview", href: "/admin", current: false },
@@ -240,25 +244,18 @@ export function AdminSubscriptionsClient() {
       return;
     }
 
-    if (formBgColour && !isValidHexColor(formBgColour)) {
-      setFeedbackMessage({ type: "error", text: "Background color must be a valid hex color code (e.g. #FFFFFF)" });
-      return;
-    }
+    const colorValidation = validateSubscriptionColors({
+      bgColour: formBgColour,
+      textColour: formTextColour,
+      accentColour: formAccentColour,
+    });
 
-    if (formTextColour && !isValidHexColor(formTextColour)) {
-      setFeedbackMessage({ type: "error", text: "Text color must be a valid hex color code (e.g. #0F172A)" });
+    if (!colorValidation.isValid) {
+      setFeedbackMessage({
+        type: "error",
+        text: colorValidation.errors[0] || "Color contrast fails accessibility guidelines.",
+      });
       return;
-    }
-
-    if (formBgColour && formTextColour) {
-      const contrast = checkContrastRatio(formBgColour, formTextColour);
-      if (contrast < 3.0) {
-        setFeedbackMessage({
-          type: "error",
-          text: `Color contrast (${contrast.toFixed(1)}:1) is below accessible 3.0:1 threshold. Please adjust colors.`,
-        });
-        return;
-      }
     }
 
     setIsSubmitting(true);
@@ -823,6 +820,30 @@ export function AdminSubscriptionsClient() {
                     </div>
                   </div>
                 </div>
+
+                {/* Live WCAG AA Contrast Evaluation */}
+                {formBgColour && formTextColour && isValidHexColor(formBgColour) && isValidHexColor(formTextColour) && (() => {
+                  const ratio = checkContrastRatio(formBgColour, formTextColour);
+                  const passesNormalAA = ratio >= 4.5;
+                  const passesLargeAA = ratio >= 3.0;
+                  return (
+                    <div className="rounded-lg border border-border bg-muted/50 p-2.5 space-y-1 text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium text-foreground">Contrast Ratio (Body &amp; Badges):</span>
+                        <span className={`font-mono font-bold ${passesNormalAA ? "text-green-600 dark:text-green-400" : passesLargeAA ? "text-amber-600 dark:text-amber-400" : "text-destructive"}`}>
+                          {ratio.toFixed(2)}:1
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        {passesNormalAA
+                          ? "✓ Meets WCAG 2.1 AA requirement (minimum 4.5:1) for body and badge text."
+                          : passesLargeAA
+                            ? "⚠ Meets 3.0:1 for large headings (>=24px) but FAILS the 4.5:1 requirement for standard card text and badges."
+                            : "✕ Fails WCAG 2.1 AA accessibility requirements."}
+                      </p>
+                    </div>
+                  );
+                })()}
 
                 <div className="flex items-center gap-6 pt-2">
                   <label className="flex items-center gap-2 cursor-pointer">
