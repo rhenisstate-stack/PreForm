@@ -164,9 +164,9 @@ const FEATURE_HIGHLIGHT_TABS: FeatureHighlightTab[] = [
     description:
       "Move seamlessly between question practice and PrepFord's 7-domain Nursing Study Guide covering Medical-Surgical, Pharmacology, Maternal & Newborn, Pediatrics, Mental Health, Fundamentals, and Leadership.",
     bullets: [
-      "Organized into 7 core nursing categories with 22 structured subject guides",
+      `Organized into ${STUDY_GUIDE_CATEGORIES.length} core nursing categories with ${STUDY_GUIDE_CATEGORIES.reduce((acc, cat) => acc + cat.subjects.length, 0)} structured subject guides`,
       "Includes pathophysiology summaries, nursing priorities, and red-flag complications",
-      "Built-in search, clinical pearls, and quick self-check review questions on every topic page",
+      "Built-in topic search, clinical alert callouts, essential nursing action items, and printable study notes",
     ],
     ctaLabel: "Browse the Nursing Study Guide",
     ctaHref: "/study-guide",
@@ -242,7 +242,7 @@ const RN_FAQ_ITEMS = [
     id: "faq-rn-what-is-included",
     question: "What resources are included in PrepFord's NCLEX-RN preparation platform?",
     answer:
-      "PrepFord provides an NCLEX-RN practice question bank with clinical vignettes, option-by-option correct and distractor rationales, a 7-domain Nursing Study Guide with 22 structured subject guides, server-scored timed readiness assessments, and a Student Workspace that tracks your accuracy across Client Needs categories.",
+      "PrepFord provides an NCLEX-RN practice question bank with clinical vignettes, option-by-option correct and distractor rationales, a 7-domain Nursing Study Guide with 10 structured subject guides, timed readiness assessments, and a Student Workspace that tracks your accuracy across Client Needs categories.",
   },
   {
     id: "faq-rn-plans-difference",
@@ -341,6 +341,7 @@ export function NCLEXRNPageClient() {
       try {
         addItem(product.id);
         router.push(`/cart?add=${encodeURIComponent(product.id)}`);
+        setTimeout(() => setSubmittingPlanId(null), 600);
       } catch {
         setSelectionError("Unable to add plan to cart right now. Please try again.");
         setSubmittingPlanId(null);
@@ -916,6 +917,9 @@ export function NCLEXRNPageClient() {
 
           <div className="mt-10 overflow-x-auto rounded-3xl bg-card shadow-sm ring-1 ring-border/70">
             <table className="w-full min-w-[680px] border-collapse text-left text-sm">
+              <caption className="sr-only">
+                Comparison of PrepFord NCLEX-RN Starter Review, Complete Preparation (Pro), and RN &amp; PN All-Access plans
+              </caption>
               <thead>
                 <tr className="border-b border-border/70 bg-muted/40">
                   <th scope="col" className="py-5 pl-6 pr-4 font-serif text-base font-bold text-foreground">
@@ -1101,27 +1105,37 @@ export function NCLEXRNPageClient() {
               </div>
             </div>
 
-            {/* Verified RN Candidate Reflections */}
+            {/* Clinical Reasoning & Study Loop Breakdown (non-duplicative of Section 14) */}
             <div className="lg:col-span-6 space-y-4">
-              {RN_TESTIMONIALS.slice(0, 2).map((item) => (
-                <blockquote
-                  key={item.id}
-                  className="rounded-3xl bg-card p-6 sm:p-7 shadow-md ring-1 ring-border/50"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <Badge variant="outline" className="text-xs font-medium text-secondary border-secondary/30">
-                      {item.focus}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">{item.role}</span>
-                  </div>
-                  <p className="text-sm sm:text-base text-foreground/90 leading-relaxed italic">
-                    &ldquo;{item.quote}&rdquo;
-                  </p>
-                  <footer className="mt-4 text-xs font-semibold text-foreground">
-                    — {item.author}
-                  </footer>
-                </blockquote>
-              ))}
+              <div className="rounded-3xl bg-card p-6 sm:p-7 shadow-md ring-1 ring-border/50 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="outline" className="text-xs font-medium text-secondary border-secondary/30">
+                    Step 1 • Clinical Cue Synthesis
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">Bedside Vignettes</span>
+                </div>
+                <h3 className="font-serif text-lg font-bold text-foreground">
+                  Connect Vital Signs &amp; Lab Trends Before Selecting an Action
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  Rather than testing isolated definitions, each RN practice stem pairs client history with live vital sign trends so you practice distinguishing expected postoperative findings from acute cardiopulmonary or hemodynamic decompensation.
+                </p>
+              </div>
+
+              <div className="rounded-3xl bg-card p-6 sm:p-7 shadow-md ring-1 ring-border/50 space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <Badge variant="outline" className="text-xs font-medium text-secondary border-secondary/30">
+                    Step 2 • Targeted Study Guide Remediation
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">7 Nursing Domains</span>
+                </div>
+                <h3 className="font-serif text-lg font-bold text-foreground">
+                  Turn Every Missed Question Into High-Yield Concept Review
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  After reviewing the option-by-option rationale, jump directly into the corresponding Nursing Study Guide topic to reinforce pharmacological antidotes, isolation rules, or RN delegation boundaries.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -1727,7 +1741,8 @@ export function NCLEXRNPageClient() {
                       {category.badge}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
-                      {category.subjects.length} Subject Guides
+                      {category.subjects.length}{" "}
+                      {category.subjects.length === 1 ? "Subject Guide" : "Subject Guides"}
                     </span>
                   </div>
 
@@ -2000,8 +2015,8 @@ export function NCLEXRNPageClient() {
           </div>
 
           <p className="mt-6 text-xs text-muted-foreground">
-            Candidate reflections describe individual study experiences with PrepFord&apos;s question
-            bank, rationales, and Study Guide. Individual exam outcomes depend on each candidate&apos;s
+            Illustrative candidate study perspectives highlighting how PrepFord&apos;s question
+            bank, option-by-option rationales, and 7-domain Study Guide support daily preparation. Individual exam outcomes depend on each candidate&apos;s
             nursing education and preparation.
           </p>
         </div>
