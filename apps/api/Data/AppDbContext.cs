@@ -157,6 +157,7 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(e => e.Pathway);
             entity.HasIndex(e => e.IsPublished);
+            entity.HasIndex(e => new { e.IsPublished, e.Pathway, e.UpdatedAt });
         });
 
         modelBuilder.Entity<ExamQuestion>(entity =>

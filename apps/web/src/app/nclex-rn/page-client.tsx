@@ -2140,8 +2140,7 @@ export function NCLEXRNPageClient() {
                     ) : (
                       <>
                         <ShoppingCart className="mr-2 h-4 w-4 shrink-0" aria-hidden="true" />
-                        <span className="truncate">Add Readiness Pack</span>
-                        <span className="sr-only">for ${readinessProduct.price}</span>
+                        <span className="truncate">Add Readiness Pack — ${readinessProduct.price}</span>
                       </>
                     )}
                   </Button>

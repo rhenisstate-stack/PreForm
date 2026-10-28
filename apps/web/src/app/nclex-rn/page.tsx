@@ -46,7 +46,7 @@ export default function RNPage() {
     provider: {
       "@type": "Organization",
       name: BRAND.fullName,
-      url: "https://prepford.com",
+      url: "https://prepfordnclex.com",
     },
     educationalCredentialAwarded: "Registered Nurse (NCLEX-RN) Licensure Preparation",
     hasCourseInstance: {
