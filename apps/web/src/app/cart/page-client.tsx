@@ -275,9 +275,9 @@ export function CartPageClient() {
                                 ? "90 days"
                                 : "one-time pack"}
                           </div>
-                          {product.savingsAmount && product.savingsAmount > 0 && (
+                          {product.originalPrice && product.originalPrice > product.price && (
                             <div className="mt-1 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
-                              Save ${product.savingsAmount}
+                              Save ${(product.originalPrice - product.price).toFixed(0)}
                             </div>
                           )}
                         </div>
