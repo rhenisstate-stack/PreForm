@@ -769,7 +769,6 @@ export function createCompletedAttempt(options: {
     selectedBankItems.push(bankItem);
   }
 
-  let totalScoreAwarded = 0;
   let correctCount = 0;
 
   const questions: QuestionReviewItem[] = selectedBankItems.map((q, idx) => {
@@ -777,7 +776,6 @@ export function createCompletedAttempt(options: {
     const scoreResult = scoreQuestion(q, submitted);
 
     if (scoreResult.isCorrect) correctCount += 1;
-    totalScoreAwarded += scoreResult.scoreAwarded;
 
     return {
       ...q,

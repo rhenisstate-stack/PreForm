@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import {
+  PerformanceTier,
   getPerformanceTier,
   getTierDescription,
   getTierStyles,
@@ -374,8 +375,8 @@ describe("PrepFord Assessment Scoring, Content Quality & Data Persistence Audit"
       expect(isValidAssessmentAttempt({ ...validAttempt, scorePercent: NaN })).toBe(false);
       expect(isValidAssessmentAttempt({ ...validAttempt, scorePercent: 120 })).toBe(false);
       expect(isValidAssessmentAttempt({ ...validAttempt, scorePercent: -5 })).toBe(false);
-      expect(isValidAssessmentAttempt({ ...validAttempt, performanceTier: "InvalidTier" as any })).toBe(false);
-      expect(isValidAssessmentAttempt({ ...validAttempt, totalQuestions: "10" as any })).toBe(false);
+      expect(isValidAssessmentAttempt({ ...validAttempt, performanceTier: "InvalidTier" as unknown as PerformanceTier })).toBe(false);
+      expect(isValidAssessmentAttempt({ ...validAttempt, totalQuestions: "10" as unknown as number })).toBe(false);
 
       // Inject corrupted JSON array into localStorage and verify safe filtering
       localStorage.setItem(
