@@ -89,8 +89,8 @@ export function FAQPageClient() {
                 onClick={() => setActiveCategory(c.id)}
                 className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
                   activeCategory === c.id
-                    ? "bg-primary text-white"
-                    : "bg-background border border-border text-foreground hover:bg-accent"
+                    ? "bg-primary text-primary-foreground shadow-xs"
+                    : "bg-background border border-border text-foreground hover:bg-muted"
                 }`}
               >
                 {c.label}

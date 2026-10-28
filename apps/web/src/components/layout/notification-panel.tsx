@@ -80,7 +80,7 @@ export function NotificationPanel({ announcementsData }: NotificationPanelProps)
                 <div
                   key={n.id}
                   className={`flex flex-col gap-1 px-3 py-2 cursor-pointer rounded-md transition-colors ${
-                    n.read ? "hover:bg-accent opacity-80" : "bg-secondary/10 hover:bg-secondary/15 border-l-2 border-secondary font-medium"
+                    n.read ? "hover:bg-muted opacity-80" : "bg-secondary/10 hover:bg-secondary/15 border-l-2 border-secondary font-medium"
                   }`}
                   onClick={() => {
                     markAsRead(n.id);
@@ -145,7 +145,7 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
           className="flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="User profile menu"
         >
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-white text-xs font-bold">
+          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-bold">
             {initial}
           </span>
           <span className="hidden sm:inline font-medium">{displayName}</span>
@@ -210,7 +210,7 @@ export function CartButton({ itemCount }: CartButtonProps) {
     >
       <ShoppingCart className="h-5 w-5" aria-hidden="true" />
       {effectiveCount > 0 && (
-        <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-bold text-white">
+        <span className="absolute top-1.5 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-secondary px-1 text-[10px] font-bold text-secondary-foreground">
           {effectiveCount}
         </span>
       )}

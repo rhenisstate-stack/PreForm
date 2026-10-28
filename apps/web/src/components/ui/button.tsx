@@ -17,7 +17,7 @@ const Button = React.forwardRef<
     <Comp
       ref={ref as unknown as React.Ref<HTMLButtonElement> | undefined}
       className={cn(
-        "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-60 [&_svg]:pointer-events-none [&_svg]:shrink-0",
         variants[variant],
         sizes[size],
         className
@@ -31,17 +31,17 @@ Button.displayName = "Button";
 
 const variants = {
   default:
-    "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm [&_*]:text-inherit",
+    "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
   primary:
-    "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm [&_*]:text-inherit",
+    "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
   blue:
-    "bg-blue-600 text-white hover:bg-blue-700 shadow-sm [&_*]:text-inherit",
+    "bg-blue-600 text-white hover:bg-blue-700 shadow-sm",
   destructive:
-    "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm [&_*]:text-inherit",
+    "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm",
   outline:
     "border border-input bg-background text-foreground hover:bg-muted hover:text-foreground shadow-sm",
   secondary:
-    "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-sm [&_*]:text-inherit",
+    "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-sm",
   ghost: "text-foreground hover:bg-muted hover:text-foreground",
   link: "text-primary underline-offset-4 hover:underline",
 };

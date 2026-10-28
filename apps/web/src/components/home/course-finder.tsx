@@ -131,7 +131,7 @@ export function CourseFinderQuiz() {
             <Card className="mt-8 border-secondary ring-1 ring-secondary/50 bg-card shadow-md text-left">
               <CardHeader>
                 <div className="flex items-center justify-between gap-2 mb-1">
-                  <Badge className="bg-secondary text-white font-semibold text-xs">
+                  <Badge className="bg-secondary text-secondary-foreground font-semibold text-xs">
                     Recommended Plan
                   </Badge>
                   <span className="text-xl font-serif font-bold text-foreground">
