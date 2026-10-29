@@ -1,5 +1,5 @@
 -- PrepFord SQLite-to-PostgreSQL Authoritative Migration Script
--- Generated: 2026-10-29T09:12:12.249Z
+-- Generated: 2026-10-29T09:18:55.536Z
 BEGIN TRANSACTION;
 
 -- 1. Seed Required RBAC Roles
@@ -478,6 +478,24 @@ INSERT INTO "SubscriptionPlans" (
   "PriceCents" = EXCLUDED."PriceCents",
   "IsActive" = EXCLUDED."IsActive",
   "UpdatedAt" = EXCLUDED."UpdatedAt";
+INSERT INTO "SubscriptionPlans" (
+  "Id", "Slug", "Name", "Code", "Description", "Audience", "Pathway", "PlanType",
+  "PriceCents", "OriginalPriceCents", "Currency", "Interval", "BillingInterval",
+  "DurationLabel", "FeaturesJson", "Popular", "BgColour", "AccentColour", "TextColour",
+  "BadgeText", "DisplayOrder", "IsActive", "EntitlementsJson", "CreatedAt", "UpdatedAt"
+) VALUES (
+  'custom-test-plan-1793265353176', 'custom-test-plan-1793265353176', 'Test Admin Plan', 'CUSTOM-TEST-PLAN-1793265353176', 'A test plan created via admin API', NULL,
+  'Both', 'premium', 10900, NULL,
+  'USD', 1, 'month', NULL,
+  '["Feature A","Feature B"]', false, NULL, NULL, NULL,
+  'Admin Special', 99, false, '["rn","pn"]',
+  '2026-10-29T09:15:53.278Z', '2026-10-29T09:15:53.415Z'
+) ON CONFLICT ("Id") DO UPDATE SET
+  "Name" = EXCLUDED."Name",
+  "Description" = EXCLUDED."Description",
+  "PriceCents" = EXCLUDED."PriceCents",
+  "IsActive" = EXCLUDED."IsActive",
+  "UpdatedAt" = EXCLUDED."UpdatedAt";
 
 -- 3. Users and User Roles
 INSERT INTO "Users" (
@@ -485,7 +503,7 @@ INSERT INTO "Users" (
   "EmailNotifications", "StudyReminders", "IsActive", "HasProfileImage", "ProfileImageUpdatedAt",
   "CreatedAt", "UpdatedAt"
 ) VALUES (
-  'prf_usr_85d27643549b141f2c22', 'rhenisstate@gmail.com', 'RESET_REQUIRED_f08f7c07ec8029eeae147afda9504a85', 'Rhenisstate', 'rn',
+  'prf_usr_85d27643549b141f2c22', 'rhenisstate@gmail.com', 'RESET_REQUIRED_0eb00cac5cd1bce5a09709f3a8f8fc67', 'Rhenisstate', 'rn',
   '2026-11-30', 'NCLEX-RN Complete Preparation Plan', true, true,
   true, true, '2026-10-28T07:19:09.187Z',
   '2026-10-28T07:19:19.794Z', '2026-10-28T07:19:19.794Z'
@@ -503,10 +521,10 @@ INSERT INTO "Users" (
   "EmailNotifications", "StudyReminders", "IsActive", "HasProfileImage", "ProfileImageUpdatedAt",
   "CreatedAt", "UpdatedAt"
 ) VALUES (
-  'prf_usr_jane_learner_123', 'jane.learner@nursing.edu', 'RESET_REQUIRED_1cfb7b0bee6086fb774177a767bfe08b', 'Jane Learner', 'rn',
+  'prf_usr_jane_learner_123', 'jane.learner@nursing.edu', 'RESET_REQUIRED_62df0996defda198ef40b080df9bde8d', 'Jane Learner', 'rn',
   '2026-12-15', 'NCLEX-RN Complete Preparation Plan', true, true,
   true, false, NULL,
-  '2026-10-29T08:51:56.401Z', '2026-10-29T08:51:56.401Z'
+  '2026-10-29T09:16:25.947Z', '2026-10-29T09:16:25.947Z'
 ) ON CONFLICT ("Id") DO UPDATE SET
   "DisplayName" = EXCLUDED."DisplayName",
   "Pathway" = EXCLUDED."Pathway",
@@ -521,10 +539,10 @@ INSERT INTO "Users" (
   "EmailNotifications", "StudyReminders", "IsActive", "HasProfileImage", "ProfileImageUpdatedAt",
   "CreatedAt", "UpdatedAt"
 ) VALUES (
-  'prf_usr_alex_checkout_456', 'alex.checkout@nursing.edu', 'RESET_REQUIRED_e78ffa9823b550f4b2b92e8ce7923dd2', 'Alex Candidate', 'both',
+  'prf_usr_alex_checkout_456', 'alex.checkout@nursing.edu', 'RESET_REQUIRED_1c29cdb7cbbcc45ac147768545b722ee', 'Alex Candidate', 'both',
   '2026-11-30', 'NCLEX-RN & PN All-Access', true, true,
   true, false, NULL,
-  '2026-10-29T08:52:15.116Z', '2026-10-29T08:52:15.116Z'
+  '2026-10-29T09:16:41.053Z', '2026-10-29T09:16:41.053Z'
 ) ON CONFLICT ("Id") DO UPDATE SET
   "DisplayName" = EXCLUDED."DisplayName",
   "Pathway" = EXCLUDED."Pathway",
@@ -539,10 +557,10 @@ INSERT INTO "Users" (
   "EmailNotifications", "StudyReminders", "IsActive", "HasProfileImage", "ProfileImageUpdatedAt",
   "CreatedAt", "UpdatedAt"
 ) VALUES (
-  'usr_jane_sec_001', 'jane.security@nursing.edu', 'RESET_REQUIRED_878797fa7c6f514ae22d7621c6393f40', 'Jane Security', 'rn',
+  'usr_jane_sec_001', 'jane.security@nursing.edu', 'RESET_REQUIRED_6354ad402dc3bdbe2622d74575a55001', 'Jane Security', 'rn',
   '2026-11-30', 'NCLEX-RN Complete Preparation Plan', true, true,
   true, false, NULL,
-  '2026-10-29T06:03:45.244Z', '2026-10-29T08:50:51.254Z'
+  '2026-10-29T06:03:45.244Z', '2026-10-29T09:15:48.538Z'
 ) ON CONFLICT ("Id") DO UPDATE SET
   "DisplayName" = EXCLUDED."DisplayName",
   "Pathway" = EXCLUDED."Pathway",
@@ -721,6 +739,30 @@ INSERT INTO "UserSessions" (
   'sess_1793263851016_5a0c6ded9309f7f3524449f7bc320783', 'usr_jane_sec_001', 'jane.security@nursing.edu', 'candidate', 'jane.security',
   'legacy_migrated_revoked_sess_1793263851016_5a0c6ded9309f7f3524449f7bc320783', 'fd231741c50df78b2113c3a4e4f9ca97', '2026-10-29T08:50:51.016Z',
   '2026-11-05T08:50:51.016Z', '2026-10-29T08:50:51.016Z', true
+) ON CONFLICT ("Id") DO NOTHING;
+INSERT INTO "UserSessions" (
+  "Id", "UserId", "Email", "Role", "DisplayName", "TokenHash", "CsrfToken",
+  "CreatedAt", "ExpiresAt", "LastActiveAt", "Revoked"
+) VALUES (
+  'sess_1793265348172_9f32f384600329ea6478d66c4138cefd', 'usr_jane_sec_001', 'jane.security@nursing.edu', 'candidate', 'jane.security',
+  'legacy_migrated_revoked_sess_1793265348172_9f32f384600329ea6478d66c4138cefd', '183514ff22b1c7c2ecf37bd24d4aa929', '2026-10-29T09:15:48.173Z',
+  '2026-11-05T09:15:48.173Z', '2026-10-29T09:15:48.173Z', true
+) ON CONFLICT ("Id") DO NOTHING;
+INSERT INTO "UserSessions" (
+  "Id", "UserId", "Email", "Role", "DisplayName", "TokenHash", "CsrfToken",
+  "CreatedAt", "ExpiresAt", "LastActiveAt", "Revoked"
+) VALUES (
+  'sess_1793265348260_51d4384cffd62765c66bb39936da7706', 'usr_jane_sec_001', 'jane.security@nursing.edu', 'candidate', 'jane.security',
+  'legacy_migrated_revoked_sess_1793265348260_51d4384cffd62765c66bb39936da7706', 'aea3be68f9f4bdae270f40daf68d3ff3', '2026-10-29T09:15:48.260Z',
+  '2026-11-05T09:15:48.260Z', '2026-10-29T09:15:48.260Z', true
+) ON CONFLICT ("Id") DO NOTHING;
+INSERT INTO "UserSessions" (
+  "Id", "UserId", "Email", "Role", "DisplayName", "TokenHash", "CsrfToken",
+  "CreatedAt", "ExpiresAt", "LastActiveAt", "Revoked"
+) VALUES (
+  'sess_1793265348267_1bb7f7b3e3bfa8276e9d53f1d08e3b31', 'usr_jane_sec_001', 'jane.security@nursing.edu', 'candidate', 'jane.security',
+  'legacy_migrated_revoked_sess_1793265348267_1bb7f7b3e3bfa8276e9d53f1d08e3b31', '7cd58b643becf2f2f14e2f698c711d43', '2026-10-29T09:15:48.267Z',
+  '2026-11-05T09:15:48.267Z', '2026-10-29T09:15:48.267Z', true
 ) ON CONFLICT ("Id") DO NOTHING;
 
 COMMIT;

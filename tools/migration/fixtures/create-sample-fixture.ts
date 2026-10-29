@@ -1,7 +1,18 @@
-import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { createRequire } from "node:module";
+
+function getDatabaseConstructor(): any {
+  const proc = process as any;
+  const modId = ["node", "sqlite"].join(":");
+  if (typeof proc.getBuiltinModule === "function") {
+    const mod = proc.getBuiltinModule(modId);
+    if (mod?.DatabaseSync) return mod.DatabaseSync;
+  }
+  const req = createRequire(import.meta.url || path.join(process.cwd(), "package.json"));
+  return req(modId).DatabaseSync;
+}
 
 export function createSanitizedFixture(fixturePath: string): void {
   const dir = path.dirname(fixturePath);
@@ -13,7 +24,8 @@ export function createSanitizedFixture(fixturePath: string): void {
     fs.unlinkSync(fixturePath);
   }
 
-  const db = new DatabaseSync(fixturePath, { open: true });
+  const DatabaseConstructor = getDatabaseConstructor();
+  const db = new DatabaseConstructor(fixturePath, { open: true });
 
   db.exec(`
     CREATE TABLE user_profiles (

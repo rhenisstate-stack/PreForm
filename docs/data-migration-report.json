@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-10-29T09:18:55.544Z",
+  "dryRun": true,
+  "sourceDbPath": "SQLite",
+  "targetHost": "localhost",
+  "targetDatabase": "prepford",
+  "success": true,
+  "stats": {
+    "users": {
+      "sourceCount": 4,
+      "targetCount": 4,
+      "insertedCount": 4,
+      "updatedCount": 0,
+      "skippedCount": 0,
+      "conflictCount": 0,
+      "checksum": "e80f2d953e93d3c1d715a34360e7d6e216c09e70037558c1934a77403c02742a"
+    },
+    "images": {
+      "sourceCount": 1,
+      "targetCount": 1,
+      "insertedCount": 1,
+      "updatedCount": 0,
+      "skippedCount": 0,
+      "conflictCount": 0,
+      "checksum": "a67599f484839c03831c326b841087efe125d92769e1959640c0afe3a4c55827"
+    },
+    "plans": {
+      "sourceCount": 27,
+      "targetCount": 27,
+      "insertedCount": 27,
+      "updatedCount": 0,
+      "skippedCount": 0,
+      "conflictCount": 0,
+      "checksum": "3834fbef8fb68178aa20a715cdf3a49a478c8ba0d7f6c5215fb741e46c068e0f"
+    },
+    "sessions": {
+      "sourceCount": 24,
+      "targetCount": 24,
+      "insertedCount": 24,
+      "updatedCount": 0,
+      "skippedCount": 0,
+      "conflictCount": 0,
+      "checksum": "0577ccf7d6d1689ca5f398f51be7fb1cae517543f01fa9f0f024fe576d1bd57d"
+    }
+  },
+  "conflicts": [],
+  "ambiguousEntitlements": [
+    {
+      "userId": "prf_usr_alex_checkout_456",
+      "email": "alex.checkout@nursing.edu",
+      "claimedPlan": "NCLEX-RN & PN All-Access",
+      "pathway": "both",
+      "reason": "User profile claims paid plan without verified Order or PaymentTransaction in source database."
+    }
+  ]
+}

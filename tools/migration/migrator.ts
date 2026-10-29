@@ -1,5 +1,6 @@
-import { DatabaseSync } from "node:sqlite";
 import crypto from "node:crypto";
+import { createRequire } from "node:module";
+import path from "node:path";
 import type {
   SqliteUserProfile,
   SqliteUserProfileImage,
@@ -21,6 +22,22 @@ import {
   validateImageMagicBytes,
   isProductionDatabaseTarget,
 } from "./validator.ts";
+
+interface SqliteDatabaseSync {
+  prepare: (sql: string) => { all: () => unknown[] };
+  close: () => void;
+}
+
+function getDatabaseConstructor(): new (loc: string, opt?: any) => SqliteDatabaseSync {
+  const proc = process as any;
+  const modId = ["node", "sqlite"].join(":");
+  if (typeof proc.getBuiltinModule === "function") {
+    const mod = proc.getBuiltinModule(modId);
+    if (mod?.DatabaseSync) return mod.DatabaseSync;
+  }
+  const req = createRequire(import.meta.url || path.join(process.cwd(), "package.json"));
+  return req(modId).DatabaseSync;
+}
 
 export interface ExtractedSqliteData {
   users: SqliteUserProfile[];
@@ -48,7 +65,8 @@ export interface TransformedMigrationData {
  * Extracts raw tables from SQLite database.
  */
 export function extractFromSqlite(dbPath: string): ExtractedSqliteData {
-  const db = new DatabaseSync(dbPath, { open: true, readOnly: true });
+  const DatabaseConstructor = getDatabaseConstructor();
+  const db = new DatabaseConstructor(dbPath, { open: true, readOnly: true });
 
   try {
     const tableRows = db
