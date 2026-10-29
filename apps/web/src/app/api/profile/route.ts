@@ -1,87 +1,54 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import {
-  deriveCandidateIdFromEmail,
   getUserProfileMeta,
   upsertUserProfileMeta,
 } from "@/lib/profile-image-db";
+import { resolveSession, signSessionPayload } from "@/lib/session";
 
-interface CandidateSession {
-  sub?: string;
-  id?: string;
-  email?: string;
-  name?: string;
-  displayName?: string;
-  role?: string;
-  pathway?: "rn" | "pn" | "both";
-  picture?: string;
-  provider?: string;
-  targetExamDate?: string;
-  activePlan?: string;
-  emailNotifications?: boolean;
-  studyReminders?: boolean;
-  updatedAt?: string;
-  [key: string]: unknown;
-}
-
-export async function GET() {
+export async function GET(request?: Request) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("preform_session");
+    const session = await resolveSession(request);
 
-    if (!sessionCookie || !sessionCookie.value) {
+    if (!session || !session.email) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    let sessionData: CandidateSession = {};
-
-    try {
-      sessionData = JSON.parse(sessionCookie.value);
-    } catch {
-      return NextResponse.json({ success: false, error: "Invalid session" }, { status: 401 });
-    }
-
-    if (!sessionData.email) {
-      return NextResponse.json({ success: false, error: "Session missing email" }, { status: 401 });
-    }
-
-    const userId =
-      sessionData.sub || sessionData.id || deriveCandidateIdFromEmail(sessionData.email);
-    const dbMeta = getUserProfileMeta(userId, sessionData.email);
+    const dbMeta = getUserProfileMeta(session.userId, session.email);
 
     const resolvedName =
       dbMeta?.displayName ||
-      sessionData.displayName ||
-      sessionData.name ||
+      session.displayName ||
+      session.name ||
       "Nursing Candidate";
 
     const profile = {
-      id: dbMeta?.userId || userId,
-      email: sessionData.email,
+      id: dbMeta?.userId || session.userId,
+      email: session.email,
       name: resolvedName,
       displayName: resolvedName,
-      role: sessionData.role || "candidate",
-      pathway: dbMeta?.pathway || sessionData.pathway || "rn",
-      targetExamDate: dbMeta?.targetExamDate || sessionData.targetExamDate || "2026-11-30",
+      role: session.role || "candidate",
+      pathway: dbMeta?.pathway || session.pathway || "rn",
+      targetExamDate: dbMeta?.targetExamDate || session.targetExamDate || "2026-11-30",
       activePlan:
         dbMeta?.activePlan ||
-        sessionData.activePlan ||
+        session.activePlan ||
         "NCLEX-RN Complete Preparation Plan",
-      provider: sessionData.provider || "credentials",
+      provider: session.provider || "credentials",
       emailNotifications:
         dbMeta !== null
           ? dbMeta.emailNotifications
-          : sessionData.emailNotifications !== undefined
-            ? sessionData.emailNotifications
+          : session.emailNotifications !== undefined
+            ? session.emailNotifications
             : true,
       studyReminders:
         dbMeta !== null
           ? dbMeta.studyReminders
-          : sessionData.studyReminders !== undefined
-            ? sessionData.studyReminders
+          : session.studyReminders !== undefined
+            ? session.studyReminders
             : true,
-      hasProfileImage: dbMeta?.hasProfileImage ?? Boolean(sessionData.picture),
-      picture: dbMeta?.pictureUrl || sessionData.picture,
+      hasProfileImage: Boolean(dbMeta?.hasProfileImage || session.picture),
+      picture: dbMeta?.pictureUrl || session.picture,
     };
 
     return NextResponse.json({ success: true, profile });
@@ -96,22 +63,10 @@ export async function GET() {
 
 export async function PUT(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("preform_session");
+    const session = await resolveSession(request);
 
-    if (!sessionCookie || !sessionCookie.value) {
+    if (!session || !session.email) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-    }
-
-    let sessionData: CandidateSession = {};
-    try {
-      sessionData = JSON.parse(sessionCookie.value);
-    } catch {
-      return NextResponse.json({ success: false, error: "Invalid session" }, { status: 401 });
-    }
-
-    if (!sessionData.email) {
-      return NextResponse.json({ success: false, error: "Session missing email" }, { status: 401 });
     }
 
     let body: Record<string, unknown> = {};
@@ -125,16 +80,14 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: false, error: "Request body must be an object" }, { status: 400 });
     }
 
-    const userId =
-      sessionData.sub || sessionData.id || deriveCandidateIdFromEmail(sessionData.email);
-    const currentDbMeta = getUserProfileMeta(userId, sessionData.email);
+    const currentDbMeta = getUserProfileMeta(session.userId, session.email);
     const authoritativePathway: "rn" | "pn" | "both" =
-      currentDbMeta?.pathway || sessionData.pathway || "rn";
+      currentDbMeta?.pathway || session.pathway || "rn";
     const authoritativePlan: string =
       currentDbMeta?.activePlan ||
-      sessionData.activePlan ||
+      session.activePlan ||
       "NCLEX-RN Complete Preparation Plan";
-    const authoritativeRole = sessionData.role || "candidate";
+    const authoritativeRole = session.role || "candidate";
 
     // ── Security Boundary: Enforce Allowlist & Prevent Entitlement Elevation ──
     // Reject any attempt to elevate privileges or self-grant subscriptions/roles.
@@ -235,31 +188,32 @@ export async function PUT(request: Request) {
 
     // ── Safe Persisted Write (Always Retaining Authoritative Entitlements) ──
     const savedRecord = upsertUserProfileMeta({
-      userId,
-      email: sessionData.email,
+      userId: session.userId,
+      email: session.email,
       displayName:
         typeof displayName === "string" && displayName.trim().length > 0
           ? displayName.trim()
-          : (currentDbMeta?.displayName || sessionData.displayName || sessionData.name || "Nursing Candidate"),
+          : (currentDbMeta?.displayName || session.displayName || session.name || "Nursing Candidate"),
       pathway: authoritativePathway,
       targetExamDate:
         typeof targetExamDate === "string" && targetExamDate.trim().length > 0
           ? targetExamDate.trim()
-          : (currentDbMeta?.targetExamDate || sessionData.targetExamDate || "2026-11-30"),
+          : (currentDbMeta?.targetExamDate || session.targetExamDate || "2026-11-30"),
       activePlan: authoritativePlan,
       emailNotifications:
         typeof emailNotifications === "boolean"
           ? emailNotifications
-          : (currentDbMeta?.emailNotifications ?? sessionData.emailNotifications ?? true),
+          : (currentDbMeta?.emailNotifications ?? session.emailNotifications ?? true),
       studyReminders:
         typeof studyReminders === "boolean"
           ? studyReminders
-          : (currentDbMeta?.studyReminders ?? sessionData.studyReminders ?? true),
+          : (currentDbMeta?.studyReminders ?? session.studyReminders ?? true),
     });
 
-    const updatedSession: CandidateSession = {
-      ...sessionData,
+    const updatedToken = signSessionPayload({
+      sid: session.sessionId,
       sub: savedRecord.userId,
+      email: session.email,
       displayName: savedRecord.displayName,
       name: savedRecord.displayName,
       role: authoritativeRole,
@@ -268,11 +222,14 @@ export async function PUT(request: Request) {
       activePlan: authoritativePlan,
       emailNotifications: savedRecord.emailNotifications,
       studyReminders: savedRecord.studyReminders,
-      picture: savedRecord.pictureUrl || sessionData.picture,
+      picture: savedRecord.pictureUrl || session.picture,
+      csrfToken: session.csrfToken,
+      expiresAt: session.expiresAt,
       updatedAt: new Date().toISOString(),
-    };
+    });
 
-    cookieStore.set("preform_session", JSON.stringify(updatedSession), {
+    const cookieStore = await cookies();
+    cookieStore.set("preform_session", updatedToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -284,18 +241,18 @@ export async function PUT(request: Request) {
       success: true,
       profile: {
         id: savedRecord.userId,
-        email: sessionData.email,
+        email: session.email,
         name: savedRecord.displayName,
         displayName: savedRecord.displayName,
         role: authoritativeRole,
         pathway: authoritativePathway,
         targetExamDate: savedRecord.targetExamDate,
         activePlan: authoritativePlan,
-        provider: updatedSession.provider || "credentials",
+        provider: session.provider || "credentials",
         emailNotifications: savedRecord.emailNotifications,
         studyReminders: savedRecord.studyReminders,
         hasProfileImage: savedRecord.hasProfileImage,
-        picture: savedRecord.pictureUrl || updatedSession.picture,
+        picture: savedRecord.pictureUrl || session.picture,
       },
     });
   } catch (err) {

@@ -3,51 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   MAX_PROFILE_IMAGE_BYTES,
   deleteProfileImageBinary,
-  deriveCandidateIdFromEmail,
   getProfileImageBinary,
   saveProfileImageBinary,
 } from "@/lib/profile-image-db";
-
-interface SessionPayload {
-  sub?: string;
-  id?: string;
-  email?: string;
-  name?: string;
-  displayName?: string;
-  role?: string;
-  pathway?: "rn" | "pn";
-  picture?: string;
-  provider?: string;
-  [key: string]: unknown;
-}
-
-async function resolveSession(): Promise<{
-  session: SessionPayload;
-  userId: string;
-  email: string;
-} | null> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get("preform_session");
-  if (!sessionCookie || !sessionCookie.value) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(sessionCookie.value) as SessionPayload;
-    if (!parsed.email || typeof parsed.email !== "string") {
-      return null;
-    }
-    const email = parsed.email.trim().toLowerCase();
-    const userId = parsed.sub || parsed.id || deriveCandidateIdFromEmail(email);
-    return { session: parsed, userId, email };
-  } catch {
-    return null;
-  }
-}
+import { resolveSession, signSessionPayload } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await resolveSession();
+    const auth = await resolveSession(request);
     if (!auth) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },
