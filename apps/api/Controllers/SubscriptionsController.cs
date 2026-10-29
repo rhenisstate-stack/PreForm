@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Preform.Api.Data;
-using Preform.Api.Models;
+using Preform.Api.DTOs;
+using Preform.Api.Services;
 
 namespace Preform.Api.Controllers;
 
@@ -9,39 +8,27 @@ namespace Preform.Api.Controllers;
 [Route("api/v1/subscriptions")]
 public class SubscriptionsController : ControllerBase
 {
-    private readonly AppDbContext _context;
+    private readonly ISubscriptionService _subscriptionService;
 
-    public SubscriptionsController(AppDbContext context)
+    public SubscriptionsController(ISubscriptionService subscriptionService)
     {
-        _context = context;
+        _subscriptionService = subscriptionService;
     }
 
     [HttpGet]
     public async Task<IActionResult> GetActivePlans(CancellationToken cancellationToken)
     {
-        var plans = await _context.SubscriptionPlans
-            .Where(p => p.IsActive)
-            .OrderBy(p => p.Interval)
-            .ThenBy(p => p.PriceCents)
-            .ToListAsync(cancellationToken);
-
-        return Ok(new
-        {
-            success = true,
-            count = plans.Count,
-            plans
-        });
+        var catalog = await _subscriptionService.GetActivePlansAsync(cancellationToken);
+        return Ok(catalog);
     }
 
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetPlanById(string id, CancellationToken cancellationToken)
+    [HttpGet("{idOrSlug}")]
+    public async Task<IActionResult> GetPlanById(string idOrSlug, CancellationToken cancellationToken)
     {
-        var plan = await _context.SubscriptionPlans
-            .FirstOrDefaultAsync(p => p.Id == id || p.Code == id, cancellationToken);
-
+        var plan = await _subscriptionService.GetPlanByIdOrSlugAsync(idOrSlug, cancellationToken);
         if (plan is null)
         {
-            return NotFound(new { success = false, error = "Subscription plan not found" });
+            return NotFound(new { success = false, error = "Subscription plan not found." });
         }
 
         return Ok(new { success = true, plan });
