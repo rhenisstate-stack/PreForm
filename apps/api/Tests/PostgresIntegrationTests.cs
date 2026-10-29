@@ -320,7 +320,7 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         var client = _factory.CreateClient();
         PostgresTestFixture.AddGatewayHeaders(client, candidate.Id, candidate.Email, "candidate", candidate.DisplayName);
 
-        // Attempt to tamper with role, activePlan, or pathway via profile PUT
+        // 1. Attempt to tamper with role, activePlan, or pathway via profile PUT -> MUST BE REJECTED with 403
         var tamperPayload = new
         {
             displayName = "Tampered Candidate",
@@ -329,16 +329,27 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
             pathway = "both"
         };
 
-        var putResponse = await client.PutAsJsonAsync("/api/v1/profile", tamperPayload);
-        putResponse.EnsureSuccessStatusCode();
+        var tamperResponse = await client.PutAsJsonAsync("/api/v1/profile", tamperPayload);
+        Assert.Equal(HttpStatusCode.Forbidden, tamperResponse.StatusCode);
 
-        // Verify in PostgreSQL that role and activePlan were NOT escalated
+        // 2. Legitimate update of allowed fields (displayName, studyReminders) -> MUST SUCCEED with 200 OK
+        var legitimatePayload = new
+        {
+            displayName = "Updated Candidate Name",
+            studyReminders = false
+        };
+
+        var validResponse = await client.PutAsJsonAsync("/api/v1/profile", legitimatePayload);
+        validResponse.EnsureSuccessStatusCode();
+
+        // 3. Verify in PostgreSQL that allowed updates persisted and disallowed fields remained untouched
         using var verifyScope = _factory.Services.CreateScope();
         var verifyContext = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var updatedUser = await verifyContext.Users.FindAsync(candidate.Id);
 
         Assert.NotNull(updatedUser);
-        Assert.Equal("Tampered Candidate", updatedUser.DisplayName);
+        Assert.Equal("Updated Candidate Name", updatedUser.DisplayName);
+        Assert.False(updatedUser.StudyReminders);
         Assert.Equal("rn", updatedUser.Pathway);
         Assert.Equal("NCLEX-RN Complete", updatedUser.ActivePlan);
     }
