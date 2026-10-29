@@ -19,7 +19,6 @@ import {
   Stethoscope,
   ChevronDown,
   ChevronUp,
-  ShieldCheck,
   Layers,
 } from "lucide-react";
 

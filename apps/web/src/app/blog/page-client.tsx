@@ -62,6 +62,14 @@ export function BlogPageClient() {
     return getBlogPostBySlug("understanding-the-next-generation-nclex");
   }, [isDefaultView]);
 
+  // Exclude featured article from the regular grid on page 1 to prevent repetition
+  const gridPosts = React.useMemo(() => {
+    if (isDefaultView && featuredArticle) {
+      return posts.filter((p) => p.slug !== featuredArticle.slug);
+    }
+    return posts;
+  }, [isDefaultView, featuredArticle, posts]);
+
   const updateFilters = (params: { page?: number; category?: string; search?: string }) => {
     const nextParams = new URLSearchParams(searchParams.toString());
 
@@ -374,7 +382,7 @@ export function BlogPageClient() {
             <>
               {/* Articles Grid with Image Thumbnails */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-                {posts.map((post) => (
+                {gridPosts.map((post) => (
                   <Card
                     key={post.slug}
                     className="flex flex-col justify-between hover:shadow-md hover:border-secondary/50 transition-all group overflow-hidden border-border/80"

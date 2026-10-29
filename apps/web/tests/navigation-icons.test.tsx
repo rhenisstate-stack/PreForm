@@ -13,12 +13,22 @@ vi.mock("next-themes", () => ({
   }),
 }));
 
+// Mock @/components/ui/dropdown-menu to render content in jsdom
+vi.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenu: ({ children }: { children?: React.ReactNode }) => <div data-testid="dropdown-menu">{children}</div>,
+  DropdownMenuTrigger: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  DropdownMenuContent: ({ children }: { children?: React.ReactNode }) => <div role="menu">{children}</div>,
+  DropdownMenuLabel: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
+  DropdownMenuItem: ({ children }: { children?: React.ReactNode }) => <div role="menuitem">{children}</div>,
+}));
+
 import PublicHeader from "@/components/layout/public-header";
 import { ProfileMenu } from "@/components/layout/notification-panel";
 
 describe("Phase 4: Navigation with Icons Transformation", () => {
   it("renders Lucide icons across desktop navigation dropdown items", () => {
-    const { container } = render(<PublicHeader />);
+    render(<PublicHeader />);
 
     // 1. Nursing dropdown
     const nursingTrigger = screen.getByRole("button", { name: /^Nursing$/i });

@@ -4,7 +4,7 @@ import * as React from "react";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => {
-  let currentParams = new URLSearchParams();
+  const currentParams = new URLSearchParams();
   return {
     usePathname: () => "/blog",
     useRouter: () => ({
@@ -21,7 +21,7 @@ vi.mock("next/navigation", () => {
 // Mock next/image
 vi.mock("next/image", () => ({
   __esModule: true,
-  default: ({ src, alt, fill, priority, ...props }: any) => {
+  default: ({ src, alt, priority, ...props }: React.ComponentProps<"img"> & { fill?: boolean; priority?: boolean }) => {
     // eslint-disable-next-line @next/next/no-img-element
     return <img src={src} alt={alt} data-priority={priority ? "true" : undefined} {...props} />;
   },
@@ -30,11 +30,9 @@ vi.mock("next/image", () => ({
 import { BlogPageClient } from "@/app/blog/page-client";
 import { ArticleDetailClient } from "@/app/blog/[slug]/page-client";
 import {
-  getAllBlogPosts,
   getBlogPostBySlug,
   getRelatedPosts,
   getAllCategories,
-  getPaginatedPosts,
 } from "@/lib/blog-data";
 import { generateMetadata } from "@/app/blog/[slug]/page";
 
@@ -169,7 +167,7 @@ describe("Phase 1 & Phase 2: PrepFord Blog & Article Detail Transformation", () 
 
       // Comparison Table
       expect(screen.getByText(/NCJMM Cognitive Step/i)).toBeInTheDocument();
-      expect(screen.getByText(/1. Recognize Cues/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/1\. Recognize Cues/i)[0]).toBeInTheDocument();
 
       // Inline Image Caption
       expect(
@@ -202,8 +200,9 @@ describe("Phase 1 & Phase 2: PrepFord Blog & Article Detail Transformation", () 
       expect(meta.title).toContain("Understanding the Next Generation NCLEX");
       expect(meta.description).toContain("A candidate guide to the NCSBN Clinical Judgment Measurement Model");
       expect(meta.alternates?.canonical).toBe("/blog/understanding-the-next-generation-nclex");
-      expect((meta.openGraph as any)?.type).toBe("article");
-      expect((meta.openGraph as any)?.images[0].url).toBe("/images/blog/prepford-ngn-article-hero.jpg");
+      const og = meta.openGraph as { type?: string; images?: Array<{ url: string }> } | undefined;
+      expect(og?.type).toBe("article");
+      expect(og?.images?.[0].url).toBe("/images/blog/prepford-ngn-article-hero.jpg");
     });
   });
 });
