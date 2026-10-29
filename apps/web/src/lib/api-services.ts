@@ -349,3 +349,63 @@ export const checkoutService = {
     });
   },
 };
+
+// ── Exam Attempts DTOs & Service ──────────────────────────────────────────
+
+export interface BackendExamAttemptDto {
+  id: string;
+  userId: string;
+  examId: string;
+  status: "InProgress" | "Completed" | "Abandoned";
+  scorePercent: number;
+  passed: boolean;
+  startedAt: string;
+  completedAt?: string | null;
+  name?: string;
+  type?: string;
+  durationMinutes?: number;
+  totalQuestions?: number;
+  correctCount?: number;
+  performanceTier?: string;
+  responses?: BackendAttemptResponseDto[];
+}
+
+export interface BackendAttemptResponseDto {
+  id?: string;
+  examAttemptId?: string;
+  questionId: string;
+  selectedOptionsJson: string;
+  isCorrect: boolean;
+  scoreAwarded: number;
+  timeSpentSeconds: number;
+  answeredAt?: string;
+}
+
+export const attemptsService = {
+  getAttempts: async (
+    session: VerifiedSession
+  ): Promise<ApiResponse<{ success: boolean; attempts: BackendExamAttemptDto[] }>> => {
+    return apiClient.get<{ success: boolean; attempts: BackendExamAttemptDto[] }>("/api/v1/attempts", {
+      session,
+    });
+  },
+
+  getAttemptById: async (
+    id: string,
+    session: VerifiedSession
+  ): Promise<ApiResponse<{ success: boolean; attempt: BackendExamAttemptDto }>> => {
+    return apiClient.get<{ success: boolean; attempt: BackendExamAttemptDto }>(
+      `/api/v1/attempts/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  syncAttempt: async (
+    attempt: unknown,
+    session: VerifiedSession
+  ): Promise<ApiResponse<{ success: boolean; attempt: BackendExamAttemptDto }>> => {
+    return apiClient.post<{ success: boolean; attempt: BackendExamAttemptDto }>("/api/v1/attempts/sync", attempt, {
+      session,
+    });
+  },
+};
