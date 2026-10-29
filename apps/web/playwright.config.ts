@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 const rawBaseUrl =
   process.env.PLAYWRIGHT_TEST_BASE_URL ||
   process.env.BASE_URL ||
-  "http://localhost:3000";
+  "http://127.0.0.1:3000";
 
 // Hardened Production Safety Refusal
 if (
@@ -53,8 +53,8 @@ export default defineConfig({
   webServer: process.env.PLAYWRIGHT_SKIP_WEBSERVER
     ? undefined
     : {
-        command: "npm run start",
-        url: "http://localhost:3000",
+        command: "npx next start -H 127.0.0.1 -p 3000",
+        url: "http://127.0.0.1:3000",
         reuseExistingServer: true,
         timeout: 120000,
       },
