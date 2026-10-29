@@ -24,7 +24,7 @@ export function generateTestStudent(pathway: "rn" | "pn" = "rn"): TestStudent {
  * Performs student registration flow through the browser UI.
  */
 export async function registerStudentUI(page: Page, student: TestStudent): Promise<void> {
-  await page.goto("/sign-up");
+  await page.goto("/sign-up?from=/dashboard");
 
   // Fill registration form using accessible stable selectors
   await page.fill("#fullName", student.fullName);
@@ -41,7 +41,7 @@ export async function registerStudentUI(page: Page, student: TestStudent): Promi
   await page.fill("#password", student.password);
 
   // Accept terms and conditions
-  const termsCheckbox = page.locator("#terms, input[type='checkbox']").first();
+  const termsCheckbox = page.locator('input[type="checkbox"]').first();
   if (await termsCheckbox.isVisible()) {
     await termsCheckbox.check();
   }
@@ -49,22 +49,22 @@ export async function registerStudentUI(page: Page, student: TestStudent): Promi
   // Submit registration form
   await page.click('button[type="submit"]');
 
-  // Verify redirected to authenticated destination (profile or dashboard)
-  await page.waitForURL(/\/(profile|dashboard|study-guide)/, { timeout: 15000 });
+  // Verify redirected to authenticated destination
+  await page.waitForURL(/\/(dashboard|courses|profile)/, { timeout: 15000 });
 }
 
 /**
  * Performs student login flow through the browser UI.
  */
 export async function loginStudentUI(page: Page, student: TestStudent): Promise<void> {
-  await page.goto("/sign-in");
+  await page.goto("/sign-in?from=/dashboard");
 
   await page.fill("#email", student.email);
   await page.fill("#password", student.password);
 
   await page.click('button[type="submit"]');
 
-  await page.waitForURL(/\/(profile|dashboard|study-guide)/, { timeout: 15000 });
+  await page.waitForURL(/\/(dashboard|courses|profile)/, { timeout: 15000 });
 }
 
 /**

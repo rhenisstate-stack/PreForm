@@ -34,7 +34,7 @@ export default defineConfig({
     baseURL: rawBaseUrl,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
-    video: "retain-on-failure",
+    video: "off",
     // Mask sensitive input attributes from traces & logs
     launchOptions: {
       slowMo: process.env.SLOW_MO ? Number(process.env.SLOW_MO) : 0,

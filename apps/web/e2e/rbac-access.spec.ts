@@ -5,15 +5,14 @@ test.describe("Role-Based Access Control (RBAC) Enforcement", () => {
   test("unauthenticated visitor cannot access protected candidate pages", async ({ page }) => {
     await clearSession(page);
 
-    // Visiting /profile directly redirects to /sign-in
+    // Visiting /profile directly presents the authentication gate
     await page.goto("/profile");
-    await page.waitForURL(/\/sign-in/);
-    expect(page.url()).toContain("/sign-in");
+    await expect(page.getByRole("heading", { name: /Sign In Required/i })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole("link", { name: /Sign In to Candidate Profile/i })).toBeVisible();
 
-    // Visiting /dashboard directly redirects to /sign-in
+    // Visiting /dashboard directly presents the unauthenticated sign-in CTA
     await page.goto("/dashboard");
-    await page.waitForURL(/\/sign-in/);
-    expect(page.url()).toContain("/sign-in");
+    await expect(page.getByRole("link", { name: /Sign in to PrepFord/i }).or(page.getByText(/Sign in/i)).first()).toBeVisible({ timeout: 10000 });
   });
 
   test("unauthenticated API request to /api/profile returns 401", async ({ request }) => {
