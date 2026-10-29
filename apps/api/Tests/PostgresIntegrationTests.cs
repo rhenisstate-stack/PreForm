@@ -44,7 +44,7 @@ public class PostgresTestFixture : WebApplicationFactory<Program>
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<PostgresTestFixture>>();
 
-        await context.Database.MigrateAsync();
+        await context.Database.EnsureCreatedAsync();
         await CatalogSeeder.SeedAsync(context, logger);
     }
 
