@@ -126,7 +126,7 @@ export interface PlanMutationInput {
   badgeText?: string;
   displayOrder?: number;
   isActive?: boolean;
-  entitlements?: string[];
+  entitlements?: ("rn" | "pn")[];
 }
 
 export function createSubscriptionPlan(input: PlanMutationInput): Product {
@@ -174,6 +174,7 @@ export function updateSubscriptionPlan(
     id: existing.id,
     displayOrder: typeof updates.displayOrder === "number" ? updates.displayOrder : existing.displayOrder,
     isActive: updates.isActive !== undefined ? Boolean(updates.isActive) : existing.isActive,
+    entitlements: updates.entitlements ?? existing.entitlements,
   };
 
   memoryPlans[index] = updated;

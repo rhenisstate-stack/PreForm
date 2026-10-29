@@ -164,7 +164,9 @@ export async function PUT(
       badgeText: badgeText?.trim(),
       displayOrder,
       isActive,
-      entitlements,
+      entitlements: Array.isArray(entitlements)
+        ? (entitlements.filter((e) => e === "rn" || e === "pn") as ("rn" | "pn")[])
+        : undefined,
     });
 
     if (!updated) {

@@ -160,7 +160,9 @@ export async function POST(request: Request) {
       badgeText: badgeText?.trim(),
       displayOrder: typeof displayOrder === "number" ? displayOrder : 99,
       isActive: isActive !== undefined ? Boolean(isActive) : true,
-      entitlements: Array.isArray(entitlements) ? entitlements : undefined,
+      entitlements: Array.isArray(entitlements)
+        ? (entitlements.filter((e) => e === "rn" || e === "pn") as ("rn" | "pn")[])
+        : undefined,
     });
 
     return NextResponse.json({ success: true, plan }, { status: 201 });
