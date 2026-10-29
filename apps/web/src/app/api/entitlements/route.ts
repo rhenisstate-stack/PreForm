@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { checkoutService } from "@/lib/api-services";
 import { resolveSession } from "@/lib/session";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   try {
     const session = await resolveSession(request);
