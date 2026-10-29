@@ -15,7 +15,7 @@ export function generateTestStudent(pathway: "rn" | "pn" = "rn"): TestStudent {
   return {
     fullName: `Test Student ${nonce}`,
     email: `student_${nonce}@nursing.test.edu`,
-    password: `Nurs1ng!Pass_${nonce}`,
+    password: `Clinical-Secure-${nonce}!#Pass`,
     pathway,
   };
 }
@@ -41,9 +41,9 @@ export async function registerStudentUI(page: Page, student: TestStudent): Promi
   await page.fill("#password", student.password);
 
   // Accept terms and conditions
-  const termsCheckbox = page.locator('input[type="checkbox"]').first();
+  const termsCheckbox = page.locator('input[name="agreeTerms"], input[type="checkbox"]').first();
   if (await termsCheckbox.isVisible()) {
-    await termsCheckbox.check();
+    await termsCheckbox.check({ force: true });
   }
 
   // Submit registration form
@@ -72,12 +72,18 @@ export async function loginStudentUI(page: Page, student: TestStudent): Promise<
  */
 export async function clearSession(page: Page): Promise<void> {
   await page.context().clearCookies();
-  await page.evaluate(() => {
-    try {
-      localStorage.clear();
-      sessionStorage.clear();
-    } catch {
-      // Ignore in contexts without window storage
+  try {
+    if (page.url() !== "about:blank") {
+      await page.evaluate(() => {
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch {
+          // Ignore in contexts without window storage
+        }
+      });
     }
-  });
+  } catch {
+    // Ignore cross-origin or pre-navigation evaluations
+  }
 }

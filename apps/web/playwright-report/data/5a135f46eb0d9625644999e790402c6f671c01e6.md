@@ -7,7 +7,7 @@
 # Test info
 
 - Name: rbac-access.spec.ts >> Role-Based Access Control (RBAC) Enforcement >> candidate cannot escalate role or grant admin rights via profile updates
-- Location: e2e\rbac-access.spec.ts:57:3
+- Location: e2e\rbac-access.spec.ts:55:3
 
 # Error details
 
@@ -254,7 +254,7 @@ waiting for navigation until "load"
   15 |   return {
   16 |     fullName: `Test Student ${nonce}`,
   17 |     email: `student_${nonce}@nursing.test.edu`,
-  18 |     password: `Nurs1ng!Pass_${nonce}`,
+  18 |     password: `Clinical-Secure-${nonce}!#Pass`,
   19 |     pathway,
   20 |   };
   21 | }
@@ -280,9 +280,9 @@ waiting for navigation until "load"
   41 |   await page.fill("#password", student.password);
   42 | 
   43 |   // Accept terms and conditions
-  44 |   const termsCheckbox = page.locator('input[type="checkbox"]').first();
+  44 |   const termsCheckbox = page.locator('input[name="agreeTerms"], input[type="checkbox"]').first();
   45 |   if (await termsCheckbox.isVisible()) {
-  46 |     await termsCheckbox.check();
+  46 |     await termsCheckbox.check({ force: true });
   47 |   }
   48 | 
   49 |   // Submit registration form
@@ -312,14 +312,20 @@ waiting for navigation until "load"
   72 |  */
   73 | export async function clearSession(page: Page): Promise<void> {
   74 |   await page.context().clearCookies();
-  75 |   await page.evaluate(() => {
-  76 |     try {
-  77 |       localStorage.clear();
-  78 |       sessionStorage.clear();
-  79 |     } catch {
-  80 |       // Ignore in contexts without window storage
-  81 |     }
-  82 |   });
-  83 | }
-  84 | 
+  75 |   try {
+  76 |     if (page.url() !== "about:blank") {
+  77 |       await page.evaluate(() => {
+  78 |         try {
+  79 |           localStorage.clear();
+  80 |           sessionStorage.clear();
+  81 |         } catch {
+  82 |           // Ignore in contexts without window storage
+  83 |         }
+  84 |       });
+  85 |     }
+  86 |   } catch {
+  87 |     // Ignore cross-origin or pre-navigation evaluations
+  88 |   }
+  89 | }
+  90 | 
 ```

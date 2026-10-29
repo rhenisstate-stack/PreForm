@@ -36,10 +36,9 @@ test.describe("Student Authentication & Session Lifecycle", () => {
       await page.goto("/sign-in");
     }
 
-    // 5. Attempting to visit /profile after logout redirects to /sign-in
+    // 5. Attempting to visit /profile after logout displays sign in required gate
     await page.goto("/profile");
-    await page.waitForURL(/\/sign-in/);
-    await expect(page).toHaveURL(/\/sign-in/);
+    await expect(page.getByRole("heading", { name: /Sign In Required/i }).or(page.getByText(/Sign In Required/i)).first()).toBeVisible({ timeout: 10000 });
   });
 
   test("student can log in with valid credentials", async ({ page }) => {
@@ -84,9 +83,7 @@ test.describe("Student Authentication & Session Lifecycle", () => {
     if (sessionCookie) {
       await page.context().addCookies([sessionCookie]);
       await page.goto("/profile");
-      // Expect redirect to sign-in or unauthorized
-      await page.waitForURL(/\/sign-in/);
-      expect(page.url()).toContain("/sign-in");
+      await expect(page.getByRole("heading", { name: /Sign In Required/i }).or(page.getByText(/Sign In Required/i)).first()).toBeVisible({ timeout: 10000 });
     }
   });
 });

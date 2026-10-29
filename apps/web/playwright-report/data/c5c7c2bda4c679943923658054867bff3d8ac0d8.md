@@ -14,14 +14,14 @@
 ```
 Error: expect(locator).toBeVisible() failed
 
-Locator: getByRole('heading', { name: /Sign In Required/i })
+Locator: getByRole('heading', { name: /Sign In Required/i }).or(getByText(/Sign In Required/i)).first()
 Expected: visible
 Timeout: 10000ms
 Error: element(s) not found
 
 Call log:
-  - Expect "toBeVisible" getByRole('heading', { name: /Sign In Required/i }) with timeout 10000ms
-  - waiting for getByRole('heading', { name: /Sign In Required/i })
+  - Expect "toBeVisible" getByRole('heading', { name: /Sign In Required/i }).or(getByText(/Sign In Required/i)).first() with timeout 10000ms
+  - waiting for getByRole('heading', { name: /Sign In Required/i }).or(getByText(/Sign In Required/i)).first()
 
 ```
 
@@ -166,76 +166,74 @@ Call log:
   3  | 
   4  | test.describe("Role-Based Access Control (RBAC) Enforcement", () => {
   5  |   test("unauthenticated visitor cannot access protected candidate pages", async ({ page }) => {
-  6  |     await clearSession(page);
-  7  | 
-  8  |     // Visiting /profile directly presents the authentication gate
-  9  |     await page.goto("/profile");
-> 10 |     await expect(page.getByRole("heading", { name: /Sign In Required/i })).toBeVisible({ timeout: 10000 });
-     |                                                                            ^ Error: expect(locator).toBeVisible() failed
-  11 |     await expect(page.getByRole("link", { name: /Sign In to Candidate Profile/i })).toBeVisible();
-  12 | 
-  13 |     // Visiting /dashboard directly presents the unauthenticated sign-in CTA
-  14 |     await page.goto("/dashboard");
-  15 |     await expect(page.getByRole("link", { name: /Sign in to PrepFord/i }).or(page.getByText(/Sign in/i)).first()).toBeVisible({ timeout: 10000 });
-  16 |   });
-  17 | 
-  18 |   test("unauthenticated API request to /api/profile returns 401", async ({ request }) => {
-  19 |     const response = await request.get("/api/profile");
-  20 |     expect(response.status()).toBe(401);
-  21 |   });
-  22 | 
-  23 |   test("unauthenticated API request to /api/admin/subscriptions returns 401", async ({ request }) => {
-  24 |     const response = await request.get("/api/admin/subscriptions");
-  25 |     expect(response.status()).toBe(401);
-  26 |   });
-  27 | 
-  28 |   test("student candidate cannot access administrative pages or administrative APIs", async ({
-  29 |     page,
-  30 |   }) => {
-  31 |     const student = generateTestStudent("rn");
-  32 |     await registerStudentUI(page, student);
-  33 | 
-  34 |     // 1. Direct browser navigation to /admin or /admin/subscriptions
-  35 |     await page.goto("/admin");
-  36 |     // Should be redirected away or forbidden (e.g. redirected to /dashboard or /profile or 403)
-  37 |     await page.waitForTimeout(1000);
-  38 |     const currentUrl = page.url();
-  39 |     expect(currentUrl).not.toContain("/admin/dashboard");
-  40 | 
-  41 |     // 2. Direct HTTP request from candidate to admin subscriptions API receives 403 Forbidden
-  42 |     const adminApiRes = await page.request.get("/api/admin/subscriptions");
-  43 |     expect([401, 403]).toContain(adminApiRes.status());
-  44 | 
-  45 |     // 3. Candidate attempting to create a subscription plan via POST receives 403 Forbidden
-  46 |     const createPlanRes = await page.request.post("/api/admin/subscriptions", {
-  47 |       data: {
-  48 |         code: "HACKED-PLAN",
-  49 |         name: "Free Unauthorized Plan",
-  50 |         priceCents: 0,
-  51 |         interval: 1,
-  52 |       },
-  53 |     });
-  54 |     expect([401, 403]).toContain(createPlanRes.status());
-  55 |   });
-  56 | 
-  57 |   test("candidate cannot escalate role or grant admin rights via profile updates", async ({
-  58 |     page,
-  59 |   }) => {
-  60 |     const student = generateTestStudent("rn");
-  61 |     await registerStudentUI(page, student);
-  62 | 
-  63 |     // Attempting to send { role: "admin", activePlan: "all-access" } via profile API
-  64 |     const res = await page.request.put("/api/profile", {
-  65 |       data: {
-  66 |         displayName: "Hacked Candidate",
-  67 |         role: "admin",
-  68 |         activePlan: "NCLEX-RN & PN All-Access",
-  69 |       },
-  70 |     });
-  71 | 
-  72 |     // Server must reject with 403 Forbidden
-  73 |     expect(res.status()).toBe(403);
-  74 |   });
-  75 | });
-  76 | 
+  6  |     // Visiting /profile directly presents the authentication gate
+  7  |     await page.goto("/profile");
+> 8  |     await expect(page.getByRole("heading", { name: /Sign In Required/i }).or(page.getByText(/Sign In Required/i)).first()).toBeVisible({ timeout: 10000 });
+     |                                                                                                                            ^ Error: expect(locator).toBeVisible() failed
+  9  |     await expect(page.getByRole("link", { name: /Sign In/i }).first()).toBeVisible();
+  10 | 
+  11 |     // Visiting /dashboard directly presents the unauthenticated sign-in CTA
+  12 |     await page.goto("/dashboard");
+  13 |     await expect(page.getByRole("link", { name: /Sign in/i }).first()).toBeVisible({ timeout: 10000 });
+  14 |   });
+  15 | 
+  16 |   test("unauthenticated API request to /api/profile returns 401", async ({ request }) => {
+  17 |     const response = await request.get("/api/profile");
+  18 |     expect(response.status()).toBe(401);
+  19 |   });
+  20 | 
+  21 |   test("unauthenticated API request to /api/admin/subscriptions returns 401", async ({ request }) => {
+  22 |     const response = await request.get("/api/admin/subscriptions");
+  23 |     expect(response.status()).toBe(401);
+  24 |   });
+  25 | 
+  26 |   test("student candidate cannot access administrative pages or administrative APIs", async ({
+  27 |     page,
+  28 |   }) => {
+  29 |     const student = generateTestStudent("rn");
+  30 |     await registerStudentUI(page, student);
+  31 | 
+  32 |     // 1. Direct browser navigation to /admin or /admin/subscriptions
+  33 |     await page.goto("/admin");
+  34 |     // Should be redirected away or forbidden (e.g. redirected to /dashboard or /profile or 403)
+  35 |     await page.waitForTimeout(1000);
+  36 |     const currentUrl = page.url();
+  37 |     expect(currentUrl).not.toContain("/admin/dashboard");
+  38 | 
+  39 |     // 2. Direct HTTP request from candidate to admin subscriptions API receives 403 Forbidden
+  40 |     const adminApiRes = await page.request.get("/api/admin/subscriptions");
+  41 |     expect([401, 403]).toContain(adminApiRes.status());
+  42 | 
+  43 |     // 3. Candidate attempting to create a subscription plan via POST receives 403 Forbidden
+  44 |     const createPlanRes = await page.request.post("/api/admin/subscriptions", {
+  45 |       data: {
+  46 |         code: "HACKED-PLAN",
+  47 |         name: "Free Unauthorized Plan",
+  48 |         priceCents: 0,
+  49 |         interval: 1,
+  50 |       },
+  51 |     });
+  52 |     expect([401, 403]).toContain(createPlanRes.status());
+  53 |   });
+  54 | 
+  55 |   test("candidate cannot escalate role or grant admin rights via profile updates", async ({
+  56 |     page,
+  57 |   }) => {
+  58 |     const student = generateTestStudent("rn");
+  59 |     await registerStudentUI(page, student);
+  60 | 
+  61 |     // Attempting to send { role: "admin", activePlan: "all-access" } via profile API
+  62 |     const res = await page.request.put("/api/profile", {
+  63 |       data: {
+  64 |         displayName: "Hacked Candidate",
+  65 |         role: "admin",
+  66 |         activePlan: "NCLEX-RN & PN All-Access",
+  67 |       },
+  68 |     });
+  69 | 
+  70 |     // Server must reject with 403 Forbidden
+  71 |     expect(res.status()).toBe(403);
+  72 |   });
+  73 | });
+  74 | 
 ```
