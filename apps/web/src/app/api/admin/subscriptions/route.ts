@@ -111,12 +111,11 @@ export async function POST(request: Request) {
       textColour,
     });
 
-    if (!colorValidation.valid) {
+    if (!colorValidation.isValid) {
       return NextResponse.json(
         {
           success: false,
-          error: `Color contrast validation failed: ${colorValidation.reasons.join("; ")}`,
-          contrastMetrics: colorValidation.metrics,
+          error: `Color contrast validation failed: ${colorValidation.errors.join("; ")}`,
         },
         { status: 400 }
       );
@@ -155,9 +154,9 @@ export async function POST(request: Request) {
       durationLabel: durationLabel?.trim(),
       features,
       popular: Boolean(popular),
-      bgColour: colorValidation.sanitizedColors?.bgColour,
-      accentColour: colorValidation.sanitizedColors?.accentColour,
-      textColour: colorValidation.sanitizedColors?.textColour,
+      bgColour: bgColour?.trim(),
+      accentColour: accentColour?.trim(),
+      textColour: textColour?.trim(),
       badgeText: badgeText?.trim(),
       displayOrder: typeof displayOrder === "number" ? displayOrder : 99,
       isActive: isActive !== undefined ? Boolean(isActive) : true,

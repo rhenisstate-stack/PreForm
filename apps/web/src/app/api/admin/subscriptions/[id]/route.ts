@@ -118,12 +118,11 @@ export async function PUT(
         textColour: effectiveText,
       });
 
-      if (!colorCheck.valid) {
+      if (!colorCheck.isValid) {
         return NextResponse.json(
           {
             success: false,
-            error: `Contrast validation failed: ${colorCheck.reasons.join("; ")}`,
-            contrastMetrics: colorCheck.metrics,
+            error: `Contrast validation failed: ${colorCheck.errors.join("; ")}`,
           },
           { status: 400 }
         );

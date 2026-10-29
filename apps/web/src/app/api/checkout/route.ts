@@ -100,7 +100,7 @@ export async function POST(request: Request) {
       const cookieStore = await cookies();
       cookieStore.set("preform_session", updatedToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: (process.env.NODE_ENV as string) === "production",
         sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 7,
@@ -197,7 +197,7 @@ export async function POST(request: Request) {
       const cookieStore = await cookies();
       cookieStore.set("preform_session", updatedToken, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
+        secure: (process.env.NODE_ENV as string) === "production",
         sameSite: "lax",
         path: "/",
         maxAge: 60 * 60 * 24 * 7,
