@@ -64,3 +64,24 @@ public class UserSummaryDto
     public bool HasProfileImage { get; set; } = false;
     public string? PictureUrl { get; set; }
 }
+
+public class RevokeSessionRequest
+{
+    public string? SessionId { get; set; }
+    public string? UserId { get; set; }
+    public bool RevokeAll { get; set; } = false;
+}
+
+public class ValidateSessionRequest
+{
+    public string? Token { get; set; }
+    public string? SessionId { get; set; }
+}
+
+public class ValidateSessionResponse
+{
+    public bool Valid { get; set; }
+    public string? Error { get; set; }
+    public UserSummaryDto? User { get; set; }
+    public string? SessionId { get; set; }
+}

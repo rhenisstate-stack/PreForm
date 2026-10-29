@@ -17,6 +17,7 @@ builder.Services.AddControllers(options =>
 });
 
 // Domain Services & Password Hasher
+builder.Services.AddSingleton<IGatewayReplayProtection, GatewayReplayProtection>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();

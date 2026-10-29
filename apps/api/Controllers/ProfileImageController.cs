@@ -6,6 +6,7 @@ using Preform.Api.Services;
 namespace Preform.Api.Controllers;
 
 [ApiController]
+[Authorize]
 [Route("api/v1/profile/image")]
 public class ProfileImageController : ControllerBase
 {
@@ -16,29 +17,27 @@ public class ProfileImageController : ControllerBase
         _profileImageService = profileImageService;
     }
 
-    private (string? userId, string? email, string? displayName) ResolveAuthenticatedUser()
+    private static readonly HashSet<string> AdminRoles = new(StringComparer.OrdinalIgnoreCase)
     {
-        // 1. Claims from verified Bearer token or Gateway HMAC
+        "admin", "superadmin", "administrator"
+    };
+
+    private (string? userId, string? email, string? displayName, string? role) ResolveAuthenticatedUser()
+    {
+        // Claims MUST be derived exclusively from verified Bearer token or Gateway HMAC
         var claimUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var claimEmail = User.FindFirst(ClaimTypes.Email)?.Value;
         var claimName = User.FindFirst(ClaimTypes.Name)?.Value;
+        var claimRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "candidate";
 
         if (!string.IsNullOrWhiteSpace(claimUserId) && !string.IsNullOrWhiteSpace(claimEmail))
         {
-            return (claimUserId.Trim(), claimEmail.Trim(), claimName);
+            return (claimUserId.Trim(), claimEmail.Trim(), claimName, claimRole.Trim().ToLowerInvariant());
         }
 
-        // 2. Direct headers for test runner backwards compatibility
-        var headerUserId = Request.Headers["X-Authenticated-User-Id"].FirstOrDefault();
-        var headerEmail = Request.Headers["X-Authenticated-User-Email"].FirstOrDefault();
-        var headerName = Request.Headers["X-Authenticated-User-Name"].FirstOrDefault();
-
-        if (!string.IsNullOrWhiteSpace(headerUserId) && !string.IsNullOrWhiteSpace(headerEmail))
-        {
-            return (headerUserId.Trim(), headerEmail.Trim(), headerName);
-        }
-
-        return (null, null, null);
+        // SEC-01 Remediation: Reject raw, unauthenticated headers. 
+        // Identity is NEVER derived from client-supplied or unverified headers.
+        return (null, null, null, null);
     }
 
     [HttpGet]
@@ -50,13 +49,15 @@ public class ProfileImageController : ControllerBase
             return Unauthorized(new { success = false, error = "Authentication is required to access profile media." });
         }
 
-        // Ownership enforcement: never allow querying another user's private image data
-        if (!string.IsNullOrWhiteSpace(userId) && !string.Equals(userId, auth.userId, StringComparison.Ordinal))
+        // Strict ownership enforcement: candidates may only query their own image; admin roles can query any user
+        var isPrivilegedAdmin = !string.IsNullOrWhiteSpace(auth.role) && AdminRoles.Contains(auth.role);
+        if (!string.IsNullOrWhiteSpace(userId) && !string.Equals(userId, auth.userId, StringComparison.Ordinal) && !isPrivilegedAdmin)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "You are not authorized to access another user's profile image." });
         }
 
-        var image = await _profileImageService.GetProfileImageAsync(auth.userId, auth.email);
+        var targetUserId = isPrivilegedAdmin && !string.IsNullOrWhiteSpace(userId) ? userId : auth.userId;
+        var image = await _profileImageService.GetProfileImageAsync(targetUserId, auth.email);
         if (image == null || image.ImageData.Length == 0)
         {
             return NotFound(new { success = false, error = "No profile image found." });
@@ -85,9 +86,11 @@ public class ProfileImageController : ControllerBase
             return Unauthorized(new { success = false, error = "Authentication is required to upload a profile image." });
         }
 
-        // Ownership enforcement: reject any attempt to modify another user's profile image
+        var isPrivilegedAdmin = !string.IsNullOrWhiteSpace(auth.role) && AdminRoles.Contains(auth.role);
+
+        // Strict ownership enforcement: reject any attempt to modify another user's profile image unless admin
         var headerTargetUser = Request.Headers["X-Target-User-Id"].FirstOrDefault() ?? targetUserId;
-        if (!string.IsNullOrWhiteSpace(headerTargetUser) && !string.Equals(headerTargetUser, auth.userId, StringComparison.Ordinal))
+        if (!string.IsNullOrWhiteSpace(headerTargetUser) && !string.Equals(headerTargetUser, auth.userId, StringComparison.Ordinal) && !isPrivilegedAdmin)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: cannot modify another user's profile image." });
         }
@@ -99,7 +102,7 @@ public class ProfileImageController : ControllerBase
         {
             var form = await Request.ReadFormAsync();
             var formUserId = form["userId"].FirstOrDefault();
-            if (!string.IsNullOrWhiteSpace(formUserId) && !string.Equals(formUserId, auth.userId, StringComparison.Ordinal))
+            if (!string.IsNullOrWhiteSpace(formUserId) && !string.Equals(formUserId, auth.userId, StringComparison.Ordinal) && !isPrivilegedAdmin)
             {
                 return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: cannot modify another user's profile image." });
             }
@@ -129,8 +132,12 @@ public class ProfileImageController : ControllerBase
 
         try
         {
+            var effectiveTargetUserId = isPrivilegedAdmin && !string.IsNullOrWhiteSpace(headerTargetUser)
+                ? headerTargetUser
+                : auth.userId;
+
             var metadata = await _profileImageService.UpsertProfileImageAsync(
-                auth.userId,
+                effectiveTargetUserId,
                 auth.email,
                 auth.displayName,
                 imageBytes,
@@ -163,13 +170,16 @@ public class ProfileImageController : ControllerBase
             return Unauthorized(new { success = false, error = "Authentication is required to delete a profile image." });
         }
 
-        // Ownership enforcement: reject attempt to delete another user's profile image
-        if (!string.IsNullOrWhiteSpace(userId) && !string.Equals(userId, auth.userId, StringComparison.Ordinal))
+        var isPrivilegedAdmin = !string.IsNullOrWhiteSpace(auth.role) && AdminRoles.Contains(auth.role);
+
+        // Ownership enforcement: reject attempt to delete another user's profile image unless admin
+        if (!string.IsNullOrWhiteSpace(userId) && !string.Equals(userId, auth.userId, StringComparison.Ordinal) && !isPrivilegedAdmin)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: cannot delete another user's profile image." });
         }
 
-        var deleted = await _profileImageService.DeleteProfileImageAsync(auth.userId, auth.email);
+        var targetUserId = isPrivilegedAdmin && !string.IsNullOrWhiteSpace(userId) ? userId : auth.userId;
+        var deleted = await _profileImageService.DeleteProfileImageAsync(targetUserId, auth.email);
         if (!deleted)
         {
             return NotFound(new { success = false, error = "No profile image found to delete." });

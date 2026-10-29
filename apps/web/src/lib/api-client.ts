@@ -80,12 +80,37 @@ export function getGatewaySecret(): string {
   return "prepford-default-internal-gateway-secret-32-chars!";
 }
 
+export const EMPTY_BODY_SHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
+export interface GatewaySigningOptions {
+  method?: string;
+  path?: string;
+  body?: unknown;
+  timestamp?: number;
+  nonce?: string;
+  forceCanonical?: boolean;
+}
+
+/**
+ * Computes the SHA-256 hash of a request body in lowercase hex format.
+ */
+export function computeBodySha256(body?: unknown): string {
+  if (body === undefined || body === null || body === "") {
+    return EMPTY_BODY_SHA256;
+  }
+  const content = typeof body === "string" ? body : JSON.stringify(body);
+  return crypto.createHash("sha256").update(content).digest("hex").toLowerCase();
+}
+
 /**
  * Generates mutual authentication gateway headers for a verified session.
+ * Supports canonical v1 signing with method, path, timestamp, nonce, and body SHA-256 digest,
+ * while preserving backwards compatibility when options are omitted.
  */
 export function createGatewayAuthHeaders(
   session?: VerifiedSession | null,
-  correlationId?: string
+  correlationId?: string,
+  signingOptions?: GatewaySigningOptions
 ): Record<string, string> {
   const headers: Record<string, string> = {
     "X-Correlation-Id": correlationId || `corr_${Date.now()}_${crypto.randomBytes(8).toString("hex")}`,
@@ -100,7 +125,42 @@ export function createGatewayAuthHeaders(
   const role = (session.role || "candidate").trim().toLowerCase();
   const name = (session.displayName || session.name || "Nursing Candidate").trim();
 
+  headers["X-Authenticated-User-Id"] = userId;
+  headers["X-Authenticated-User-Email"] = email;
+  headers["X-Authenticated-User-Role"] = role;
+  headers["X-Authenticated-User-Name"] = name;
+  if (session.sessionId) {
+    headers["X-Session-Id"] = session.sessionId;
+  }
+
   const secret = getGatewaySecret();
+
+  // Canonical v1 protocol when signingOptions are supplied
+  if (signingOptions && (signingOptions.forceCanonical || signingOptions.method || signingOptions.path)) {
+    const timestamp = signingOptions.timestamp ?? Math.floor(Date.now() / 1000);
+    const nonce = signingOptions.nonce ?? crypto.randomBytes(16).toString("hex");
+    const method = (signingOptions.method || "GET").toUpperCase();
+    const path = signingOptions.path
+      ? (signingOptions.path.startsWith("/") ? signingOptions.path : `/${signingOptions.path}`)
+      : "/";
+    const bodyHash = computeBodySha256(signingOptions.body);
+
+    const canonicalPayload = `${timestamp}\n${method}\n${path}\n${nonce}\n${bodyHash}\n${userId}\n${email}\n${role}`;
+    const signature = crypto
+      .createHmac("sha256", secret)
+      .update(canonicalPayload)
+      .digest("hex")
+      .toLowerCase();
+
+    headers["X-Gateway-Signature"] = signature;
+    headers["X-Gateway-Timestamp"] = timestamp.toString();
+    headers["X-Gateway-Nonce"] = nonce;
+    headers["X-Gateway-Content-SHA256"] = bodyHash;
+    headers["X-Gateway-Signature-Version"] = "1";
+    return headers;
+  }
+
+  // Legacy signature fallback
   const payloadToSign = `${userId}|${email}|${role}`;
   const signature = crypto
     .createHmac("sha256", secret)
@@ -109,12 +169,18 @@ export function createGatewayAuthHeaders(
     .toLowerCase();
 
   headers["X-Gateway-Signature"] = signature;
-  headers["X-Authenticated-User-Id"] = userId;
-  headers["X-Authenticated-User-Email"] = email;
-  headers["X-Authenticated-User-Role"] = role;
-  headers["X-Authenticated-User-Name"] = name;
-
   return headers;
+}
+
+/**
+ * Creates canonical v1 gateway authentication headers incorporating timestamp, nonce, method, path, and body hash.
+ */
+export function createCanonicalGatewayAuthHeaders(
+  session?: VerifiedSession | null,
+  correlationId?: string,
+  options: GatewaySigningOptions = {}
+): Record<string, string> {
+  return createGatewayAuthHeaders(session, correlationId, { ...options, forceCanonical: true });
 }
 
 /**
@@ -134,9 +200,13 @@ export async function apiRequest<T = unknown>(
 
   const requestHeaders = new Headers(options.headers || {});
 
-  // Mutual Gateway HMAC Headers
+  // Mutual Gateway HMAC Headers (always sends hardened canonical v1 headers for active HTTP requests)
   if (options.session) {
-    const gatewayHeaders = createGatewayAuthHeaders(options.session, options.correlationId);
+    const gatewayHeaders = createCanonicalGatewayAuthHeaders(options.session, options.correlationId, {
+      method: options.method || "GET",
+      path: normalizedEndpoint,
+      body: options.body,
+    });
     for (const [key, val] of Object.entries(gatewayHeaders)) {
       if (!requestHeaders.has(key)) {
         requestHeaders.set(key, val);
