@@ -6,61 +6,7 @@ import {
   validateSubscriptionColors,
   type PlanMutationInput,
 } from "@/lib/subscription-store";
-
-
-interface AdminUserSession {
-  role?: string;
-  email?: string;
-  [key: string]: unknown;
-}
-
-async function verifyAdminAuth(request?: Request) {
-  let sessionCookieValue: string | undefined;
-
-  try {
-    const cookieStore = await cookies();
-    sessionCookieValue = cookieStore.get("preform_session")?.value;
-  } catch {
-    // cookies() unavailable outside request scope
-  }
-
-  if (!sessionCookieValue && request) {
-    const cookieHeader = request.headers.get("cookie");
-    if (cookieHeader) {
-      const match = cookieHeader.match(/preform_session=([^;]+)/);
-      if (match) {
-        sessionCookieValue = decodeURIComponent(match[1]);
-      }
-    }
-  }
-
-  if (!sessionCookieValue) {
-    return { authorized: false, status: 401, error: "Authentication required" };
-  }
-
-  let session: AdminUserSession = {};
-  try {
-    session = JSON.parse(sessionCookieValue);
-  } catch {
-    return { authorized: false, status: 401, error: "Invalid session format" };
-  }
-
-  const role = (session.role || "").trim().toLowerCase();
-  const allowedAdminRoles = new Set([
-    "admin",
-    "superadmin",
-    "administrator",
-    "manager",
-    "content_manager",
-  ]);
-  const isPrivileged = allowedAdminRoles.has(role);
-
-  if (!isPrivileged) {
-    return { authorized: false, status: 403, error: "Administrative privilege required" };
-  }
-
-  return { authorized: true, user: session };
-}
+import { verifyAdminAuth } from "@/lib/session";
 
 export async function GET(request?: Request) {
   const auth = await verifyAdminAuth(request);

@@ -193,11 +193,30 @@ function getDatabase(): SqliteDatabaseSync {
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      email TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'candidate',
+      display_name TEXT NOT NULL,
+      csrf_token TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      last_active_at TEXT NOT NULL,
+      revoked INTEGER NOT NULL DEFAULT 0
+    );
+    CREATE INDEX IF NOT EXISTS idx_user_sessions_user ON user_sessions(user_id, revoked);
+    CREATE INDEX IF NOT EXISTS idx_user_sessions_email ON user_sessions(email, revoked);
   `);
 
   dbInstance = db;
   currentDbPath = targetPath;
   return db;
+}
+
+export function getProfileDatabase(): SqliteDatabaseSync {
+  return getDatabase();
 }
 
 export function resetProfileDatabaseForTesting(): void {

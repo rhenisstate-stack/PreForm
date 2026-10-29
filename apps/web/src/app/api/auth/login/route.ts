@@ -5,6 +5,7 @@ import {
   deriveCandidateIdFromEmail,
   getUserProfileMeta,
 } from "@/lib/profile-image-db";
+import { createServerSession } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,39 +38,33 @@ export async function POST(request: NextRequest) {
     const pathway = dbMeta?.pathway || ("rn" as const);
     const picture = dbMeta?.pictureUrl;
 
-    const sessionPayload = {
-      sub: dbMeta?.userId || userId,
+    const serverSession = createServerSession({
+      userId,
       email,
-      name: displayName,
-      displayName,
       role: "candidate",
-      pathway,
-      picture,
-      provider: "credentials",
-      createdAt: new Date().toISOString(),
-    };
+      displayName,
+      rememberMe,
+    });
 
     const cookieStore = await cookies();
-    const maxAge = rememberMe ? 60 * 60 * 24 * 30 : 60 * 60 * 24 * 7; // 30 days if rememberMe, else 7 days
-
-    cookieStore.set("preform_session", JSON.stringify(sessionPayload), {
+    cookieStore.set("preform_session", serverSession.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge,
+      maxAge: serverSession.maxAgeSeconds,
     });
 
     return NextResponse.json({
       success: true,
       user: {
-        id: sessionPayload.sub,
-        email: sessionPayload.email,
-        name: sessionPayload.displayName,
-        displayName: sessionPayload.displayName,
-        role: sessionPayload.role,
-        pathway: sessionPayload.pathway,
-        picture: sessionPayload.picture,
+        id: serverSession.session.userId,
+        email: serverSession.session.email,
+        name: displayName,
+        displayName,
+        role: serverSession.session.role,
+        pathway,
+        picture,
       },
     });
   } catch (err) {

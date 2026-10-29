@@ -3,51 +3,20 @@ import { NextResponse } from "next/server";
 import {
   createAuthoritativeCheckoutSession,
   isSandboxCheckoutPermitted,
+  getAppEnvironment,
   type AuthoritativePlan,
 } from "@/lib/payment-provider";
 import { getSubscriptionPlanByIdOrSlug } from "@/lib/subscription-store";
-import {
-  deriveCandidateIdFromEmail,
-  upsertUserProfileMeta,
-} from "@/lib/profile-image-db";
-
-interface CandidateSession {
-  sub?: string;
-  id?: string;
-  email?: string;
-  name?: string;
-  displayName?: string;
-  role?: string;
-  pathway?: "rn" | "pn" | "both";
-  activePlan?: string;
-  [key: string]: unknown;
-}
+import { upsertUserProfileMeta } from "@/lib/profile-image-db";
+import { resolveSession, signSessionPayload } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("preform_session");
+    const session = await resolveSession(request);
 
-    if (!sessionCookie || !sessionCookie.value) {
+    if (!session || !session.email) {
       return NextResponse.json(
         { success: false, error: "Authentication required to initiate checkout." },
-        { status: 401 }
-      );
-    }
-
-    let sessionData: CandidateSession = {};
-    try {
-      sessionData = JSON.parse(sessionCookie.value);
-    } catch {
-      return NextResponse.json(
-        { success: false, error: "Invalid session." },
-        { status: 401 }
-      );
-    }
-
-    if (!sessionData.email) {
-      return NextResponse.json(
-        { success: false, error: "Session missing candidate email." },
         { status: 401 }
       );
     }
@@ -105,26 +74,25 @@ export async function POST(request: Request) {
       isActive: Boolean(product.isActive ?? true),
     };
 
-    const userId =
-      sessionData.sub || sessionData.id || deriveCandidateIdFromEmail(sessionData.email);
-
     const sessionResult = await createAuthoritativeCheckoutSession(
       {
         planId: product.id,
-        candidateUserId: userId,
-        candidateEmail: sessionData.email,
-        candidateName: sessionData.displayName || sessionData.name || "Candidate",
+        candidateUserId: session.userId,
+        candidateEmail: session.email,
+        candidateName: session.displayName || "Candidate",
       },
       authoritativePlan
     );
 
     if (!sessionResult.success) {
-      const statusCode = process.env.NODE_ENV === "production" ? 503 : 400;
+      const isProd = getAppEnvironment() === "production";
+      const statusCode = isProd ? 503 : 400;
       return NextResponse.json(
         {
           success: false,
           error: sessionResult.error,
           status: sessionResult.status,
+          isSimulated: false,
         },
         { status: statusCode }
       );
@@ -133,24 +101,29 @@ export async function POST(request: Request) {
     // ── Safe Server-Controlled Sandbox Fulfillment (Non-Production Only) ──
     if (sessionResult.status === "sandbox_completed" && isSandboxCheckoutPermitted()) {
       const updatedRecord = upsertUserProfileMeta({
-        userId,
-        email: sessionData.email,
-        displayName: sessionData.displayName || sessionData.name || "Nursing Candidate",
+        userId: session.userId,
+        email: session.email,
+        displayName: session.displayName || "Nursing Candidate",
         pathway: authoritativePathway,
         activePlan: product.name,
       });
 
-      const updatedSession: CandidateSession = {
-        ...sessionData,
+      const updatedToken = signSessionPayload({
+        sid: session.sessionId,
         sub: updatedRecord.userId,
+        email: session.email,
         displayName: updatedRecord.displayName,
         name: updatedRecord.displayName,
+        role: session.role,
         pathway: authoritativePathway,
         activePlan: product.name,
+        csrfToken: session.csrfToken,
+        expiresAt: session.expiresAt,
         updatedAt: new Date().toISOString(),
-      };
+      });
 
-      cookieStore.set("preform_session", JSON.stringify(updatedSession), {
+      const cookieStore = await cookies();
+      cookieStore.set("preform_session", updatedToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
@@ -162,6 +135,8 @@ export async function POST(request: Request) {
         success: true,
         sessionId: sessionResult.sessionId,
         checkoutUrl: sessionResult.checkoutUrl,
+        isSimulated: true,
+        simulationNotice: sessionResult.simulationNotice,
         plan: {
           id: authoritativePlan.id,
           name: authoritativePlan.name,
@@ -174,6 +149,7 @@ export async function POST(request: Request) {
       success: true,
       sessionId: sessionResult.sessionId,
       checkoutUrl: sessionResult.checkoutUrl,
+      isSimulated: false,
     });
   } catch (error) {
     console.error("Checkout POST error:", error);
