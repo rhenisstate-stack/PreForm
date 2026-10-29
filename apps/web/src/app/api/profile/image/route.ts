@@ -149,7 +149,7 @@ async function handleUpload(request: NextRequest) {
       savedMeta = saveProfileImageBinary({
         userId: auth.userId,
         userEmail: auth.email,
-        displayName: auth.session.displayName || auth.session.name,
+        displayName: auth.displayName || auth.name,
         imageBytes,
       });
     } catch (validationErr) {

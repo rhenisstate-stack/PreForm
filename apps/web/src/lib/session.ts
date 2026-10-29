@@ -404,6 +404,7 @@ export async function verifyAdminAuth(request?: Request): Promise<{
   status: number;
   error?: string;
   session?: VerifiedSession;
+  user?: unknown;
   role?: string;
 }> {
   let cookieValue: string | undefined;
