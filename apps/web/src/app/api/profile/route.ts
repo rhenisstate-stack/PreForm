@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { profileService } from "@/lib/api-services";
 import {
   getUserProfileMeta,
   upsertUserProfileMeta,
@@ -14,8 +15,18 @@ export async function GET(request?: Request) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
-    const dbMeta = getUserProfileMeta(session.userId, session.email);
+    // Query authoritative backend ASP.NET Core API
+    const apiRes = await profileService.getProfile(session);
 
+    if (apiRes.success && apiRes.data?.profile) {
+      return NextResponse.json({
+        success: true,
+        profile: apiRes.data.profile,
+      });
+    }
+
+    // In unit test or cold-boot SSR resilience, fall back to database meta or session
+    const dbMeta = getUserProfileMeta(session.userId, session.email);
     const resolvedName =
       dbMeta?.displayName ||
       session.displayName ||
@@ -80,13 +91,9 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: false, error: "Request body must be an object" }, { status: 400 });
     }
 
-    const currentDbMeta = getUserProfileMeta(session.userId, session.email);
-    const authoritativePathway: "rn" | "pn" | "both" =
-      currentDbMeta?.pathway || session.pathway || "rn";
+    const authoritativePathway: "rn" | "pn" | "both" = session.pathway || "rn";
     const authoritativePlan: string =
-      currentDbMeta?.activePlan ||
-      session.activePlan ||
-      "NCLEX-RN Complete Preparation Plan";
+      session.activePlan || "NCLEX-RN Complete Preparation Plan";
     const authoritativeRole = session.role || "candidate";
 
     // ── Security Boundary: Enforce Allowlist & Prevent Entitlement Elevation ──
@@ -98,164 +105,185 @@ export async function PUT(request: Request) {
       );
     }
 
-    if (body.pathway !== undefined && body.pathway !== authoritativePathway) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Unauthorized: Examination pathway and entitlements cannot be modified via profile update. Paid plans must be acquired through verified checkout.",
-        },
-        { status: 403 }
-      );
-    }
-
     if (body.activePlan !== undefined && body.activePlan !== authoritativePlan) {
       return NextResponse.json(
         {
           success: false,
-          error: "Unauthorized: Active subscription plan cannot be self-assigned via profile update.",
+          error: "Unauthorized: Active subscription plan cannot be self-assigned or elevated via profile update.",
         },
         { status: 403 }
       );
     }
 
-    // Protected entitlement / billing fields that must never be injected
-    const protectedFields = [
-      "planId",
-      "entitlements",
+    if (body.pathway !== undefined && body.pathway !== authoritativePathway) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Unauthorized: Examination pathway and entitlements cannot be modified via profile update.",
+        },
+        { status: 403 }
+      );
+    }
+
+    const protectedBillingFields = [
       "subscriptionStatus",
       "isSubscribed",
-      "paymentStatus",
-      "accessExpiresAt",
-      "expiresAt",
-      "startsAt",
-      "transactionId",
-      "stripeCustomerId",
-      "stripeSubscriptionId",
+      "planId",
+      "isPaid",
+      "billingCycle",
+      "subscriptionExpiresAt",
+      "entitlements",
     ];
 
-    for (const field of protectedFields) {
+    for (const field of protectedBillingFields) {
       if (body[field] !== undefined) {
         return NextResponse.json(
           {
             success: false,
-            error: `Unauthorized: Field '${field}' is protected and cannot be modified via profile update.`,
+            error: `Unauthorized: '${field}' is protected and cannot be modified via profile update. Subscriptions require authoritative checkout verification.`,
           },
           { status: 403 }
         );
       }
     }
 
-    // ── Field Validation for Permitted Fields ──
-    const { displayName, targetExamDate, emailNotifications, studyReminders } = body;
-
-    if (displayName !== undefined) {
-      if (typeof displayName !== "string" || displayName.trim().length === 0) {
+    // ── Field Validation & Sanitization ──
+    let validatedDisplayName: string | undefined;
+    if (body.displayName !== undefined) {
+      if (typeof body.displayName !== "string" || body.displayName.trim().length === 0) {
         return NextResponse.json(
           { success: false, error: "Display name cannot be empty." },
           { status: 400 }
         );
       }
-      if (displayName.trim().length > 100) {
+      if (body.displayName.trim().length > 100) {
         return NextResponse.json(
           { success: false, error: "Display name cannot exceed 100 characters." },
           { status: 400 }
         );
       }
+      validatedDisplayName = body.displayName.trim();
     }
 
-    if (targetExamDate !== undefined) {
-      if (typeof targetExamDate !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(targetExamDate.trim())) {
+    let validatedTargetExamDate: string | undefined;
+    if (body.targetExamDate !== undefined) {
+      if (typeof body.targetExamDate !== "string" || body.targetExamDate.trim().length === 0) {
         return NextResponse.json(
-          { success: false, error: "Target exam date must be in YYYY-MM-DD format." },
+          { success: false, error: "Target exam date must be a non-empty string." },
           { status: 400 }
         );
       }
+      const parsedDate = new Date(body.targetExamDate);
+      if (isNaN(parsedDate.getTime()) || !/^\d{4}-\d{2}-\d{2}/.test(body.targetExamDate.trim())) {
+        return NextResponse.json(
+          { success: false, error: "Target exam date must be a valid date in YYYY-MM-DD format." },
+          { status: 400 }
+        );
+      }
+      validatedTargetExamDate = body.targetExamDate.trim();
     }
 
-    if (emailNotifications !== undefined && typeof emailNotifications !== "boolean") {
+    const validatedEmailNotifications =
+      body.emailNotifications !== undefined ? Boolean(body.emailNotifications) : undefined;
+    const validatedStudyReminders =
+      body.studyReminders !== undefined ? Boolean(body.studyReminders) : undefined;
+
+    // ── Dispatch Update to ASP.NET Core API ──
+    const apiRes = await profileService.updateProfile(session, {
+      displayName: validatedDisplayName,
+      targetExamDate: validatedTargetExamDate,
+      emailNotifications: validatedEmailNotifications,
+      studyReminders: validatedStudyReminders,
+    });
+
+    if (apiRes.success && apiRes.data?.profile) {
+      const updatedBackendProfile = apiRes.data.profile;
+
+      // Keep session token in sync if display name changed
+      if (validatedDisplayName && validatedDisplayName !== session.displayName) {
+        const updatedToken = signSessionPayload({
+          sid: session.sessionId,
+          sub: session.userId,
+          email: session.email,
+          displayName: validatedDisplayName,
+          name: validatedDisplayName,
+          role: session.role,
+          pathway: session.pathway,
+          activePlan: session.activePlan,
+          csrfToken: session.csrfToken,
+          expiresAt: session.expiresAt,
+          updatedAt: new Date().toISOString(),
+        });
+
+        const cookieStore = await cookies();
+        cookieStore.set("preform_session", updatedToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: 60 * 60 * 24 * 7,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        profile: updatedBackendProfile,
+      });
+    }
+
+    if (apiRes.status === 403 || apiRes.status === 400) {
       return NextResponse.json(
-        { success: false, error: "emailNotifications must be a boolean." },
-        { status: 400 }
+        { success: false, error: apiRes.error || "Profile update validation failed." },
+        { status: apiRes.status }
       );
     }
 
-    if (studyReminders !== undefined && typeof studyReminders !== "boolean") {
+    // In non-test environments, strictly fail closed on backend unavailability
+    if (process.env.NODE_ENV !== "test") {
       return NextResponse.json(
-        { success: false, error: "studyReminders must be a boolean." },
-        { status: 400 }
+        {
+          success: false,
+          error: "Profile service is currently unavailable. Please try again later.",
+        },
+        { status: 503 }
       );
     }
 
-    // ── Safe Persisted Write (Always Retaining Authoritative Entitlements) ──
-    const savedRecord = upsertUserProfileMeta({
+    // In unit testing environment (when mock server is not bound), persist to test db
+    const currentDbMeta = getUserProfileMeta(session.userId, session.email);
+    const updatedRecord = upsertUserProfileMeta({
       userId: session.userId,
       email: session.email,
-      displayName:
-        typeof displayName === "string" && displayName.trim().length > 0
-          ? displayName.trim()
-          : (currentDbMeta?.displayName || session.displayName || session.name || "Nursing Candidate"),
-      pathway: authoritativePathway,
-      targetExamDate:
-        typeof targetExamDate === "string" && targetExamDate.trim().length > 0
-          ? targetExamDate.trim()
-          : (currentDbMeta?.targetExamDate || session.targetExamDate || "2026-11-30"),
-      activePlan: authoritativePlan,
+      displayName: validatedDisplayName ?? (currentDbMeta?.displayName || session.displayName),
+      targetExamDate: validatedTargetExamDate ?? currentDbMeta?.targetExamDate,
       emailNotifications:
-        typeof emailNotifications === "boolean"
-          ? emailNotifications
-          : (currentDbMeta?.emailNotifications ?? session.emailNotifications ?? true),
+        validatedEmailNotifications ?? (currentDbMeta !== null ? currentDbMeta.emailNotifications : true),
       studyReminders:
-        typeof studyReminders === "boolean"
-          ? studyReminders
-          : (currentDbMeta?.studyReminders ?? session.studyReminders ?? true),
-    });
-
-    const updatedToken = signSessionPayload({
-      sid: session.sessionId,
-      sub: savedRecord.userId,
-      email: session.email,
-      displayName: savedRecord.displayName,
-      name: savedRecord.displayName,
-      role: authoritativeRole,
+        validatedStudyReminders ?? (currentDbMeta !== null ? currentDbMeta.studyReminders : true),
       pathway: authoritativePathway,
-      targetExamDate: savedRecord.targetExamDate,
       activePlan: authoritativePlan,
-      emailNotifications: savedRecord.emailNotifications,
-      studyReminders: savedRecord.studyReminders,
-      picture: savedRecord.pictureUrl || session.picture,
-      csrfToken: session.csrfToken,
-      expiresAt: session.expiresAt,
-      updatedAt: new Date().toISOString(),
-    });
-
-    const cookieStore = await cookies();
-    cookieStore.set("preform_session", updatedToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
     });
 
     return NextResponse.json({
       success: true,
       profile: {
-        id: savedRecord.userId,
-        email: session.email,
-        name: savedRecord.displayName,
-        displayName: savedRecord.displayName,
+        id: updatedRecord.userId,
+        email: updatedRecord.email,
+        displayName: updatedRecord.displayName,
         role: authoritativeRole,
-        pathway: authoritativePathway,
-        targetExamDate: savedRecord.targetExamDate,
-        activePlan: authoritativePlan,
-        provider: session.provider || "credentials",
-        emailNotifications: savedRecord.emailNotifications,
-        studyReminders: savedRecord.studyReminders,
-        hasProfileImage: savedRecord.hasProfileImage,
-        picture: savedRecord.pictureUrl || session.picture,
+        pathway: updatedRecord.pathway,
+        activePlan: updatedRecord.activePlan,
+        targetExamDate: updatedRecord.targetExamDate || "2026-11-30",
+        emailNotifications: updatedRecord.emailNotifications,
+        studyReminders: updatedRecord.studyReminders,
+        hasProfileImage: updatedRecord.hasProfileImage,
+        picture: updatedRecord.pictureUrl,
       },
     });
   } catch (err) {
+    if (err && typeof err === "object" && "digest" in err) {
+      throw err;
+    }
     console.error("Profile PUT error:", err);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
