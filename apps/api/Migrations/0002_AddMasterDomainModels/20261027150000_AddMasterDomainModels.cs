@@ -458,6 +458,7 @@ public partial class AddMasterDomainModels : Migration
             schema: "public",
             table: "QuestionTypeDefinitions",
             columns: new[] { "Id", "Key", "Name", "Description", "Category", "SupportedScoring", "IsActive", "DisplayOrder" },
+            columnTypes: new[] { "text", "character varying(64)", "character varying(128)", "character varying(512)", "character varying(64)", "character varying(64)", "boolean", "integer" },
             values: new object[,]
             {
                 { "qt-1", "single-choice", "Single Choice", "Standard single-answer multiple-choice question", "Traditional", "ExactMatch", true, 1 },
@@ -485,6 +486,7 @@ public partial class AddMasterDomainModels : Migration
             schema: "public",
             table: "Roles",
             columns: new[] { "Id", "Name", "Description", "IsSystem", "CreatedAt" },
+            columnTypes: new[] { "text", "character varying(64)", "character varying(256)", "boolean", "timestamp with time zone" },
             values: new object[,]
             {
                 { "role-superadmin", "Super Admin", "System-wide administration, security policies, and audit logs", true, DateTime.UtcNow },
