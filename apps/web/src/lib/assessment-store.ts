@@ -1,8 +1,11 @@
 /**
  * PrepFord Assessment Data & Persistence Store
  * Provides typed data models, realistic clinical scenarios, performance tier calculations,
- * and localStorage persistence for completed learner tests and reference cohort benchmarks.
+ * and PostgreSQL-authoritative persistence for completed learner tests and reference cohort benchmarks.
  */
+
+import { attemptsService } from "./api-services";
+import type { VerifiedSession } from "./session";
 
 export type PerformanceTier = "Very High" | "High" | "Borderline" | "Low";
 export type QuestionType = "single_choice" | "multi_select";
@@ -692,7 +695,11 @@ export function getStoredAttempts(userId?: string): CompletedAssessmentAttempt[]
   }
 }
 
-export function saveStoredAttempt(userId: string | undefined, attempt: CompletedAssessmentAttempt): void {
+export function saveStoredAttempt(
+  userId: string | undefined,
+  attempt: CompletedAssessmentAttempt,
+  session?: VerifiedSession | null
+): void {
   if (typeof window === "undefined") return;
   if (!userId || typeof userId !== "string" || !userId.trim()) return;
   if (!isValidAssessmentAttempt(attempt)) {
@@ -707,6 +714,91 @@ export function saveStoredAttempt(userId: string | undefined, attempt: Completed
   } catch (err) {
     console.error("Failed to save assessment attempt to localStorage", err);
   }
+
+  // Authoritative PostgreSQL datastore synchronization: dispatch attempt persistence to backend API
+  if (session && session.userId) {
+    syncAttemptToBackend(attempt, session).catch(() => {
+      // In offline/test environments, localStorage remains the temporary resilient cache
+    });
+  }
+}
+
+/**
+ * Synchronizes an assessment attempt with PostgreSQL ExamAttempts and AttemptResponses.
+ */
+export async function syncAttemptToBackend(
+  attempt: CompletedAssessmentAttempt,
+  session: VerifiedSession
+): Promise<boolean> {
+  try {
+    const res = await attemptsService.syncAttempt(
+      {
+        id: attempt.id,
+        name: attempt.name,
+        type: attempt.type,
+        scorePercent: attempt.scorePercent,
+        performanceTier: attempt.performanceTier,
+        totalQuestions: attempt.totalQuestions,
+        correctCount: attempt.correctCount,
+        durationMinutes: attempt.durationMinutes,
+        questions: attempt.questions,
+      },
+      session
+    );
+    return res.success;
+  } catch (err) {
+    console.warn("[AssessmentStore] Backend attempt persistence warning:", err);
+    return false;
+  }
+}
+
+/**
+ * Fetches authoritative assessment attempts from PostgreSQL and synchronizes client localStorage.
+ */
+export async function fetchAuthoritativeAttempts(
+  session: VerifiedSession
+): Promise<CompletedAssessmentAttempt[]> {
+  try {
+    const res = await attemptsService.getAttempts(session);
+    if (res.success && res.data?.attempts) {
+      const mapped: CompletedAssessmentAttempt[] = res.data.attempts.map((dto) => {
+        const tier = (dto.performanceTier || getPerformanceTier(dto.scorePercent)) as PerformanceTier;
+        return {
+          id: dto.id,
+          name: dto.name || "Assessment Practice CAT",
+          type: (dto.type === "rat" ? "rat" : "tutored_cat") as "tutored_cat" | "rat",
+          date: new Date(dto.startedAt).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          timestamp: new Date(dto.startedAt).getTime(),
+          scorePercent: dto.scorePercent,
+          performanceTier: tier,
+          totalQuestions: dto.totalQuestions || 0,
+          correctCount: dto.correctCount || 0,
+          durationMinutes: dto.durationMinutes || 10,
+          domains: [],
+          questions: [],
+        };
+      });
+
+      if (typeof window !== "undefined" && session.userId && mapped.length > 0) {
+        try {
+          const key = `${STORAGE_PREFIX}${session.userId.trim()}`;
+          window.localStorage.setItem(key, JSON.stringify(mapped));
+        } catch {
+          // Ignore localStorage quota errors
+        }
+      }
+
+      return mapped;
+    }
+  } catch (err) {
+    console.warn("[AssessmentStore] Could not fetch authoritative attempts from PostgreSQL:", err);
+  }
+
+  return getStoredAttempts(session.userId);
 }
 
 export function clearStoredAttempts(userId?: string): void {
