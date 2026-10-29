@@ -9,6 +9,7 @@ import {
   PUT as putAdminSubscription,
   DELETE as deleteAdminSubscription,
 } from "@/app/api/admin/subscriptions/[id]/route";
+import { createSignedTestSession } from "@/lib/session";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -134,9 +135,10 @@ describe("Admin API Endpoints & RBAC Validation", () => {
   });
 
   it("rejects non-admin role with 403", async () => {
+    const candidateToken = createSignedTestSession({ role: "candidate", email: "learner@prepford.com" });
     const req = new Request("http://localhost/api/admin/subscriptions", {
       headers: {
-        cookie: `preform_session=${encodeURIComponent(JSON.stringify({ role: "candidate", email: "learner@prepford.com" }))}`,
+        cookie: `preform_session=${encodeURIComponent(candidateToken)}`,
       },
     });
     const res = await postAdminSubscription(req);
@@ -147,7 +149,8 @@ describe("Admin API Endpoints & RBAC Validation", () => {
 
   it("validates required fields, price > 0, and accessible contrast when creating plans", async () => {
     // Missing required fields
-    const adminCookie = `preform_session=${encodeURIComponent(JSON.stringify({ role: "admin", email: "admin@prepford.com" }))}`;
+    const adminToken = createSignedTestSession({ role: "admin", email: "admin@prepford.com" });
+    const adminCookie = `preform_session=${encodeURIComponent(adminToken)}`;
 
     const badPriceReq = new Request("http://localhost/api/admin/subscriptions", {
       method: "POST",
@@ -198,7 +201,8 @@ describe("Admin API Endpoints & RBAC Validation", () => {
   });
 
   it("creates, updates, and non-destructively archives a plan", async () => {
-    const adminCookie = `preform_session=${encodeURIComponent(JSON.stringify({ role: "admin", email: "admin@prepford.com" }))}`;
+    const adminToken = createSignedTestSession({ role: "admin", email: "admin@prepford.com" });
+    const adminCookie = `preform_session=${encodeURIComponent(adminToken)}`;
     const testSlug = `custom-test-plan-${Date.now()}`;
 
     // 1. Create plan

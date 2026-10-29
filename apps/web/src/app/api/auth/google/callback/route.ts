@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sanitizeReturnUrl } from "@/lib/validation/auth";
+import { createServerSession } from "@/lib/session";
 
 interface StoredOAuthState {
   state: string;
@@ -118,21 +119,19 @@ export async function GET(request: Request) {
     }
 
     // Create session payload and establish secure session cookie
-    const sessionPayload = {
-      sub: profile.sub,
+    const serverSession = createServerSession({
+      userId: profile.sub,
       email: profile.email,
-      name: profile.name || profile.given_name || "Nursing Candidate",
-      picture: profile.picture,
-      provider: "google",
-      createdAt: new Date().toISOString(),
-    };
+      role: "candidate",
+      displayName: profile.name || profile.given_name || "Nursing Candidate",
+    });
 
-    cookieStore.set("preform_session", JSON.stringify(sessionPayload), {
+    cookieStore.set("preform_session", serverSession.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days session
+      maxAge: serverSession.maxAgeSeconds,
     });
 
     // Successfully authenticated, navigate to destination
