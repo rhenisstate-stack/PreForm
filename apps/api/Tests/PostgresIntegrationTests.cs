@@ -355,11 +355,9 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         {
             EventId = "evt_" + Guid.NewGuid().ToString("N"),
             EventType = "checkout.session.completed",
-            SessionId = "sess_" + Guid.NewGuid().ToString("N"),
-            UserId = "usr_001",
-            PlanId = "plan_001",
-            AmountCents = 5900,
-            Currency = "usd"
+            OrderId = "ord_001",
+            ProviderSessionId = "sess_" + Guid.NewGuid().ToString("N"),
+            AmountCents = 5900
         };
 
         var response = await client.PostAsJsonAsync("/api/v1/webhooks/payments", payload);
