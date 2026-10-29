@@ -4,6 +4,7 @@ import {
   getSubscriptionPlanById,
   updateSubscriptionPlan,
   archiveSubscriptionPlan,
+  isValidHexColor,
   validateSubscriptionColors,
   type PlanMutationInput,
 } from "@/lib/subscription-store";
