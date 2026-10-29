@@ -1,10 +1,22 @@
 import crypto from "node:crypto";
 import { cookies } from "next/headers";
 import {
-  getProfileDatabase,
   deriveCandidateIdFromEmail,
   getUserProfileMeta,
+  registerResetCallback,
 } from "./profile-image-db";
+
+// ── In-Memory Server Session Store (Zero SQLite Runtime Dependency) ──
+const memorySessions = new Map<string, StoredSession>();
+const revokedSessionIds = new Set<string>();
+
+export function resetSessionStoreForTesting(): void {
+  memorySessions.clear();
+  revokedSessionIds.clear();
+}
+
+// Automatically reset sessions when resetProfileDatabaseForTesting is invoked
+registerResetCallback(resetSessionStoreForTesting);
 
 export interface StoredSession {
   id: string;
@@ -134,7 +146,7 @@ export function verifySignedSessionToken(token: string | undefined): {
 }
 
 /**
- * Persists an opaque session record in the server database and returns a cryptographically signed cookie token.
+ * Persists an opaque session record in the server memory store and returns a cryptographically signed cookie token.
  */
 export function createServerSession(options: {
   userId: string;
@@ -147,7 +159,6 @@ export function createServerSession(options: {
   session: StoredSession;
   maxAgeSeconds: number;
 } {
-  const db = getProfileDatabase();
   const sessionId = `sess_${Date.now()}_${crypto.randomBytes(16).toString("hex")}`;
   const csrfToken = crypto.randomBytes(16).toString("hex");
 
@@ -160,21 +171,20 @@ export function createServerSession(options: {
   const role = (options.role || "candidate").trim().toLowerCase();
   const displayName = options.displayName?.trim() || options.email.split("@")[0] || "Nursing Candidate";
 
-  db.prepare(`
-    INSERT INTO user_sessions (
-      id, user_id, email, role, display_name, csrf_token, created_at, expires_at, last_active_at, revoked
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
-  `).run(
-    sessionId,
-    options.userId,
-    options.email.toLowerCase().trim(),
+  const sessionRecord: StoredSession = {
+    id: sessionId,
+    userId: options.userId,
+    email: options.email.toLowerCase().trim(),
     role,
     displayName,
     csrfToken,
-    now.toISOString(),
-    expiresDate.toISOString(),
-    now.toISOString()
-  );
+    createdAt: now.toISOString(),
+    expiresAt: expiresDate.toISOString(),
+    lastActiveAt: now.toISOString(),
+    revoked: false,
+  };
+
+  memorySessions.set(sessionId, sessionRecord);
 
   const payload = {
     sid: sessionId,
@@ -192,18 +202,7 @@ export function createServerSession(options: {
 
   return {
     token,
-    session: {
-      id: sessionId,
-      userId: options.userId,
-      email: options.email.toLowerCase().trim(),
-      role,
-      displayName,
-      csrfToken,
-      createdAt: now.toISOString(),
-      expiresAt: expiresDate.toISOString(),
-      lastActiveAt: now.toISOString(),
-      revoked: false,
-    },
+    session: sessionRecord,
     maxAgeSeconds,
   };
 }
@@ -229,19 +228,16 @@ export function createSignedTestSession(payload: Record<string, unknown>): strin
 }
 
 /**
- * Revokes a session by ID in the database.
+ * Revokes a session by ID in the server session store.
  */
 export function revokeSession(sessionId: string): boolean {
   if (!sessionId) return false;
-  try {
-    const db = getProfileDatabase();
-    const result = db.prepare(`
-      UPDATE user_sessions SET revoked = 1 WHERE id = ?
-    `).run(sessionId);
-    return Number(result.changes) > 0;
-  } catch {
-    return false;
+  revokedSessionIds.add(sessionId);
+  const session = memorySessions.get(sessionId);
+  if (session) {
+    session.revoked = true;
   }
+  return true;
 }
 
 /**
@@ -249,15 +245,15 @@ export function revokeSession(sessionId: string): boolean {
  */
 export function revokeAllUserSessions(userId: string): boolean {
   if (!userId) return false;
-  try {
-    const db = getProfileDatabase();
-    const result = db.prepare(`
-      UPDATE user_sessions SET revoked = 1 WHERE user_id = ?
-    `).run(userId);
-    return Number(result.changes) > 0;
-  } catch {
-    return false;
+  let revokedAny = false;
+  for (const session of memorySessions.values()) {
+    if (session.userId === userId) {
+      session.revoked = true;
+      revokedSessionIds.add(session.id);
+      revokedAny = true;
+    }
   }
+  return true;
 }
 
 /**
