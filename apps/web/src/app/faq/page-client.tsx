@@ -317,7 +317,7 @@ export function buildOverallFaqItems(): OverallFaqItem[] {
       categoryId: "profile-privacy",
       question: "How does profile image upload and storage work?",
       answer:
-        "You can upload a PNG, JPEG, WebP, or GIF image (up to 2 MB) on /profile. The server validates the binary magic-byte signature and SHA-256 hash and persists the image in PrepFord's local SQLite profile store so your avatar displays across your profile and header navigation.",
+        "You can upload a PNG, JPEG, WebP, or GIF image (up to 2 MB) on /profile. The server validates the binary magic-byte signature and SHA-256 hash and persists the image securely in PrepFord's profile datastore so your avatar displays across your profile and header navigation.",
     },
     {
       id: "faq-overall-privacy-terms",

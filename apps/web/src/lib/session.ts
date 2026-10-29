@@ -327,24 +327,19 @@ export async function resolveSession(request?: Request): Promise<VerifiedSession
   const userId = String(rawPayload.sub || rawPayload.id || deriveCandidateIdFromEmail(email));
   const sessionId = String(rawPayload.sid || rawPayload.sessionId || "");
 
-  // 3. If session ID exists, check revocation status in server database
+  // 3. If session ID exists, check revocation status
   if (sessionId) {
-    try {
-      const db = getProfileDatabase();
-      const sessionRow = db.prepare(`
-        SELECT id, role, revoked, expires_at FROM user_sessions WHERE id = ?
-      `).get(sessionId) as { id: string; role: string; revoked: number; expires_at: string } | undefined;
-
-      if (sessionRow) {
-        if (sessionRow.revoked === 1) {
-          return null; // Session explicitly revoked
-        }
-        if (new Date(sessionRow.expires_at).getTime() < Date.now()) {
-          return null; // Session expired on server
-        }
+    if (revokedSessionIds.has(sessionId)) {
+      return null; // Session explicitly revoked
+    }
+    const sessionRecord = memorySessions.get(sessionId);
+    if (sessionRecord) {
+      if (sessionRecord.revoked) {
+        return null; // Session explicitly revoked
       }
-    } catch {
-      // Database query failed or table not ready
+      if (new Date(sessionRecord.expiresAt).getTime() < Date.now()) {
+        return null; // Session expired on server
+      }
     }
   }
 
@@ -457,25 +452,20 @@ export async function verifyAdminAuth(request?: Request): Promise<{
   const payload = verification.payload;
   const role = String(payload.role || "").trim().toLowerCase();
 
-  // Validate session against database if session ID is present
+  // Validate session against revocation status if session ID is present
   const sessionId = String(payload.sid || "");
   if (sessionId) {
-    try {
-      const db = getProfileDatabase();
-      const sessionRow = db.prepare(`
-        SELECT id, role, revoked, expires_at FROM user_sessions WHERE id = ?
-      `).get(sessionId) as { id: string; role: string; revoked: number; expires_at: string } | undefined;
-
-      if (sessionRow) {
-        if (sessionRow.revoked === 1) {
-          return { authorized: false, status: 401, error: "Authentication required: Session has been revoked" };
-        }
-        if (new Date(sessionRow.expires_at).getTime() < Date.now()) {
-          return { authorized: false, status: 401, error: "Authentication required: Session has expired" };
-        }
+    if (revokedSessionIds.has(sessionId)) {
+      return { authorized: false, status: 401, error: "Authentication required: Session has been revoked" };
+    }
+    const sessionRecord = memorySessions.get(sessionId);
+    if (sessionRecord) {
+      if (sessionRecord.revoked) {
+        return { authorized: false, status: 401, error: "Authentication required: Session has been revoked" };
       }
-    } catch {
-      // Table query failed
+      if (new Date(sessionRecord.expiresAt).getTime() < Date.now()) {
+        return { authorized: false, status: 401, error: "Authentication required: Session has expired" };
+      }
     }
   }
 
