@@ -349,42 +349,113 @@ public class ExamAttemptsController : ControllerBase
             return BadRequest(new { success = false, error = "Attempt has already been completed." });
         }
 
-        // Database transaction for score calculation and status transition consistency
-        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-        try
+        var totalResponses = attempt.Responses.Count;
+        var correctResponses = attempt.Responses.Count(r => r.IsCorrect);
+        var passingThreshold = attempt.Exam?.PassingScorePercent ?? 75.0m;
+
+        attempt.ScorePercent = totalResponses > 0
+            ? Math.Round((decimal)correctResponses / totalResponses * 100m, 2)
+            : 0.0m;
+
+        attempt.Passed = attempt.ScorePercent >= passingThreshold;
+        attempt.Status = AttemptStatus.Completed;
+        attempt.CompletedAt = DateTime.UtcNow;
+
+        if (_context.Database.IsRelational())
         {
-            var totalResponses = attempt.Responses.Count;
-            var correctResponses = attempt.Responses.Count(r => r.IsCorrect);
-            var passingThreshold = attempt.Exam?.PassingScorePercent ?? 75.0m;
-
-            attempt.ScorePercent = totalResponses > 0
-                ? Math.Round((decimal)correctResponses / totalResponses * 100m, 2)
-                : 0.0m;
-
-            attempt.Passed = attempt.ScorePercent >= passingThreshold;
-            attempt.Status = AttemptStatus.Completed;
-            attempt.CompletedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-
-            return Ok(new
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            try
             {
-                success = true,
-                attemptId = attempt.Id,
-                scorePercent = attempt.ScorePercent,
-                passed = attempt.Passed,
-                totalQuestions = totalResponses,
-                correctCount = correctResponses,
-                completedAt = attempt.CompletedAt
-            });
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError(ex, "Failed to complete attempt {AttemptId}", id);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, error = "Failed to finalize and score assessment attempt." });
+            }
         }
-        catch (Exception ex)
+        else
         {
-            await transaction.RollbackAsync(cancellationToken);
-            _logger.LogError(ex, "Failed to complete attempt {AttemptId}", id);
-            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, error = "Failed to finalize and score assessment attempt." });
+            await _context.SaveChangesAsync(cancellationToken);
         }
+
+        return Ok(new
+        {
+            success = true,
+            attemptId = attempt.Id,
+            scorePercent = attempt.ScorePercent,
+            passed = attempt.Passed,
+            totalQuestions = totalResponses,
+            correctCount = correctResponses,
+            completedAt = attempt.CompletedAt
+        });
+    }
+
+    private async Task SaveSyncedAttemptAsync(
+        ExamAttempt attempt,
+        SyncAssessmentAttemptRequest request,
+        DateTime now,
+        string candidateUserId,
+        CancellationToken cancellationToken)
+    {
+        _context.ExamAttempts.Add(attempt);
+
+        if (request.Questions != null && request.Questions.Count > 0)
+        {
+            foreach (var q in request.Questions)
+            {
+                var questionId = !string.IsNullOrWhiteSpace(q.Id) ? q.Id : "q_" + Guid.NewGuid().ToString("N");
+
+                // Ensure question stub exists if referenced by foreign key
+                var questionExists = await _context.Questions.AnyAsync(existingQ => existingQ.Id == questionId, cancellationToken);
+                if (!questionExists)
+                {
+                    var newQuestion = new Question
+                    {
+                        Id = questionId,
+                        Stem = q.Stem ?? "Clinical scenario assessment question",
+                        Pathway = request.Pathway ?? "rn",
+                        QuestionTypeKey = q.QuestionType ?? "single_choice",
+                        Status = QuestionStatus.Published,
+                        CreatedAt = now,
+                        UpdatedAt = now
+                    };
+                    _context.Questions.Add(newQuestion);
+                }
+
+                var selectedJson = q.UserAnswerIndices != null && q.UserAnswerIndices.Count > 0
+                    ? JsonSerializer.Serialize(q.UserAnswerIndices)
+                    : q.UserAnswerIndex.HasValue
+                        ? JsonSerializer.Serialize(new[] { q.UserAnswerIndex.Value })
+                        : "[]";
+
+                var resp = new AttemptResponse
+                {
+                    Id = "resp_" + Guid.NewGuid().ToString("N"),
+                    ExamAttemptId = attempt.Id,
+                    QuestionId = questionId,
+                    SelectedOptionsJson = selectedJson,
+                    IsCorrect = q.IsCorrect,
+                    ScoreAwarded = q.ScoreAwarded,
+                    TimeSpentSeconds = 60,
+                    AnsweredAt = now
+                };
+                _context.AttemptResponses.Add(resp);
+            }
+        }
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            ActorId = candidateUserId,
+            Action = "AssessmentAttemptPersisted",
+            EntityType = "ExamAttempt",
+            EntityId = attempt.Id,
+            Description = $"Persisted candidate assessment attempt '{request.Name}' with score {request.ScorePercent}%",
+            Outcome = "Success",
+            Timestamp = now
+        });
     }
 
     [HttpPost("sync")]
@@ -415,99 +486,50 @@ public class ExamAttemptsController : ControllerBase
         }
 
         var exam = await GetOrCreateDefaultExamAsync(request.Pathway ?? "rn", cancellationToken);
+        var now = DateTime.UtcNow;
+        var startedAt = now.AddMinutes(-Math.Max(1, request.DurationMinutes));
 
-        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-        try
+        var attempt = new ExamAttempt
         {
-            var now = DateTime.UtcNow;
-            var startedAt = now.AddMinutes(-Math.Max(1, request.DurationMinutes));
+            Id = attemptId,
+            UserId = candidateUserId, // Server-derived candidate ownership
+            ExamId = exam.Id,
+            Status = AttemptStatus.Completed,
+            ScorePercent = request.ScorePercent,
+            Passed = request.ScorePercent >= 75.0m,
+            StartedAt = startedAt,
+            CompletedAt = now
+        };
 
-            var attempt = new ExamAttempt
+        if (_context.Database.IsRelational())
+        {
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            try
             {
-                Id = attemptId,
-                UserId = candidateUserId, // Server-derived candidate ownership
-                ExamId = exam.Id,
-                Status = AttemptStatus.Completed,
-                ScorePercent = request.ScorePercent,
-                Passed = request.ScorePercent >= 75.0m,
-                StartedAt = startedAt,
-                CompletedAt = now
-            };
-
-            _context.ExamAttempts.Add(attempt);
-
-            if (request.Questions != null && request.Questions.Count > 0)
-            {
-                foreach (var q in request.Questions)
-                {
-                    var questionId = !string.IsNullOrWhiteSpace(q.Id) ? q.Id : "q_" + Guid.NewGuid().ToString("N");
-
-                    // Ensure question stub exists if referenced by foreign key
-                    var questionExists = await _context.Questions.AnyAsync(existingQ => existingQ.Id == questionId, cancellationToken);
-                    if (!questionExists)
-                    {
-                        var newQuestion = new Question
-                        {
-                            Id = questionId,
-                            Stem = q.Stem ?? "Clinical scenario assessment question",
-                            Pathway = request.Pathway ?? "rn",
-                            QuestionTypeKey = q.QuestionType ?? "single_choice",
-                            Status = QuestionStatus.Published,
-                            CreatedAt = now,
-                            UpdatedAt = now
-                        };
-                        _context.Questions.Add(newQuestion);
-                    }
-
-                    var selectedJson = q.UserAnswerIndices != null && q.UserAnswerIndices.Count > 0
-                        ? JsonSerializer.Serialize(q.UserAnswerIndices)
-                        : q.UserAnswerIndex.HasValue
-                            ? JsonSerializer.Serialize(new[] { q.UserAnswerIndex.Value })
-                            : "[]";
-
-                    var resp = new AttemptResponse
-                    {
-                        Id = "resp_" + Guid.NewGuid().ToString("N"),
-                        ExamAttemptId = attempt.Id,
-                        QuestionId = questionId,
-                        SelectedOptionsJson = selectedJson,
-                        IsCorrect = q.IsCorrect,
-                        ScoreAwarded = q.ScoreAwarded,
-                        TimeSpentSeconds = 60,
-                        AnsweredAt = now
-                    };
-                    _context.AttemptResponses.Add(resp);
-                }
+                await SaveSyncedAttemptAsync(attempt, request, now, candidateUserId, cancellationToken);
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
             }
-
-            _context.AuditLogs.Add(new AuditLog
+            catch (Exception ex)
             {
-                ActorId = candidateUserId,
-                Action = "AssessmentAttemptPersisted",
-                EntityType = "ExamAttempt",
-                EntityId = attempt.Id,
-                Description = $"Persisted candidate assessment attempt '{request.Name}' with score {request.ScorePercent}%",
-                Outcome = "Success",
-                Timestamp = now
-            });
-
-            await _context.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-
-            return Ok(new
-            {
-                success = true,
-                attemptId = attempt.Id,
-                scorePercent = attempt.ScorePercent,
-                passed = attempt.Passed,
-                persistedAt = now
-            });
+                await transaction.RollbackAsync(cancellationToken);
+                _logger.LogError(ex, "Failed to persist assessment attempt {AttemptId}", attemptId);
+                return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, error = "Failed to persist assessment attempt to PostgreSQL database." });
+            }
         }
-        catch (Exception ex)
+        else
         {
-            await transaction.RollbackAsync(cancellationToken);
-            _logger.LogError(ex, "Failed to persist assessment attempt {AttemptId}", attemptId);
-            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, error = "Failed to persist assessment attempt to PostgreSQL database." });
+            await SaveSyncedAttemptAsync(attempt, request, now, candidateUserId, cancellationToken);
+            await _context.SaveChangesAsync(cancellationToken);
         }
+
+        return Ok(new
+        {
+            success = true,
+            attemptId = attempt.Id,
+            scorePercent = attempt.ScorePercent,
+            passed = attempt.Passed,
+            persistedAt = now
+        });
     }
 }

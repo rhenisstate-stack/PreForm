@@ -1,6 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   createGatewayAuthHeaders,
+  createCanonicalGatewayAuthHeaders,
+  computeBodySha256,
+  EMPTY_BODY_SHA256,
   getGatewaySecret,
   setMockApiHandler,
 } from "@/lib/api-client";
@@ -8,8 +11,15 @@ import {
   subscriptionService,
   profileService,
   checkoutService,
+  authService,
+  attemptsService,
   type BackendSubscriptionPlan,
 } from "@/lib/api-services";
+import {
+  syncAttemptToBackend,
+  fetchAuthoritativeAttempts,
+  type CompletedAssessmentAttempt,
+} from "@/lib/assessment-store";
 import type { VerifiedSession } from "@/lib/session";
 import crypto from "node:crypto";
 
@@ -149,5 +159,107 @@ describe("Security Regression & Architecture Boundary Tests", () => {
     expect(res.success).toBe(false);
     expect(res.status).toBe(403);
     expect(res.error).toContain("Forbidden");
+  });
+
+  // ── SEC-03: Hardened Canonical Gateway HMAC Tests ────────────────────────
+
+  it("SEC-03: generates hardened canonical v1 HMAC headers binding method, path, timestamp, nonce, and body hash", () => {
+    const fixedTimestamp = 1793280000;
+    const fixedNonce = "test-nonce-1234567890abcdef";
+    const testBody = { action: "sync", count: 5 };
+    const bodyHash = computeBodySha256(testBody);
+
+    const headers = createCanonicalGatewayAuthHeaders(dummySession, "corr-sec03-1", {
+      method: "POST",
+      path: "/api/v1/attempts/sync",
+      body: testBody,
+      timestamp: fixedTimestamp,
+      nonce: fixedNonce,
+    });
+
+    expect(headers["X-Gateway-Signature-Version"]).toBe("1");
+    expect(headers["X-Gateway-Timestamp"]).toBe(fixedTimestamp.toString());
+    expect(headers["X-Gateway-Nonce"]).toBe(fixedNonce);
+    expect(headers["X-Gateway-Content-SHA256"]).toBe(bodyHash);
+    expect(headers["X-Session-Id"]).toBe(dummySession.sessionId);
+
+    // Compute expected canonical HMAC independently
+    const secret = getGatewaySecret();
+    const canonicalPayload = `${fixedTimestamp}\nPOST\n/api/v1/attempts/sync\n${fixedNonce}\n${bodyHash}\n${dummySession.userId}\n${dummySession.email}\n${dummySession.role}`;
+    const expectedSig = crypto
+      .createHmac("sha256", secret)
+      .update(canonicalPayload)
+      .digest("hex")
+      .toLowerCase();
+
+    expect(headers["X-Gateway-Signature"]).toBe(expectedSig);
+  });
+
+  it("SEC-03: empty body generates standard SHA-256 hash matching ASP.NET Core PrepfordAuthHandler", () => {
+    const emptyHash = computeBodySha256(undefined);
+    expect(emptyHash).toBe(EMPTY_BODY_SHA256);
+    expect(emptyHash).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+  });
+
+  // ── SEC-02: Authoritative Session Revocation Dispatch ─────────────────────
+
+  it("SEC-02: authService.revokeSession dispatches revocation request to ASP.NET Core", async () => {
+    let capturedEndpoint = "";
+    let capturedBody: Record<string, unknown> | null = null;
+
+    setMockApiHandler(async (endpoint, options) => {
+      capturedEndpoint = endpoint;
+      capturedBody = options.body ? JSON.parse(options.body as string) : null;
+      return {
+        success: true,
+        status: 200,
+        data: { success: true, message: "Revoked" },
+        headers: new Headers(),
+      };
+    });
+
+    const res = await authService.revokeSession("sess_target_999", dummySession);
+    expect(res.success).toBe(true);
+    expect(capturedEndpoint).toBe("/api/v1/auth/revoke-session");
+    expect(capturedBody).toEqual({ sessionId: "sess_target_999" });
+  });
+
+  // ── ARCH-01: Assessment Attempt Persistence API Integration ───────────────
+
+  it("ARCH-01: syncAttemptToBackend dispatches completed attempt to /api/v1/attempts/sync", async () => {
+    let capturedEndpoint = "";
+    let capturedBody: Record<string, unknown> | null = null;
+
+    setMockApiHandler(async (endpoint, options) => {
+      capturedEndpoint = endpoint;
+      capturedBody = options.body ? JSON.parse(options.body as string) : null;
+      return {
+        success: true,
+        status: 200,
+        data: { success: true, attempt: { id: "att_123" } },
+        headers: new Headers(),
+      };
+    });
+
+    const testAttempt: CompletedAssessmentAttempt = {
+      id: "att_mock_999",
+      name: "Mock CAT Test",
+      type: "tutored_cat",
+      date: "Oct 29, 2026",
+      timestamp: Date.now(),
+      scorePercent: 82.5,
+      performanceTier: "Very High",
+      totalQuestions: 5,
+      correctCount: 4,
+      durationMinutes: 12,
+      domains: [],
+      questions: [],
+    };
+
+    const success = await syncAttemptToBackend(testAttempt, dummySession);
+    expect(success).toBe(true);
+    expect(capturedEndpoint).toBe("/api/v1/attempts/sync");
+    expect(capturedBody?.["id"]).toBe("att_mock_999");
+    expect(capturedBody?.["scorePercent"]).toBe(82.5);
   });
 });
