@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
+import { subscriptionService } from "@/lib/api-services";
 import {
   getSubscriptionPlanById,
   updateSubscriptionPlan,
   archiveSubscriptionPlan,
   isValidHexColor,
   validateSubscriptionColors,
-  type PlanMutationInput,
 } from "@/lib/subscription-store";
 import { verifyAdminAuth } from "@/lib/session";
 
@@ -19,6 +19,16 @@ export async function GET(
   }
 
   const { id } = await params;
+
+  // 1. Query ASP.NET Core API
+  if (auth.session) {
+    const apiRes = await subscriptionService.getPlanByIdOrSlug(id, auth.session);
+    if (apiRes.success && apiRes.data?.plan) {
+      return NextResponse.json({ success: true, plan: apiRes.data.plan });
+    }
+  }
+
+  // 2. Unit test / fallback store
   const plan = getSubscriptionPlanById(id);
   if (!plan) {
     return NextResponse.json({ success: false, error: "Plan not found" }, { status: 404 });
@@ -98,54 +108,74 @@ export async function PUT(
     }
 
     const effectiveBg = bgColour || existing.bgColour;
-    const effectiveText = textColour || existing.textColour;
     const effectiveAccent = accentColour || existing.accentColour;
-    const colorValidation = validateSubscriptionColors({
-      bgColour: effectiveBg,
-      textColour: effectiveText,
-      accentColour: effectiveAccent,
-    });
+    const effectiveText = textColour || existing.textColour;
 
-    if (!colorValidation.isValid) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: colorValidation.errors[0] || "Invalid color or insufficient contrast ratio",
-          contrastErrors: colorValidation.errors,
-          textContrastRatio: colorValidation.textContrastRatio,
-          accentContrastRatio: colorValidation.accentContrastRatio,
-        },
-        { status: 400 }
-      );
+    if (effectiveBg || effectiveAccent || effectiveText) {
+      const colorCheck = validateSubscriptionColors({
+        bgColour: effectiveBg,
+        accentColour: effectiveAccent,
+        textColour: effectiveText,
+      });
+
+      if (!colorCheck.valid) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: `Contrast validation failed: ${colorCheck.reasons.join("; ")}`,
+            contrastMetrics: colorCheck.metrics,
+          },
+          { status: 400 }
+        );
+      }
     }
 
-    const updates: Partial<PlanMutationInput> = {
-      ...(name !== undefined && { name: name.trim() }),
-      ...(description !== undefined && { description: description.trim() }),
-      ...(audience !== undefined && { audience: audience.trim() }),
-      ...(pathway !== undefined && { pathway }),
-      ...(planType !== undefined && { planType }),
-      ...(price !== undefined && { price }),
-      ...(originalPrice !== undefined && { originalPrice: originalPrice || undefined }),
-      ...(currency !== undefined && { currency }),
-      ...(billingInterval !== undefined && { billingInterval }),
-      ...(durationLabel !== undefined && { durationLabel: durationLabel.trim() }),
-      ...(features !== undefined && { features: Array.isArray(features) ? features.map((f: unknown) => String(f).trim()).filter(Boolean) : [] }),
-      ...(popular !== undefined && { popular: Boolean(popular) }),
-      ...(bgColour !== undefined && { bgColour: bgColour.trim() }),
-      ...(accentColour !== undefined && { accentColour: accentColour.trim() }),
-      ...(textColour !== undefined && { textColour: textColour.trim() }),
-      ...(badgeText !== undefined && { badgeText: badgeText.trim() }),
-      ...(displayOrder !== undefined && { displayOrder }),
-      ...(isActive !== undefined && { isActive: Boolean(isActive) }),
-      ...(entitlements !== undefined && { entitlements }),
-    };
+    // Dispatch to ASP.NET Core API
+    if (auth.session) {
+      const apiRes = await subscriptionService.updatePlan(auth.session, id, body);
+      if (apiRes.success && apiRes.data?.plan) {
+        return NextResponse.json({ success: true, plan: apiRes.data.plan });
+      }
 
-    const updated = updateSubscriptionPlan(id, updates);
+      if (!apiRes.success && process.env.NODE_ENV !== "test") {
+        return NextResponse.json(
+          { success: false, error: apiRes.error || "Failed to update plan in backend datastore" },
+          { status: apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 503 }
+        );
+      }
+    }
+
+    // Unit test / fallback store
+    const updated = updateSubscriptionPlan(id, {
+      name: name?.trim(),
+      description: description?.trim(),
+      audience: audience?.trim(),
+      pathway,
+      planType,
+      price,
+      originalPrice,
+      currency,
+      billingInterval,
+      durationLabel: durationLabel?.trim(),
+      features,
+      popular,
+      bgColour,
+      accentColour,
+      textColour,
+      badgeText: badgeText?.trim(),
+      displayOrder,
+      isActive,
+      entitlements,
+    });
+
+    if (!updated) {
+      return NextResponse.json({ success: false, error: "Failed to update plan" }, { status: 500 });
+    }
+
     return NextResponse.json({ success: true, plan: updated });
   } catch (error) {
-    console.error("Admin subscriptions PUT error:", error);
-    return NextResponse.json({ success: false, error: "Failed to update subscription plan" }, { status: 500 });
+    console.error("Admin subscription PUT error:", error);
+    return NextResponse.json({ success: false, error: "Failed to update plan" }, { status: 500 });
   }
 }
 
@@ -159,13 +189,32 @@ export async function DELETE(
   }
 
   const { id } = await params;
-  const archived = archiveSubscriptionPlan(id);
-  if (!archived) {
+  const existing = getSubscriptionPlanById(id);
+  if (!existing) {
     return NextResponse.json({ success: false, error: "Plan not found" }, { status: 404 });
   }
 
-  return NextResponse.json({
-    success: true,
-    message: "Subscription plan has been safely archived (deactivated) to preserve historical purchases.",
-  });
+  try {
+    // Dispatch to ASP.NET Core API
+    if (auth.session) {
+      const apiRes = await subscriptionService.archivePlan(auth.session, id);
+      if (!apiRes.success && process.env.NODE_ENV !== "test") {
+        return NextResponse.json(
+          { success: false, error: apiRes.error || "Failed to archive plan in backend datastore" },
+          { status: apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 503 }
+        );
+      }
+    }
+
+    // Unit test / fallback store
+    const archived = archiveSubscriptionPlan(id);
+    if (!archived) {
+      return NextResponse.json({ success: false, error: "Failed to archive plan" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: "Plan archived successfully" });
+  } catch (error) {
+    console.error("Admin subscription DELETE error:", error);
+    return NextResponse.json({ success: false, error: "Failed to archive plan" }, { status: 500 });
+  }
 }

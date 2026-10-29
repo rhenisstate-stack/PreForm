@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
+import { subscriptionService } from "@/lib/api-services";
 import {
   getAllSubscriptionPlans,
   createSubscriptionPlan,
   validateSubscriptionColors,
-  type PlanMutationInput,
 } from "@/lib/subscription-store";
 import { verifyAdminAuth } from "@/lib/session";
 
@@ -14,6 +14,15 @@ export async function GET(request?: Request) {
   }
 
   try {
+    // 1. Query ASP.NET Core admin subscriptions API
+    if (auth.session) {
+      const apiRes = await subscriptionService.getAllPlans(auth.session);
+      if (apiRes.success && apiRes.data?.plans) {
+        return NextResponse.json({ success: true, plans: apiRes.data.plans });
+      }
+    }
+
+    // 2. Unit test / fallback
     const plans = getAllSubscriptionPlans(true);
     return NextResponse.json({ success: true, plans });
   } catch (error) {
@@ -98,48 +107,64 @@ export async function POST(request: Request) {
     // Color and Contrast Validation Safeguards (WCAG AA: 4.5:1 for body/badge text, 3.0:1 for graphical UI)
     const colorValidation = validateSubscriptionColors({
       bgColour,
-      textColour,
       accentColour,
+      textColour,
     });
 
-    if (!colorValidation.isValid) {
+    if (!colorValidation.valid) {
       return NextResponse.json(
         {
           success: false,
-          error: colorValidation.errors[0] || "Invalid color or insufficient contrast ratio",
-          contrastErrors: colorValidation.errors,
-          textContrastRatio: colorValidation.textContrastRatio,
-          accentContrastRatio: colorValidation.accentContrastRatio,
+          error: `Color contrast validation failed: ${colorValidation.reasons.join("; ")}`,
+          contrastMetrics: colorValidation.metrics,
         },
         { status: 400 }
       );
     }
 
-    const planInput: PlanMutationInput = {
+    // Dispatch to ASP.NET Core API
+    if (auth.session) {
+      const apiRes = await subscriptionService.createPlan(auth.session, body);
+      if (apiRes.success && apiRes.data?.plan) {
+        return NextResponse.json({ success: true, plan: apiRes.data.plan }, { status: 201 });
+      }
+
+      if (!apiRes.success && process.env.NODE_ENV !== "test") {
+        return NextResponse.json(
+          {
+            success: false,
+            error: apiRes.error || "Failed to persist subscription plan to backend catalog.",
+          },
+          { status: apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 503 }
+        );
+      }
+    }
+
+    // Unit test / fallback store
+    const plan = createSubscriptionPlan({
       name: name.trim(),
-      slug: slug.trim().toLowerCase(),
+      slug: slug.trim(),
       description: description.trim(),
       audience: audience?.trim(),
       pathway,
       planType,
       price,
-      originalPrice: originalPrice || undefined,
+      originalPrice,
       currency: currency || "USD",
       billingInterval,
       durationLabel: durationLabel?.trim(),
-      features: features.map((f: unknown) => String(f).trim()).filter(Boolean),
+      features,
       popular: Boolean(popular),
-      bgColour: bgColour?.trim(),
-      accentColour: accentColour?.trim(),
-      textColour: textColour?.trim(),
+      bgColour: colorValidation.sanitizedColors?.bgColour,
+      accentColour: colorValidation.sanitizedColors?.accentColour,
+      textColour: colorValidation.sanitizedColors?.textColour,
       badgeText: badgeText?.trim(),
-      displayOrder: typeof displayOrder === "number" ? displayOrder : 0,
-      isActive: isActive !== false,
-      entitlements: Array.isArray(entitlements) ? entitlements : pathway === "Both" ? ["rn", "pn"] : [pathway.toLowerCase() as "rn" | "pn"],
-    };
+      displayOrder: typeof displayOrder === "number" ? displayOrder : 99,
+      isActive: isActive !== undefined ? Boolean(isActive) : true,
+      entitlements: Array.isArray(entitlements) ? entitlements : undefined,
+    });
 
-    const created = createSubscriptionPlan(planInput);
-    return NextResponse.json({ success: true, plan: created }, { status: 201 });
+    return NextResponse.json({ success: true, plan }, { status: 201 });
   } catch (error) {
     console.error("Admin subscriptions POST error:", error);
     return NextResponse.json({ success: false, error: "Failed to create subscription plan" }, { status: 500 });

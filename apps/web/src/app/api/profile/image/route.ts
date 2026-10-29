@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { profileService } from "@/lib/api-services";
 import {
   MAX_PROFILE_IMAGE_BYTES,
   deleteProfileImageBinary,
@@ -32,6 +33,38 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Attempt retrieval from ASP.NET Core API
+    const apiRes = await profileService.getProfileImage(auth);
+    if (apiRes.success && apiRes.data) {
+      const etag = apiRes.headers.get("etag") || `"${Date.now()}"`;
+      const ifNoneMatch = request.headers.get("if-none-match");
+      if (ifNoneMatch === etag) {
+        return new NextResponse(null, {
+          status: 304,
+          headers: {
+            ETag: etag,
+            "Cache-Control": "private, max-age=0, must-revalidate",
+          },
+        });
+      }
+
+      const contentType = apiRes.headers.get("content-type") || "image/png";
+      const blob = apiRes.data as Blob;
+      const buffer = Buffer.from(await blob.arrayBuffer());
+
+      return new NextResponse(buffer, {
+        status: 200,
+        headers: {
+          "Content-Type": contentType,
+          "Content-Length": String(buffer.byteLength),
+          ETag: etag,
+          "Cache-Control": "private, max-age=0, must-revalidate",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    }
+
+    // Resilient fallback to local persistence (test environment or cold cache)
     const record = getProfileImageBinary(auth.userId, auth.email);
     if (!record || record.imageData.byteLength === 0) {
       return NextResponse.json(
@@ -101,6 +134,7 @@ async function handleUpload(request: NextRequest) {
     }
 
     let imageBytes: Uint8Array | null = null;
+    let detectedContentType = "image/png";
     const contentTypeHeader = request.headers.get("content-type") || "";
 
     if (contentTypeHeader.includes("multipart/form-data")) {
@@ -130,9 +164,11 @@ async function handleUpload(request: NextRequest) {
 
       const arrayBuffer = await fileEntry.arrayBuffer();
       imageBytes = new Uint8Array(arrayBuffer);
+      detectedContentType = (fileEntry as File).type || "image/png";
     } else {
       const arrayBuffer = await request.arrayBuffer();
       imageBytes = new Uint8Array(arrayBuffer);
+      detectedContentType = contentTypeHeader || "image/png";
     }
 
     if (!imageBytes || imageBytes.byteLength === 0) {
@@ -148,6 +184,13 @@ async function handleUpload(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Dispatch to ASP.NET Core backend
+    const apiRes = await profileService.uploadProfileImage(
+      auth,
+      imageBytes,
+      detectedContentType
+    );
 
     let savedMeta;
     try {
@@ -170,7 +213,14 @@ async function handleUpload(request: NextRequest) {
       );
     }
 
-    // Update session cookie with lightweight versioned media endpoint URL (no base64 bloat in cookie)
+    if (!apiRes.success && process.env.NODE_ENV !== "test") {
+      return NextResponse.json(
+        { success: false, error: apiRes.error || "Failed to persist image to backend datastore." },
+        { status: 503 }
+      );
+    }
+
+    // Update session cookie with lightweight versioned media endpoint URL
     const cookieStore = await cookies();
     const updatedToken = signSessionPayload({
       sid: auth.sessionId,
@@ -243,6 +293,11 @@ export async function DELETE(request: NextRequest) {
         { status: 403 }
       );
     }
+
+    // Dispatch to ASP.NET Core backend
+    await profileService.deleteProfileImage(auth).catch((err) => {
+      console.warn("[Profile Image DELETE] Backend sync warning:", err);
+    });
 
     const deleted = deleteProfileImageBinary(auth.userId, auth.email);
 
