@@ -22,7 +22,17 @@ public class User
     public string DisplayName { get; set; } = string.Empty;
 
     [MaxLength(10)]
-    public string Pathway { get; set; } = "rn"; // "rn" or "pn"
+    public string Pathway { get; set; } = "rn"; // "rn", "pn", "both"
+
+    [MaxLength(32)]
+    public string TargetExamDate { get; set; } = "2026-11-30";
+
+    [MaxLength(128)]
+    public string ActivePlan { get; set; } = "NCLEX-RN Complete Preparation Plan";
+
+    public bool EmailNotifications { get; set; } = true;
+
+    public bool StudyReminders { get; set; } = true;
 
     public bool IsActive { get; set; } = true;
 
@@ -33,8 +43,45 @@ public class User
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public UserProfileImage? ProfileImage { get; set; }
+    public ICollection<UserSession> UserSessions { get; set; } = new List<UserSession>();
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+}
+
+[Table("UserSessions", Schema = "public")]
+public class UserSession
+{
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    [Required]
+    [MaxLength(128)]
+    public string UserId { get; set; } = string.Empty;
+    public User User { get; set; } = null!;
+
+    [Required]
+    [EmailAddress]
+    [MaxLength(256)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(64)]
+    public string Role { get; set; } = "candidate";
+
+    [MaxLength(128)]
+    public string DisplayName { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(128)]
+    public string TokenHash { get; set; } = string.Empty;
+
+    [MaxLength(128)]
+    public string CsrfToken { get; set; } = string.Empty;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddDays(7);
+    public DateTime LastActiveAt { get; set; } = DateTime.UtcNow;
+    public bool Revoked { get; set; } = false;
 }
 
 [Table("UserProfileImages", Schema = "public")]
@@ -99,14 +146,14 @@ public class Permission
 
     [Required]
     [MaxLength(64)]
-    public string Key { get; set; } = string.Empty; // e.g. "dashboard.view", "questions.create"
+    public string Key { get; set; } = string.Empty;
 
     [Required]
     [MaxLength(128)]
     public string Name { get; set; } = string.Empty;
 
     [MaxLength(64)]
-    public string Category { get; set; } = string.Empty; // "Questions", "Exams", "Users", etc.
+    public string Category { get; set; } = string.Empty;
 
     public ICollection<RolePermission> RolePermissions { get; set; } = new List<RolePermission>();
 }
@@ -144,7 +191,7 @@ public class AuditLog
 
     [Required]
     [MaxLength(64)]
-    public string Action { get; set; } = string.Empty; // "UserLogin", "QuestionCreated", "ExamPublished", etc.
+    public string Action { get; set; } = string.Empty;
 
     [Required]
     [MaxLength(64)]
@@ -157,7 +204,7 @@ public class AuditLog
     public string Description { get; set; } = string.Empty;
 
     [MaxLength(32)]
-    public string Outcome { get; set; } = "Success"; // "Success", "Failed", "Denied"
+    public string Outcome { get; set; } = "Success";
 
     [MaxLength(64)]
     public string? IpAddress { get; set; }

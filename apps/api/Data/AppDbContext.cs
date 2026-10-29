@@ -19,6 +19,7 @@ public class AppDbContext : DbContext
 
     // Identity & RBAC
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<UserProfileImage> UserProfileImages => Set<UserProfileImage>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
@@ -38,9 +39,11 @@ public class AppDbContext : DbContext
     public DbSet<ExamAttempt> ExamAttempts => Set<ExamAttempt>();
     public DbSet<AttemptResponse> AttemptResponses => Set<AttemptResponse>();
 
-    // Subscriptions
+    // Subscriptions, Orders & Payments
     public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
     public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
+    public DbSet<Order> Orders => Set<Order>();
+    public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -95,7 +98,21 @@ public class AppDbContext : DbContext
             entity.HasIndex(u => u.IsActive);
         });
 
-        // UserProfileImage (Binary BLOB / bytea storage separated from routine User queries)
+        // UserSession Indexes & Relationships
+        modelBuilder.Entity<UserSession>(entity =>
+        {
+            entity.ToTable("UserSessions", "public");
+            entity.HasKey(s => s.Id);
+            entity.HasIndex(s => s.TokenHash).IsUnique();
+            entity.HasIndex(s => new { s.UserId, s.Revoked });
+            entity.HasIndex(s => new { s.Email, s.Revoked });
+            entity.HasOne(s => s.User)
+                  .WithMany(u => u.UserSessions)
+                  .HasForeignKey(s => s.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // UserProfileImage
         modelBuilder.Entity<UserProfileImage>(entity =>
         {
             entity.ToTable("UserProfileImages", "public");
@@ -109,6 +126,65 @@ public class AppDbContext : DbContext
                   .WithOne(u => u.ProfileImage)
                   .HasForeignKey<UserProfileImage>(upi => upi.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // SubscriptionPlan Indexes
+        modelBuilder.Entity<SubscriptionPlan>(entity =>
+        {
+            entity.ToTable("SubscriptionPlans", "public");
+            entity.HasKey(sp => sp.Id);
+            entity.HasIndex(sp => sp.Slug).IsUnique();
+            entity.HasIndex(sp => new { sp.Pathway, sp.IsActive });
+            entity.HasIndex(sp => sp.DisplayOrder);
+        });
+
+        // Orders & Transactions
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.ToTable("Orders", "public");
+            entity.HasKey(o => o.Id);
+            entity.HasIndex(o => o.UserId);
+            entity.HasIndex(o => o.ProviderSessionId);
+            entity.HasOne(o => o.User)
+                  .WithMany()
+                  .HasForeignKey(o => o.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(o => o.Plan)
+                  .WithMany()
+                  .HasForeignKey(o => o.PlanId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.ToTable("PaymentTransactions", "public");
+            entity.HasKey(pt => pt.Id);
+            entity.HasIndex(pt => pt.ProviderEventId).IsUnique();
+            entity.HasIndex(pt => pt.OrderId);
+            entity.HasOne(pt => pt.Order)
+                  .WithMany(o => o.Transactions)
+                  .HasForeignKey(pt => pt.OrderId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<UserSubscription>(entity =>
+        {
+            entity.ToTable("UserSubscriptions", "public");
+            entity.HasKey(us => us.Id);
+            entity.HasIndex(us => us.UserId);
+            entity.HasIndex(us => us.Status);
+            entity.HasOne(us => us.User)
+                  .WithMany()
+                  .HasForeignKey(us => us.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(us => us.Plan)
+                  .WithMany()
+                  .HasForeignKey(us => us.PlanId)
+                  .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(us => us.Order)
+                  .WithMany()
+                  .HasForeignKey(us => us.OrderId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Permission Indexes
