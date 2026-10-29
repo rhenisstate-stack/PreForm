@@ -33,6 +33,7 @@ public class PostgresTestFixture : WebApplicationFactory<Program>
             services.AddDbContext<AppDbContext>(options =>
             {
                 options.UseNpgsql(ConnectionString);
+                options.LogTo(Console.WriteLine, LogLevel.Information);
             });
         });
     }

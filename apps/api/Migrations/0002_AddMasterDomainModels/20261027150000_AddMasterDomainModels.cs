@@ -145,7 +145,7 @@ public partial class AddMasterDomainModels : Migration
             constraints: table =>
             {
                 table.PrimaryKey("PK_Courses", x => x.Id);
-                table.ForeignKey(name: "FK_Courses_Programme_ProgrammeId", column: x => x.ProgrammeId, principalTable: "Programme", principalColumn: "Id", onDelete: ReferentialAction.Cascade);
+                table.ForeignKey(name: "FK_Courses_Programme_ProgrammeId", column: x => x.ProgrammeId, principalSchema: "public", principalTable: "Programme", principalColumn: "Id", onDelete: ReferentialAction.Cascade);
             });
 
         // 8. SubjectDomains

@@ -13,6 +13,7 @@ public partial class CreateProgrammes : Migration
 
         migrationBuilder.CreateTable(
             name: "Programme",
+            schema: "public",
             columns: table => new
             {
                 Id = table.Column<string>(type: "text", nullable: false),
@@ -29,18 +30,22 @@ public partial class CreateProgrammes : Migration
 
         migrationBuilder.CreateIndex(
             name: "IX_Programme_Code",
+            schema: "public",
             table: "Programme",
             column: "Code",
             unique: true);
 
         migrationBuilder.CreateIndex(
             name: "IX_Programme_IsActive",
+            schema: "public",
             table: "Programme",
             column: "IsActive");
 
         migrationBuilder.InsertData(
+            schema: "public",
             table: "Programme",
             columns: new[] { "Id", "Code", "DisplayName", "IsActive", "CreatedAt", "UpdatedAt" },
+            columnTypes: new[] { "text", "text", "text", "boolean", "timestamp with time zone", "timestamp with time zone" },
             values: new object[,]
             {
                 { "programme_rn", "RN", "NCLEX-RN", true, new DateTime(2026, 10, 26, 12, 0, 0, DateTimeKind.Utc), new DateTime(2026, 10, 26, 12, 0, 0, DateTimeKind.Utc) },
