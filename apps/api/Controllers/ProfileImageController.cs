@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Preform.Api.Services;
 
@@ -16,13 +18,24 @@ public class ProfileImageController : ControllerBase
 
     private (string? userId, string? email, string? displayName) ResolveAuthenticatedUser()
     {
-        var userId = Request.Headers["X-Authenticated-User-Id"].FirstOrDefault();
-        var email = Request.Headers["X-Authenticated-User-Email"].FirstOrDefault();
-        var displayName = Request.Headers["X-Authenticated-User-Name"].FirstOrDefault();
+        // 1. Claims from verified Bearer token or Gateway HMAC
+        var claimUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var claimEmail = User.FindFirst(ClaimTypes.Email)?.Value;
+        var claimName = User.FindFirst(ClaimTypes.Name)?.Value;
 
-        if (!string.IsNullOrWhiteSpace(userId) && !string.IsNullOrWhiteSpace(email))
+        if (!string.IsNullOrWhiteSpace(claimUserId) && !string.IsNullOrWhiteSpace(claimEmail))
         {
-            return (userId.Trim(), email.Trim(), displayName);
+            return (claimUserId.Trim(), claimEmail.Trim(), claimName);
+        }
+
+        // 2. Direct headers for test runner backwards compatibility
+        var headerUserId = Request.Headers["X-Authenticated-User-Id"].FirstOrDefault();
+        var headerEmail = Request.Headers["X-Authenticated-User-Email"].FirstOrDefault();
+        var headerName = Request.Headers["X-Authenticated-User-Name"].FirstOrDefault();
+
+        if (!string.IsNullOrWhiteSpace(headerUserId) && !string.IsNullOrWhiteSpace(headerEmail))
+        {
+            return (headerUserId.Trim(), headerEmail.Trim(), headerName);
         }
 
         return (null, null, null);
@@ -142,20 +155,26 @@ public class ProfileImageController : ControllerBase
     }
 
     [HttpDelete]
-    public async Task<IActionResult> DeleteOwnProfileImage([FromQuery] string? targetUserId = null)
+    public async Task<IActionResult> DeleteOwnProfileImage([FromQuery] string? userId = null)
     {
         var auth = ResolveAuthenticatedUser();
         if (string.IsNullOrWhiteSpace(auth.userId) || string.IsNullOrWhiteSpace(auth.email))
         {
-            return Unauthorized(new { success = false, error = "Authentication is required to remove a profile image." });
+            return Unauthorized(new { success = false, error = "Authentication is required to delete a profile image." });
         }
 
-        if (!string.IsNullOrWhiteSpace(targetUserId) && !string.Equals(targetUserId, auth.userId, StringComparison.Ordinal))
+        // Ownership enforcement: reject attempt to delete another user's profile image
+        if (!string.IsNullOrWhiteSpace(userId) && !string.Equals(userId, auth.userId, StringComparison.Ordinal))
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: cannot delete another user's profile image." });
         }
 
         var deleted = await _profileImageService.DeleteProfileImageAsync(auth.userId, auth.email);
-        return Ok(new { success = true, deleted });
+        if (!deleted)
+        {
+            return NotFound(new { success = false, error = "No profile image found to delete." });
+        }
+
+        return Ok(new { success = true, message = "Profile image deleted successfully." });
     }
 }

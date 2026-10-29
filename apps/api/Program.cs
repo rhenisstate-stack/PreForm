@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Preform.Api.Data;
 using Preform.Api.Formatters;
 using Preform.Api.Models;
@@ -13,10 +15,40 @@ builder.Services.AddControllers(options =>
     options.OutputFormatters.RemoveType<SystemTextJsonOutputFormatter>();
     options.OutputFormatters.Insert(0, new StreamJsonOutputFormatter());
 });
+
+// Domain Services & Password Hasher
+builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 builder.Services.AddScoped<IProgrammeService, ProgrammeService>();
 builder.Services.AddScoped<IProfileImageService, ProfileImageService>();
 
-// CORS for the Next.js frontend (WEB_ORIGIN, default http://localhost:3000)
+// Authentication with PrepfordAuth scheme (Bearer Session Token & Gateway HMAC)
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = PrepfordAuthSchemeOptions.SchemeName;
+    options.DefaultChallengeScheme = PrepfordAuthSchemeOptions.SchemeName;
+})
+.AddScheme<PrepfordAuthSchemeOptions, PrepfordAuthHandler>(PrepfordAuthSchemeOptions.SchemeName, null);
+
+// Authorization Policies
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("RequireAdmin", policy =>
+        policy.RequireRole("admin", "superadmin", "administrator"));
+
+    options.AddPolicy("RequireSuperAdmin", policy =>
+        policy.RequireRole("superadmin"));
+
+    options.AddPolicy("RequireContentManager", policy =>
+        policy.RequireRole("content_manager", "admin", "superadmin"));
+
+    options.AddPolicy("RequireExamManager", policy =>
+        policy.RequireRole("exam_manager", "superadmin"));
+});
+
+// CORS for Next.js frontend (WEB_ORIGIN, default http://localhost:3000)
 var webOrigin = builder.Configuration["WEB_ORIGIN"] ?? "http://localhost:3000";
 builder.Services.AddCors(options =>
 {
@@ -29,20 +61,24 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new() { Title = "PrepFord API", Version = "v1" });
 });
 
-// Add EF Core with Npgsql
+// EF Core with Npgsql PostgreSQL
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
-    var connectionString = config["DATABASE_URL"]
-        ?? config.GetConnectionString("DefaultConnection")
-        ?? "Host=localhost;Port=5432;Database=prepford;Username=postgres;Password=postgres";
+    var dbUrl = config["DATABASE_URL"];
+    var defaultConn = config.GetConnectionString("DefaultConnection");
+
+    var connectionString = !string.IsNullOrWhiteSpace(dbUrl)
+        ? dbUrl
+        : (!string.IsNullOrWhiteSpace(defaultConn)
+            ? defaultConn
+            : "Host=localhost;Port=5432;Database=prepford;Username=postgres;Password=postgres");
 
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {
@@ -50,9 +86,25 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     });
 });
 
-// Health checks
+// Robust Health checks: liveness check & relational database readiness check
 builder.Services.AddHealthChecks()
-    .AddCheck("database", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy());
+    .AddCheck("liveness", () => HealthCheckResult.Healthy())
+    .AddAsyncCheck("database", async (sp, ct) =>
+    {
+        try
+        {
+            using var scope = sp.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var canConnect = await db.Database.CanConnectAsync(ct);
+            return canConnect
+                ? HealthCheckResult.Healthy("PostgreSQL datastore is reachable and healthy.")
+                : HealthCheckResult.Unhealthy("PostgreSQL connection check failed.");
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy("PostgreSQL health probe encountered an error.", ex);
+        }
+    }, tags: new[] { "ready" });
 
 var app = builder.Build();
 
@@ -69,60 +121,47 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAuthorization();
-
 app.UseCors("AllowFrontend");
 
-app.MapControllers();
-app.MapHealthChecks("/api/v1/health/live");
-app.MapHealthChecks("/api/v1/health/ready");
+app.UseAuthentication();
+app.UseAuthorization();
 
-// Ensure database is created and migrated
+app.MapControllers();
+app.MapHealthChecks("/api/v1/health/live", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = r => r.Name == "liveness"
+});
+app.MapHealthChecks("/api/v1/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = r => r.Tags.Contains("ready") || r.Name == "database"
+});
+
+// Ensure database is migrated and seeded on startup
 if (!app.Environment.IsEnvironment("Testing"))
 {
-    using (var scope = app.Services.CreateScope())
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        if (dbContext.Database.IsRelational())
-        {
-            try
-            {
-                dbContext.Database.Migrate();
+    using var scope = app.Services.CreateScope();
+    var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
-                // Seed initial data
-                if (!dbContext.Programmes.Any())
-                {
-                    dbContext.Programmes.AddRange(
-                        new Programme
-                        {
-                            Code = ProgrammeCode.RN,
-                            DisplayName = "NCLEX-RN",
-                            IsActive = true,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
-                        },
-                        new Programme
-                        {
-                            Code = ProgrammeCode.PN,
-                            DisplayName = "NCLEX-PN",
-                            IsActive = true,
-                            CreatedAt = DateTime.UtcNow,
-                            UpdatedAt = DateTime.UtcNow
-                        }
-                    );
-                    dbContext.SaveChanges();
-                }
-            }
-            catch (Exception ex)
-            {
-                var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-                logger.LogWarning(ex, "Database migration on startup was deferred or skipped.");
-            }
-        }
-        else
+    if (dbContext.Database.IsRelational())
+    {
+        try
         {
-            dbContext.Database.EnsureCreated();
+            logger.LogInformation("Applying EF Core migrations to PostgreSQL...");
+            dbContext.Database.Migrate();
+
+            // Seed initial programmes, roles, and canonical subscription plans
+            CatalogSeeder.SeedAsync(dbContext, logger).GetAwaiter().GetResult();
         }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Database migration on startup was deferred or skipped.");
+        }
+    }
+    else
+    {
+        dbContext.Database.EnsureCreated();
+        CatalogSeeder.SeedAsync(dbContext, logger).GetAwaiter().GetResult();
     }
 }
 
