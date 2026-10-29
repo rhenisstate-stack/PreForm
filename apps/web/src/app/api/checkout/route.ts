@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     if (planRes.success && planRes.data?.plan) {
       product = planRes.data.plan;
     } else {
-      product = getSubscriptionPlanByIdOrSlug(planId);
+      product = getSubscriptionPlanByIdOrSlug(planId) ?? null;
     }
 
     if (!product) {
