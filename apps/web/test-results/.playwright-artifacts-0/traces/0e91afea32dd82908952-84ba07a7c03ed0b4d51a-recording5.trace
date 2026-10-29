@@ -1,0 +1,31 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.1","options":{},"platform":"win32","wallTime":1793272216374,"monotonicTime":12461.536,"sdkLanguage":"javascript","title":"rbac-access.spec.ts:26 › Role-Based Access Control (RBAC) Enforcement › student candidate cannot access administrative pages or administrative APIs"}
+{"type":"before","callId":"fgka@301","startTime":20996.936,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/admin/subscriptions","method":"GET"}}
+{"type":"log","callId":"fgka@301","time":21132.358,"message":"→ GET http://127.0.0.1:3000/api/admin/subscriptions"}
+{"type":"log","callId":"fgka@301","time":21132.433,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36"}
+{"type":"log","callId":"fgka@301","time":21132.493,"message":"  accept: */*"}
+{"type":"log","callId":"fgka@301","time":21132.523,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"fgka@301","time":21132.548,"message":"  cookie: preform_session=eyJzaWQiOiJzZXNzXzE3OTMyNzIyMjE4NDFfZGZjZThkYmQ1ODJlMDcxNGQ4M2Y4MmYwZDRmODIyMWEiLCJzdWIiOiIxNjVhNDg2ZC02MzQ4LTQ5ZDMtYWMzOS02YWZkYmE1YWQzOTMiLCJlbWFpbCI6InN0dWRlbnRfMTc5MzI3MjIxNjkwM19nMXEzaEBudXJzaW5nLnRlc3QuZWR1Iiwicm9sZSI6ImNhbmRpZGF0ZSIsImRpc3BsYXlOYW1lIjoiVGVzdCBTdHVkZW50IDE3OTMyNzIyMTY5MDNfZzFxM2giLCJjc3JmVG9rZW4iOiIxNWU3MjkzMjI2ZTdjZWUxZGQyNzkwNzNlYTcxNGUxYyIsImlhdCI6MTc5MzI3MjIyMSwiZXhwIjoxNzkzODc3MDIxLCJleHBpcmVzQXQiOiIyMDI2LTExLTA1VDExOjEwOjIxLjg0MloifQ.p56CPQ0HBz_bGQkkGD5U2zZu9NwaA5AZBz-V79WnNQI"}
+{"type":"log","callId":"fgka@301","time":21170.767,"message":"← 403 Forbidden"}
+{"type":"log","callId":"fgka@301","time":21171.748,"message":"  vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"}
+{"type":"log","callId":"fgka@301","time":21171.824,"message":"  content-type: application/json"}
+{"type":"log","callId":"fgka@301","time":21171.857,"message":"  date: Thu, 29 Oct 2026 11:10:25 GMT"}
+{"type":"log","callId":"fgka@301","time":21171.909,"message":"  connection: keep-alive"}
+{"type":"log","callId":"fgka@301","time":21172.29,"message":"  keep-alive: timeout=5"}
+{"type":"log","callId":"fgka@301","time":21172.339,"message":"  transfer-encoding: chunked"}
+{"type":"after","callId":"fgka@301","endTime":21172.72,"result":{"response":{"url":"http://127.0.0.1:3000/api/admin/subscriptions","status":403,"statusText":"Forbidden","headers":[{"name":"vary","value":"rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"},{"name":"content-type","value":"application/json"},{"name":"Date","value":"Thu, 29 Oct 2026 11:10:25 GMT"},{"name":"Connection","value":"keep-alive"},{"name":"Keep-Alive","value":"timeout=5"},{"name":"Transfer-Encoding","value":"chunked"}],"serverAddr":{"ipAddress":"127.0.0.1","port":3000},"timing":{"startTime":1793272225043,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":12.402000000001863,"requestStart":12.402000000001863,"responseStart":34.02300000000105},"responseEndTiming":37.84600000000137,"fetchUid":"66354fda940aa47004ce4facd41296b7"}}}
+{"type":"before","callId":"fgka@304","startTime":21211.515,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/admin/subscriptions","method":"POST","jsonData":"{\"code\":\"HACKED-PLAN\",\"name\":\"Free Unauthorized Plan\",\"priceCents\":0,\"interval\":1}"}}
+{"type":"log","callId":"fgka@304","time":21241.165,"message":"→ POST http://127.0.0.1:3000/api/admin/subscriptions"}
+{"type":"log","callId":"fgka@304","time":21241.23,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36"}
+{"type":"log","callId":"fgka@304","time":21241.259,"message":"  accept: */*"}
+{"type":"log","callId":"fgka@304","time":21241.283,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"fgka@304","time":21241.306,"message":"  content-type: application/json"}
+{"type":"log","callId":"fgka@304","time":21241.33,"message":"  content-length: 82"}
+{"type":"log","callId":"fgka@304","time":21241.353,"message":"  cookie: preform_session=eyJzaWQiOiJzZXNzXzE3OTMyNzIyMjE4NDFfZGZjZThkYmQ1ODJlMDcxNGQ4M2Y4MmYwZDRmODIyMWEiLCJzdWIiOiIxNjVhNDg2ZC02MzQ4LTQ5ZDMtYWMzOS02YWZkYmE1YWQzOTMiLCJlbWFpbCI6InN0dWRlbnRfMTc5MzI3MjIxNjkwM19nMXEzaEBudXJzaW5nLnRlc3QuZWR1Iiwicm9sZSI6ImNhbmRpZGF0ZSIsImRpc3BsYXlOYW1lIjoiVGVzdCBTdHVkZW50IDE3OTMyNzIyMTY5MDNfZzFxM2giLCJjc3JmVG9rZW4iOiIxNWU3MjkzMjI2ZTdjZWUxZGQyNzkwNzNlYTcxNGUxYyIsImlhdCI6MTc5MzI3MjIyMSwiZXhwIjoxNzkzODc3MDIxLCJleHBpcmVzQXQiOiIyMDI2LTExLTA1VDExOjEwOjIxLjg0MloifQ.p56CPQ0HBz_bGQkkGD5U2zZu9NwaA5AZBz-V79WnNQI"}
+{"type":"log","callId":"fgka@304","time":21267.443,"message":"← 403 Forbidden"}
+{"type":"log","callId":"fgka@304","time":21267.524,"message":"  vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"}
+{"type":"log","callId":"fgka@304","time":21267.561,"message":"  content-type: application/json"}
+{"type":"log","callId":"fgka@304","time":21267.588,"message":"  date: Thu, 29 Oct 2026 11:10:25 GMT"}
+{"type":"log","callId":"fgka@304","time":21267.654,"message":"  connection: keep-alive"}
+{"type":"log","callId":"fgka@304","time":21267.678,"message":"  keep-alive: timeout=5"}
+{"type":"log","callId":"fgka@304","time":21267.709,"message":"  transfer-encoding: chunked"}
+{"type":"after","callId":"fgka@304","endTime":21268.413,"result":{"response":{"url":"http://127.0.0.1:3000/api/admin/subscriptions","status":403,"statusText":"Forbidden","headers":[{"name":"vary","value":"rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"},{"name":"content-type","value":"application/json"},{"name":"Date","value":"Thu, 29 Oct 2026 11:10:25 GMT"},{"name":"Connection","value":"keep-alive"},{"name":"Keep-Alive","value":"timeout=5"},{"name":"Transfer-Encoding","value":"chunked"}],"serverAddr":{"ipAddress":"127.0.0.1","port":3000},"timing":{"startTime":1793272225149,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":-1,"secureConnectionStart":-1,"connectEnd":-1,"requestStart":5.004000000000815,"responseStart":28.86200000000099},"responseEndTiming":29.831999999998516,"fetchUid":"a8ae9d3f52e2ee6babe5949aff076800"}}}

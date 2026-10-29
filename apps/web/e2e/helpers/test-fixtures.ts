@@ -46,11 +46,20 @@ export async function registerStudentUI(page: Page, student: TestStudent): Promi
     await termsCheckbox.check({ force: true });
   }
 
-  // Submit registration form
-  await page.click('button[type="submit"]');
+  // Submit registration form and await successful 200 response
+  await Promise.all([
+    page.waitForResponse(
+      (res) => res.url().includes("/api/auth/register") && res.status() === 200,
+      { timeout: 15000 }
+    ),
+    page.click('button[type="submit"]'),
+  ]);
 
-  // Verify redirected to authenticated destination
-  await page.waitForURL(/\/(dashboard|courses|profile)/, { timeout: 15000 });
+  // Verify redirected to authenticated destination pathname
+  await page.waitForURL(
+    (url) => ["/dashboard", "/courses", "/profile"].includes(url.pathname),
+    { timeout: 15000 }
+  );
 }
 
 /**
@@ -62,9 +71,19 @@ export async function loginStudentUI(page: Page, student: TestStudent): Promise<
   await page.fill("#email", student.email);
   await page.fill("#password", student.password);
 
-  await page.click('button[type="submit"]');
+  // Submit login form and await successful 200 response
+  await Promise.all([
+    page.waitForResponse(
+      (res) => res.url().includes("/api/auth/login") && res.status() === 200,
+      { timeout: 15000 }
+    ),
+    page.click('button[type="submit"]'),
+  ]);
 
-  await page.waitForURL(/\/(dashboard|courses|profile)/, { timeout: 15000 });
+  await page.waitForURL(
+    (url) => ["/dashboard", "/courses", "/profile"].includes(url.pathname),
+    { timeout: 15000 }
+  );
 }
 
 /**

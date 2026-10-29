@@ -1,0 +1,37 @@
+2:"$Sreact.fragment"
+3:"/_next/static/chunks/1g1uskodj_ztb.js"
+4:"/_next/static/chunks/01sv4shbvqscb.js"
+5:"/_next/static/chunks/14v_j-zh6qsy-.js"
+6:"/_next/static/chunks/0-d5l5jtcc65p.js"
+7:"/_next/static/chunks/0vf54zqub7i5h.js"
+8:"/_next/static/chunks/32jw0c0u-on1j.js"
+9:I[39756,["$3","$4","$5","$6","$7","$8"],"default"]
+a:I[37457,["$3","$4","$5","$6","$7","$8"],"default"]
+f:I[22016,["$3","$4","$5","$6","$7","$8"],""]
+10:I[97367,["$3","$4","$5","$6","$7","$8"],"OutletBoundary"]
+11:"$Sreact.suspense"
+15:"ViewportBoundary"
+16:I[97367,["$3","$4","$5","$6","$7","$8"],"$15"]
+17:"MetadataBoundary"
+18:I[97367,["$3","$4","$5","$6","$7","$8"],"$17"]
+19:I[27201,["$3","$4","$5","$6","$7","$8"],"IconMark"]
+c:X
+c:C
+d:X
+d:300
+d:C
+14:X
+14:C
+e:[["children",{"s":"__PAGE__","h":49314,"d":{"r":["$","$2","c",{"children":[["$","section",null,{"className":"pt-20 pb-24 px-4 lg:pt-32 lg:pb-32 lg:px-8","children":["$","div",null,{"className":"mx-auto max-w-3xl","children":[["$","div",null,{"className":"text-center","children":[["$","p",null,{"className":"text-xs font-medium uppercase tracking-wider text-secondary","children":"For Educators"}],["$","h1",null,{"className":"mt-4 text-3xl font-serif font-semibold tracking-tight text-foreground sm:text-4xl","children":"Teaching tools for nursing educators"}],["$","p",null,{"className":"mt-6 text-muted-foreground max-w-xl mx-auto lg:text-lg","children":"PrepFord NCLEX supports nursing educators and training institutions with practice questions, readiness assessments, and progress reporting for RN and PN candidates."}]]}],["$","div",null,{"className":"mt-16 space-y-8","children":[["$","div",null,{"className":"rounded-2xl bg-card p-6 shadow-sm","children":[["$","h2",null,{"className":"text-lg font-serif font-semibold text-foreground","children":"Practice and assessment tools"}],["$","p",null,{"className":"mt-2 text-sm text-muted-foreground","children":"Assign original NCLEX-style questions and readiness assessments to learners. Track completion and performance by topic."}]]}],["$","div",null,{"className":"rounded-2xl bg-card p-6 shadow-sm","children":[["$","h2",null,{"className":"text-lg font-serif font-semibold text-foreground","children":"Progress reporting"}],["$","p",null,{"className":"mt-2 text-sm text-muted-foreground","children":"View learner accuracy by topic, question type, and time. Identify weak areas and demonstrated strengths."}]]}],["$","div",null,{"className":"rounded-2xl bg-card p-6 shadow-sm","children":[["$","h2",null,{"className":"text-lg font-serif font-semibold text-foreground","children":"Institutional enquiry"}],["$","p",null,{"className":"mt-2 text-sm text-muted-foreground","children":"Interested in group access or institutional licensing? Contact us to discuss your needs."}],["$","$Lf",null,{"href":"/contact","className":"mt-4 inline-flex items-center gap-1 text-sm font-medium text-secondary hover:underline transition-colors","children":["Send an enquiry ",["$","svg",null,{"xmlns":"http://www.w3.org/2000/svg","width":24,"height":24,"viewBox":"0 0 24 24","fill":"none","stroke":"currentColor","strokeWidth":2,"strokeLinecap":"round","strokeLinejoin":"round","className":"lucide lucide-arrow-right h-3 w-3","children":[["$","path","1ays0h",{"d":"M5 12h14"}],["$","path","xquz4c",{"d":"m12 5 7 7-7 7"}],"$undefined"]}]]}]]}]]}],["$","p",null,{"className":"mt-12 text-sm text-muted-foreground","children":"Institutional reporting, cohort management, bulk licensing, and LMS integration are planned capabilities. Contact us for current availability."}]]}]}],null,["$","$L10",null,{"children":["$","$11",null,{"name":"Next.MetadataOutlet","children":"$@12"}]}]]}],"p":"$@13","v":"$14","s":"$d"}}]]
+1:[["children",{"s":"educators","h":49218,"d":{"r":["$","$2","c",{"children":[null,["$","$L9",null,{"parallelRouterKey":"children","template":["$","$La",null,{}]}]]}],"p":"$@b","v":"$c","s":"$d"},"c":"$Qe"}]]
+1b:X
+1b:C
+1e:X
+1e:C
+0:{"t":{"t":{"s":"","h":49170,"c":"$Q1"},"h":{"r":["$","$2","h",{"children":[null,["$","$L16",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}]]}],["$","$L18",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$11",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"For Educators | PrepFord NCLEX | PrepFord"}],["$","meta","1",{"name":"description","content":"Information for nursing educators and training institutions about PrepFord NCLEX learning tools, progress reporting, and institutional enquiries."}],["$","meta","2",{"name":"author","content":"PrepFord Clinical Education Team"}],["$","link","3",{"rel":"manifest","href":"/manifest.webmanifest"}],["$","meta","4",{"name":"keywords","content":"NCLEX-RN,NCLEX-PN,Next Generation NCLEX,NGN,Nursing Exam Preparation,Client Needs,Nursing Study Guide,Clinical Judgment,CAT Practice,PrepFord"}],["$","meta","5",{"name":"creator","content":"PrepFord"}],["$","meta","6",{"name":"publisher","content":"PrepFord"}],["$","meta","7",{"name":"robots","content":"index, follow"}],["$","meta","8",{"name":"googlebot","content":"index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1"}],["$","meta","9",{"property":"og:title","content":"PrepFord | NCLEX-RN & NCLEX-PN Exam Preparation"}],["$","meta","10",{"property":"og:description","content":"Prepare for the NCLEX-RN and NCLEX-PN with PrepFord's available nursing practice questions, study notes, and learning resources."}],["$","meta","11",{"property":"og:url","content":"https://prepfordnclex.com"}],["$","meta","12",{"property":"og:site_name","content":"PrepFord"}],["$","meta","13",{"property":"og:image","content":"https://prepfordnclex.com/prepford-logo.png"}],["$","meta","14",{"property":"og:image:width","content":"1024"}],["$","meta","15",{"property":"og:image:height","content":"1024"}],["$","meta","16",{"property":"og:image:alt","content":"PrepFord logo"}],["$","meta","17",{"property":"og:type","content":"website"}],["$","meta","18",{"name":"twitter:card","content":"summary_large_image"}],["$","meta","19",{"name":"twitter:title","content":"PrepFord | NCLEX-RN & NCLEX-PN Exam Preparation"}],["$","meta","20",{"name":"twitter:description","content":"Prepare for the NCLEX-RN and NCLEX-PN with PrepFord's available nursing practice questions, study notes, and learning resources."}],["$","meta","21",{"name":"twitter:image","content":"https://prepfordnclex.com/prepford-logo.png"}],["$","link","22",{"rel":"shortcut icon","href":"/favicon.ico"}],["$","link","23",{"rel":"icon","href":"/favicon.ico?favicon.117ezoe8m31dk.ico","sizes":"48x48","type":"image/x-icon"}],["$","link","24",{"rel":"icon","href":"/favicon.ico","sizes":"any"}],["$","link","25",{"rel":"icon","href":"/favicon-32x32.png","type":"image/png","sizes":"32x32"}],["$","link","26",{"rel":"icon","href":"/favicon-16x16.png","type":"image/png","sizes":"16x16"}],["$","link","27",{"rel":"icon","href":"/prepford-logo.png","type":"image/png"}],["$","link","28",{"rel":"apple-touch-icon","href":"/apple-touch-icon.png"}],["$","$L19","29",{}]]}]}],null]}],null]}],"p":"$@1a","v":"$1b","s":"$d"}},"a":"$@1c","u":"$@1d","b":"JRSZnTnlFYNL9yoXIAJFn","r":"$1e"}
+12:null
+1d:false
+1c:null
+b:"$undefined"
+1a:"$undefined"
+13:"$undefined"
