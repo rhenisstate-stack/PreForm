@@ -21,10 +21,9 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
         IOptionsMonitor<PrepfordAuthSchemeOptions> options,
         ILoggerFactory logger,
         UrlEncoder encoder,
-        ISystemClock clock,
         ISessionService sessionService,
         IConfiguration configuration)
-        : base(options, logger, encoder, clock)
+        : base(options, logger, encoder)
     {
         _sessionService = sessionService;
         _configuration = configuration;

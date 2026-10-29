@@ -89,22 +89,7 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 // Robust Health checks: liveness check & relational database readiness check
 builder.Services.AddHealthChecks()
     .AddCheck("liveness", () => HealthCheckResult.Healthy())
-    .AddAsyncCheck("database", async (sp, ct) =>
-    {
-        try
-        {
-            using var scope = sp.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var canConnect = await db.Database.CanConnectAsync(ct);
-            return canConnect
-                ? HealthCheckResult.Healthy("PostgreSQL datastore is reachable and healthy.")
-                : HealthCheckResult.Unhealthy("PostgreSQL connection check failed.");
-        }
-        catch (Exception ex)
-        {
-            return HealthCheckResult.Unhealthy("PostgreSQL health probe encountered an error.", ex);
-        }
-    }, tags: new[] { "ready" });
+    .AddCheck<PostgresHealthCheck>("database", tags: new[] { "ready" });
 
 var app = builder.Build();
 
