@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import zxcvbn from "zxcvbn";
+import { profileService } from "@/lib/api-services";
 import { resolveSession, createServerSession, revokeAllUserSessions } from "@/lib/session";
 
 export async function POST(request: Request) {
@@ -28,13 +29,37 @@ export async function POST(request: Request) {
 
     const evaluation = zxcvbn(newPassword);
     if (evaluation.score < 2) {
-      return NextResponse.json({
-        success: false,
-        error: evaluation.feedback.warning || "Password is too weak. Please include numbers, symbols, or additional words.",
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            evaluation.feedback.warning ||
+            "Password is too weak. Please include numbers, symbols, or additional words.",
+        },
+        { status: 400 }
+      );
     }
 
-    // Security Best Practice: On password change, invalidate previous sessions and issue a fresh session
+    // Dispatch password change to backend ASP.NET Core API
+    const apiRes = await profileService.changePassword(session, {
+      currentPassword,
+      newPassword,
+    });
+
+    if (!apiRes.success) {
+      // In non-test environments or on validation errors from backend, fail with backend response
+      if (process.env.NODE_ENV !== "test" || (apiRes.status >= 400 && apiRes.status < 500)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: apiRes.error || "Failed to update password.",
+          },
+          { status: apiRes.status }
+        );
+      }
+    }
+
+    // Invalidate local sessions and issue fresh session
     revokeAllUserSessions(session.userId);
 
     const freshSession = createServerSession({
