@@ -17,7 +17,7 @@ test.describe("Student Authentication & Session Lifecycle", () => {
 
     // 2. Verify authenticated page elements
     await expect(page).toHaveURL(/\/(profile|dashboard)/);
-    const greeting = page.locator("text=" + student.fullName);
+    const greeting = page.locator("text=" + student.fullName).first();
     if (await greeting.isVisible()) {
       await expect(greeting).toBeVisible();
     }
@@ -75,8 +75,10 @@ test.describe("Student Authentication & Session Lifecycle", () => {
     const cookies = await page.context().cookies();
     const sessionCookie = cookies.find((c) => c.name === "preform_session");
 
-    // Logout
-    await request.post("/api/auth/logout");
+    // Logout with active authenticated browser session
+    await page.evaluate(async () => {
+      await fetch("/api/auth/logout", { method: "POST" });
+    });
     await clearSession(page);
 
     // Attempt to access profile with the old cookie
