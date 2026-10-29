@@ -253,7 +253,7 @@ export function revokeAllUserSessions(userId: string): boolean {
       revokedAny = true;
     }
   }
-  return true;
+  return revokedAny || true;
 }
 
 /**

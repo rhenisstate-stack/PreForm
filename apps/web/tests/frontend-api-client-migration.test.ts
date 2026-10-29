@@ -115,9 +115,10 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
 
       expect(res.success).toBe(true);
       expect(interceptedEndpoint).toBe("/api/v1/auth/register");
-      expect((interceptedBody as any)?.email).toBe("new.candidate@prepford.com");
-      expect((interceptedBody as any)?.displayName).toBe("New Candidate");
-      expect((interceptedBody as any)?.pathway).toBe("rn");
+      const regBody = interceptedBody as Record<string, unknown> | null;
+      expect(regBody?.email).toBe("new.candidate@prepford.com");
+      expect(regBody?.displayName).toBe("New Candidate");
+      expect(regBody?.pathway).toBe("rn");
     });
 
     it("authService.login dispatches to POST /api/v1/auth/login", async () => {
@@ -251,10 +252,11 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
 
       expect(res.success).toBe(true);
       expect(interceptedEndpoint).toBe("/api/v1/profile");
-      expect((interceptedBody as any)?.displayName).toBe("Sarah Nurse, MSN, RN");
-      expect((interceptedBody as any)?.targetExamDate).toBe("2027-01-15");
-      expect((interceptedBody as any)?.emailNotifications).toBe(false);
-      expect((interceptedBody as any)?.studyReminders).toBe(false);
+      const profBody = interceptedBody as Record<string, unknown> | null;
+      expect(profBody?.displayName).toBe("Sarah Nurse, MSN, RN");
+      expect(profBody?.targetExamDate).toBe("2027-01-15");
+      expect(profBody?.emailNotifications).toBe(false);
+      expect(profBody?.studyReminders).toBe(false);
     });
   });
 

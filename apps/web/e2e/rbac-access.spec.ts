@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { generateTestStudent, registerStudentUI, clearSession } from "./helpers/test-fixtures";
+import { generateTestStudent, registerStudentUI } from "./helpers/test-fixtures";
 
 test.describe("Role-Based Access Control (RBAC) Enforcement", () => {
   test("unauthenticated visitor cannot access protected candidate pages", async ({ page }) => {

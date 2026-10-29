@@ -66,7 +66,6 @@ test.describe("Student Authentication & Session Lifecycle", () => {
 
   test("logout invalidates session and prevents reuse of old session token", async ({
     page,
-    request,
   }) => {
     const student = generateTestStudent("rn");
     await registerStudentUI(page, student);
