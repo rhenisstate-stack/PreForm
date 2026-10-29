@@ -381,8 +381,9 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
 
       expect(res.success).toBe(true);
       expect(interceptedEndpoint).toBe("/api/v1/checkout");
-      expect((interceptedBody as any)?.planId).toBe("rn-pro");
-      expect((interceptedBody as any)?.pathway).toBe("rn");
+      const checkoutBody = interceptedBody as Record<string, unknown> | null;
+      expect(checkoutBody?.planId).toBe("rn-pro");
+      expect(checkoutBody?.pathway).toBe("rn");
     });
 
     it("returns fail-closed 503 error when backend API is unreachable", async () => {
