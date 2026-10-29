@@ -1,1 +1,0 @@
-{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.1","options":{},"platform":"win32","wallTime":1793272209824,"monotonicTime":5911.553,"sdkLanguage":"javascript","title":"rbac-access.spec.ts:5 › Role-Based Access Control (RBAC) Enforcement › unauthenticated visitor cannot access protected candidate pages"}
