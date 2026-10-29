@@ -11,7 +11,6 @@ import {
   isProductionDatabaseTarget,
   validateImageMagicBytes,
   computeSha256,
-  mapIntervalToEnum,
 } from "../../../tools/migration/validator.ts";
 import { createSanitizedFixture } from "../../../tools/migration/fixtures/create-sample-fixture.ts";
 

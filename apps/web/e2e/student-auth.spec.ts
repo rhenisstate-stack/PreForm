@@ -83,7 +83,7 @@ test.describe("Student Authentication & Session Lifecycle", () => {
     // Attempt to access profile with the old cookie
     if (sessionCookie) {
       await page.context().addCookies([sessionCookie]);
-      const res = await page.goto("/profile");
+      await page.goto("/profile");
       // Expect redirect to sign-in or unauthorized
       await page.waitForURL(/\/sign-in/);
       expect(page.url()).toContain("/sign-in");

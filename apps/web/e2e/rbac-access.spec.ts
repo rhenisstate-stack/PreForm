@@ -28,7 +28,6 @@ test.describe("Role-Based Access Control (RBAC) Enforcement", () => {
 
   test("student candidate cannot access administrative pages or administrative APIs", async ({
     page,
-    request,
   }) => {
     const student = generateTestStudent("rn");
     await registerStudentUI(page, student);

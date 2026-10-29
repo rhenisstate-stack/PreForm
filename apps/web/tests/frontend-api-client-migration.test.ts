@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import {
-  apiClient,
   createGatewayAuthHeaders,
   getApiBaseUrl,
   getGatewaySecret,
@@ -85,7 +84,7 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
   describe("2. Auth Service Dispatches to ASP.NET Core Endpoints", () => {
     it("authService.register dispatches to POST /api/v1/auth/register", async () => {
       let interceptedEndpoint = "";
-      let interceptedBody: any = null;
+      let interceptedBody: Record<string, unknown> | null = null;
 
       setMockApiHandler(async (endpoint, options) => {
         interceptedEndpoint = endpoint;
@@ -216,7 +215,7 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
 
     it("profileService.updateProfile dispatches to PUT /api/v1/profile with updated fields", async () => {
       let interceptedEndpoint = "";
-      let interceptedBody: any = null;
+      let interceptedBody: Record<string, unknown> | null = null;
 
       setMockApiHandler(async (endpoint, options) => {
         interceptedEndpoint = endpoint;
@@ -354,7 +353,7 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
   describe("5. Checkout & Entitlements Dispatches & Fail-Closed Behavior", () => {
     it("checkoutService.createCheckoutSession dispatches to POST /api/v1/checkout", async () => {
       let interceptedEndpoint = "";
-      let interceptedBody: any = null;
+      let interceptedBody: Record<string, unknown> | null = null;
 
       setMockApiHandler(async (endpoint, options) => {
         interceptedEndpoint = endpoint;

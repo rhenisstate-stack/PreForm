@@ -1,15 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import {
   createGatewayAuthHeaders,
   getGatewaySecret,
-  apiClient,
   setMockApiHandler,
-  ApiClientError,
 } from "@/lib/api-client";
 import {
   subscriptionService,
   profileService,
   checkoutService,
+  type BackendSubscriptionPlan,
 } from "@/lib/api-services";
 import type { VerifiedSession } from "@/lib/session";
 import crypto from "node:crypto";
@@ -61,8 +60,8 @@ describe("Security Regression & Architecture Boundary Tests", () => {
   });
 
   it("enforces strong GATEWAY_SHARED_SECRET requirement in production environment", () => {
-    (process.env as any).NODE_ENV = "production";
-    (process.env as any).APP_ENV = "production";
+    (process.env as Record<string, string | undefined>).NODE_ENV = "production";
+    (process.env as Record<string, string | undefined>).APP_ENV = "production";
     delete process.env.GATEWAY_SHARED_SECRET;
 
     expect(() => getGatewaySecret()).toThrow(
@@ -122,9 +121,8 @@ describe("Security Regression & Architecture Boundary Tests", () => {
 
   it("role tampering: candidate attempting administrative plan creation is rejected with 403", async () => {
     setMockApiHandler(async (_endpoint, options) => {
-      const roleHeader = options.headers
-        ? (options.headers as any)["X-Authenticated-User-Role"]
-        : null;
+      const headersRecord = (options.headers || {}) as Record<string, string>;
+      const roleHeader = headersRecord["X-Authenticated-User-Role"] || null;
 
       if (!roleHeader || roleHeader !== "admin") {
         return {
@@ -138,7 +136,7 @@ describe("Security Regression & Architecture Boundary Tests", () => {
       return {
         success: true,
         status: 200,
-        data: { plan: { id: "test" } as any, success: true },
+        data: { plan: { id: "test" } as unknown as BackendSubscriptionPlan, success: true },
         headers: new Headers(),
       };
     });
@@ -146,7 +144,7 @@ describe("Security Regression & Architecture Boundary Tests", () => {
     const res = await subscriptionService.createPlan(dummySession, {
       name: "Hacked Plan",
       slug: "hacked-plan",
-    } as any);
+    } as unknown as Partial<BackendSubscriptionPlan>);
 
     expect(res.success).toBe(false);
     expect(res.status).toBe(403);
