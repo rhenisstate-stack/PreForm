@@ -15,10 +15,9 @@ import {
   createAuthoritativeCheckoutSession,
 } from "@/lib/payment-provider";
 import { resetProfileDatabaseForTesting, upsertUserProfileMeta } from "@/lib/profile-image-db";
-import { GET as getAdminSubscriptions, POST as postAdminSubscription } from "@/app/api/admin/subscriptions/route";
+import type { NextRequest } from "next/server";
+import { GET as getAdminSubscriptions } from "@/app/api/admin/subscriptions/route";
 import { GET as getProfileImage } from "@/app/api/profile/image/route";
-import { PUT as updateProfile } from "@/app/api/profile/route";
-import { POST as checkoutPost } from "@/app/api/checkout/route";
 
 let mockSessionCookieValue: string | undefined = undefined;
 
@@ -81,7 +80,7 @@ describe("Phase 1 & 2 — Session Integrity & Server-Side Authorization Hardenin
       role: "candidate",
     });
 
-    const [data, sig] = validToken.split(".");
+    const [, sig] = validToken.split(".");
     // Attacker modifies data to claim admin role while keeping original signature
     const tamperedPayload = {
       sub: candidateUserId,
@@ -196,7 +195,7 @@ describe("Phase 1 & 2 — Session Integrity & Server-Side Authorization Hardenin
 
     // Alice attempts to fetch Bob's image
     const req = new Request("http://localhost/api/profile/image?userId=usr_bob&email=bob@nursing.edu");
-    const res = await getProfileImage(req as any);
+    const res = await getProfileImage(req as unknown as NextRequest);
     expect(res.status).toBe(403);
     const data = await res.json();
     expect(data.error).toContain("cannot access another user's profile image");

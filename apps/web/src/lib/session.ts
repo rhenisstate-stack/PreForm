@@ -89,6 +89,10 @@ export function verifySignedSessionToken(token: string | undefined): {
   }
 
   const trimmed = token.trim();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    return { valid: false, error: "Unsigned or malformed session token" };
+  }
+
   const dotIndex = trimmed.lastIndexOf(".");
   if (dotIndex === -1) {
     return { valid: false, error: "Unsigned or malformed session token" };

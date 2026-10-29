@@ -19,8 +19,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Enforce server-side ownership: reject requests attempting to fetch another user's private image
-    const requestedUserId = request.nextUrl.searchParams.get("userId");
-    const requestedEmail = request.nextUrl.searchParams.get("email");
+    const url = new URL(request.url);
+    const requestedUserId = request.nextUrl?.searchParams?.get("userId") || url.searchParams.get("userId");
+    const requestedEmail = request.nextUrl?.searchParams?.get("email") || url.searchParams.get("email");
     if (
       (requestedUserId && requestedUserId !== auth.userId) ||
       (requestedEmail && requestedEmail.trim().toLowerCase() !== auth.email)
@@ -81,10 +82,14 @@ async function handleUpload(request: NextRequest) {
     }
 
     // Server-side ownership check: never allow client to specify another user's ID or email
+    const reqUrl = new URL(request.url);
     const targetUserParam =
-      request.nextUrl.searchParams.get("userId") ||
+      request.nextUrl?.searchParams?.get("userId") ||
+      reqUrl.searchParams.get("userId") ||
       request.headers.get("x-target-user-id");
-    const targetEmailParam = request.nextUrl.searchParams.get("email");
+    const targetEmailParam =
+      request.nextUrl?.searchParams?.get("email") ||
+      reqUrl.searchParams.get("email");
     if (
       (targetUserParam && targetUserParam !== auth.userId) ||
       (targetEmailParam && targetEmailParam.trim().toLowerCase() !== auth.email)
@@ -227,8 +232,10 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
+    const delUrl = new URL(request.url);
     const targetUserParam =
-      request.nextUrl.searchParams.get("userId") ||
+      request.nextUrl?.searchParams?.get("userId") ||
+      delUrl.searchParams.get("userId") ||
       request.headers.get("x-target-user-id");
     if (targetUserParam && targetUserParam !== auth.userId) {
       return NextResponse.json(
