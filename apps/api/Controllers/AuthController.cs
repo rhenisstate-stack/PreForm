@@ -198,6 +198,111 @@ public class AuthController : ControllerBase
         return Ok(new { success = true, message = "Logged out successfully." });
     }
 
+    [HttpPost("revoke-session")]
+    [Authorize]
+    public async Task<IActionResult> RevokeSession([FromBody] RevokeSessionRequest request, CancellationToken cancellationToken)
+    {
+        var callerUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var callerRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "candidate";
+        var isPrivilegedAdmin = string.Equals(callerRole, "admin", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(callerRole, "superadmin", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(callerRole, "administrator", StringComparison.OrdinalIgnoreCase);
+
+        if (request.RevokeAll)
+        {
+            var targetUserId = !string.IsNullOrWhiteSpace(request.UserId) ? request.UserId : callerUserId;
+            if (string.IsNullOrWhiteSpace(targetUserId))
+            {
+                return BadRequest(new { success = false, error = "Target user ID is required to revoke all sessions." });
+            }
+
+            if (!string.Equals(targetUserId, callerUserId, StringComparison.Ordinal) && !isPrivilegedAdmin)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot revoke another user's sessions." });
+            }
+
+            var count = await _sessionService.RevokeAllUserSessionsAsync(targetUserId, cancellationToken);
+            _context.AuditLogs.Add(new AuditLog
+            {
+                ActorId = callerUserId ?? "system",
+                Action = "RevokeAllUserSessions",
+                EntityType = "User",
+                EntityId = targetUserId,
+                Description = $"Revoked all sessions for user {targetUserId} (count: {count})",
+                Outcome = "Success",
+                Timestamp = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return Ok(new { success = true, revokedCount = count, message = "All user sessions revoked successfully." });
+        }
+
+        var targetSessionId = !string.IsNullOrWhiteSpace(request.SessionId)
+            ? request.SessionId
+            : User.FindFirst("sessionId")?.Value;
+
+        if (string.IsNullOrWhiteSpace(targetSessionId))
+        {
+            return BadRequest(new { success = false, error = "Session ID is required for revocation." });
+        }
+
+        // Ownership enforcement: verify session belongs to caller unless admin
+        var existingSession = await _context.UserSessions.FindAsync(new object[] { targetSessionId }, cancellationToken);
+        if (existingSession != null && !string.Equals(existingSession.UserId, callerUserId, StringComparison.Ordinal) && !isPrivilegedAdmin)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot revoke another user's session." });
+        }
+
+        var revoked = await _sessionService.RevokeSessionAsync(targetSessionId, cancellationToken);
+        return Ok(new { success = true, revoked, message = "Session revoked successfully." });
+    }
+
+    [HttpPost("validate-session")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ValidateSession([FromBody] ValidateSessionRequest request, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Token) && string.IsNullOrWhiteSpace(request.SessionId))
+        {
+            return BadRequest(new ValidateSessionResponse { Valid = false, Error = "Token or SessionId is required." });
+        }
+
+        UserSession? session = null;
+        if (!string.IsNullOrWhiteSpace(request.Token))
+        {
+            session = await _sessionService.ValidateTokenAsync(request.Token, cancellationToken);
+        }
+        else if (!string.IsNullOrWhiteSpace(request.SessionId))
+        {
+            session = await _context.UserSessions
+                .Include(s => s.User)
+                .FirstOrDefaultAsync(s => s.Id == request.SessionId && !s.Revoked && s.ExpiresAt > DateTime.UtcNow, cancellationToken);
+        }
+
+        if (session == null || session.User == null || !session.User.IsActive || session.Revoked)
+        {
+            return Ok(new ValidateSessionResponse { Valid = false, Error = "Session is invalid, expired, or revoked." });
+        }
+
+        return Ok(new ValidateSessionResponse
+        {
+            Valid = true,
+            SessionId = session.Id,
+            User = new UserSummaryDto
+            {
+                Id = session.User.Id,
+                Email = session.User.Email,
+                DisplayName = session.User.DisplayName,
+                Role = session.Role,
+                Pathway = session.User.Pathway,
+                ActivePlan = session.User.ActivePlan,
+                TargetExamDate = session.User.TargetExamDate,
+                EmailNotifications = session.User.EmailNotifications,
+                StudyReminders = session.User.StudyReminders,
+                HasProfileImage = session.User.HasProfileImage
+            }
+        });
+    }
+
     [HttpGet("session")]
     [Authorize]
     public async Task<IActionResult> GetSession(CancellationToken cancellationToken)

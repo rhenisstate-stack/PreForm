@@ -177,6 +177,38 @@ export const authService = {
       session,
     });
   },
+
+  revokeSession: async (
+    sessionId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; message: string }>> => {
+    return apiClient.post<{ success: boolean; message: string }>(
+      "/api/v1/auth/revoke-session",
+      { sessionId },
+      { session }
+    );
+  },
+
+  revokeAllUserSessions: async (
+    userId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; message: string; revokedCount?: number }>> => {
+    return apiClient.post<{ success: boolean; message: string; revokedCount?: number }>(
+      "/api/v1/auth/revoke-session",
+      { userId, revokeAll: true },
+      { session }
+    );
+  },
+
+  validateSession: async (input: {
+    token?: string;
+    sessionId?: string;
+  }): Promise<ApiResponse<{ valid: boolean; user?: BackendUserSummary; error?: string }>> => {
+    return apiClient.post<{ valid: boolean; user?: BackendUserSummary; error?: string }>(
+      "/api/v1/auth/validate-session",
+      input
+    );
+  },
 };
 
 export const profileService = {
