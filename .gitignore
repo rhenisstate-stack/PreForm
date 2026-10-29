@@ -11,6 +11,13 @@ apps/api/prisma/*.db
 apps/api/prisma/*.db-journal
 apps/api/src/generated/prisma/
 
+# SQLite runtime databases & transient migration fixtures
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+apps/web/.data/
+backups/
+
 # .NET build artifacts
 bin/
 obj/

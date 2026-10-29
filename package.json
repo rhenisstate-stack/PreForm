@@ -21,6 +21,7 @@
     "test": "npm run test --workspace @preform/web --if-present && npm run test --workspace @preform/api --if-present",
     "test:api": "npm run test --workspace @preform/api",
     "test:e2e": "cd apps/api && dotnet test Tests/Preform.Api.Tests.csproj --filter FullyQualifiedName~Integration",
+    "verify:no-sqlite": "npx tsx scripts/verify-no-sqlite-runtime.ts",
     "db:generate": "cd apps/api && dotnet ef migrations bundle --output ../migrate --self-contained || echo 'EF Core tools required: dotnet tool install --global dotnet-ef'",
     "db:migrate": "cd apps/api && dotnet ef database update",
     "db:deploy": "cd apps/api && dotnet ef database update"
