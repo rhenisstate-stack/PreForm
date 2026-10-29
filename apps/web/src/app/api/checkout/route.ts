@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { checkoutService, subscriptionService } from "@/lib/api-services";
+import {
+  checkoutService,
+  subscriptionService,
+  type BackendSubscriptionPlan,
+} from "@/lib/api-services";
 import {
   createAuthoritativeCheckoutSession,
   isSandboxCheckoutPermitted,
@@ -8,6 +12,7 @@ import {
   type AuthoritativePlan,
 } from "@/lib/payment-provider";
 import { getSubscriptionPlanByIdOrSlug } from "@/lib/subscription-store";
+import type { Product } from "@/lib/products";
 import { upsertUserProfileMeta } from "@/lib/profile-image-db";
 import { resolveSession, signSessionPayload } from "@/lib/session";
 
@@ -41,7 +46,7 @@ export async function POST(request: Request) {
     }
 
     // ── 1. Authoritative Plan Lookup from ASP.NET Core API or Catalog Store ──
-    let product: any = null;
+    let product: BackendSubscriptionPlan | Product | null = null;
     const planRes = await subscriptionService.getPlanByIdOrSlug(planId, session);
     if (planRes.success && planRes.data?.plan) {
       product = planRes.data.plan;
