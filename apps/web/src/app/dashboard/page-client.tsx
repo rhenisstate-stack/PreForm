@@ -128,15 +128,22 @@ export function DashboardClient() {
   }, [user?.id, attemptRefreshKey]);
 
   // Synchronize authoritative attempt histories from PostgreSQL datastore
+  const userId = user?.id;
+  const userEmail = user?.email;
+  const userName = user?.name;
+  const userDisplayName = user?.displayName;
+  const userRole = user?.role;
+  const userPathway = user?.pathway;
+
   React.useEffect(() => {
-    if (user?.id) {
+    if (userId && userEmail) {
       const syntheticSession = {
-        userId: user.id,
-        email: user.email,
-        name: user.name || user.displayName || "Candidate",
-        displayName: user.displayName || user.name || "Candidate",
-        role: user.role || "candidate",
-        pathway: (user.pathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
+        userId,
+        email: userEmail,
+        name: userName || userDisplayName || "Candidate",
+        displayName: userDisplayName || userName || "Candidate",
+        role: userRole || "candidate",
+        pathway: (userPathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
         csrfToken: "",
         sessionId: "",
         expiresAt: "",
@@ -145,7 +152,7 @@ export function DashboardClient() {
         .then(() => setAttemptRefreshKey((k) => k + 1))
         .catch(() => {});
     }
-  }, [user?.id]);
+  }, [userId, userEmail, userName, userDisplayName, userRole, userPathway]);
 
   // Create test interactive form state
   const [createTestType, setCreateTestType] = React.useState<"tutored_cat" | "rat">("tutored_cat");

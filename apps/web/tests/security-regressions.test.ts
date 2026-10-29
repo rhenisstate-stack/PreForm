@@ -12,12 +12,10 @@ import {
   profileService,
   checkoutService,
   authService,
-  attemptsService,
   type BackendSubscriptionPlan,
 } from "@/lib/api-services";
 import {
   syncAttemptToBackend,
-  fetchAuthoritativeAttempts,
   type CompletedAssessmentAttempt,
 } from "@/lib/assessment-store";
 import type { VerifiedSession } from "@/lib/session";
