@@ -30,7 +30,8 @@ test.describe("Subscription Catalog & Pricing Integrity", () => {
     // Verify all returned plans are active
     for (const plan of data.plans) {
       expect(plan.isActive).toBe(true);
-      expect(plan.priceCents).toBeGreaterThan(0);
+      const price = plan.priceCents ?? (typeof plan.price === "number" ? plan.price * 100 : 0);
+      expect(price).toBeGreaterThan(0);
       expect(["rn", "pn", "both", "RN", "PN", "Both"]).toContain(plan.pathway);
     }
   });

@@ -45,8 +45,8 @@ export default defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
-        // If system Chrome or Edge is installed, channel can be enabled
-        channel: process.env.PLAYWRIGHT_BROWSER_CHANNEL || undefined,
+        // Use installed Chrome channel by default on Windows
+        channel: process.env.PLAYWRIGHT_BROWSER_CHANNEL || "chrome",
       },
     },
   ],
