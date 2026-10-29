@@ -72,7 +72,7 @@ export async function GET(request: NextRequest) {
 
 async function handleUpload(request: NextRequest) {
   try {
-    const auth = await resolveSession();
+    const auth = await resolveSession(request);
     if (!auth) {
       return NextResponse.json(
         { success: false, error: "Unauthorized. Please sign in to upload a profile picture." },
@@ -167,14 +167,21 @@ async function handleUpload(request: NextRequest) {
 
     // Update session cookie with lightweight versioned media endpoint URL (no base64 bloat in cookie)
     const cookieStore = await cookies();
-    const updatedSession: SessionPayload = {
-      ...auth.session,
+    const updatedToken = signSessionPayload({
+      sid: auth.sessionId,
       sub: savedMeta.userId,
+      email: auth.email,
+      displayName: auth.displayName,
+      name: auth.name,
+      role: auth.role,
+      pathway: auth.pathway,
       picture: savedMeta.imageUrl,
       updatedAt: savedMeta.updatedAt,
-    };
+      csrfToken: auth.csrfToken,
+      expiresAt: auth.expiresAt,
+    });
 
-    cookieStore.set("preform_session", JSON.stringify(updatedSession), {
+    cookieStore.set("preform_session", updatedToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -212,7 +219,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    const auth = await resolveSession();
+    const auth = await resolveSession(request);
     if (!auth) {
       return NextResponse.json(
         { success: false, error: "Authentication required" },
@@ -233,13 +240,21 @@ export async function DELETE(request: NextRequest) {
     const deleted = deleteProfileImageBinary(auth.userId, auth.email);
 
     const cookieStore = await cookies();
-    const updatedSession: SessionPayload = {
-      ...auth.session,
+    const updatedToken = signSessionPayload({
+      sid: auth.sessionId,
+      sub: auth.userId,
+      email: auth.email,
+      displayName: auth.displayName,
+      name: auth.name,
+      role: auth.role,
+      pathway: auth.pathway,
       picture: undefined,
       updatedAt: new Date().toISOString(),
-    };
+      csrfToken: auth.csrfToken,
+      expiresAt: auth.expiresAt,
+    });
 
-    cookieStore.set("preform_session", JSON.stringify(updatedSession), {
+    cookieStore.set("preform_session", updatedToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

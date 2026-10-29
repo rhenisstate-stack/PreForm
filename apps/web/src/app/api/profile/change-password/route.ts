@@ -1,13 +1,13 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import zxcvbn from "zxcvbn";
+import { resolveSession, createServerSession, revokeAllUserSessions } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const sessionCookie = cookieStore.get("preform_session");
+    const session = await resolveSession(request);
 
-    if (!sessionCookie || !sessionCookie.value) {
+    if (!session || !session.email) {
       return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
     }
 
@@ -34,7 +34,25 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // In preview mode, password change is confirmed successfully
+    // Security Best Practice: On password change, invalidate previous sessions and issue a fresh session
+    revokeAllUserSessions(session.userId);
+
+    const freshSession = createServerSession({
+      userId: session.userId,
+      email: session.email,
+      role: session.role,
+      displayName: session.displayName,
+    });
+
+    const cookieStore = await cookies();
+    cookieStore.set("preform_session", freshSession.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: freshSession.maxAgeSeconds,
+    });
+
     return NextResponse.json({
       success: true,
       message: "Password updated successfully.",
