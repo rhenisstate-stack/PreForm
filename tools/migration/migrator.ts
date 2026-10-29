@@ -1,6 +1,6 @@
 import { DatabaseSync } from "node:sqlite";
 import crypto from "node:crypto";
-import {
+import type {
   SqliteUserProfile,
   SqliteUserProfileImage,
   SqliteSubscriptionPlan,
@@ -13,14 +13,14 @@ import {
   AmbiguousEntitlementRecord,
   MigrationReconciliationReport,
   EntityReconciliationStats,
-} from "./types";
+} from "./types.ts";
 import {
   computeSha256,
   mapIntervalToEnum,
   normalizeEmail,
   validateImageMagicBytes,
   isProductionDatabaseTarget,
-} from "./validator";
+} from "./validator.ts";
 
 export interface ExtractedSqliteData {
   users: SqliteUserProfile[];

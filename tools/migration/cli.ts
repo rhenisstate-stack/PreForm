@@ -5,8 +5,8 @@ import {
   transformAndValidate,
   generateSqlScript,
   executeMigration,
-} from "./migrator";
-import { isProductionDatabaseTarget } from "./validator";
+} from "./migrator.ts";
+import { isProductionDatabaseTarget } from "./validator.ts";
 
 async function main() {
   const args = process.argv.slice(2);
