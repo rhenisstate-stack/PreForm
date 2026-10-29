@@ -3,19 +3,27 @@ import { BRAND } from "@/lib/brand";
 import { TestimonialsPageClient } from "./page-client";
 
 export const metadata: Metadata = {
-  title: "Candidate Experiences & Reflections | PrepFord NCLEX",
+  title: "Candidate Reflections & Testimonials | PrepFord NCLEX",
   description:
-    "Explore candidate preparation workflows and clinical learning experiences with PrepFord NCLEX question rationales and Next Generation case studies.",
+    "Real progress and meaningful preparation. Explore how nursing candidates leverage PrepFord's structured rationales, NGN case studies, and clinical study workflows.",
   alternates: {
     canonical: "/testimonials",
   },
   openGraph: {
-    title: "Candidate Experiences & Reflections | PrepFord NCLEX",
+    title: "Candidate Reflections & Testimonials | PrepFord NCLEX",
     description:
-      "Explore candidate preparation workflows and clinical learning experiences with PrepFord NCLEX question rationales and Next Generation case studies.",
+      "Real progress and meaningful preparation. Explore how nursing candidates leverage PrepFord's structured rationales, NGN case studies, and clinical study workflows.",
     url: "/testimonials",
     siteName: BRAND.fullName,
     type: "website",
+    images: [
+      {
+        url: "/images/testimonials/prepford-testimonials-hero.jpg",
+        width: 1200,
+        height: 675,
+        alt: "PrepFord Testimonials - Smiling nursing graduate with cap and stethoscope",
+      },
+    ],
   },
 };
 

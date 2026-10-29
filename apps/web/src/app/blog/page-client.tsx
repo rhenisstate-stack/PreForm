@@ -2,10 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   getAllCategories,
   getPaginatedPosts,
+  getBlogPostBySlug,
+  type BlogPost,
 } from "@/lib/blog-data";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -18,7 +21,9 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
+  Sparkles,
   X,
+  GraduationCap,
 } from "lucide-react";
 
 const PAGE_SIZE = 4;
@@ -49,6 +54,13 @@ export function BlogPageClient() {
   const { posts, totalPosts, totalPages, currentPage: safePage } = React.useMemo(() => {
     return getPaginatedPosts(currentPage, PAGE_SIZE, currentCategory, rawSearch);
   }, [currentPage, currentCategory, rawSearch]);
+
+  // Featured article spotlight (show when on page 1 without specific search/category filters)
+  const isDefaultView = currentCategory === "All" && !rawSearch && safePage === 1;
+  const featuredArticle: BlogPost | undefined = React.useMemo(() => {
+    if (!isDefaultView) return undefined;
+    return getBlogPostBySlug("understanding-the-next-generation-nclex");
+  }, [isDefaultView]);
 
   const updateFilters = (params: { page?: number; category?: string; search?: string }) => {
     const nextParams = new URLSearchParams(searchParams.toString());
@@ -95,10 +107,17 @@ export function BlogPageClient() {
 
   return (
     <div className="bg-background min-h-[calc(100vh-4.5rem)]">
-      {/* Editorial Header */}
-      <section className="border-b border-border bg-card/60 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Editorial Hero Section with Real Image */}
+      <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-card/90 via-card/50 to-background py-12 md:py-16 px-4 sm:px-6 lg:px-8">
+        {/* Subtle Decorative Ambient Palette Accent */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-96 w-96 -translate-x-1/2 rounded-full bg-secondary/10 blur-3xl"
+        />
+
         <div className="mx-auto max-w-7xl">
-          <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted-foreground">
+          {/* Breadcrumb Navigation */}
+          <nav aria-label="Breadcrumb" className="mb-6 text-xs text-muted-foreground">
             <ol className="flex items-center gap-1.5">
               <li>
                 <Link href="/" className="hover:text-foreground transition-colors">
@@ -112,39 +131,81 @@ export function BlogPageClient() {
             </ol>
           </nav>
 
-          <div className="max-w-3xl">
-            <div className="flex items-center gap-2 text-secondary mb-2">
-              <BookOpen className="h-4 w-4" />
-              <span className="text-xs font-semibold uppercase tracking-wider">
-                NCLEX Learning Hub
-              </span>
+          {/* Desktop Split Hero / Mobile Clean Vertical Composition */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            {/* Left Content Column */}
+            <div className="lg:col-span-7 space-y-5">
+              <div className="inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 px-3 py-1 text-xs font-semibold text-secondary">
+                <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>PrepFord Clinical Learning Hub</span>
+              </div>
+
+              <h1 className="text-3xl font-serif font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl leading-tight">
+                PrepFord Nursing Insights
+              </h1>
+
+              <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-2xl">
+                Master Next Generation NCLEX clinical judgment, unfolding case study strategy, high-alert pharmacology, and evidence-based study methods written directly by experienced nurse educators.
+              </p>
+
+              <div className="flex flex-wrap items-center gap-4 pt-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-1.5">
+                  <GraduationCap className="h-4 w-4 text-secondary" aria-hidden="true" />
+                  <span>NCLEX-RN &amp; NCLEX-PN Pathways</span>
+                </div>
+                <span className="hidden sm:inline">•</span>
+                <div className="flex items-center gap-1.5">
+                  <Sparkles className="h-4 w-4 text-secondary" aria-hidden="true" />
+                  <span>NCSBN Clinical Judgment Model</span>
+                </div>
+              </div>
             </div>
-            <h1 className="text-3xl font-serif font-bold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
-              PrepFord NCLEX Blog
-            </h1>
-            <p className="mt-4 text-base sm:text-lg text-muted-foreground leading-relaxed">
-              Clinical study strategies, Next Gen NCLEX breakdowns, high-alert pharmacology reviews, and evidence-based test preparation guides written by nurse educators.
-            </p>
+
+            {/* Right Hero Image Container */}
+            <div className="lg:col-span-5">
+              <div className="relative mx-auto max-w-md lg:max-w-none rounded-2xl overflow-hidden border border-border/70 shadow-lg bg-card/60">
+                <div className="aspect-[16/10] relative w-full">
+                  <Image
+                    src="/images/blog/prepford-blog-hero.jpg"
+                    alt="Focused nursing student in scrubs studying NCLEX materials with laptop, notes, and stethoscope"
+                    fill
+                    priority
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 540px"
+                    className="object-cover object-center transition-transform duration-500 hover:scale-[1.02]"
+                  />
+                </div>
+                <div className="p-3 bg-card/90 border-t border-border/50 text-[11px] text-muted-foreground flex items-center justify-between">
+                  <span>Editorial Clinical Review</span>
+                  <span className="font-medium text-foreground">PrepFord Faculty</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Filter and Search Bar */}
-      <section className="border-b border-border py-4 px-4 sm:px-6 lg:px-8 bg-card/20">
+      <section className="sticky top-[4.5rem] z-20 border-b border-border bg-card/95 backdrop-blur-md py-4 px-4 sm:px-6 lg:px-8 shadow-xs">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-4">
           {/* Category Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-2 md:pb-0 scrollbar-none" role="tablist" aria-label="Article categories">
+          <div
+            className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none"
+            role="tablist"
+            aria-label="Article categories"
+          >
             {categories.map((cat) => {
-              const isActive = (cat === "All" && currentCategory === "All") || currentCategory.toLowerCase() === cat.toLowerCase();
+              const isActive =
+                (cat === "All" && currentCategory === "All") ||
+                currentCategory.toLowerCase() === cat.toLowerCase();
               return (
                 <button
                   key={cat}
                   role="tab"
                   aria-selected={isActive}
                   onClick={() => updateFilters({ category: cat })}
-                  className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                  className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-medium transition-all ${
                     isActive
-                      ? "bg-secondary text-secondary-foreground shadow-sm"
+                      ? "bg-secondary text-secondary-foreground shadow-xs font-semibold ring-1 ring-secondary/40"
                       : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
                   }`}
                 >
@@ -164,7 +225,7 @@ export function BlogPageClient() {
               <input
                 id="blog-search"
                 type="text"
-                placeholder="Search articles..."
+                placeholder="Search clinical topics..."
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 className="w-full rounded-full border border-input bg-background pl-9 pr-8 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
@@ -184,9 +245,91 @@ export function BlogPageClient() {
         </div>
       </section>
 
-      {/* Main Articles Grid & Pagination */}
+      {/* Main Content Area */}
       <section className="py-12 px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-7xl">
+          {/* Featured Article Spotlight (Default View) */}
+          {featuredArticle && (
+            <div className="mb-14">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="h-4 w-4 text-secondary" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-secondary">
+                  Featured Clinical Guide
+                </h2>
+              </div>
+
+              <Card className="overflow-hidden border-border/80 hover:border-secondary/50 transition-all shadow-sm hover:shadow-md group">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-0">
+                  {/* Featured Thumbnail */}
+                  <div className="relative lg:col-span-5 aspect-[16/10] lg:aspect-auto min-h-[240px] lg:min-h-[320px] bg-muted">
+                    <Image
+                      src={featuredArticle.featuredImage}
+                      alt={featuredArticle.imageAlt}
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 480px"
+                      className="object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
+                    />
+                    <div className="absolute top-3 left-3">
+                      <Badge className="bg-secondary text-secondary-foreground font-semibold shadow-xs">
+                        {featuredArticle.category}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* Featured Content */}
+                  <div className="lg:col-span-7 p-6 sm:p-8 flex flex-col justify-between">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="h-3.5 w-3.5" />
+                          {new Date(featuredArticle.publishedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                        <span>•</span>
+                        <span className="inline-flex items-center gap-1">
+                          <Clock className="h-3.5 w-3.5" />
+                          {featuredArticle.readingTime}
+                        </span>
+                      </div>
+
+                      <CardTitle className="font-serif text-2xl sm:text-3xl font-bold leading-tight group-hover:text-secondary transition-colors">
+                        <Link href={`/blog/${featuredArticle.slug}`}>
+                          {featuredArticle.title}
+                        </Link>
+                      </CardTitle>
+
+                      <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
+                        {featuredArticle.excerpt}
+                      </p>
+                    </div>
+
+                    <div className="pt-6 mt-4 border-t border-border/60 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                      <div className="text-xs text-muted-foreground">
+                        <span>By </span>
+                        <strong className="font-semibold text-foreground">
+                          {featuredArticle.author.name}
+                        </strong>
+                        <span className="block text-[11px] text-muted-foreground">
+                          {featuredArticle.author.role} ({featuredArticle.author.credentials})
+                        </span>
+                      </div>
+
+                      <Button asChild className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-xs self-start sm:self-auto">
+                        <Link href={`/blog/${featuredArticle.slug}`}>
+                          <span>Read Complete Guide</span>
+                          <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          )}
+
           {/* Active filters summary */}
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-8">
             <p>
@@ -229,38 +372,48 @@ export function BlogPageClient() {
             </div>
           ) : (
             <>
-              {/* Articles Grid */}
+              {/* Articles Grid with Image Thumbnails */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
                 {posts.map((post) => (
                   <Card
                     key={post.slug}
-                    className="flex flex-col justify-between hover:shadow-md hover:border-secondary/50 transition-all group overflow-hidden"
+                    className="flex flex-col justify-between hover:shadow-md hover:border-secondary/50 transition-all group overflow-hidden border-border/80"
                   >
                     <div>
-                      {/* Top banner / Decorative category accent */}
-                      <div className="h-2 w-full bg-gradient-to-r from-secondary/40 via-secondary to-teal-500" />
-                      <CardHeader className="pt-6">
-                        <div className="flex items-center justify-between gap-2 mb-3">
-                          <Badge variant="outline" className="border-secondary/40 text-secondary font-medium">
+                      {/* Image Thumbnail Header */}
+                      <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
+                        <Image
+                          src={post.featuredImage}
+                          alt={post.imageAlt || post.title}
+                          fill
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 600px"
+                          className="object-cover object-center transition-transform duration-300 group-hover:scale-[1.03]"
+                        />
+                        <div className="absolute top-3 left-3">
+                          <Badge variant="outline" className="bg-background/90 backdrop-blur-xs border-secondary/40 text-secondary font-medium">
                             {post.category}
                           </Badge>
-                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                            <span className="inline-flex items-center gap-1">
-                              <Calendar className="h-3.5 w-3.5" />
-                              {new Date(post.publishedAt).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              })}
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <Clock className="h-3.5 w-3.5" />
-                              {post.readingTime}
-                            </span>
-                          </div>
+                        </div>
+                      </div>
+
+                      <CardHeader className="pt-5">
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-2">
+                          <span className="inline-flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {new Date(post.publishedAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </span>
+                          <span>•</span>
+                          <span className="inline-flex items-center gap-1">
+                            <Clock className="h-3.5 w-3.5" />
+                            {post.readingTime}
+                          </span>
                         </div>
 
-                        <CardTitle className="font-serif text-xl sm:text-2xl leading-tight group-hover:text-secondary transition-colors">
+                        <CardTitle className="font-serif text-xl sm:text-2xl leading-snug group-hover:text-secondary transition-colors">
                           <Link href={`/blog/${post.slug}`}>
                             {post.title}
                           </Link>
@@ -319,7 +472,7 @@ export function BlogPageClient() {
                           aria-label={`Page ${pageNum}`}
                           className={`flex h-9 w-9 items-center justify-center rounded-md text-sm font-medium transition-colors ${
                             isCurrent
-                              ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                              ? "bg-primary text-primary-foreground font-semibold shadow-xs"
                               : "text-foreground hover:bg-muted"
                           }`}
                         >
