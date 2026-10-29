@@ -74,7 +74,7 @@ describe("Phase 4 — WCAG AA Accessibility Contrast Remediation", () => {
     });
     expect(failingColors.isValid).toBe(false);
     expect(failingColors.errors.length).toBeGreaterThan(0);
-    expect(failingColors.errors[0]).toContain("Insufficient contrast");
+    expect(failingColors.errors[0]).toContain("Insufficient color contrast");
   });
 
   it("enforces 3.0:1 requirement for non-text UI components and interactive accents", () => {

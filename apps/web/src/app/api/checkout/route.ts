@@ -102,7 +102,7 @@ export async function POST(request: Request) {
       currency: product.currency || "USD",
       pathway: authoritativePathway,
       billingInterval: product.billingInterval,
-      isActive: product.isActive !== false,
+      isActive: Boolean(product.isActive ?? true),
     };
 
     const userId =
