@@ -1,10 +1,7 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { signInSchema } from "@/lib/validation/auth";
-import {
-  deriveCandidateIdFromEmail,
-  getUserProfileMeta,
-} from "@/lib/profile-image-db";
+import { authService } from "@/lib/api-services";
 import { createServerSession } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
@@ -23,25 +20,41 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, rememberMe } = result.data;
+    const { email, password, rememberMe } = result.data;
 
-    // Format display name from email (e.g. jane.doe@example.com -> Jane Doe)
+    // Dispatch login request to authoritative ASP.NET Core API
+    const apiRes = await authService.login({
+      email,
+      password,
+      rememberMe,
+    });
+
+    if (!apiRes.success || !apiRes.data?.success) {
+      const status = apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 401;
+      return NextResponse.json(
+        {
+          success: false,
+          error: apiRes.error || apiRes.data?.error || "Invalid login credentials.",
+        },
+        { status }
+      );
+    }
+
+    const backendUser = apiRes.data.user;
     const rawName = email.split("@")[0].replace(/[._-]/g, " ");
     const defaultDisplayName = rawName
       .split(" ")
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ");
 
-    const userId = deriveCandidateIdFromEmail(email);
-    const dbMeta = getUserProfileMeta(userId, email);
-    const displayName = dbMeta?.displayName || defaultDisplayName;
-    const pathway = dbMeta?.pathway || ("rn" as const);
-    const picture = dbMeta?.pictureUrl;
+    const displayName = backendUser?.displayName || backendUser?.name || defaultDisplayName;
+    const userId = backendUser?.id || `cand_${Date.now()}`;
+    const role = backendUser?.role || "candidate";
 
     const serverSession = createServerSession({
       userId,
       email,
-      role: "candidate",
+      role,
       displayName,
       rememberMe,
     });
@@ -58,13 +71,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       user: {
-        id: serverSession.session.userId,
-        email: serverSession.session.email,
+        id: userId,
+        email: email.toLowerCase().trim(),
         name: displayName,
         displayName,
-        role: serverSession.session.role,
-        pathway,
-        picture,
+        role,
+        pathway: backendUser?.pathway || "rn",
+        picture: backendUser?.picture,
       },
     });
   } catch (err) {

@@ -28,6 +28,24 @@ export class ApiClientError extends Error {
   }
 }
 
+export type MockApiHandler = (
+  endpoint: string,
+  options: ApiClientOptions
+) => Promise<ApiResponse | null> | ApiResponse | null;
+
+let currentMockHandler: MockApiHandler | null = null;
+
+/**
+ * Sets a mock handler for testing API client dispatches in unit and integration tests.
+ */
+export function setMockApiHandler(handler: MockApiHandler | null): void {
+  currentMockHandler = handler;
+}
+
+export function getMockApiHandler(): MockApiHandler | null {
+  return currentMockHandler;
+}
+
 /**
  * Returns the base URL for the backend ASP.NET Core API.
  */
@@ -133,6 +151,18 @@ export async function apiRequest<T = unknown>(
 
   if (!requestHeaders.has("Accept")) {
     requestHeaders.set("Accept", "application/json");
+  }
+
+  // Check if a mock handler is configured (e.g. during test suites)
+  if (currentMockHandler) {
+    const mockResult = await currentMockHandler(normalizedEndpoint, {
+      ...options,
+      headers: requestHeaders,
+    });
+    if (mockResult) {
+      clearTimeout(timeoutId);
+      return mockResult as ApiResponse<T>;
+    }
   }
 
   try {

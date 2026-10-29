@@ -1,10 +1,7 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { signUpSchema } from "@/lib/validation/auth";
-import {
-  deriveCandidateIdFromEmail,
-  upsertUserProfileMeta,
-} from "@/lib/profile-image-db";
+import { authService } from "@/lib/api-services";
 import { createServerSession } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
@@ -23,21 +20,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { fullName, email, pathway } = result.data;
+    const { fullName, email, pathway, password } = result.data;
 
-    const userId = deriveCandidateIdFromEmail(email);
-    const savedRecord = upsertUserProfileMeta({
-      userId,
+    // Dispatch registration to authoritative ASP.NET Core API
+    const apiRes = await authService.register({
+      fullName,
       email,
-      displayName: fullName,
+      password,
       pathway,
     });
 
+    if (!apiRes.success || !apiRes.data?.success) {
+      const status = apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 503;
+      return NextResponse.json(
+        {
+          success: false,
+          error: apiRes.error || apiRes.data?.error || "Registration failed on backend authority.",
+        },
+        { status }
+      );
+    }
+
+    const backendUser = apiRes.data.user;
+    const userId = backendUser?.id || `cand_${Date.now()}`;
+
+    // Establish cryptographically signed session cookie
     const serverSession = createServerSession({
       userId,
       email,
-      role: "candidate",
-      displayName: fullName,
+      role: backendUser?.role || "candidate",
+      displayName: backendUser?.displayName || fullName,
     });
 
     const cookieStore = await cookies();
@@ -52,13 +64,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       user: {
-        id: serverSession.session.userId,
-        email: serverSession.session.email,
-        name: savedRecord.displayName,
-        displayName: savedRecord.displayName,
-        role: serverSession.session.role,
-        pathway: savedRecord.pathway,
-        picture: savedRecord.pictureUrl,
+        id: userId,
+        email: email.toLowerCase().trim(),
+        name: backendUser?.displayName || fullName,
+        displayName: backendUser?.displayName || fullName,
+        role: backendUser?.role || "candidate",
+        pathway: backendUser?.pathway || pathway || "rn",
+        picture: backendUser?.picture,
       },
     });
   } catch (err) {
