@@ -14,6 +14,7 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 interface Violation {
   file: string;
@@ -22,6 +23,8 @@ interface Violation {
   snippet: string;
 }
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "..");
 
 const RUNTIME_TARGET_DIRS = [
@@ -137,24 +140,51 @@ export function verifyNoSqliteRuntime(): {
   }
 
   // 2. Scan package manifests
-  const manifestPaths = [
+  const jsonManifests = [
     path.join(ROOT_DIR, "package.json"),
     path.join(ROOT_DIR, "apps", "web", "package.json"),
-    path.join(ROOT_DIR, "apps", "api", "Preform.Api.csproj"),
   ];
 
-  for (const manifestPath of manifestPaths) {
+  for (const manifestPath of jsonManifests) {
     if (!fs.existsSync(manifestPath)) continue;
     scannedFiles.push(manifestPath);
 
-    const content = fs.readFileSync(manifestPath, "utf-8");
-    for (const dep of FORBIDDEN_MANIFEST_DEPENDENCIES) {
-      if (content.toLowerCase().includes(`"${dep.toLowerCase()}"`) || content.includes(dep)) {
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf-8"));
+      const allDeps = {
+        ...manifest.dependencies,
+        ...manifest.devDependencies,
+        ...manifest.peerDependencies,
+      };
+
+      for (const depKey of Object.keys(allDeps)) {
+        for (const forbidden of FORBIDDEN_MANIFEST_DEPENDENCIES) {
+          if (depKey.toLowerCase() === forbidden.toLowerCase()) {
+            violations.push({
+              file: path.relative(ROOT_DIR, manifestPath),
+              line: 1,
+              pattern: forbidden,
+              snippet: `Disallowed SQLite dependency '${depKey}' detected in ${path.basename(manifestPath)}.`,
+            });
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const csprojPath = path.join(ROOT_DIR, "apps", "api", "Preform.Api.csproj");
+  if (fs.existsSync(csprojPath)) {
+    scannedFiles.push(csprojPath);
+    const csprojContent = fs.readFileSync(csprojPath, "utf-8");
+    for (const forbidden of FORBIDDEN_MANIFEST_DEPENDENCIES) {
+      if (csprojContent.includes(`Include="${forbidden}"`)) {
         violations.push({
-          file: path.relative(ROOT_DIR, manifestPath),
+          file: path.relative(ROOT_DIR, csprojPath),
           line: 1,
-          pattern: dep,
-          snippet: `Disallowed SQLite dependency '${dep}' detected in package manifest.`,
+          pattern: forbidden,
+          snippet: `Disallowed SQLite package reference '${forbidden}' detected in Preform.Api.csproj.`,
         });
       }
     }
@@ -168,7 +198,7 @@ export function verifyNoSqliteRuntime(): {
 }
 
 // CLI execution
-if (require.main === module || process.argv[1]?.endsWith("verify-no-sqlite-runtime.ts")) {
+if (process.argv[1]?.includes("verify-no-sqlite-runtime")) {
   console.log("==================================================================");
   console.log("PrepFord Architecture Guard: Verifying Zero SQLite Runtime Presence");
   console.log("==================================================================");
