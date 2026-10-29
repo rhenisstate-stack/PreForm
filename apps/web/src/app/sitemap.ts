@@ -3,7 +3,7 @@ import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
 import { getAllBlogPosts } from "@/lib/blog-data";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://prepfordnclex.com";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://prepford.com";
   const now = new Date();
 
   // Core public indexable marketing and pathway pages
