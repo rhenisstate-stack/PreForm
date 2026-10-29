@@ -47,6 +47,7 @@ import {
   getStoredAttempts,
   saveStoredAttempt,
   createCompletedAttempt,
+  fetchAuthoritativeAttempts,
   CLINICAL_QUESTION_BANK,
 } from "@/lib/assessment-store";
 
@@ -125,6 +126,26 @@ export function DashboardClient() {
     void attemptRefreshKey;
     return getStoredAttempts(user?.id);
   }, [user?.id, attemptRefreshKey]);
+
+  // Synchronize authoritative attempt histories from PostgreSQL datastore
+  React.useEffect(() => {
+    if (user?.id) {
+      const syntheticSession = {
+        userId: user.id,
+        email: user.email,
+        name: user.name || user.displayName || "Candidate",
+        displayName: user.displayName || user.name || "Candidate",
+        role: user.role || "candidate",
+        pathway: (user.pathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
+        csrfToken: "",
+        sessionId: "",
+        expiresAt: "",
+      };
+      fetchAuthoritativeAttempts(syntheticSession)
+        .then(() => setAttemptRefreshKey((k) => k + 1))
+        .catch(() => {});
+    }
+  }, [user?.id]);
 
   // Create test interactive form state
   const [createTestType, setCreateTestType] = React.useState<"tutored_cat" | "rat">("tutored_cat");
@@ -216,7 +237,19 @@ export function DashboardClient() {
         userAnswers: formattedAnswers,
       });
 
-      saveStoredAttempt(user?.id, completed);
+      const candidateSession = user?.id ? {
+        userId: user.id,
+        email: user.email,
+        name: user.name || user.displayName || "Candidate",
+        displayName: user.displayName || user.name || "Candidate",
+        role: user.role || "candidate",
+        pathway: (user.pathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
+        csrfToken: "",
+        sessionId: "",
+        expiresAt: "",
+      } : null;
+
+      saveStoredAttempt(user?.id, completed, candidateSession);
       setAttemptRefreshKey((k) => k + 1);
       setTestInProgress(false);
       setCreateModalOpen(false);

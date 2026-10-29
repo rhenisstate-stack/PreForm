@@ -266,7 +266,16 @@ public class CheckoutService : ICheckoutService
             return false;
         }
 
-        // 1. Signature Verification
+        // 1. Signature Verification with Timing-Safe Comparison & Fail-Closed Enforcement
+        var env = GetAppEnvironment();
+        var isProd = env == "production" || env == "prod";
+
+        if (isProd && string.IsNullOrWhiteSpace(signatureHeader))
+        {
+            _logger.LogWarning("Webhook rejected in production: Missing required signature header.");
+            return false;
+        }
+
         var webhookSecret = _configuration["WEBHOOK_SIGNING_SECRET"] ?? "prepford-default-test-webhook-secret-32-chars!";
         if (!string.IsNullOrWhiteSpace(signatureHeader))
         {
@@ -275,7 +284,10 @@ public class CheckoutService : ICheckoutService
                 HMACSHA256.HashData(Encoding.UTF8.GetBytes(webhookSecret), Encoding.UTF8.GetBytes(raw))
             ).ToLowerInvariant();
 
-            if (!string.Equals(signatureHeader.Trim(), expectedSignature, StringComparison.OrdinalIgnoreCase))
+            var sigBytes = Encoding.UTF8.GetBytes(signatureHeader.Trim().ToLowerInvariant());
+            var expectedBytes = Encoding.UTF8.GetBytes(expectedSignature);
+
+            if (sigBytes.Length != expectedBytes.Length || !CryptographicOperations.FixedTimeEquals(sigBytes, expectedBytes))
             {
                 _logger.LogWarning("Webhook signature mismatch for event {EventId}", webhook.EventId);
                 return false;

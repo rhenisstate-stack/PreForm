@@ -291,13 +291,34 @@ public class ProfileImageServiceAndControllerTests : IClassFixture<WebApplicatio
         });
     }
 
+    private static void AddGatewayHeaders(HttpClient client, string userId, string email, string role, string name = "Jane Candidate")
+    {
+        var secret = "prepford-default-internal-gateway-secret-32-chars!";
+        var payload = $"{userId}|{email}|{role}";
+        var sig = Convert.ToHexString(
+            System.Security.Cryptography.HMACSHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(secret),
+                System.Text.Encoding.UTF8.GetBytes(payload))
+        ).ToLowerInvariant();
+
+        client.DefaultRequestHeaders.Remove("X-Gateway-Signature");
+        client.DefaultRequestHeaders.Remove("X-Authenticated-User-Id");
+        client.DefaultRequestHeaders.Remove("X-Authenticated-User-Email");
+        client.DefaultRequestHeaders.Remove("X-Authenticated-User-Role");
+        client.DefaultRequestHeaders.Remove("X-Authenticated-User-Name");
+
+        client.DefaultRequestHeaders.Add("X-Gateway-Signature", sig);
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", userId);
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", email);
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Role", role);
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Name", name);
+    }
+
     [Fact]
     public async Task UploadGetReplaceAndDeleteProfileImage_PersistsInDatabase()
     {
         var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", "user-101");
-        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", "jane.candidate@nursing.edu");
-        client.DefaultRequestHeaders.Add("X-Authenticated-User-Name", "Jane Candidate");
+        AddGatewayHeaders(client, "user-101", "jane.candidate@nursing.edu", "candidate", "Jane Candidate");
 
         // 1. Upload valid PNG
         var putResponse = await client.PutAsync("/api/v1/profile/image", new ByteArrayContent(ValidPngBytes));
@@ -331,8 +352,7 @@ public class ProfileImageServiceAndControllerTests : IClassFixture<WebApplicatio
     public async Task UploadInvalidFormatOrOversized_ReturnsBadRequest()
     {
         var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", "user-102");
-        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", "alex@nursing.edu");
+        AddGatewayHeaders(client, "user-102", "alex@nursing.edu", "candidate");
 
         var invalidSvgOrHtml = System.Text.Encoding.UTF8.GetBytes("<svg onload='alert(1)'></svg>");
         var badFormatRes = await client.PutAsync("/api/v1/profile/image", new ByteArrayContent(invalidSvgOrHtml));
@@ -343,14 +363,70 @@ public class ProfileImageServiceAndControllerTests : IClassFixture<WebApplicatio
     public async Task UploadOrGetForAnotherUser_ReturnsForbidden()
     {
         var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", "user-101");
-        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", "jane@nursing.edu");
+        AddGatewayHeaders(client, "user-101", "jane@nursing.edu", "candidate");
 
         var forbiddenPut = await client.PutAsync("/api/v1/profile/image?targetUserId=user-999", new ByteArrayContent(ValidPngBytes));
         Assert.Equal(HttpStatusCode.Forbidden, forbiddenPut.StatusCode);
 
         var forbiddenGet = await client.GetAsync("/api/v1/profile/image?userId=user-999");
         Assert.Equal(HttpStatusCode.Forbidden, forbiddenGet.StatusCode);
+    }
+
+    // ── SEC-01 Regression Tests ─────────────────────────────────────────────
+
+    [Fact]
+    public async Task ProfileImage_UnauthenticatedRequest_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        // Zero authentication headers
+        var getResponse = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, getResponse.StatusCode);
+
+        var putResponse = await client.PutAsync("/api/v1/profile/image", new ByteArrayContent(ValidPngBytes));
+        Assert.Equal(HttpStatusCode.Unauthorized, putResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProfileImage_SpoofedHeaderWithoutGatewaySignature_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        // Attacker injects spoofed identity headers without valid HMAC signature
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", "victim-user-123");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", "victim@prepford.com");
+
+        var getResponse = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, getResponse.StatusCode);
+
+        var putResponse = await client.PutAsync("/api/v1/profile/image", new ByteArrayContent(ValidPngBytes));
+        Assert.Equal(HttpStatusCode.Unauthorized, putResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProfileImage_InvalidHmacSignature_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", "user-101");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", "user-101@prepford.com");
+        client.DefaultRequestHeaders.Add("X-Gateway-Signature", "0000000000000000000000000000000000000000000000000000000000000000");
+
+        var getResponse = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, getResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task ProfileImage_AdminCanAccessCandidateImage_ReturnsSuccess200()
+    {
+        var client = _factory.CreateClient();
+
+        // 1. Candidate uploads image
+        AddGatewayHeaders(client, "candidate-404", "candidate-404@prepford.com", "candidate");
+        var putRes = await client.PutAsync("/api/v1/profile/image", new ByteArrayContent(ValidPngBytes));
+        putRes.EnsureSuccessStatusCode();
+
+        // 2. Admin queries candidate's image
+        AddGatewayHeaders(client, "admin-001", "admin@prepford.com", "admin");
+        var adminGetRes = await client.GetAsync("/api/v1/profile/image?userId=candidate-404");
+        Assert.Equal(HttpStatusCode.OK, adminGetRes.StatusCode);
     }
 }
 
@@ -428,5 +504,374 @@ public class SubscriptionsControllerTests : IClassFixture<WebApplicationFactory<
         // 3. Lookup non-existent plan
         var missingRes = await client.GetAsync("/api/v1/subscriptions/non-existent-code");
         Assert.Equal(HttpStatusCode.NotFound, missingRes.StatusCode);
+    }
+}
+
+public class GatewayHmacAndReplaySecurityTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+
+    public GatewayHmacAndReplaySecurityTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureServices(services =>
+            {
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+                if (descriptor != null) services.Remove(descriptor);
+                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestingGatewaySecurityDb"));
+            });
+        });
+    }
+
+    internal static void AddCanonicalHeaders(
+        HttpClient client,
+        string method,
+        string path,
+        string userId,
+        string email,
+        string role,
+        string bodyHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        long? timestamp = null,
+        string? nonce = null,
+        string? secret = null)
+    {
+        var effectiveTimestamp = timestamp ?? DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        var effectiveNonce = nonce ?? Guid.NewGuid().ToString("N");
+        var effectiveSecret = secret ?? "prepford-default-internal-gateway-secret-32-chars!";
+
+        var canonicalPayload = $"{effectiveTimestamp}\n{method.ToUpperInvariant()}\n{path}\n{effectiveNonce}\n{bodyHash}\n{userId.Trim()}\n{email.Trim().ToLowerInvariant()}\n{role.Trim().ToLowerInvariant()}";
+        var signature = Convert.ToHexString(
+            System.Security.Cryptography.HMACSHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(effectiveSecret),
+                System.Text.Encoding.UTF8.GetBytes(canonicalPayload))
+        ).ToLowerInvariant();
+
+        client.DefaultRequestHeaders.Remove("X-Gateway-Signature");
+        client.DefaultRequestHeaders.Remove("X-Gateway-Timestamp");
+        client.DefaultRequestHeaders.Remove("X-Gateway-Nonce");
+        client.DefaultRequestHeaders.Remove("X-Gateway-Content-SHA256");
+        client.DefaultRequestHeaders.Remove("X-Gateway-Signature-Version");
+        client.DefaultRequestHeaders.Remove("X-Authenticated-User-Id");
+        client.DefaultRequestHeaders.Remove("X-Authenticated-User-Email");
+        client.DefaultRequestHeaders.Remove("X-Authenticated-User-Role");
+
+        client.DefaultRequestHeaders.Add("X-Gateway-Signature", signature);
+        client.DefaultRequestHeaders.Add("X-Gateway-Timestamp", effectiveTimestamp.ToString());
+        client.DefaultRequestHeaders.Add("X-Gateway-Nonce", effectiveNonce);
+        client.DefaultRequestHeaders.Add("X-Gateway-Content-SHA256", bodyHash);
+        client.DefaultRequestHeaders.Add("X-Gateway-Signature-Version", "1");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", userId);
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", email);
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Role", role);
+    }
+
+    [Fact]
+    public async Task CanonicalV1Signature_ValidTimestampAndNonce_ReturnsSuccess200()
+    {
+        var client = _factory.CreateClient();
+        AddCanonicalHeaders(client, "GET", "/api/v1/profile/image", "user-gw-101", "gw-user@prepford.com", "candidate");
+
+        var response = await client.GetAsync("/api/v1/profile/image");
+        // Endpoint requires auth; 404 means auth succeeded and reached controller logic (no image found)
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CanonicalV1Signature_ExpiredTimestamp_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        var expiredTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds() - 120; // 2 minutes in past
+        AddCanonicalHeaders(client, "GET", "/api/v1/profile/image", "user-gw-102", "gw2@prepford.com", "candidate", timestamp: expiredTime);
+
+        var response = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CanonicalV1Signature_ReplayedNonce_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        var fixedNonce = "fixed-replay-nonce-abcdef0123456789";
+        var fixedTimestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        AddCanonicalHeaders(client, "GET", "/api/v1/profile/image", "user-gw-103", "gw3@prepford.com", "candidate",
+            timestamp: fixedTimestamp, nonce: fixedNonce);
+
+        // First attempt succeeds in auth (returns 404 because no image uploaded yet)
+        var firstResponse = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.NotFound, firstResponse.StatusCode);
+
+        // Replay attempt with exact same nonce and timestamp must be REJECTED
+        var replayResponse = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, replayResponse.StatusCode);
+    }
+
+    [Fact]
+    public async Task CanonicalV1Signature_AlteredHttpMethod_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        // Compute signature for GET, then dispatch request as DELETE
+        AddCanonicalHeaders(client, "GET", "/api/v1/profile/image", "user-gw-104", "gw4@prepford.com", "candidate");
+
+        var response = await client.DeleteAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CanonicalV1Signature_AlteredPath_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        // Compute signature for /api/v1/profile, but send to /api/v1/profile/image
+        AddCanonicalHeaders(client, "GET", "/api/v1/profile", "user-gw-105", "gw5@prepford.com", "candidate");
+
+        var response = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+}
+
+public class AuthoritativeSessionManagementTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+
+    public AuthoritativeSessionManagementTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureServices(services =>
+            {
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+                if (descriptor != null) services.Remove(descriptor);
+                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestingSessionDurabilityDb"));
+            });
+        });
+    }
+
+    [Fact]
+    public async Task Session_RevokeSession_InvalidatesSessionInDatabaseAndRejectsSubsequentCalls()
+    {
+        var client = _factory.CreateClient();
+
+        // 1. Seed a user and active session in database
+        string sessionId = "sess_durable_test_101";
+        string userId = "usr_durable_101";
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var sessionService = scope.ServiceProvider.GetRequiredService<ISessionService>();
+
+            var user = new User
+            {
+                Id = userId,
+                Email = "durable.candidate@prepford.com",
+                DisplayName = "Durable Candidate",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            db.Users.Add(user);
+
+            var session = new UserSession
+            {
+                Id = sessionId,
+                UserId = userId,
+                Email = user.Email,
+                Role = "candidate",
+                DisplayName = user.DisplayName,
+                TokenHash = "hash101",
+                CsrfToken = "csrf101",
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                LastActiveAt = DateTime.UtcNow,
+                Revoked = false
+            };
+            db.UserSessions.Add(session);
+            await db.SaveChangesAsync();
+        }
+
+        // 2. Validate session is initially valid via endpoint
+        var validateRes = await client.PostAsJsonAsync("/api/v1/auth/validate-session", new { SessionId = sessionId });
+        validateRes.EnsureSuccessStatusCode();
+        var validBody = await validateRes.Content.ReadFromJsonAsync<ValidateSessionResponse>();
+        Assert.True(validBody!.Valid);
+
+        // 3. Authenticate with gateway headers pointing to this session ID
+        GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
+            client, "POST", "/api/v1/auth/revoke-session", userId, "durable.candidate@prepford.com", "candidate");
+        client.DefaultRequestHeaders.Add("X-Session-Id", sessionId);
+
+        var revokeRes = await client.PostAsJsonAsync("/api/v1/auth/revoke-session", new { SessionId = sessionId });
+        revokeRes.EnsureSuccessStatusCode();
+
+        // 4. Assert session is revoked in database
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var revokedSession = await db.UserSessions.FindAsync(sessionId);
+            Assert.NotNull(revokedSession);
+            Assert.True(revokedSession.Revoked);
+        }
+
+        // 5. Subsequent validation rejects the revoked session
+        var recheckRes = await client.PostAsJsonAsync("/api/v1/auth/validate-session", new { SessionId = sessionId });
+        recheckRes.EnsureSuccessStatusCode();
+        var recheckBody = await recheckRes.Content.ReadFromJsonAsync<ValidateSessionResponse>();
+        Assert.False(recheckBody!.Valid);
+
+        // 6. Any subsequent request with this revoked session ID header is REJECTED (401)
+        var clientSubsequent = _factory.CreateClient();
+        GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
+            clientSubsequent, "GET", "/api/v1/profile/image", userId, "durable.candidate@prepford.com", "candidate");
+        clientSubsequent.DefaultRequestHeaders.Add("X-Session-Id", sessionId);
+
+        var rejectedRes = await clientSubsequent.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, rejectedRes.StatusCode);
+    }
+}
+
+public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+
+    public ExamAttemptsPersistenceTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Testing");
+            builder.ConfigureServices(services =>
+            {
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+                if (descriptor != null) services.Remove(descriptor);
+                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestingExamAttemptsDb"));
+            });
+        });
+    }
+
+    [Fact]
+    public async Task ExamAttempts_StartAttempt_PersistsInProgressAttempt()
+    {
+        var client = _factory.CreateClient();
+        var candidateId = "cand_attempt_001";
+        var candidateEmail = "attempt.cand@prepford.com";
+
+        GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
+            client, "POST", "/api/v1/attempts", candidateId, candidateEmail, "candidate");
+
+        var response = await client.PostAsJsonAsync("/api/v1/attempts", new StartAttemptRequest
+        {
+            Pathway = "rn",
+            Name = "NCLEX-RN Diagnostic Assessment"
+        });
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.True(body.GetProperty("success").GetBoolean());
+        var attemptId = body.GetProperty("attemptId").GetString();
+        Assert.NotNull(attemptId);
+
+        // Verify persisted in DB
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persisted = await db.ExamAttempts.FindAsync(attemptId);
+        Assert.NotNull(persisted);
+        Assert.Equal(candidateId, persisted.UserId);
+        Assert.Equal(AttemptStatus.InProgress, persisted.Status);
+    }
+
+    [Fact]
+    public async Task ExamAttempts_SyncAssessmentAttempt_PersistsClientCompletedAttempt()
+    {
+        var client = _factory.CreateClient();
+        var candidateId = "cand_sync_002";
+        var candidateEmail = "sync.cand@prepford.com";
+
+        GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
+            client, "POST", "/api/v1/attempts/sync", candidateId, candidateEmail, "candidate");
+
+        var syncRequest = new SyncAssessmentAttemptRequest
+        {
+            Id = "client_att_777",
+            Name = "Tutored CAT 1",
+            Type = "tutored_cat",
+            ScorePercent = 80.0m,
+            PerformanceTier = "Very High",
+            TotalQuestions = 2,
+            CorrectCount = 2,
+            DurationMinutes = 15,
+            Pathway = "rn",
+            Questions = new List<SyncAttemptQuestionItem>
+            {
+                new SyncAttemptQuestionItem
+                {
+                    Id = "q_sync_101",
+                    QuestionNumber = 1,
+                    Stem = "Patient exhibits signs of fluid volume overload. Priority action?",
+                    Domain = "Physiological Adaptation",
+                    QuestionType = "single_choice",
+                    UserAnswerIndex = 2,
+                    CorrectAnswerIndex = 2,
+                    IsCorrect = true,
+                    ScoreAwarded = 1.0m
+                },
+                new SyncAttemptQuestionItem
+                {
+                    Id = "q_sync_102",
+                    QuestionNumber = 2,
+                    Stem = "Which medications require dual nurse verification?",
+                    Domain = "Pharmacological Therapies",
+                    QuestionType = "multi_select",
+                    UserAnswerIndices = new List<int> { 0, 2 },
+                    CorrectAnswerIndices = new List<int> { 0, 2 },
+                    IsCorrect = true,
+                    ScoreAwarded = 1.0m
+                }
+            }
+        };
+
+        var response = await client.PostAsJsonAsync("/api/v1/attempts/sync", syncRequest);
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
+        Assert.True(body.GetProperty("success").GetBoolean());
+        Assert.Equal("client_att_777", body.GetProperty("attemptId").GetString());
+
+        // Verify persisted in PostgreSQL ExamAttempts and AttemptResponses
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var attempt = await db.ExamAttempts.Include(ea => ea.Responses).FirstOrDefaultAsync(ea => ea.Id == "client_att_777");
+        Assert.NotNull(attempt);
+        Assert.Equal(candidateId, attempt.UserId);
+        Assert.Equal(80.0m, attempt.ScorePercent);
+        Assert.True(attempt.Passed);
+        Assert.Equal(AttemptStatus.Completed, attempt.Status);
+        Assert.Equal(2, attempt.Responses.Count);
+    }
+
+    [Fact]
+    public async Task ExamAttempts_CandidateCannotViewAnotherCandidatesAttempt_ReturnsForbidden403()
+    {
+        var client = _factory.CreateClient();
+
+        // 1. Candidate Alice syncs an attempt
+        GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
+            client, "POST", "/api/v1/attempts/sync", "cand_alice_1", "alice@prepford.com", "candidate");
+
+        var syncRes = await client.PostAsJsonAsync("/api/v1/attempts/sync", new SyncAssessmentAttemptRequest
+        {
+            Id = "att_alice_private",
+            Name = "Alice Private CAT",
+            ScorePercent = 90.0m
+        });
+        syncRes.EnsureSuccessStatusCode();
+
+        // 2. Candidate Bob attempts to access Alice's attempt by ID
+        var clientBob = _factory.CreateClient();
+        GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
+            clientBob, "GET", "/api/v1/attempts/att_alice_private", "cand_bob_2", "bob@prepford.com", "candidate");
+
+        var bobGetRes = await clientBob.GetAsync("/api/v1/attempts/att_alice_private");
+        Assert.Equal(HttpStatusCode.Forbidden, bobGetRes.StatusCode);
     }
 }
