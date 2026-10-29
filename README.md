@@ -171,13 +171,16 @@ npm run typecheck
 # Code formatting and lint
 npm run lint
 
-# Frontend Vitest test suite (82 passing tests)
+# SQLite Zero-Runtime Architecture Guard
+npm run verify:no-sqlite
+
+# Frontend Vitest test suite (33 test files, 257 passing tests)
 npm run test:web
 
 # Backend .NET build
 npm run build:api
 
-# Backend test suite
+# Backend test suite (27 passing tests against PostgreSQL)
 npm run test:api
 
 # Production frontend build
