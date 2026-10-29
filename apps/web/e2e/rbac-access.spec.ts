@@ -58,16 +58,21 @@ test.describe("Role-Based Access Control (RBAC) Enforcement", () => {
     const student = generateTestStudent("rn");
     await registerStudentUI(page, student);
 
-    // Attempting to send { role: "admin", activePlan: "all-access" } via profile API
-    const res = await page.request.put("/api/profile", {
-      data: {
-        displayName: "Hacked Candidate",
-        role: "admin",
-        activePlan: "NCLEX-RN & PN All-Access",
-      },
+    // Attempting to send { role: "admin", activePlan: "all-access" } via browser authenticated fetch
+    const status = await page.evaluate(async () => {
+      const resp = await fetch("/api/profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          displayName: "Hacked Candidate",
+          role: "admin",
+          activePlan: "NCLEX-RN & PN All-Access",
+        }),
+      });
+      return resp.status;
     });
 
     // Server must reject with 403 Forbidden
-    expect(res.status()).toBe(403);
+    expect(status).toBe(403);
   });
 });

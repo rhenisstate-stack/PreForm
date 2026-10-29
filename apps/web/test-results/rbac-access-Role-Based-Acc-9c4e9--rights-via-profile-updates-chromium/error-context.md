@@ -72,7 +72,7 @@ Received: 401
         - generic [ref=e100]:
           - generic [ref=e101]: TS
           - generic [ref=e102]:
-            - paragraph [ref=e103]: Test Student 1793271972642_mw099
+            - paragraph [ref=e103]: Test Student 1793272045089_mn609
             - paragraph [ref=e104]: NCLEX-RN
       - generic [ref=e105]:
         - generic [ref=e106]:
@@ -90,17 +90,17 @@ Received: 401
             - button "Notifications" [ref=e121]
             - button "Change theme" [ref=e126]:
               - generic [ref=e129]: Toggle theme (system)
-            - link "TS Test Student 1793271972642_mw099" [ref=e130] [cursor=pointer]:
+            - link "TS Test Student 1793272045089_mn609" [ref=e130] [cursor=pointer]:
               - /url: /profile
               - generic [ref=e131]: TS
-              - generic [ref=e132]: Test Student 1793271972642_mw099
+              - generic [ref=e132]: Test Student 1793272045089_mn609
         - main [ref=e133]:
           - region [ref=e134]:
             - generic [ref=e136]:
               - generic [ref=e137]:
                 - generic [ref=e138]: Authenticated Learner Workspace
                 - generic [ref=e144]: NCLEX-RN Focus
-              - heading "Welcome back, Test Student 1793271972642_mw099." [level=1] [ref=e145]
+              - heading "Welcome back, Test Student 1793272045089_mn609." [level=1] [ref=e145]
               - paragraph [ref=e146]: Pick up where you left off in your NCLEX-RN preparation, review high-yield clinical study guides, or take a tutored Computer Adaptive Test.
               - generic [ref=e147]:
                 - link "Explore study materials" [ref=e148] [cursor=pointer]:
@@ -240,7 +240,7 @@ Received: 401
               - link "Contact Support" [ref=e338] [cursor=pointer]:
                 - /url: /contact
   - region "Notifications alt+T"
-  - alert [ref=e339]: Welcome back, Test Student 1793271972642_mw099.
+  - alert [ref=e339]: Welcome back, Test Student 1793272045089_mn609.
 ```
 
 # Test source
@@ -306,19 +306,24 @@ Received: 401
   58 |     const student = generateTestStudent("rn");
   59 |     await registerStudentUI(page, student);
   60 | 
-  61 |     // Attempting to send { role: "admin", activePlan: "all-access" } via profile API
-  62 |     const res = await page.request.put("/api/profile", {
-  63 |       data: {
-  64 |         displayName: "Hacked Candidate",
-  65 |         role: "admin",
-  66 |         activePlan: "NCLEX-RN & PN All-Access",
-  67 |       },
-  68 |     });
-  69 | 
-  70 |     // Server must reject with 403 Forbidden
-> 71 |     expect(res.status()).toBe(403);
-     |                          ^ Error: expect(received).toBe(expected) // Object.is equality
-  72 |   });
-  73 | });
+  61 |     // Attempting to send { role: "admin", activePlan: "all-access" } via browser authenticated fetch
+  62 |     const status = await page.evaluate(async () => {
+  63 |       const resp = await fetch("/api/profile", {
+  64 |         method: "PUT",
+  65 |         headers: { "Content-Type": "application/json" },
+  66 |         body: JSON.stringify({
+  67 |           displayName: "Hacked Candidate",
+  68 |           role: "admin",
+  69 |           activePlan: "NCLEX-RN & PN All-Access",
+  70 |         }),
+  71 |       });
+  72 |       return resp.status;
+  73 |     });
   74 | 
+  75 |     // Server must reject with 403 Forbidden
+> 76 |     expect(status).toBe(403);
+     |                    ^ Error: expect(received).toBe(expected) // Object.is equality
+  77 |   });
+  78 | });
+  79 | 
 ```
