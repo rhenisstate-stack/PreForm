@@ -115,9 +115,9 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
 
       expect(res.success).toBe(true);
       expect(interceptedEndpoint).toBe("/api/v1/auth/register");
-      expect(interceptedBody.email).toBe("new.candidate@prepford.com");
-      expect(interceptedBody.displayName).toBe("New Candidate");
-      expect(interceptedBody.pathway).toBe("rn");
+      expect((interceptedBody as any)?.email).toBe("new.candidate@prepford.com");
+      expect((interceptedBody as any)?.displayName).toBe("New Candidate");
+      expect((interceptedBody as any)?.pathway).toBe("rn");
     });
 
     it("authService.login dispatches to POST /api/v1/auth/login", async () => {
@@ -251,10 +251,10 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
 
       expect(res.success).toBe(true);
       expect(interceptedEndpoint).toBe("/api/v1/profile");
-      expect(interceptedBody.displayName).toBe("Sarah Nurse, MSN, RN");
-      expect(interceptedBody.targetExamDate).toBe("2027-01-15");
-      expect(interceptedBody.emailNotifications).toBe(false);
-      expect(interceptedBody.studyReminders).toBe(false);
+      expect((interceptedBody as any)?.displayName).toBe("Sarah Nurse, MSN, RN");
+      expect((interceptedBody as any)?.targetExamDate).toBe("2027-01-15");
+      expect((interceptedBody as any)?.emailNotifications).toBe(false);
+      expect((interceptedBody as any)?.studyReminders).toBe(false);
     });
   });
 
@@ -379,8 +379,8 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
 
       expect(res.success).toBe(true);
       expect(interceptedEndpoint).toBe("/api/v1/checkout");
-      expect(interceptedBody.planId).toBe("rn-pro");
-      expect(interceptedBody.pathway).toBe("rn");
+      expect((interceptedBody as any)?.planId).toBe("rn-pro");
+      expect((interceptedBody as any)?.pathway).toBe("rn");
     });
 
     it("returns fail-closed 503 error when backend API is unreachable", async () => {

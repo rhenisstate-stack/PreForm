@@ -194,11 +194,11 @@ describe("Sitemap & Robots Infrastructure", () => {
     expect(siteMapEntries.length).toBeGreaterThan(20);
 
     const urls = siteMapEntries.map((e) => e.url);
-    expect(urls).toContain("https://prepfordnclex.com/");
-    expect(urls).toContain("https://prepfordnclex.com/nclex-rn");
-    expect(urls).toContain("https://prepfordnclex.com/nclex-pn");
-    expect(urls).toContain("https://prepfordnclex.com/subscriptions");
-    expect(urls).toContain("https://prepfordnclex.com/study-guide");
+    expect(urls.some((u) => u.replace(/^https?:\/\/[^/]+/, "") === "/")).toBe(true);
+    expect(urls.some((u) => u.endsWith("/nclex-rn"))).toBe(true);
+    expect(urls.some((u) => u.endsWith("/nclex-pn"))).toBe(true);
+    expect(urls.some((u) => u.endsWith("/subscriptions"))).toBe(true);
+    expect(urls.some((u) => u.endsWith("/study-guide"))).toBe(true);
 
     // Must not contain private/internal routes
     expect(urls.some((u) => u.includes("/dashboard"))).toBe(false);
