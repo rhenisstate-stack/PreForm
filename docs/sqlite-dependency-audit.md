@@ -1,8 +1,8 @@
 # PrepFord Phase 1 — Comprehensive SQLite Dependency and Backend Readiness Audit
 
-**Document Version:** 1.0  
+**Document Version:** 1.1  
 **Audit Date:** 2026-10-29  
-**Auditor:** Full-Stack & Application Security Engineer  
+**Auditor:** Senior Full-Stack, Application Security & Database Architect  
 **Repository:** `C:\Users\gitau\Documents\PREform`  
 **Branch:** `feature/dotnet-backend-migration`  
 **Audited Baseline Commit:** `a4c8c24c35233df5e0581b759804f3d2f0cfa358`  
@@ -26,7 +26,7 @@ While `apps/api` contains an Entity Framework Core schema (`AppDbContext.cs`) an
 5. **Security Vulnerability in ProfileImageController:** `apps/api/Controllers/ProfileImageController.cs` relies on unverified headers (`X-Authenticated-User-Id`, `X-Authenticated-User-Email`) without HMAC signatures or shared-secret validation, which would allow arbitrary identity spoofing if exposed.
 6. **In-Memory Backend Tests Only:** All 15 unit/integration tests in `apps/api/Tests/AppTests.cs` run exclusively against `Microsoft.EntityFrameworkCore.InMemory`. Zero tests run against PostgreSQL.
 
-SQLite must remain in place as a functioning persistence layer until the ASP.NET Core backend is augmented, secured, and wired into the Next.js BFF according to the remediation backlog in Section 11.
+SQLite must remain in place as a functioning persistence layer until the ASP.NET Core backend is augmented, secured, and wired into the Next.js BFF according to the remediation backlog in Section 12.
 
 ---
 
@@ -50,7 +50,7 @@ SQLite must remain in place as a functioning persistence layer until the ASP.NET
   Changes not staged for commit:
       modified: apps/web/.data/prepford.sqlite-wal
   ```
-  *(Note: `apps/web/.data/prepford.sqlite-wal` was modified by read/write locks during unit test runs).*
+  *(Note: `apps/web/.data/prepford.sqlite-wal` was modified by read/write locks during unit test runs; no source code or configuration files were modified during this audit).*
 
 ### 2.2 Prior Documentation Claims vs Actual Repository Code
 
@@ -300,9 +300,53 @@ Three migrations exist in `apps/api/Migrations`:
 
 ---
 
-## 9. Data Migration Inventory and Risks
+## 9. Architectural and Operational Risk Assessment
 
-### 9.1 Existing Local SQLite Datastore
+This section addresses the 8 specific operational questions and delivers a prioritized Risk Register:
+
+### 9.1 Operational Risk Evaluations
+1. **Conflicting Runtimes:**
+   *Can multiple runtimes write conflicting versions of the same entity?*
+   **Currently No, but imminent risk upon partial migration.** Currently, `apps/web` writes only to SQLite, while `apps/api` writes to PostgreSQL. If an external client or migration begins updating PostgreSQL while Next.js continues writing to SQLite, identity and subscription records will diverge irrecoverably.
+2. **Resilience to API Downtime:**
+   *Does the frontend remain functional when the .NET API is unavailable?*
+   **Yes, completely.** Because `apps/web` does not yet call `apps/api`, Next.js operates without any dependency on whether `apps/api` is running, degraded, or stopped.
+3. **SQLite Startup Auto-Creation:**
+   *Is SQLite recreated automatically at startup?*
+   **Yes.** In both `profile-image-db.ts` (lines 147-151) and `subscription-store.ts` (lines 43-47), `fs.mkdirSync(".data", { recursive: true })` and `CREATE TABLE IF NOT EXISTS` execute synchronously on first database access. In addition, subscription plans are automatically re-seeded if empty.
+4. **Hosting Volumes in Deployment:**
+   *Do deployment instructions still require a SQLite volume?*
+   **Yes.** For single-container staging deployments, `PREPFORD_SQLITE_PATH` must point to a persistent container volume (e.g. `/var/data/prepford.sqlite`) to prevent data wipeout on container redeploy.
+5. **PostgreSQL Operational Documentation:**
+   *Are PostgreSQL migrations, backups, restores, and test databases documented?*
+   **Partially.** Migration update scripts (`dotnet ef database update`) are documented in `README.md` and root `package.json`, but automated backup/point-in-time recovery (PITR) procedures and dedicated CI test databases are not yet formalized.
+6. **Multi-Instance Inconsistency:**
+   *Would multiple frontend instances create inconsistent local state?*
+   **Yes, severe risk with SQLite.** If `apps/web` is scaled to multiple container instances behind a load balancer with local disk storage, each instance maintains a separate SQLite file, leading to split-brain user sessions, out-of-sync profile images, and broken revocation.
+7. **Cross-Origin & Header Forwarding:**
+   *Do API calls require authentication forwarding or cross-origin configuration?*
+   **Yes.** ASP.NET Core has a CORS policy (`AllowFrontend` for `http://localhost:3000`), but does not have a secure mutual authentication mechanism to validate requests forwarded from the Next.js BFF.
+8. **Test & Onboarding Breakage on SQLite Removal:**
+   *Would removing SQLite break tests, seed scripts, or developer onboarding?*
+   **Yes, catastrophic failure.** 29 test suites rely on SQLite or in-memory SQLite fixtures (`:memory:`). Removing SQLite today causes 5 core test suites (43 tests) and all auth/profile flows to fail immediately.
+
+### 9.2 Prioritized Risk Register
+
+| Risk ID | Severity | Category | Risk Description & Evidence | Affected Components | Likely Impact | Recommended Remediation |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **R-01** | **CRITICAL** | Security | Identity spoofing via trusted headers on .NET API (`X-Authenticated-User-Id`). | `apps/api/Controllers/ProfileImageController.cs#L19-L29` | Attacker can access or delete any candidate's profile image if port 5000 is exposed. | Implement shared HMAC gateway token or validate verified JWT in `ProfileImageController`. |
+| **R-02** | **CRITICAL** | Availability | Removing SQLite immediately crashes candidate journeys and tests. | `apps/web/src/lib/session.ts`, `profile-image-db.ts`, `tests/` | Total application failure; 43 unit tests fail; login and checkout unavailable. | Retain SQLite until ASP.NET Core auth and BFF proxy are fully implemented. |
+| **R-03** | **HIGH** | Data Integrity| Price unit mismatch between SQLite (dollars) and PostgreSQL (cents). | `apps/api/Models/Subscriptions.cs#L35`, `subscription-store.ts#L75` | 100x pricing discrepancy if raw numbers are migrated directly without $\times 100$ factor. | Harmonize EF Core model to explicitly store `PriceCents` and validate converter. |
+| **R-04** | **HIGH** | Architecture | Unimplemented `API_GATEWAY_URL` causes silent fallback to local SQLite. | `apps/web/src/app/api/*`, `docs/data-ownership-architecture.md` | Dual-store drift; PostgreSQL remains empty while production writes to container disk. | Author Next.js BFF HTTP client (`src/lib/api-client.ts`) with strict production gating. |
+| **R-05** | **HIGH** | Security | Missing authentication scheme in `apps/api/Program.cs`. | `apps/api/Program.cs#L72` | `[Authorize]` attributes in ASP.NET Core do not function; API endpoints unprotected. | Configure `AddAuthentication().AddJwtBearer()` or cookie scheme in `Program.cs`. |
+| **R-06** | **MEDIUM** | Scalability | SQLite multi-instance split-brain under load balancing. | `apps/web/.data/prepford.sqlite` | Learners logged out or unable to find updated profile images across different pods. | Complete PostgreSQL migration prior to multi-replica scaling. |
+| **R-07** | **MEDIUM** | Quality | In-memory EF Core testing masks PostgreSQL-specific constraints. | `apps/api/Tests/AppTests.cs#L29-L371` | Production migration failures on `bytea` or foreign key constraints not caught in CI. | Introduce Testcontainers or dedicated PostgreSQL integration test suite. |
+
+---
+
+## 10. Data Migration Inventory and Risks
+
+### 10.1 Existing Local SQLite Datastore
 - **Location:** `apps/web/.data/prepford.sqlite`
 - **File Size:** 147,456 bytes
 - **Current Row Counts:**
@@ -311,7 +355,7 @@ Three migrations exist in `apps/api/Migrations`:
   - `subscription_plans`: 23 rows (standard catalogue plus test variations)
   - `user_sessions`: 12 rows (active and revoked sessions)
 
-### 9.2 Migration Risk Analysis
+### 10.2 Migration Risk Analysis
 1. **Conflicting Identifiers:**
    SQLite `subscription_plans` uses slug-based IDs (e.g. `nclex-rn-pro`), whereas PostgreSQL expects GUID string IDs (`Guid.NewGuid().ToString()`). Migration must normalize `Code = slug` and generate consistent GUIDs.
 2. **Password Hashes:**
@@ -323,9 +367,9 @@ Three migrations exist in `apps/api/Migrations`:
 
 ---
 
-## 10. Missing Endpoints, Services, Constraints, and Tests
+## 11. Missing Endpoints, Services, Constraints, and Tests
 
-### 10.1 Missing ASP.NET Core Controllers & Endpoints
+### 11.1 Missing ASP.NET Core Controllers & Endpoints
 - **Authentication & Sessions:**
   - `POST /api/v1/auth/register` (Missing)
   - `POST /api/v1/auth/login` (Missing)
@@ -348,17 +392,17 @@ Three migrations exist in `apps/api/Migrations`:
   - `POST /api/v1/exams/attempts` (Missing)
   - `GET /api/v1/exams/attempts/{id}` (Missing)
 
-### 10.2 Missing Frontend Integration Infrastructure
+### 11.2 Missing Frontend Integration Infrastructure
 - **Gateway Client:** No HTTP client utility in Next.js configured with base URL, timeout, retry policy, and authorization forwarding.
 - **Mutual Gateway Authentication:** No shared secret header (e.g. `X-Gateway-Secret`) or JWT forwarding between Next.js BFF and ASP.NET Core.
 
-### 10.3 Testing Gaps
+### 11.3 Testing Gaps
 - `apps/api/Tests` contains **0 tests executed against PostgreSQL**. All 15 tests use `UseInMemoryDatabase()`, which ignores PostgreSQL-specific constraints, triggers, and data types (such as `bytea`).
 - No end-to-end integration test exists that traverses from a Next.js route handler to ASP.NET Core and asserts on a PostgreSQL database.
 
 ---
 
-## 11. Prioritized Remediation Backlog (Phases 2–6)
+## 12. Prioritized Remediation Backlog (Phases 2–6)
 
 ```mermaid
 flowchart LR
@@ -399,7 +443,7 @@ flowchart LR
 
 ---
 
-## 12. Explicit Go/No-Go Criteria for Removing SQLite
+## 13. Explicit Go/No-Go Criteria for Removing SQLite
 
 The removal of SQLite from `apps/web` must **NOT** occur until all of the following criteria are demonstrably met:
 
