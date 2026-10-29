@@ -3,7 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bell, ShoppingCart, ArrowRight, User, BookOpen, CreditCard, LogOut } from "lucide-react";
+import { Bell, ShoppingCart, ArrowRight, UserRound, BookOpen, CreditCard, LogOut, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -171,34 +171,42 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/profile" className="flex items-center gap-2 cursor-pointer">
-            <User className="h-4 w-4" />
+            <UserRound className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
             <span>My Profile</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/courses" className="flex items-center gap-2 cursor-pointer">
-            <BookOpen className="h-4 w-4" />
+            <BookOpen className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
             <span>My Courses</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/subscriptions" className="flex items-center gap-2 cursor-pointer">
-            <CreditCard className="h-4 w-4" />
+            <CreditCard className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
             <span>My Subscriptions</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/cart" className="flex items-center gap-2 cursor-pointer">
-            <ShoppingCart className="h-4 w-4" />
+            <ShoppingCart className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
             <span>Shopping Cart</span>
           </Link>
         </DropdownMenuItem>
+        {user.role === "admin" && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin" className="flex items-center gap-2 cursor-pointer">
+              <ShieldCheck className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
+              <span>Admin Workspace</span>
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={handleLogout}
           className="flex items-center gap-2 cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
         >
-          <LogOut className="h-4 w-4" />
+          <LogOut className="h-4 w-4 text-destructive shrink-0" aria-hidden="true" />
           <span>Sign out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

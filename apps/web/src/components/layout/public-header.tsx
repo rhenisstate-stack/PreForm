@@ -7,17 +7,28 @@ import {
   Menu,
   X,
   ChevronDown,
-  User,
+  UserRound,
   ShoppingCart,
   BookOpen,
   CreditCard,
   LogOut,
-  Quote,
   Newspaper,
   GraduationCap,
   Mail,
   Layers,
   HelpCircle,
+  Stethoscope,
+  Library,
+  HeartPulse,
+  Brain,
+  ShieldCheck,
+  FileCheck,
+  ClipboardCheck,
+  ChartNoAxesCombined,
+  Info,
+  LogIn,
+  UserRoundPlus,
+  MessageCircle,
 } from "lucide-react";
 import {
   NavigationMenu,
@@ -42,13 +53,14 @@ type NavLink = {
   href: string;
   description?: string;
   badge?: string;
-  icon?: React.ComponentType<{ className?: string }>;
+  icon?: React.ComponentType<{ className?: string; "aria-hidden"?: string | boolean }>;
 };
 
 type DesktopNavItem = {
   id: string;
   label: string;
   href?: string;
+  icon?: React.ComponentType<{ className?: string; "aria-hidden"?: string | boolean }>;
   activePrefixes: string[];
   items?: NavLink[];
 };
@@ -57,6 +69,7 @@ const desktopNav: DesktopNavItem[] = [
   {
     id: "nursing",
     label: "Nursing",
+    icon: GraduationCap,
     activePrefixes: ["/nclex-rn", "/nclex-pn"],
     items: [
       {
@@ -64,17 +77,20 @@ const desktopNav: DesktopNavItem[] = [
         href: "/nclex-rn",
         badge: "RN Pathway",
         description: "Registered Nurse exam preparation, NGN case studies, and adaptive practice.",
+        icon: GraduationCap,
       },
       {
         label: "NCLEX-PN",
         href: "/nclex-pn",
         badge: "PN Pathway",
         description: "Practical & Vocational Nurse exam preparation, rationales, and study tools.",
+        icon: Stethoscope,
       },
       {
         label: "All Nursing Courses",
         href: "/courses",
         description: "Browse RN and PN question banks, readiness assessments, and study modules.",
+        icon: BookOpen,
       },
     ],
   },
@@ -82,40 +98,43 @@ const desktopNav: DesktopNavItem[] = [
     id: "study-guide",
     label: "Study Guide",
     href: "/study-guide",
+    icon: Library,
     activePrefixes: ["/study-guide"],
     items: [
-      { label: "All Study Guides", href: "/study-guide" },
-      { label: "Medical-Surgical Nursing", href: "/study-guide/medical-surgical" },
-      { label: "Pharmacology & Medication Safety", href: "/study-guide/pharmacology" },
-      { label: "Maternal & Newborn Nursing", href: "/study-guide/maternal-newborn" },
-      { label: "Pediatric Nursing", href: "/study-guide/pediatrics" },
-      { label: "Mental Health Nursing", href: "/study-guide/mental-health" },
-      { label: "Fundamentals of Nursing", href: "/study-guide/fundamentals" },
-      { label: "Leadership & Delegation", href: "/study-guide/leadership-delegation" },
+      { label: "All Study Guides", href: "/study-guide", icon: Library },
+      { label: "Medical-Surgical Nursing", href: "/study-guide/medical-surgical", icon: HeartPulse },
+      { label: "Pharmacology & Medication Safety", href: "/study-guide/pharmacology", icon: FileCheck },
+      { label: "Maternal & Newborn Nursing", href: "/study-guide/maternal-newborn", icon: HeartPulse },
+      { label: "Pediatric Nursing", href: "/study-guide/pediatrics", icon: UserRound },
+      { label: "Mental Health Nursing", href: "/study-guide/mental-health", icon: Brain },
+      { label: "Fundamentals of Nursing", href: "/study-guide/fundamentals", icon: BookOpen },
+      { label: "Leadership & Delegation", href: "/study-guide/leadership-delegation", icon: ShieldCheck },
     ],
   },
   {
     id: "products",
     label: "Products & Pricing",
     href: "/subscriptions",
+    icon: CreditCard,
     activePrefixes: ["/subscriptions", "/courses"],
     items: [
-      { label: "Compare Subscription Plans", href: "/subscriptions" },
-      { label: "All Courses & Question Banks", href: "/courses" },
-      { label: "Free Sample Questions", href: "/courses?type=practice" },
-      { label: "Platform Features", href: "/features" },
+      { label: "Compare Subscription Plans", href: "/subscriptions", icon: CreditCard },
+      { label: "All Courses & Question Banks", href: "/courses", icon: BookOpen },
+      { label: "Free Sample Questions", href: "/courses?type=practice", icon: ClipboardCheck },
+      { label: "Platform Features", href: "/features", icon: ChartNoAxesCombined },
     ],
   },
   {
     id: "more",
     label: "More",
+    icon: Layers,
     activePrefixes: ["/testimonials", "/blog", "/about", "/contact"],
     items: [
       {
         label: "Testimonials",
         href: "/testimonials",
         description: "Student experiences, feedback, and success stories.",
-        icon: Quote,
+        icon: MessageCircle,
       },
       {
         label: "Blog",
@@ -133,7 +152,7 @@ const desktopNav: DesktopNavItem[] = [
         label: "About PrepFord",
         href: "/about",
         description: "Our nurse educator team, clinical pedagogy, and platform mission.",
-        icon: GraduationCap,
+        icon: Info,
       },
       {
         label: "Contact",
@@ -150,22 +169,24 @@ const mobileNursingLinks: NavLink[] = [
     label: "NCLEX-RN",
     href: "/nclex-rn",
     description: "Registered Nurse Exam Preparation",
+    icon: GraduationCap,
   },
   {
     label: "NCLEX-PN",
     href: "/nclex-pn",
     description: "Practical / Vocational Nurse Preparation",
+    icon: Stethoscope,
   },
 ];
 
 const mobileNavLinks: NavLink[] = [
-  { label: "Study Guide & Notes", href: "/study-guide", icon: BookOpen },
+  { label: "Study Guide & Notes", href: "/study-guide", icon: Library },
   { label: "Products & Pricing", href: "/subscriptions", icon: CreditCard },
-  { label: "All Courses", href: "/courses", icon: Layers },
-  { label: "Testimonials", href: "/testimonials", icon: Quote },
+  { label: "All Courses", href: "/courses", icon: BookOpen },
+  { label: "Testimonials", href: "/testimonials", icon: MessageCircle },
   { label: "Blog", href: "/blog", icon: Newspaper },
-  { label: "Platform Features", href: "/features", icon: Layers },
-  { label: "About PrepFord", href: "/about", icon: GraduationCap },
+  { label: "Platform Features", href: "/features", icon: ChartNoAxesCombined },
+  { label: "About PrepFord", href: "/about", icon: Info },
   { label: "FAQ", href: "/faq", icon: HelpCircle },
   { label: "Contact Us", href: "/contact", icon: Mail },
 ];
@@ -267,6 +288,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
             <NavigationMenuList>
               {desktopNav.map((item) => {
                 const active = isItemActive(item.activePrefixes);
+                const ItemIcon = item.icon;
 
                 if (!item.items || item.items.length === 0) {
                   return (
@@ -276,11 +298,12 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                           href={item.href ?? "/"}
                           onClick={closeDesktopMenu}
                           data-active={active ? "true" : undefined}
-                          className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors hover:text-secondary hover:bg-muted/60 focus:bg-muted/60 ${
+                          className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors hover:text-secondary hover:bg-muted/60 focus:bg-muted/60 ${
                             active ? "text-secondary font-semibold bg-secondary/10" : "text-foreground"
                           }`}
                         >
-                          {item.label}
+                          {ItemIcon && <ItemIcon className="h-4 w-4 shrink-0 text-secondary" aria-hidden="true" />}
+                          <span>{item.label}</span>
                         </Link>
                       </NavigationMenuLink>
                     </NavigationMenuItem>
@@ -296,11 +319,12 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                             href={item.href}
                             onClick={closeDesktopMenu}
                             data-active={active ? "true" : undefined}
-                            className={`px-3 py-2 rounded-l-lg text-sm font-medium transition-colors hover:text-secondary hover:bg-transparent focus:bg-transparent ${
+                            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-l-lg text-sm font-medium transition-colors hover:text-secondary hover:bg-transparent focus:bg-transparent ${
                               active ? "text-secondary font-semibold" : "text-foreground"
                             }`}
                           >
-                            {item.label}
+                            {ItemIcon && <ItemIcon className="h-4 w-4 shrink-0 text-secondary" aria-hidden="true" />}
+                            <span>{item.label}</span>
                           </Link>
                         </NavigationMenuLink>
                         <NavigationMenuTrigger
@@ -319,6 +343,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                           active ? "text-secondary font-semibold bg-secondary/10" : ""
                         }`}
                       >
+                        {ItemIcon && <ItemIcon className="h-4 w-4 shrink-0 text-secondary" aria-hidden="true" />}
                         <span>{item.label}</span>
                         <ChevronDown className="h-3.5 w-3.5 opacity-70 transition-transform group-data-[state=open]:rotate-180" />
                       </NavigationMenuTrigger>
@@ -329,12 +354,13 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                           ? "w-80 min-w-[20rem] p-2.5"
                           : item.id === "more"
                           ? "w-80 min-w-[20rem] p-2.5 right-0 left-auto"
-                          : "w-64 min-w-[16rem] p-2"
+                          : "w-72 min-w-[18rem] p-2"
                       }
                     >
                       <div className="space-y-1">
                         {item.items.map((subItem) => {
                           const subActive = pathname === subItem.href;
+                          const SubIcon = subItem.icon;
                           return (
                             <NavigationMenuLink key={`${item.id}-${subItem.href}`} asChild>
                               <Link
@@ -348,8 +374,8 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                                 }`}
                               >
                                 <div className="flex items-start gap-3">
-                                  {subItem.icon && (
-                                    <subItem.icon className="h-4 w-4 shrink-0 text-secondary mt-0.5" aria-hidden="true" />
+                                  {SubIcon && (
+                                    <SubIcon className="h-4 w-4 shrink-0 text-secondary mt-0.5" aria-hidden="true" />
                                   )}
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center justify-between gap-2">
@@ -398,15 +424,17 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
             <div className="hidden lg:flex items-center gap-2">
               <Link
                 href="/sign-in"
-                className="px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
               >
-                Sign in
+                <LogIn className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
+                <span>Sign in</span>
               </Link>
               <Link
                 href="/sign-up"
-                className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-sm"
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring shadow-sm"
               >
-                Create account
+                <UserRoundPlus className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>Create account</span>
               </Link>
             </div>
           )}
@@ -435,6 +463,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
             <div className="space-y-1">
               {mobileNursingLinks.map((item) => {
                 const isActive = pathname === item.href;
+                const Icon = item.icon;
                 return (
                   <Link
                     key={item.href}
@@ -446,12 +475,17 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                         : "bg-muted/40 text-foreground hover:bg-muted"
                     }`}
                   >
-                    <span className="block font-semibold">{item.label}</span>
-                    {item.description && (
-                      <span className="block text-xs text-muted-foreground mt-0.5">
-                        {item.description}
-                      </span>
-                    )}
+                    <div className="flex items-start gap-2.5">
+                      {Icon && <Icon className="h-4 w-4 text-secondary shrink-0 mt-0.5" aria-hidden="true" />}
+                      <div className="flex-1 min-w-0">
+                        <span className="block font-semibold">{item.label}</span>
+                        {item.description && (
+                          <span className="block text-xs text-muted-foreground mt-0.5">
+                            {item.description}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </Link>
                 );
               })}
@@ -461,6 +495,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
           <div className="space-y-1">
             {mobileNavLinks.map((item) => {
               const isActive = pathname === item.href;
+              const Icon = item.icon;
               return (
                 <Link
                   key={item.href}
@@ -473,7 +508,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    {item.icon && <item.icon className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />}
+                    {Icon && <Icon className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />}
                     <span>{item.label}</span>
                   </div>
                 </Link>
@@ -496,7 +531,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                     onClick={closeMobileMenu}
                     className="flex items-center justify-center gap-1.5 rounded-xl bg-muted/60 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                   >
-                    <User className="h-4 w-4" />
+                    <UserRound className="h-4 w-4 text-secondary" aria-hidden="true" />
                     <span>My Profile</span>
                   </Link>
                   <Link
@@ -504,7 +539,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                     onClick={closeMobileMenu}
                     className="flex items-center justify-center gap-1.5 rounded-xl bg-muted/60 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                   >
-                    <ShoppingCart className="h-4 w-4" />
+                    <ShoppingCart className="h-4 w-4 text-secondary" aria-hidden="true" />
                     <span>Cart {cartItemCount > 0 ? `(${cartItemCount})` : ""}</span>
                   </Link>
                   <Link
@@ -512,7 +547,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                     onClick={closeMobileMenu}
                     className="flex items-center justify-center gap-1.5 rounded-xl bg-muted/60 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                   >
-                    <BookOpen className="h-4 w-4" />
+                    <BookOpen className="h-4 w-4 text-secondary" aria-hidden="true" />
                     <span>My Courses</span>
                   </Link>
                   <Link
@@ -520,7 +555,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                     onClick={closeMobileMenu}
                     className="flex items-center justify-center gap-1.5 rounded-xl bg-muted/60 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                   >
-                    <CreditCard className="h-4 w-4" />
+                    <CreditCard className="h-4 w-4 text-secondary" aria-hidden="true" />
                     <span>Subscriptions</span>
                   </Link>
                 </div>
@@ -529,7 +564,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                   onClick={handleMobileLogout}
                   className="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
                 >
-                  <LogOut className="h-4 w-4" />
+                  <LogOut className="h-4 w-4" aria-hidden="true" />
                   <span>Sign out</span>
                 </button>
               </div>
@@ -538,16 +573,18 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                 <Link
                   href="/sign-in"
                   onClick={closeMobileMenu}
-                  className="flex w-full items-center justify-center rounded-xl bg-muted/70 px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-muted/70 px-4 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
                 >
-                  Sign in
+                  <LogIn className="h-4 w-4 text-secondary" aria-hidden="true" />
+                  <span>Sign in</span>
                 </Link>
                 <Link
                   href="/sign-up"
                   onClick={closeMobileMenu}
-                  className="flex w-full items-center justify-center rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
                 >
-                  Create account
+                  <UserRoundPlus className="h-4 w-4" aria-hidden="true" />
+                  <span>Create account</span>
                 </Link>
               </div>
             )}
