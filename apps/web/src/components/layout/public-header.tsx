@@ -29,6 +29,7 @@ import {
   LogIn,
   UserRoundPlus,
   MessageCircle,
+  type LucideIcon,
 } from "lucide-react";
 import {
   NavigationMenu,
@@ -53,14 +54,14 @@ type NavLink = {
   href: string;
   description?: string;
   badge?: string;
-  icon?: React.ComponentType<{ className?: string; "aria-hidden"?: string | boolean }>;
+  icon?: LucideIcon;
 };
 
 type DesktopNavItem = {
   id: string;
   label: string;
   href?: string;
-  icon?: React.ComponentType<{ className?: string; "aria-hidden"?: string | boolean }>;
+  icon?: LucideIcon;
   activePrefixes: string[];
   items?: NavLink[];
 };
