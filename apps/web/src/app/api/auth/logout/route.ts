@@ -1,8 +1,14 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { resolveSession, revokeSession } from "@/lib/session";
 
-export async function POST() {
+export async function POST(request?: Request) {
   try {
+    const session = await resolveSession(request);
+    if (session && session.sessionId) {
+      revokeSession(session.sessionId);
+    }
+
     const cookieStore = await cookies();
     cookieStore.set("preform_session", "", {
       httpOnly: true,

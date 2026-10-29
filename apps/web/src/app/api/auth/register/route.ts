@@ -5,6 +5,7 @@ import {
   deriveCandidateIdFromEmail,
   upsertUserProfileMeta,
 } from "@/lib/profile-image-db";
+import { createServerSession } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,37 +33,32 @@ export async function POST(request: NextRequest) {
       pathway,
     });
 
-    const sessionPayload = {
-      sub: savedRecord.userId,
+    const serverSession = createServerSession({
+      userId,
       email,
-      name: savedRecord.displayName,
-      displayName: savedRecord.displayName,
       role: "candidate",
-      pathway: savedRecord.pathway,
-      picture: savedRecord.pictureUrl,
-      provider: "credentials",
-      createdAt: new Date().toISOString(),
-    };
+      displayName: fullName,
+    });
 
     const cookieStore = await cookies();
-    cookieStore.set("preform_session", JSON.stringify(sessionPayload), {
+    cookieStore.set("preform_session", serverSession.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: serverSession.maxAgeSeconds,
     });
 
     return NextResponse.json({
       success: true,
       user: {
-        id: sessionPayload.sub,
-        email: sessionPayload.email,
-        name: sessionPayload.displayName,
-        displayName: sessionPayload.displayName,
-        role: sessionPayload.role,
-        pathway: sessionPayload.pathway,
-        picture: sessionPayload.picture,
+        id: serverSession.session.userId,
+        email: serverSession.session.email,
+        name: savedRecord.displayName,
+        displayName: savedRecord.displayName,
+        role: serverSession.session.role,
+        pathway: savedRecord.pathway,
+        picture: savedRecord.pictureUrl,
       },
     });
   } catch (err) {
