@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { subscriptionService } from "@/lib/api-services";
 import { getAllSubscriptionPlans } from "@/lib/subscription-store";
 import { SubscriptionsPageClient } from "./page-client";
 
@@ -17,12 +18,21 @@ export const metadata: Metadata = {
   },
 };
 
-export default function SubscriptionsPage() {
+export default async function SubscriptionsPage() {
   let initialPlans;
   try {
-    initialPlans = getAllSubscriptionPlans(false);
+    const apiRes = await subscriptionService.getActivePlans();
+    if (apiRes.success && apiRes.data?.plans) {
+      initialPlans = apiRes.data.plans;
+    } else {
+      initialPlans = getAllSubscriptionPlans(false);
+    }
   } catch {
-    initialPlans = undefined;
+    try {
+      initialPlans = getAllSubscriptionPlans(false);
+    } catch {
+      initialPlans = undefined;
+    }
   }
 
   return <SubscriptionsPageClient initialPlans={initialPlans} />;

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { checkoutService, subscriptionService } from "@/lib/api-services";
 import {
   createAuthoritativeCheckoutSession,
   isSandboxCheckoutPermitted,
@@ -39,8 +40,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // ── Authoritative Plan Lookup from Database ──
-    const product = getSubscriptionPlanByIdOrSlug(planId);
+    // ── 1. Authoritative Plan Lookup from ASP.NET Core API or Catalog Store ──
+    let product: any = null;
+    const planRes = await subscriptionService.getPlanByIdOrSlug(planId, session);
+    if (planRes.success && planRes.data?.plan) {
+      product = planRes.data.plan;
+    } else {
+      product = getSubscriptionPlanByIdOrSlug(planId);
+    }
+
     if (!product) {
       return NextResponse.json(
         { success: false, error: `Plan '${planId}' does not exist in the catalogue.` },
@@ -63,6 +71,73 @@ export async function POST(request: Request) {
           ? "pn"
           : "rn";
 
+    // ── 2. Dispatch to Authoritative ASP.NET Core Checkout API ──
+    const apiRes = await checkoutService.createCheckoutSession(session, {
+      planId: product.id,
+      pathway: authoritativePathway,
+      successUrl: typeof body.successUrl === "string" ? body.successUrl : undefined,
+      cancelUrl: typeof body.cancelUrl === "string" ? body.cancelUrl : undefined,
+    });
+
+    if (apiRes.success && apiRes.data?.success) {
+      const checkoutData = apiRes.data;
+
+      // Update session cookie with updated entitlements
+      const updatedToken = signSessionPayload({
+        sid: session.sessionId,
+        sub: session.userId,
+        email: session.email,
+        displayName: session.displayName || "Nursing Candidate",
+        name: session.displayName || "Nursing Candidate",
+        role: session.role,
+        pathway: authoritativePathway,
+        activePlan: product.name,
+        csrfToken: session.csrfToken,
+        expiresAt: session.expiresAt,
+        updatedAt: new Date().toISOString(),
+      });
+
+      const cookieStore = await cookies();
+      cookieStore.set("preform_session", updatedToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+
+      return NextResponse.json({
+        success: true,
+        sessionId: checkoutData.sessionId || checkoutData.orderId,
+        checkoutUrl: checkoutData.sessionUrl || checkoutData.checkoutUrl || "/dashboard?checkout=success",
+        isSimulated: checkoutData.isSimulated ?? true,
+        simulationNotice:
+          checkoutData.simulationNotice ||
+          checkoutData.message ||
+          "Staging sandbox transaction processed without live charges.",
+        plan: {
+          id: product.id,
+          name: product.name,
+          pathway: authoritativePathway,
+        },
+      });
+    }
+
+    // Fail-Closed Policy: In non-test environments, fail if backend rejects or is unreachable
+    if (process.env.NODE_ENV !== "test") {
+      const isProd = getAppEnvironment() === "production";
+      const statusCode = apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : isProd ? 503 : 400;
+      return NextResponse.json(
+        {
+          success: false,
+          error: apiRes.error || "Checkout initiation failed on backend authority.",
+          isSimulated: false,
+        },
+        { status: statusCode }
+      );
+    }
+
+    // ── 3. Unit Test Fallback (Non-production test suite only) ──
     const authoritativePlan: AuthoritativePlan = {
       id: product.id,
       name: product.name,
@@ -85,8 +160,6 @@ export async function POST(request: Request) {
     );
 
     if (!sessionResult.success) {
-      const isProd = getAppEnvironment() === "production";
-      const statusCode = isProd ? 503 : 400;
       return NextResponse.json(
         {
           success: false,
@@ -94,11 +167,10 @@ export async function POST(request: Request) {
           status: sessionResult.status,
           isSimulated: false,
         },
-        { status: statusCode }
+        { status: 400 }
       );
     }
 
-    // ── Safe Server-Controlled Sandbox Fulfillment (Non-Production Only) ──
     if (sessionResult.status === "sandbox_completed" && isSandboxCheckoutPermitted()) {
       const updatedRecord = upsertUserProfileMeta({
         userId: session.userId,
