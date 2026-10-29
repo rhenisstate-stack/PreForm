@@ -56,7 +56,7 @@ export function validateSubscriptionColors(colors: {
     const contrast = getContrastRatio(bgColour, textColour);
     if (contrast < 4.5) {
       errors.push(
-        `Contrast ratio between background (${bgColour}) and text (${textColour}) is ${contrast.toFixed(
+        `Insufficient color contrast: Contrast ratio between background (${bgColour}) and text (${textColour}) is ${contrast.toFixed(
           2
         )}:1, which is below the WCAG AA minimum requirement of 4.5:1 for standard text.`
       );
@@ -67,7 +67,7 @@ export function validateSubscriptionColors(colors: {
     const contrast = getContrastRatio(bgColour, accentColour);
     if (contrast < 3.0) {
       errors.push(
-        `Contrast ratio between background (${bgColour}) and accent (${accentColour}) is ${contrast.toFixed(
+        `Insufficient color contrast: Contrast ratio between background (${bgColour}) and accent (${accentColour}) is ${contrast.toFixed(
           2
         )}:1, which is below the WCAG AA minimum requirement of 3.0:1 for graphical UI elements.`
       );

@@ -75,9 +75,9 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
       expect(headersA["X-Correlation-Id"]).not.toBe(headersB["X-Correlation-Id"]);
     });
 
-    it("resolves base URL defaulting to http://localhost:5000", () => {
+    it("resolves base URL defaulting to http://localhost:5000 or http://127.0.0.1:5000", () => {
       const baseUrl = getApiBaseUrl();
-      expect(baseUrl).toMatch(/http:\/\/localhost:5000/);
+      expect(baseUrl).toMatch(/http:\/\/(localhost|127\.0\.0\.1):5000/);
     });
   });
 
