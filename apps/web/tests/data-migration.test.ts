@@ -6,14 +6,14 @@ import {
   transformAndValidate,
   generateSqlScript,
   executeMigration,
-} from "../../tools/migration/migrator.ts";
+} from "../../../tools/migration/migrator.ts";
 import {
   isProductionDatabaseTarget,
   validateImageMagicBytes,
   computeSha256,
   mapIntervalToEnum,
-} from "../../tools/migration/validator.ts";
-import { createSanitizedFixture } from "../../tools/migration/fixtures/create-sample-fixture.ts";
+} from "../../../tools/migration/validator.ts";
+import { createSanitizedFixture } from "../../../tools/migration/fixtures/create-sample-fixture.ts";
 
 describe("Phase 4 — Safe SQLite-to-PostgreSQL Data Migration Tests", () => {
   const tempFixturePath = path.resolve("apps/web/.data/test_migration_fixture.sqlite");
