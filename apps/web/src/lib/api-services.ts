@@ -312,7 +312,7 @@ export const checkoutService = {
   getUserEntitlements: async (
     session: VerifiedSession
   ): Promise<ApiResponse<BackendEntitlementsResponse>> => {
-    return apiClient.get<BackendEntitlementsResponse>("/api/v1/checkout/entitlements", {
+    return apiClient.get<BackendEntitlementsResponse>("/api/v1/entitlements", {
       session,
     });
   },
