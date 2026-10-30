@@ -104,7 +104,11 @@ public class AdminBootstrapService : IAdminBootstrapService
         var effectiveName = string.IsNullOrWhiteSpace(displayName) ? "PrepFord Super Admin" : displayName.Trim();
 
         // 4. Transactional creation or recovery update
-        await using var tx = await _context.Database.BeginTransactionAsync(cancellationToken);
+        var isRelational = _context.Database.IsRelational();
+        Microsoft.EntityFrameworkCore.Storage.IDbContextTransaction? tx = isRelational
+            ? await _context.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+
         try
         {
             User user;
@@ -118,7 +122,7 @@ public class AdminBootstrapService : IAdminBootstrapService
             {
                 if (!allowRecovery)
                 {
-                    await tx.RollbackAsync(cancellationToken);
+                    if (tx != null) await tx.RollbackAsync(cancellationToken);
                     return new AdminBootstrapResult
                     {
                         Success = false,
@@ -189,7 +193,7 @@ public class AdminBootstrapService : IAdminBootstrapService
             });
 
             await _context.SaveChangesAsync(cancellationToken);
-            await tx.CommitAsync(cancellationToken);
+            if (tx != null) await tx.CommitAsync(cancellationToken);
 
             _logger.LogInformation("Super Admin bootstrap completed successfully for UserId: {UserId}, Email: {Email}, Recovery: {IsRecovery}",
                 user.Id, user.Email, isRecovery);
@@ -207,13 +211,17 @@ public class AdminBootstrapService : IAdminBootstrapService
         }
         catch (Exception ex)
         {
-            await tx.RollbackAsync(cancellationToken);
+            if (tx != null) await tx.RollbackAsync(cancellationToken);
             _logger.LogError(ex, "Failed to bootstrap Super Admin account.");
             return new AdminBootstrapResult
             {
                 Success = false,
                 Message = $"Failed to bootstrap Super Admin account: {ex.Message}"
             };
+        }
+        finally
+        {
+            if (tx != null) await tx.DisposeAsync();
         }
     }
 }
