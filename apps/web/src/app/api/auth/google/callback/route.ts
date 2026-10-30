@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { sanitizeReturnUrl } from "@/lib/validation/auth";
-import { createServerSession } from "@/lib/session";
+import { createServerSession, setSessionCookie } from "@/lib/session";
 
 interface StoredOAuthState {
   state: string;
@@ -18,9 +18,12 @@ export async function GET(request: Request) {
   const error = url.searchParams.get("error");
 
   const cookieStore = await cookies();
-  const rawStoredState = cookieStore.get("preform_oauth_state")?.value;
+  const rawStoredState =
+    cookieStore.get("prepford_oauth_state")?.value ||
+    cookieStore.get("preform_oauth_state")?.value;
 
-  // Clear OAuth state cookie immediately to prevent replay
+  // Clear OAuth state cookies immediately to prevent replay
+  cookieStore.delete("prepford_oauth_state");
   cookieStore.delete("preform_oauth_state");
 
   let storedState: StoredOAuthState | null = null;
@@ -126,13 +129,7 @@ export async function GET(request: Request) {
       displayName: profile.name || profile.given_name || "Nursing Candidate",
     });
 
-    cookieStore.set("preform_session", serverSession.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: serverSession.maxAgeSeconds,
-    });
+    setSessionCookie(cookieStore, serverSession.token, serverSession.maxAgeSeconds);
 
     // Successfully authenticated, navigate to destination
     return NextResponse.redirect(new URL(targetDestination, url.origin));

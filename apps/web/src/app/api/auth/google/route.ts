@@ -66,13 +66,15 @@ export async function GET(request: Request) {
   });
 
   const cookieStore = await cookies();
-  cookieStore.set("preform_oauth_state", sessionData, {
+  const oauthCookieOptions = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "lax" as const,
     path: "/",
     maxAge: 60 * 10, // 10 minutes expiry
-  });
+  };
+  cookieStore.set("prepford_oauth_state", sessionData, oauthCookieOptions);
+  cookieStore.set("preform_oauth_state", sessionData, oauthCookieOptions);
 
   return NextResponse.redirect(googleAuthUrl);
 }

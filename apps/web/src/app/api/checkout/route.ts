@@ -14,7 +14,7 @@ import {
 import { getSubscriptionPlanByIdOrSlug } from "@/lib/subscription-store";
 import type { Product } from "@/lib/products";
 import { upsertUserProfileMeta } from "@/lib/profile-image-db";
-import { resolveSession, signSessionPayload } from "@/lib/session";
+import { resolveSession, signSessionPayload, setSessionCookie } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
@@ -76,10 +76,13 @@ export async function POST(request: Request) {
           ? "pn"
           : "rn";
 
+    const promoCode = typeof body.promoCode === "string" ? body.promoCode.trim() : undefined;
+
     // ── 2. Dispatch to Authoritative ASP.NET Core Checkout API ──
     const apiRes = await checkoutService.createCheckoutSession(session, {
       planId: product.id,
       pathway: authoritativePathway,
+      promoCode,
       successUrl: typeof body.successUrl === "string" ? body.successUrl : undefined,
       cancelUrl: typeof body.cancelUrl === "string" ? body.cancelUrl : undefined,
     });
@@ -103,13 +106,7 @@ export async function POST(request: Request) {
       });
 
       const cookieStore = await cookies();
-      cookieStore.set("preform_session", updatedToken, {
-        httpOnly: true,
-        secure: (process.env.NODE_ENV as string) === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-      });
+      setSessionCookie(cookieStore, updatedToken, 60 * 60 * 24 * 30);
 
       return NextResponse.json({
         success: true,
@@ -200,13 +197,7 @@ export async function POST(request: Request) {
       });
 
       const cookieStore = await cookies();
-      cookieStore.set("preform_session", updatedToken, {
-        httpOnly: true,
-        secure: (process.env.NODE_ENV as string) === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 7,
-      });
+      setSessionCookie(cookieStore, updatedToken, 60 * 60 * 24 * 30);
 
       return NextResponse.json({
         success: true,
