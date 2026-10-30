@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { SignInPageClient } from "./page-client";
+import { AuthLoadingSkeleton } from "@/components/auth/auth-loading-skeleton";
 
 export const metadata: Metadata = {
   title: "Sign In",
@@ -16,8 +17,8 @@ export default function SignInPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-[calc(100vh-4.5rem)] flex items-center justify-center bg-background text-muted-foreground text-sm">
-          Loading sign in…
+        <div className="min-h-screen w-full flex items-center justify-center bg-background p-6">
+          <AuthLoadingSkeleton variant="sign-in" message="Loading PrepFord sign in…" />
         </div>
       }
     >
