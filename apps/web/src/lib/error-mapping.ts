@@ -24,7 +24,7 @@ const LEAKY_PATTERNS = [
   /Exception/i,
   /Stack trace/i,
   /at (?:[a-zA-Z0-9_.]+\/)+[a-zA-Z0-9_.]+\.ts:\d+:\d+/i,
-  /at Preform\.Api\./i,
+  /at [a-zA-Z0-9_]+\.Api\./i,
   /SELECT .* FROM/i,
 ];
 

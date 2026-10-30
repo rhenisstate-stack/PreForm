@@ -7,20 +7,23 @@
  * and automatic sanitization of technical error messages.
  */
 
+import * as React from "react";
 import { toast as sonnerToast } from "sonner";
 import { sanitizeErrorMessage } from "./error-mapping";
+
+export interface NotifyAction {
+  label: React.ReactNode;
+  onClick: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
+}
 
 export interface NotifyOptions {
   description?: string;
   duration?: number;
   id?: string | number;
-  action?: {
-    label: string;
-    onClick: () => void;
-  };
+  action?: NotifyAction;
   cancel?: {
-    label: string;
-    onClick?: () => void;
+    label: React.ReactNode;
+    onClick?: (event: React.MouseEvent<HTMLButtonElement, MouseEvent>) => void;
   };
   onDismiss?: () => void;
   onAutoClose?: () => void;
@@ -48,6 +51,14 @@ function shouldSuppress(key: string): boolean {
   return false;
 }
 
+function resolveCancel(cancel?: NotifyOptions["cancel"]) {
+  if (!cancel) return undefined;
+  return {
+    label: cancel.label,
+    onClick: cancel.onClick || (() => {}),
+  };
+}
+
 export const notify = {
   /**
    * Displays a successful operation toast with PrepFord medical-teal styling.
@@ -64,7 +75,7 @@ export const notify = {
       duration: options?.duration ?? 4000,
       id: options?.id,
       action: options?.action,
-      cancel: options?.cancel,
+      cancel: resolveCancel(options?.cancel),
       onDismiss: options?.onDismiss,
       onAutoClose: options?.onAutoClose,
     });
@@ -86,7 +97,7 @@ export const notify = {
       duration: options?.duration ?? 6000,
       id: options?.id,
       action: options?.action,
-      cancel: options?.cancel,
+      cancel: resolveCancel(options?.cancel),
       onDismiss: options?.onDismiss,
       onAutoClose: options?.onAutoClose,
     });
@@ -107,7 +118,7 @@ export const notify = {
       duration: options?.duration ?? 5000,
       id: options?.id,
       action: options?.action,
-      cancel: options?.cancel,
+      cancel: resolveCancel(options?.cancel),
       onDismiss: options?.onDismiss,
       onAutoClose: options?.onAutoClose,
     });
@@ -128,7 +139,7 @@ export const notify = {
       duration: options?.duration ?? 4000,
       id: options?.id,
       action: options?.action,
-      cancel: options?.cancel,
+      cancel: resolveCancel(options?.cancel),
       onDismiss: options?.onDismiss,
       onAutoClose: options?.onAutoClose,
     });
