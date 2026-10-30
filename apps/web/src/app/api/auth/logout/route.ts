@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { authService } from "@/lib/api-services";
-import { resolveSession, revokeSession } from "@/lib/session";
+import { resolveSession, revokeSession, clearSessionCookie } from "@/lib/session";
 
 export async function POST(request?: Request) {
   try {
@@ -19,13 +19,7 @@ export async function POST(request?: Request) {
     }
 
     const cookieStore = await cookies();
-    cookieStore.set("preform_session", "", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 0,
-    });
+    clearSessionCookie(cookieStore);
 
     return NextResponse.json({ success: true, message: "Logged out successfully" });
   } catch (err) {
