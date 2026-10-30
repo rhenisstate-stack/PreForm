@@ -51,7 +51,8 @@ export interface NotificationsContextType {
 
 const NotificationsContext = React.createContext<NotificationsContextType | undefined>(undefined);
 
-const NOTIFICATIONS_STORAGE_KEY = "preform_notifications";
+const NOTIFICATIONS_STORAGE_KEY = "prepford_notifications";
+const LEGACY_NOTIFICATIONS_STORAGE_KEY = "preform_notifications";
 
 export function NotificationsProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = React.useState<CandidateNotification[]>(DEFAULT_NOTIFICATIONS);
