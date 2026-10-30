@@ -395,6 +395,7 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
 
         var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("at Prepford.", body);
         Assert.DoesNotContain("at Preform.", body);
         Assert.DoesNotContain("System.Exception", body);
         Assert.DoesNotContain("Npgsql.NpgsqlException", body);

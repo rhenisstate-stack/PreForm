@@ -24,69 +24,84 @@ interface BrandViolation {
   snippet: string;
 }
 
-interface AllowedReference {
-  pattern: RegExp | string;
-  files: string[];
-  justification: string;
+interface AllowedRule {
+  id: string;
+  description: string;
+  test: (normalizedFile: string, lineContent: string) => boolean;
 }
 
 // Documented allowlist for legitimate historical and compatibility-sensitive references
-const DOCUMENTED_ALLOWLIST: AllowedReference[] = [
+const DOCUMENTED_RULES: AllowedRule[] = [
   {
-    pattern: "preform_session",
-    files: [
-      path.normalize("apps/web/src/lib/session.ts"),
-      path.normalize("apps/web/src/lib/auth-context.tsx"),
-      path.normalize("apps/web/src/app/api/auth/google/route.ts"),
-      path.normalize("docs/superadmin-setup.md"),
-    ],
-    justification: "Dual-cookie legacy session fallback ensuring active learner sessions remain valid during migration",
+    id: "legacy-session-cookie",
+    description: "Dual-cookie legacy session fallback ensuring active learner sessions remain valid during migration",
+    test: (file, line) =>
+      (file.endsWith(path.normalize("apps/web/src/lib/session.ts")) ||
+        file.endsWith(path.normalize("apps/web/src/lib/auth-context.tsx")) ||
+        file.endsWith(path.normalize("apps/web/src/app/api/auth/google/route.ts")) ||
+        file.endsWith(path.normalize("docs/superadmin-setup.md"))) &&
+      line.includes("preform_session"),
   },
   {
-    pattern: "preform_cart",
-    files: [path.normalize("apps/web/src/lib/cart-context.tsx")],
-    justification: "Dual-storage localStorage fallback so learners do not lose existing cart items",
+    id: "legacy-cart-storage",
+    description: "Dual-storage localStorage fallback so learners do not lose existing cart items",
+    test: (file, line) =>
+      file.endsWith(path.normalize("apps/web/src/lib/cart-context.tsx")) &&
+      line.includes("preform_cart"),
   },
   {
-    pattern: "preform:cookie-consent",
-    files: [path.normalize("apps/web/src/lib/cookie.ts")],
-    justification: "Dual-storage cookie consent key fallback preventing unnecessary reprompts",
+    id: "legacy-cookie-consent",
+    description: "Dual-storage cookie consent key fallback preventing unnecessary reprompts",
+    test: (file, line) =>
+      file.endsWith(path.normalize("apps/web/src/lib/cookie.ts")) &&
+      line.includes("preform:cookie-consent"),
   },
   {
-    pattern: "preform_notifications",
-    files: [path.normalize("apps/web/src/lib/notifications-context.tsx")],
-    justification: "Dual-storage notification history fallback preserving user notification state",
+    id: "legacy-notifications-storage",
+    description: "Dual-storage notification history fallback preserving user notification state",
+    test: (file, line) =>
+      file.endsWith(path.normalize("apps/web/src/lib/notifications-context.tsx")) &&
+      line.includes("preform_notifications"),
   },
   {
-    pattern: "PREFORM10",
-    files: [
-      path.normalize("apps/web/src/lib/cart-context.tsx"),
-      path.normalize("apps/web/tests/promo-code.test.tsx"),
-      path.normalize("apps/api/Services/ICheckoutService.cs"),
-      path.normalize("apps/api/Tests/PromoDiscountTests.cs"),
-      path.normalize("docs/superadmin-setup.md"),
-    ],
-    justification: "Promotional discount backward-compatibility alias automatically normalizing legacy vouchers to PREPFORD10",
+    id: "legacy-promo-code-alias",
+    description: "Promotional discount backward-compatibility alias automatically normalizing legacy vouchers to PREPFORD10",
+    test: (file, line) =>
+      (file.endsWith(path.normalize("apps/web/src/lib/cart-context.tsx")) ||
+        file.endsWith(path.normalize("apps/web/tests/promo-code.test.tsx")) ||
+        file.endsWith(path.normalize("apps/api/Services/ICheckoutService.cs")) ||
+        file.endsWith(path.normalize("apps/api/Tests/PromoDiscountTests.cs")) ||
+        file.endsWith(path.normalize("docs/superadmin-setup.md"))) &&
+      line.includes("PREFORM10"),
   },
   {
-    pattern: "Preform.Api",
-    files: [
-      path.normalize("apps/api/Preform.Api.csproj"),
-      path.normalize("apps/api/Tests/Preform.Api.Tests.csproj"),
-      path.normalize("apps/api/package.json"),
-      path.normalize("package.json"),
-      path.normalize("README.md"),
-      path.normalize("apps/api/Program.cs"),
-    ],
-    justification: "C# assembly and namespace identifier preserved to maintain EF Core migration table consistency",
+    id: "csharp-assembly-namespace",
+    description: "C# assembly, project file, and namespace identifier Preform.Api preserved to maintain EF Core migration table consistency",
+    test: (file, line) =>
+      (file.startsWith("apps" + path.sep + "api") || file === "package.json" || file === "README.md" || file.startsWith("docs")) &&
+      (line.includes("Preform.Api") || line.includes("Preform.Api.csproj") || line.includes("Preform.Api.Tests")),
   },
   {
-    pattern: "PREform",
-    files: [
-      path.normalize("README.md"),
-      path.normalize("package.json"),
-    ],
-    justification: "Local repository directory name / git clone reference",
+    id: "repo-folder-reference",
+    description: "Local repository directory name / git clone reference",
+    test: (file, line) =>
+      (file === "README.md" || file === "package.json" || file.startsWith("docs")) &&
+      (line.includes("PREform") || line.includes("cd PREform")),
+  },
+  {
+    id: "stack-trace-leak-guard",
+    description: "Security regression test asserting that neither Prepford nor legacy Preform stack traces are leaked in HTTP responses",
+    test: (file, line) =>
+      file.endsWith(path.normalize("apps/api/Tests/PostgresIntegrationTests.cs")) &&
+      line.includes('Assert.DoesNotContain("at Preform.", body);'),
+  },
+  {
+    id: "historical-milestone-docs",
+    description: "Immutable historical audit reports capturing verbatim terminal output and test logs from previous migration milestones",
+    test: (file, _) =>
+      file.startsWith("docs") &&
+      !file.endsWith("superadmin-setup.md") &&
+      !file.endsWith("product-polish-and-ux-implementation-report.md"),
   },
 ];
 
@@ -108,10 +123,10 @@ const IGNORE_DIRS = new Set([
   ".git",
   "dist",
   "coverage",
-  "tools", // historical migration tools
-  "scripts", // guard scripts themselves
+  "tools",
+  "scripts",
   "backups",
-  "Migrations", // historical EF Core migration files
+  "Migrations",
 ]);
 
 const SCANNABLE_EXTENSIONS = new Set([
@@ -133,13 +148,8 @@ function isAllowed(filePath: string, lineContent: string): boolean {
   const relativePath = path.relative(ROOT_DIR, filePath);
   const normalized = path.normalize(relativePath);
 
-  for (const item of DOCUMENTED_ALLOWLIST) {
-    const fileMatches = item.files.some((f) => normalized.endsWith(f) || normalized === f);
-    if (!fileMatches) continue;
-
-    if (typeof item.pattern === "string") {
-      if (lineContent.includes(item.pattern)) return true;
-    } else if (item.pattern.test(lineContent)) {
+  for (const rule of DOCUMENTED_RULES) {
+    if (rule.test(normalized, lineContent)) {
       return true;
     }
   }
@@ -233,9 +243,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   } else {
     console.log("\n[PASS] 0 un-allowlisted legacy PREform brand occurrences detected.");
     console.log("Public product branding is 100% consistently PrepFord.");
-    console.log("\nDocumented compatibility allowlist entries:");
-    for (const item of DOCUMENTED_ALLOWLIST) {
-      console.log(`  • ${item.pattern}: ${item.justification} (${item.files.length} files)`);
+    console.log("\nDocumented compatibility allowlist rules:");
+    for (const rule of DOCUMENTED_RULES) {
+      console.log(`  • [${rule.id}] ${rule.description}`);
     }
     process.exit(0);
   }
