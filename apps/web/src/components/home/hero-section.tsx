@@ -223,7 +223,7 @@ export function HeroSection() {
     <section
       id="main-content"
       data-testid="hero-section"
-      className="relative isolate w-full min-h-[580px] lg:min-h-[660px] flex items-center overflow-hidden bg-gradient-to-b from-teal-50/50 via-slate-50/35 to-background dark:from-slate-950 dark:via-slate-900/90 dark:to-background text-foreground pt-10 pb-20 sm:pt-14 sm:pb-24 lg:pt-18 lg:pb-28"
+      className="relative isolate w-full min-h-[600px] lg:min-h-[680px] flex flex-col justify-between overflow-hidden bg-gradient-to-b from-teal-50/50 via-slate-50/35 to-background dark:from-slate-950 dark:via-slate-900/90 dark:to-background text-foreground pt-8 sm:pt-12 lg:pt-16 pb-2 sm:pb-3"
       aria-label="PrepFord NCLEX Hero"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -243,59 +243,8 @@ export function HeroSection() {
         <div className="absolute bottom-12 -left-20 h-80 w-80 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl" />
       </div>
 
-      {/* Full-Width Left-to-Right Animated Heartbeat / ECG Line (z-10, spans full hero width, pointer-events-none) */}
-      <div
-        aria-hidden="true"
-        data-testid="hero-fullwidth-heartbeat"
-        className="absolute inset-x-0 bottom-3 sm:bottom-5 z-10 w-full pointer-events-none select-none overflow-hidden"
-      >
-        <div
-          data-testid="hero-ecg-container"
-          className="w-full"
-        >
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between text-[11px] font-mono text-teal-800/75 dark:text-teal-300/80 mb-1">
-            <span className="inline-flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400 motion-safe:animate-heartbeat" />
-              PREPFORD CLINICAL RHYTHM • LEAD II
-            </span>
-            <span className="font-semibold text-teal-700 dark:text-emerald-300">
-              NORMAL SINUS • LEFT-TO-RIGHT PULSE
-            </span>
-          </div>
-          <svg
-            className="w-full h-14 sm:h-16 lg:h-20 block"
-            viewBox="0 0 1440 120"
-            fill="none"
-            preserveAspectRatio="none"
-          >
-            {/* Static baseline waveform */}
-            <path
-              data-testid="hero-ecg-baseline"
-              d={FULLWIDTH_ECG_PATH}
-              pathLength={1000}
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-teal-700/20 dark:text-teal-400/25"
-            />
-            {/* Travelling left-to-right heartbeat pulse wave */}
-            <path
-              data-testid="hero-ecg-pulse-ltr"
-              d={FULLWIDTH_ECG_PATH}
-              pathLength={1000}
-              stroke="currentColor"
-              strokeWidth="3.2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="text-teal-600 dark:text-teal-300 drop-shadow-[0_0_8px_rgba(13,148,136,0.55)] dark:drop-shadow-[0_0_10px_rgba(45,212,191,0.85)] motion-safe:animate-ecg-ltr"
-            />
-          </svg>
-        </div>
-      </div>
-
-      {/* Foreground Content Container (z-20) */}
-      <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 relative z-20">
+      {/* Foreground Content Container (z-20, flex-1 to center split layout vertically in document flow) */}
+      <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 relative z-20 flex-1 flex items-center">
         {/* Unified Editorial Split Layout (Archer Review-Inspired) */}
         <div
           key={currentSlide.id}
@@ -303,7 +252,7 @@ export function HeroSection() {
           role="group"
           aria-roledescription="slide"
           aria-label={`Slide ${activeSlide + 1} of ${HERO_SLIDES.length}: ${currentSlide.title}`}
-          className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-center transition-opacity duration-700 ease-in-out motion-reduce:transition-none"
+          className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-center transition-opacity duration-700 ease-in-out motion-reduce:transition-none py-2 sm:py-4"
         >
           {/* Left Column: Eyebrow, Headline, Supporting Copy, Primary & Secondary CTAs */}
           <div
@@ -317,7 +266,7 @@ export function HeroSection() {
             </div>
 
             {/* Headline */}
-            <h1 className="mt-5 text-3xl font-serif font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem] leading-[1.14] text-left">
+            <h1 className="mt-5 text-3xl font-serif font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem] leading-[1.18] sm:leading-[1.14] text-left">
               {currentSlide.title}
             </h1>
 
@@ -399,6 +348,59 @@ export function HeroSection() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Full-Width Left-to-Right Animated Heartbeat / ECG Line (z-10, spans full hero width in natural document flow) */}
+      <div
+        aria-hidden="true"
+        data-testid="hero-fullwidth-heartbeat"
+        className="relative inset-x-0 w-full z-10 pointer-events-none select-none overflow-hidden mt-6 sm:mt-8 lg:mt-10"
+      >
+        <div
+          data-testid="hero-ecg-container"
+          className="w-full"
+        >
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between text-[10px] sm:text-[11px] font-mono text-teal-800/75 dark:text-teal-300/80 mb-1 gap-2">
+            <span className="inline-flex items-center gap-1.5 shrink-0">
+              <Activity className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400 motion-safe:animate-heartbeat" />
+              <span className="hidden sm:inline">PREPFORD CLINICAL RHYTHM • LEAD II</span>
+              <span className="sm:hidden">RHYTHM • LEAD II</span>
+            </span>
+            <span className="font-semibold text-teal-700 dark:text-emerald-300 text-right shrink-0">
+              <span className="hidden sm:inline">NORMAL SINUS • LEFT-TO-RIGHT PULSE</span>
+              <span className="sm:hidden">NORMAL SINUS</span>
+            </span>
+          </div>
+          <svg
+            className="w-full h-12 sm:h-14 lg:h-16 block"
+            viewBox="0 0 1440 120"
+            fill="none"
+            preserveAspectRatio="none"
+          >
+            {/* Static baseline waveform */}
+            <path
+              data-testid="hero-ecg-baseline"
+              d={FULLWIDTH_ECG_PATH}
+              pathLength={1000}
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-teal-700/20 dark:text-teal-400/25"
+            />
+            {/* Travelling left-to-right heartbeat pulse wave */}
+            <path
+              data-testid="hero-ecg-pulse-ltr"
+              d={FULLWIDTH_ECG_PATH}
+              pathLength={1000}
+              stroke="currentColor"
+              strokeWidth="3.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="text-teal-600 dark:text-teal-300 drop-shadow-[0_0_8px_rgba(13,148,136,0.55)] dark:drop-shadow-[0_0_10px_rgba(45,212,191,0.85)] motion-safe:animate-ecg-ltr"
+            />
+          </svg>
         </div>
       </div>
     </section>
