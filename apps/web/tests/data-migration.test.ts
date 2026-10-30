@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import path from "node:path";
 import fs from "node:fs";
+import os from "node:os";
 import {
   extractFromSqlite,
   transformAndValidate,
@@ -15,7 +16,7 @@ import {
 import { createSanitizedFixture } from "../../../tools/migration/fixtures/create-sample-fixture.ts";
 
 describe("Phase 4 — Safe SQLite-to-PostgreSQL Data Migration Tests", () => {
-  const tempFixturePath = path.resolve("apps/web/.data/test_migration_fixture.sqlite");
+  const tempFixturePath = path.join(os.tmpdir(), "prepford_test_migration_fixture.sqlite");
 
   beforeEach(() => {
     createSanitizedFixture(tempFixturePath);
