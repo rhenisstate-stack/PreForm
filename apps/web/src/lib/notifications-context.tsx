@@ -60,7 +60,9 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   React.useEffect(() => {
     try {
-      const stored = localStorage.getItem(NOTIFICATIONS_STORAGE_KEY);
+      const stored =
+        localStorage.getItem(NOTIFICATIONS_STORAGE_KEY) ||
+        localStorage.getItem(LEGACY_NOTIFICATIONS_STORAGE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
