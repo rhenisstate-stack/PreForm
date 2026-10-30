@@ -76,11 +76,13 @@ builder.Services.AddDbContext<AppDbContext>((sp, options) =>
     var dbUrl = config["DATABASE_URL"];
     var defaultConn = config.GetConnectionString("DefaultConnection");
 
-    var connectionString = !string.IsNullOrWhiteSpace(dbUrl)
+    var rawConn = !string.IsNullOrWhiteSpace(dbUrl)
         ? dbUrl
         : (!string.IsNullOrWhiteSpace(defaultConn)
             ? defaultConn
-            : "Host=localhost;Port=5432;Database=prepford;Username=postgres;Password=postgres");
+            : "Host=localhost;Port=5432;Database=prepford;Username=postgres;Password=local-dev-only-change-me");
+
+    var connectionString = ConnectionStringHelper.ToNpgsqlConnectionString(rawConn);
 
     options.UseNpgsql(connectionString, npgsqlOptions =>
     {

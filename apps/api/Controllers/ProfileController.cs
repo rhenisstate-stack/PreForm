@@ -65,7 +65,7 @@ public class ProfileController : ControllerBase
             return NotFound(new { success = false, error = "Candidate profile not found." });
         }
 
-        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "candidate";
+        var role = RoleHierarchy.GetEffectiveRole(User);
         return Ok(new { success = true, profile = MapToProfileDto(user, role) });
     }
 
@@ -135,7 +135,7 @@ public class ProfileController : ControllerBase
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "candidate";
+        var role = RoleHierarchy.GetEffectiveRole(User);
         return Ok(new { success = true, profile = MapToProfileDto(user, role) });
     }
 
@@ -174,7 +174,7 @@ public class ProfileController : ControllerBase
         await _sessionService.RevokeAllUserSessionsAsync(user.Id, cancellationToken);
 
         // Issue a fresh new session
-        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "candidate";
+        var role = RoleHierarchy.GetEffectiveRole(User);
         var (newToken, _) = await _sessionService.CreateSessionAsync(user, role, rememberMe: false, cancellationToken);
 
         _context.AuditLogs.Add(new AuditLog

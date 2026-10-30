@@ -28,7 +28,7 @@ public class ProfileImageController : ControllerBase
         var claimUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var claimEmail = User.FindFirst(ClaimTypes.Email)?.Value;
         var claimName = User.FindFirst(ClaimTypes.Name)?.Value;
-        var claimRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "candidate";
+        var claimRole = RoleHierarchy.GetEffectiveRole(User);
 
         if (!string.IsNullOrWhiteSpace(claimUserId) && !string.IsNullOrWhiteSpace(claimEmail))
         {

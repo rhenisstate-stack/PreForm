@@ -150,7 +150,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new AuthResponse { Success = false, Error = "Invalid credentials. Please verify your email and password." });
         }
 
-        var primaryRole = user.UserRoles.FirstOrDefault()?.Role?.Name ?? "candidate";
+        var primaryRole = RoleHierarchy.GetEffectiveRole(user);
         var (token, session) = await _sessionService.CreateSessionAsync(user, primaryRole, request.RememberMe, cancellationToken);
 
         _context.AuditLogs.Add(new AuditLog
@@ -203,10 +203,8 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> RevokeSession([FromBody] RevokeSessionRequest request, CancellationToken cancellationToken)
     {
         var callerUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var callerRole = User.FindFirst(ClaimTypes.Role)?.Value ?? "candidate";
-        var isPrivilegedAdmin = string.Equals(callerRole, "admin", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(callerRole, "superadmin", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(callerRole, "administrator", StringComparison.OrdinalIgnoreCase);
+        var callerRole = RoleHierarchy.GetEffectiveRole(User);
+        var isPrivilegedAdmin = RoleHierarchy.IsAdmin(callerRole);
 
         if (request.RevokeAll)
         {
@@ -319,7 +317,7 @@ public class AuthController : ControllerBase
             return Unauthorized(new SessionResponse { Authenticated = false });
         }
 
-        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "candidate";
+        var role = RoleHierarchy.GetEffectiveRole(User);
 
         return Ok(new SessionResponse
         {

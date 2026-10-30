@@ -100,7 +100,7 @@ public class ExamAttemptsController : ControllerBase
     private (string? userId, string? role) ResolveCaller()
     {
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "candidate";
+        var role = RoleHierarchy.GetEffectiveRole(User);
         return (userId, role.Trim().ToLowerInvariant());
     }
 
