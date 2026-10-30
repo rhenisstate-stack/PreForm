@@ -5,7 +5,7 @@ import {
   getUserProfileMeta,
   upsertUserProfileMeta,
 } from "@/lib/profile-image-db";
-import { resolveSession, signSessionPayload } from "@/lib/session";
+import { resolveSession, signSessionPayload, setSessionCookie } from "@/lib/session";
 
 export async function GET(request?: Request) {
   try {
@@ -216,13 +216,7 @@ export async function PUT(request: Request) {
         });
 
         const cookieStore = await cookies();
-        cookieStore.set("preform_session", updatedToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          maxAge: 60 * 60 * 24 * 7,
-        });
+        setSessionCookie(cookieStore, updatedToken, 60 * 60 * 24 * 30);
       }
 
       return NextResponse.json({

@@ -7,7 +7,7 @@ import {
   getProfileImageBinary,
   saveProfileImageBinary,
 } from "@/lib/profile-image-db";
-import { resolveSession, signSessionPayload } from "@/lib/session";
+import { resolveSession, signSessionPayload, setSessionCookie } from "@/lib/session";
 
 export async function GET(request: NextRequest) {
   try {
@@ -236,13 +236,7 @@ async function handleUpload(request: NextRequest) {
       expiresAt: auth.expiresAt,
     });
 
-    cookieStore.set("preform_session", updatedToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    setSessionCookie(cookieStore, updatedToken, 60 * 60 * 24 * 30);
 
     return NextResponse.json({
       success: true,
@@ -316,13 +310,7 @@ export async function DELETE(request: NextRequest) {
       expiresAt: auth.expiresAt,
     });
 
-    cookieStore.set("preform_session", updatedToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 7,
-    });
+    setSessionCookie(cookieStore, updatedToken, 60 * 60 * 24 * 30);
 
     return NextResponse.json({
       success: true,

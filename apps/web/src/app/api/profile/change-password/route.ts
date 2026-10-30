@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import zxcvbn from "zxcvbn";
 import { profileService } from "@/lib/api-services";
-import { resolveSession, createServerSession, revokeAllUserSessions } from "@/lib/session";
+import { resolveSession, createServerSession, revokeAllUserSessions, setSessionCookie } from "@/lib/session";
 
 export async function POST(request: Request) {
   try {
@@ -70,13 +70,7 @@ export async function POST(request: Request) {
     });
 
     const cookieStore = await cookies();
-    cookieStore.set("preform_session", freshSession.token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: freshSession.maxAgeSeconds,
-    });
+    setSessionCookie(cookieStore, freshSession.token, freshSession.maxAgeSeconds);
 
     return NextResponse.json({
       success: true,
