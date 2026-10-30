@@ -99,8 +99,20 @@ export interface BackendCatalogResponse {
 export interface BackendCheckoutRequest {
   planId: string;
   pathway?: string;
+  promoCode?: string;
   successUrl?: string;
   cancelUrl?: string;
+}
+
+export interface BackendValidatePromoResponse {
+  valid: boolean;
+  code?: string;
+  discountPercent?: number;
+  discountCents?: number;
+  originalPriceCents?: number;
+  finalPriceCents?: number;
+  message?: string;
+  error?: string;
 }
 
 export interface BackendCheckoutResponse {
@@ -346,6 +358,16 @@ export const checkoutService = {
   ): Promise<ApiResponse<BackendEntitlementsResponse>> => {
     return apiClient.get<BackendEntitlementsResponse>("/api/v1/entitlements", {
       session,
+    });
+  },
+
+  validatePromoCode: async (
+    code: string,
+    planId?: string
+  ): Promise<ApiResponse<BackendValidatePromoResponse>> => {
+    return apiClient.post<BackendValidatePromoResponse>("/api/v1/checkout/validate-promo", {
+      code,
+      planId,
     });
   },
 };

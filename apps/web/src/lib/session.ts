@@ -50,6 +50,43 @@ export interface VerifiedSession {
   expiresAt: string;
 }
 
+export const SESSION_COOKIE_NAME = "prepford_session";
+export const LEGACY_SESSION_COOKIE_NAME = "preform_session";
+
+export interface CookieStoreLike {
+  set(name: string, value: string, options?: Record<string, unknown>): void;
+}
+
+export function setSessionCookie(
+  cookieStore: CookieStoreLike,
+  token: string,
+  maxAgeSeconds: number = 60 * 60 * 24 * 30
+): void {
+  const isProd = process.env.NODE_ENV === "production";
+  const cookieOptions = {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: maxAgeSeconds,
+  };
+  cookieStore.set(SESSION_COOKIE_NAME, token, cookieOptions);
+  cookieStore.set(LEGACY_SESSION_COOKIE_NAME, token, cookieOptions);
+}
+
+export function clearSessionCookie(cookieStore: CookieStoreLike): void {
+  const isProd = process.env.NODE_ENV === "production";
+  const clearOptions = {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: "lax" as const,
+    path: "/",
+    maxAge: 0,
+  };
+  cookieStore.set(SESSION_COOKIE_NAME, "", clearOptions);
+  cookieStore.set(LEGACY_SESSION_COOKIE_NAME, "", clearOptions);
+}
+
 export const ALLOWED_ADMIN_ROLES = new Set([
   "admin",
   "superadmin",
@@ -165,8 +202,8 @@ export function createServerSession(options: {
 
   const now = new Date();
   const maxAgeSeconds = options.rememberMe
-    ? 60 * 60 * 24 * 30 // 30 days
-    : 60 * 60 * 24 * 7;  // 7 days
+    ? 60 * 60 * 24 * 90 // 90 days persistent
+    : 60 * 60 * 24 * 30; // 30 days standard persistent
 
   const expiresDate = new Date(now.getTime() + maxAgeSeconds * 1000);
   const role = (options.role || "candidate").trim().toLowerCase();
@@ -282,7 +319,7 @@ export async function resolveSession(request?: Request): Promise<VerifiedSession
 
   try {
     const cookieStore = await cookies();
-    cookieValue = cookieStore.get("preform_session")?.value;
+    cookieValue = cookieStore.get(SESSION_COOKIE_NAME)?.value || cookieStore.get(LEGACY_SESSION_COOKIE_NAME)?.value;
   } catch {
     // outside Server Component / Route Handler scope
   }
@@ -290,7 +327,7 @@ export async function resolveSession(request?: Request): Promise<VerifiedSession
   if (!cookieValue && request) {
     const cookieHeader = request.headers.get("cookie");
     if (cookieHeader) {
-      const match = cookieHeader.match(/preform_session=([^;]+)/);
+      const match = cookieHeader.match(/(?:prepford_session|preform_session)=([^;]+)/);
       if (match) {
         cookieValue = decodeURIComponent(match[1]);
       }
@@ -424,7 +461,7 @@ export async function verifyAdminAuth(request?: Request): Promise<{
 
   try {
     const cookieStore = await cookies();
-    cookieValue = cookieStore.get("preform_session")?.value;
+    cookieValue = cookieStore.get(SESSION_COOKIE_NAME)?.value || cookieStore.get(LEGACY_SESSION_COOKIE_NAME)?.value;
   } catch {
     // outside Server Component / Route Handler scope
   }
@@ -432,7 +469,7 @@ export async function verifyAdminAuth(request?: Request): Promise<{
   if (!cookieValue && request) {
     const cookieHeader = request.headers.get("cookie");
     if (cookieHeader) {
-      const match = cookieHeader.match(/preform_session=([^;]+)/);
+      const match = cookieHeader.match(/(?:prepford_session|preform_session)=([^;]+)/);
       if (match) {
         cookieValue = decodeURIComponent(match[1]);
       }
