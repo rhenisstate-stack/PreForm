@@ -43,3 +43,10 @@ public class TestimonialResponseDto
     public TestimonialStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+
+public class TestimonialsListResponse
+{
+    public bool Success { get; set; } = true;
+    public int Count { get; set; }
+    public List<TestimonialResponseDto> Testimonials { get; set; } = new();
+}

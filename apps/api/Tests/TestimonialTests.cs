@@ -112,9 +112,9 @@ public class TestimonialTests
 
         var result = await controller.GetApprovedTestimonials(null);
         var okResult = Assert.IsType<OkObjectResult>(result);
-        dynamic val = okResult.Value!;
-        Assert.True(val.success);
-        Assert.Equal(1, val.count);
+        var val = Assert.IsType<TestimonialsListResponse>(okResult.Value);
+        Assert.True(val.Success);
+        Assert.Equal(1, val.Count);
     }
 
     [Fact]
@@ -145,13 +145,13 @@ public class TestimonialTests
 
         var rnResult = await controller.GetApprovedTestimonials("RN");
         var rnOk = Assert.IsType<OkObjectResult>(rnResult);
-        dynamic rnVal = rnOk.Value!;
-        Assert.Equal(1, rnVal.count);
+        var rnVal = Assert.IsType<TestimonialsListResponse>(rnOk.Value);
+        Assert.Equal(1, rnVal.Count);
 
         var pnResult = await controller.GetApprovedTestimonials("PN");
         var pnOk = Assert.IsType<OkObjectResult>(pnResult);
-        dynamic pnVal = pnOk.Value!;
-        Assert.Equal(1, pnVal.count);
+        var pnVal = Assert.IsType<TestimonialsListResponse>(pnOk.Value);
+        Assert.Equal(1, pnVal.Count);
     }
 
     [Fact]

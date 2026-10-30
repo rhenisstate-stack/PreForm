@@ -54,11 +54,11 @@ public class TestimonialsController : ControllerBase
             })
             .ToListAsync();
 
-        return Ok(new
+        return Ok(new TestimonialsListResponse
         {
-            success = true,
-            count = results.Count,
-            testimonials = results
+            Success = true,
+            Count = results.Count,
+            Testimonials = results
         });
     }
 
@@ -76,7 +76,7 @@ public class TestimonialsController : ControllerBase
             return BadRequest(new { success = false, error = "Consent must be explicitly granted to publish feedback." });
         }
 
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = User?.FindFirstValue(ClaimTypes.NameIdentifier);
 
         var testimonial = new Testimonial
         {
