@@ -27,7 +27,21 @@ export function useQuestionFlag({
   // Query state with initial data and 5-min staleTime
   const { data: isFlagged = initialFlagged } = useQuery({
     queryKey,
-    queryFn: () => initialFlagged,
+    queryFn: async () => {
+      try {
+        const url = attemptId
+          ? `/api/attempts/${encodeURIComponent(attemptId)}/questions/${encodeURIComponent(questionId)}/flag`
+          : `/api/questions/${encodeURIComponent(questionId)}/flag`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.isFlagged === "boolean") return data.isFlagged;
+        }
+      } catch {
+        // graceful offline fallback
+      }
+      return queryClient.getQueryData<boolean>(queryKey) ?? initialFlagged;
+    },
     initialData: initialFlagged,
     staleTime: 5 * 60 * 1000,
   });
@@ -65,15 +79,14 @@ export function useQuestionFlag({
       // 4. Return context containing the snapshot
       return { previousFlagged };
     },
+    onSuccess: (data: boolean) => {
+      queryClient.setQueryData<boolean>(queryKey, data);
+    },
     // Rollback to snapshot on error
     onError: (_err, _nextFlagState, context) => {
       if (context) {
         queryClient.setQueryData<boolean>(queryKey, context.previousFlagged);
       }
-    },
-    // Invalidate queries when settled to re-sync with authoritative server
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey });
     },
   });
 
