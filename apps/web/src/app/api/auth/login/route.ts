@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { signInSchema } from "@/lib/validation/auth";
 import { authService } from "@/lib/api-services";
+import { getApiBaseUrl } from "@/lib/api-client";
 import { createServerSession, setSessionCookie } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
@@ -22,12 +23,15 @@ export async function POST(request: NextRequest) {
 
     const { email, password, rememberMe } = result.data;
 
+    console.log("[Login API Route] Base URL:", getApiBaseUrl());
+
     // Dispatch login request to authoritative ASP.NET Core API
     const apiRes = await authService.login({
       email,
       password,
       rememberMe,
     });
+    console.log("[Login API Route] apiRes status:", apiRes.status, "error:", apiRes.error);
 
     if (!apiRes.success || !apiRes.data?.success) {
       const status = apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 401;
