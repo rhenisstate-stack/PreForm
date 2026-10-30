@@ -6,6 +6,8 @@ import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { TestimonialCard } from "@/components/testimonials/testimonial-card";
+import { SubmitTestimonialDialog } from "@/components/testimonials/submit-testimonial-dialog";
 import {
   ArrowRight,
   Quote,
@@ -17,9 +19,8 @@ import {
   Brain,
   CheckCircle2,
   Stethoscope,
-  ChevronDown,
-  ChevronUp,
   Layers,
+  MessageSquarePlus,
 } from "lucide-react";
 
 interface TestimonialProps {
@@ -121,6 +122,7 @@ const featureHighlights = [
 export function TestimonialsPageClient() {
   const [selectedFilter, setSelectedFilter] = React.useState<"ALL" | "RN" | "PN">("ALL");
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
+  const [isSubmitDialogOpen, setIsSubmitDialogOpen] = React.useState(false);
 
   const filteredTestimonials = React.useMemo(() => {
     if (selectedFilter === "ALL") return testimonials;

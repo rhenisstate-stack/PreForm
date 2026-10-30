@@ -1,28 +1,25 @@
 "use client";
 
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import Link from "next/link";
-import { ArrowRight, Quote } from "lucide-react";
+import { ArrowRight, Quote, MessageSquarePlus } from "lucide-react";
+import { TestimonialCard, type TestimonialData } from "@/components/testimonials/testimonial-card";
 
-interface TestimonialProps {
-  name: string;
-  role: string;
-  pathway: "RN" | "PN";
-  content: string;
-}
-
-const testimonials: TestimonialProps[] = [
+const PREVIEW_TESTIMONIALS: TestimonialData[] = [
   {
-    name: "Alex R.",
-    role: "RN candidate",
+    id: "prev-1",
+    displayName: "Alex R.",
+    role: "NCLEX-RN Candidate",
     pathway: "RN",
-    content: "The rationales helped me understand not just the right answer, but why the distractors were wrong.",
+    studyFocus: "Physiological Adaptation",
+    quote: "The clinical rationales helped me understand not just the right answer, but why the distractors were unsafe.",
   },
   {
-    name: "Sam K.",
-    role: "PN candidate",
+    id: "prev-2",
+    displayName: "Sam K.",
+    role: "NCLEX-PN Candidate",
     pathway: "PN",
-    content: "Clear explanations and a question bank that actually reflected the exam format.",
+    studyFocus: "Cardiovascular & Pharmacology",
+    quote: "Clear explanations and a question bank that actually reflected the exam format and clinical decision-making.",
   },
 ];
 
@@ -33,46 +30,35 @@ export function TestimonialsPreview() {
         <div className="text-center max-w-2xl mx-auto">
           <Quote className="mx-auto h-8 w-8 text-secondary/60" aria-hidden="true" />
           <p className="mt-6 text-xl font-serif text-foreground leading-relaxed sm:text-2xl">
-            PrepFord helped me focus on the reasoning behind each answer, not just memorisation.
+            &ldquo;PrepFord helped me focus on the reasoning behind each answer, not just memorisation.&rdquo;
           </p>
           <p className="mt-4 text-sm text-muted-foreground">— Jordan M., RN candidate</p>
         </div>
 
         <div className="mt-16 grid grid-cols-1 md:grid-cols-2 gap-6">
-          {testimonials.map((t) => (
-            <Card key={t.name} className="bg-card shadow-xs">
-              <CardContent className="pt-6 pb-4">
-                <Quote className="mb-4 h-5 w-5 text-secondary/60" aria-hidden="true" />
-                <p className="text-sm text-foreground leading-relaxed">{t.content}</p>
-              </CardContent>
-              <CardFooter className="pt-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-foreground">{t.name}</span>
-                    <span className="text-xs text-muted-foreground">&middot; {t.role}</span>
-                  </div>
-                <BadgeInline pathway={t.pathway} />
-              </CardFooter>
-            </Card>
+          {PREVIEW_TESTIMONIALS.map((t) => (
+            <TestimonialCard key={t.id} testimonial={t} />
           ))}
         </div>
 
-        <div className="mt-12 flex justify-center">
+        <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
             href="/testimonials"
-            className="inline-flex items-center gap-1 text-sm font-medium text-secondary hover:underline transition-colors"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-secondary hover:underline transition-colors"
           >
-            Read all testimonials <ArrowRight className="h-3 w-3" />
+            <span>Explore all candidate reflections</span>
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+          <span className="hidden sm:inline text-muted-foreground text-xs">•</span>
+          <Link
+            href="/testimonials"
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <MessageSquarePlus className="h-3.5 w-3.5 text-secondary" />
+            <span>Share your study journey</span>
           </Link>
         </div>
       </div>
     </section>
-  );
-}
-
-function BadgeInline({ pathway }: { pathway: "RN" | "PN" }) {
-  return (
-    <span className="inline-flex items-center rounded-md border border-secondary/30 bg-secondary/10 px-2 py-0.5 text-xs font-semibold text-secondary">
-      {pathway}
-    </span>
   );
 }
