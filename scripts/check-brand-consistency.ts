@@ -39,28 +39,32 @@ const DOCUMENTED_RULES: AllowedRule[] = [
       (file.endsWith(path.normalize("apps/web/src/lib/session.ts")) ||
         file.endsWith(path.normalize("apps/web/src/lib/auth-context.tsx")) ||
         file.endsWith(path.normalize("apps/web/src/app/api/auth/google/route.ts")) ||
-        file.endsWith(path.normalize("docs/superadmin-setup.md"))) &&
+        file.endsWith(path.normalize("docs/superadmin-setup.md")) ||
+        file.endsWith(path.normalize("docs/product-polish-and-ux-implementation-report.md"))) &&
       line.includes("preform_session"),
   },
   {
     id: "legacy-cart-storage",
     description: "Dual-storage localStorage fallback so learners do not lose existing cart items",
     test: (file, line) =>
-      file.endsWith(path.normalize("apps/web/src/lib/cart-context.tsx")) &&
+      (file.endsWith(path.normalize("apps/web/src/lib/cart-context.tsx")) ||
+        file.endsWith(path.normalize("docs/product-polish-and-ux-implementation-report.md"))) &&
       line.includes("preform_cart"),
   },
   {
     id: "legacy-cookie-consent",
     description: "Dual-storage cookie consent key fallback preventing unnecessary reprompts",
     test: (file, line) =>
-      file.endsWith(path.normalize("apps/web/src/lib/cookie.ts")) &&
+      (file.endsWith(path.normalize("apps/web/src/lib/cookie.ts")) ||
+        file.endsWith(path.normalize("docs/product-polish-and-ux-implementation-report.md"))) &&
       line.includes("preform:cookie-consent"),
   },
   {
     id: "legacy-notifications-storage",
     description: "Dual-storage notification history fallback preserving user notification state",
     test: (file, line) =>
-      file.endsWith(path.normalize("apps/web/src/lib/notifications-context.tsx")) &&
+      (file.endsWith(path.normalize("apps/web/src/lib/notifications-context.tsx")) ||
+        file.endsWith(path.normalize("docs/product-polish-and-ux-implementation-report.md"))) &&
       line.includes("preform_notifications"),
   },
   {
@@ -71,7 +75,8 @@ const DOCUMENTED_RULES: AllowedRule[] = [
         file.endsWith(path.normalize("apps/web/tests/promo-code.test.tsx")) ||
         file.endsWith(path.normalize("apps/api/Services/ICheckoutService.cs")) ||
         file.endsWith(path.normalize("apps/api/Tests/PromoDiscountTests.cs")) ||
-        file.endsWith(path.normalize("docs/superadmin-setup.md"))) &&
+        file.endsWith(path.normalize("docs/superadmin-setup.md")) ||
+        file.endsWith(path.normalize("docs/product-polish-and-ux-implementation-report.md"))) &&
       line.includes("PREFORM10"),
   },
   {
@@ -92,8 +97,9 @@ const DOCUMENTED_RULES: AllowedRule[] = [
     id: "stack-trace-leak-guard",
     description: "Security regression test asserting that neither Prepford nor legacy Preform stack traces are leaked in HTTP responses",
     test: (file, line) =>
-      file.endsWith(path.normalize("apps/api/Tests/PostgresIntegrationTests.cs")) &&
-      line.includes('Assert.DoesNotContain("at Preform.", body);'),
+      (file.endsWith(path.normalize("apps/api/Tests/PostgresIntegrationTests.cs")) ||
+        file.endsWith(path.normalize("docs/product-polish-and-ux-implementation-report.md"))) &&
+      (line.includes('Assert.DoesNotContain("at Preform.", body);') || line.includes("Preform stack traces")),
   },
   {
     id: "historical-milestone-docs",

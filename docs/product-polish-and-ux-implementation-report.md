@@ -15,7 +15,7 @@ PrepFord has undergone a comprehensive, end-to-end product polish, branding migr
 
 Key engineering and pedagogical outcomes achieved in this milestone:
 1. **Super Admin Creation & Recovery:** Implemented a secure, CLI-driven, environment-guarded administrative bootstrap service (`AdminBootstrapService.cs`) that creates or recovers Super Admin credentials transactionally without public API endpoints or unhashed secrets, documented in `docs/superadmin-setup.md`.
-2. **Comprehensive Brand Consistency:** Replaced legacy `preform` branding across 233 source files and documentation assets. Established an automated CI/CD guard (`npm run verify:brand`) with 0 violations.
+2. **Comprehensive Brand Consistency:** Replaced legacy PREform branding across 234 source files and documentation assets. Established an automated CI/CD guard (`npm run verify:brand`) with 0 violations.
 3. **Durable Persistent Sessions:** Replaced short idle timeouts with server-authoritative, persistent sessions lasting 30 days (90 days with "Remember Me") across browser restarts and application redeployments, preserving secure revocation on logout, account lock, or credential change. Dual-cookie parsing (`prepford_session` with fallback to `preform_session`) guarantees backward compatibility.
 4. **Promotional Discount System:** Audited and implemented server-authoritative promo codes (`FUTURENURSE` [10%], `NURSE10` [10%], `PREPFORD10` [10%], `CLINICAL20` [20%], and legacy `PREFORM10` alias). Discounts are validated authoritatively in the ASP.NET Core backend before payment, preventing client-side price tampering.
 5. **Original Medical Education Imagery:** Deployed 10 dedicated, 16:9 topic-specific hero images in `apps/web/public/images/blog/` created specifically for each published nursing article, supported by an automated imagery audit script (`npm run verify:blog-images`).
@@ -79,7 +79,7 @@ To prevent accidental re-introduction of legacy branding in future pull requests
 ```bash
 npm run verify:brand
 ```
-The script audits 233 source files (TypeScript, TSX, C#, Markdown, JSON) and checks for un-allowlisted case-insensitive matches of `preform`.
+The script audits 234 source files (TypeScript, TSX, C#, Markdown, JSON) and checks for un-allowlisted case-insensitive matches of PREform.
 
 ### 3.3 Documented Allowlist Exceptions
 | Allowlist Key | Context | Technical / Architectural Justification |
