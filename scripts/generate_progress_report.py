@@ -1457,8 +1457,9 @@ class SimplePdfWriter:
         return img_id
 
     def write_pdf(self, output_path):
-        # Build Pages Tree
-        pages_id = len(self.objects) + 1
+        # Calculate Pages Tree object id in advance:
+        # Each page adds 2 objects: (1 content stream + 1 page object)
+        pages_id = len(self.objects) + 2 * len(self.pages) + 1
         page_ids = []
         
         for p in self.pages:
@@ -1485,7 +1486,8 @@ class SimplePdfWriter:
         # Add Pages object
         kids_str = " ".join([f"{pid} 0 R" for pid in page_ids])
         pages_data = f"<< /Type /Pages /Kids [{kids_str}] /Count {len(page_ids)} >>".encode("ascii")
-        self.add_object(pages_data)
+        actual_pages_id = self.add_object(pages_data)
+        assert actual_pages_id == pages_id, f"Pages ID mismatch: expected {pages_id}, got {actual_pages_id}"
         
         # Catalog object
         catalog_id = self.add_object(f"<< /Type /Catalog /Pages {pages_id} 0 R >>".encode("ascii"))
