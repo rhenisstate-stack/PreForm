@@ -349,8 +349,8 @@ export const BLOG_POSTS: BlogPost[] = [
     },
     publishedAt: "2026-10-05",
     readingTime: "7 min read",
-    featuredImage: "/images/illustrations/prepford-ehr-unfolding-case.png",
-    imageAlt: "Electronic Health Record interface with vital sign flowsheets and nurse shift notes",
+    featuredImage: "/images/blog/prepford-unfolding-case-studies-hero.jpg",
+    imageAlt: "Electronic health record workstation displaying an unfolding NCLEX clinical case study with patient trends, vitals, and progress notes",
     tags: ["NGN", "Case Studies", "Partial Credit", "Scoring"],
     content: {
       lead: "Unfolding case studies test how well you process evolving patient scenarios across time. Unlike standalone questions, your decisions in question 3 can inform question 5. Learning how to navigate EHR tabs efficiently ensures you do not waste precious exam time rereading baseline data.",
@@ -395,8 +395,8 @@ export const BLOG_POSTS: BlogPost[] = [
     },
     publishedAt: "2026-09-28",
     readingTime: "6 min read",
-    featuredImage: "/images/illustrations/prepford-study-guide-overview.png",
-    imageAlt: "Pediatric nursing study guide and medication safe dosage calculation charts",
+    featuredImage: "/images/blog/prepford-pediatric-dosage-hero.jpg",
+    imageAlt: "Pediatric nursing dosage calculation desk with precision calibrated oral syringe, pediatric stethoscope, and weight-based calculation formulas",
     tags: ["Pediatrics", "Dosage Calculations", "Pharmacology", "Patient Safety"],
     content: {
       lead: "Children are not simply miniature adults; pharmacokinetic variations in hepatic and renal maturation make pediatric patients particularly vulnerable to medication errors. NCLEX dosage calculation questions emphasize checking safe dose ranges before administering any dose.",
@@ -432,8 +432,8 @@ export const BLOG_POSTS: BlogPost[] = [
     },
     publishedAt: "2026-09-20",
     readingTime: "5 min read",
-    featuredImage: "/landing-page-nurse.jpg",
-    imageAlt: "Nursing student preparing calmly with laptop and study tools",
+    featuredImage: "/images/blog/prepford-test-anxiety-management-hero.jpg",
+    imageAlt: "Calm, organized nursing study sanctuary with focused NCLEX preparation book, timer, herbal tea, and mindfulness breathing guidelines",
     tags: ["Study Strategies", "Test Anxiety", "Exam Day", "Mindset"],
     content: {
       lead: "Test anxiety is one of the most common factors that undermine capable nursing graduates on exam day. The Computerized Adaptive Testing (CAT) algorithm adapts to your performance, meaning every candidate receives questions near their threshold of difficulty.",
@@ -467,8 +467,8 @@ export const BLOG_POSTS: BlogPost[] = [
     },
     publishedAt: "2026-09-12",
     readingTime: "6 min read",
-    featuredImage: "/images/illustrations/prepford-pn-pathway-card.png",
-    imageAlt: "Practical nurse reviewing infection control standards and client precautions",
+    featuredImage: "/images/blog/prepford-infection-control-hero.jpg",
+    imageAlt: "Hospital isolation anteroom with personal protective equipment station, N95 respirator, sterile gloves, and CDC transmission precautions chart",
     tags: ["Infection Control", "PPE", "Safety", "Airborne Precautions", "NCLEX-PN"],
     content: {
       lead: "Infection control questions appear across all client need categories. Knowing which organisms require which precautions and mastering the correct sequence for donning and doffing Personal Protective Equipment (PPE) are guaranteed high-yield concepts.",
