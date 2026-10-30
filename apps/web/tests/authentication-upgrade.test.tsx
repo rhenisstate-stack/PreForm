@@ -307,7 +307,13 @@ describe("Authentication Connectivity & Experience Upgrade", () => {
     it("suppresses AnnouncementBar on /sign-in and /sign-up", () => {
       currentPathname = "/sign-in";
       const mockAnnouncements = [
-        { id: "ann-1", title: "NCLEX Update", destination: "/courses" },
+        {
+          id: "ann-1",
+          title: "NCLEX Update",
+          summary: "New practice items available",
+          activeFrom: "2026-10-01",
+          destination: "/courses",
+        },
       ];
       const { container } = render(
         <AnnouncementBar announcements={mockAnnouncements} isLoading={false} />
