@@ -297,7 +297,7 @@ const policySections: PolicySection[] = [
     content: {
       paragraphs: [
         "If you have questions, comments, or wish to exercise any of your statutory data protection rights, please contact our designated Data Protection team:",
-        "Email: privacy@prepfordnclex.com (or via our Contact Us portal at /contact)",
+        "Email: privacy@prepford.com (or via our Contact Us portal at /contact)",
         "Postal Address: PrepFord NCLEX Data Protection Office, Attn: Privacy Compliance Officer.",
       ],
     },

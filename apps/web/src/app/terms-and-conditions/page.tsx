@@ -55,7 +55,7 @@ const termsSections: TermsSection[] = [
             "Accurate Data: You agree to provide true, accurate, and complete registration information and promptly update changes.",
             "Credential Confidentiality: You are solely responsible for maintaining the confidentiality of your credentials. You must not share, transfer, or sell your account login to any other individual.",
             "Single-User License: Every account represents a single-seat personal license. Simultaneous sessions from disparate geographical locations or suspicious concurrent access may trigger automated security holds.",
-            "Unauthorized Access: You agree to notify PrepFord immediately at security@prepfordnclex.com upon discovering any unauthorized use of your account.",
+            "Unauthorized Access: You agree to notify PrepFord immediately at security@prepford.com upon discovering any unauthorized use of your account.",
           ],
         },
       ],
@@ -222,7 +222,7 @@ const termsSections: TermsSection[] = [
     content: {
       paragraphs: [
         "Administrative Note: The governing law and jurisdiction clause is designated for formal corporate legal review prior to final commercial execution.",
-        "Unless mandatory consumer legislation in your local jurisdiction provides otherwise, these Terms shall be construed and governed in accordance with applicable commercial laws. In the event of any controversy or claim arising out of or relating to these Terms, the parties agree to first seek informal resolution in good faith by contacting legal@prepfordnclex.com before initiating formal legal proceedings.",
+        "Unless mandatory consumer legislation in your local jurisdiction provides otherwise, these Terms shall be construed and governed in accordance with applicable commercial laws. In the event of any controversy or claim arising out of or relating to these Terms, the parties agree to first seek informal resolution in good faith by contacting legal@prepford.com before initiating formal legal proceedings.",
       ],
     },
   },
@@ -232,7 +232,7 @@ const termsSections: TermsSection[] = [
     content: {
       paragraphs: [
         "For legal inquiries, copyright notices, or questions regarding these Terms, please contact us at:",
-        "Email: legal@prepfordnclex.com (or via our Contact Us portal at /contact)",
+        "Email: legal@prepford.com (or via our Contact Us portal at /contact)",
         "Attention: PrepFord NCLEX Legal Compliance Department.",
       ],
     },

@@ -129,7 +129,7 @@ const desktopNav: DesktopNavItem[] = [
     id: "more",
     label: "More",
     icon: Layers,
-    activePrefixes: ["/testimonials", "/blog", "/about", "/contact"],
+    activePrefixes: ["/testimonials", "/blog", "/about", "/contact", "/faq"],
     items: [
       {
         label: "Testimonials",
@@ -148,6 +148,12 @@ const desktopNav: DesktopNavItem[] = [
         href: "/study-guide",
         description: "Explore 7 core nursing domains, clinical cheat sheets, and high-yield notes.",
         icon: BookOpen,
+      },
+      {
+        label: "Help & FAQ",
+        href: "/faq",
+        description: "Clear answers to exam prep, subscription, and platform questions.",
+        icon: HelpCircle,
       },
       {
         label: "About PrepFord",

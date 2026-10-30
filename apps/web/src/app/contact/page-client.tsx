@@ -423,11 +423,11 @@ export function ContactPageClient() {
                 <CardContent className="space-y-3 text-sm text-muted-foreground">
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-wider text-foreground">General Support:</span>
-                    <p className="font-mono text-xs text-secondary mt-0.5">support@prepfordnclex.com</p>
+                    <p className="font-mono text-xs text-secondary mt-0.5">support@prepford.com</p>
                   </div>
                   <div>
                     <span className="text-xs font-semibold uppercase tracking-wider text-foreground">Institutional Partnerships:</span>
-                    <p className="font-mono text-xs text-secondary mt-0.5">educators@prepfordnclex.com</p>
+                    <p className="font-mono text-xs text-secondary mt-0.5">educators@prepford.com</p>
                   </div>
                 </CardContent>
               </Card>

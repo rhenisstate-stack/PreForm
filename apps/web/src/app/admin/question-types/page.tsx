@@ -5,6 +5,24 @@ import Link from "next/link";
 import {
   ArrowLeft,
   Search,
+  CircleDot,
+  CheckSquare,
+  ListChecks,
+  Image as ImageIcon,
+  Images,
+  GripVertical,
+  ArrowDownUp,
+  Workflow,
+  FileEdit,
+  GitMerge,
+  FormInput,
+  Table,
+  Calculator,
+  ToggleLeft,
+  Sheet,
+  AlignLeft,
+  FlaskConical,
+  type LucideIcon,
 } from "lucide-react";
 
 interface QuestionTypeCatalogueItem {
@@ -201,6 +219,27 @@ const eighteenQuestionTypes: QuestionTypeCatalogueItem[] = [
   },
 ];
 
+const questionTypeIcons: Record<string, LucideIcon> = {
+  "single-choice": CircleDot,
+  "multiple-choice": CheckSquare,
+  "sata": ListChecks,
+  "checkbox": CheckSquare,
+  "image-based": ImageIcon,
+  "multiple-image": Images,
+  "drag-drop": GripVertical,
+  "ordering": ArrowDownUp,
+  "case-study": Workflow,
+  "essay": FileEdit,
+  "matching": GitMerge,
+  "fill-blank": FormInput,
+  "matrix": Table,
+  "numeric": Calculator,
+  "true-false": ToggleLeft,
+  "tabular": Sheet,
+  "short-answer": AlignLeft,
+  "dynamic-lab": FlaskConical,
+};
+
 export default function QuestionTypesPage() {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedCategory, setSelectedCategory] = React.useState<string>("All");
@@ -274,28 +313,36 @@ export default function QuestionTypesPage() {
 
       {/* 18 Question Types Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredTypes.map((item, idx) => (
-          <div
-            key={item.id}
-            className="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between hover:border-secondary/40 transition-colors"
-          >
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="font-mono text-xs font-semibold text-secondary">
-                  #{idx + 1} · {item.key}
-                </span>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                  {item.category}
-                </span>
-              </div>
+        {filteredTypes.map((item, idx) => {
+          const Icon = questionTypeIcons[item.key] || CircleDot;
 
-              <h3 className="font-serif font-semibold text-foreground text-lg">
-                {item.name}
-              </h3>
+          return (
+            <div
+              key={item.id}
+              className="rounded-2xl border border-border bg-card p-6 shadow-xs flex flex-col justify-between hover:border-secondary/40 transition-colors"
+            >
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-semibold text-secondary">
+                    #{idx + 1} · {item.key}
+                  </span>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                    {item.category}
+                  </span>
+                </div>
 
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {item.description}
-              </p>
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/10 text-secondary shrink-0 mt-0.5">
+                    <Icon className="h-4 w-4" aria-hidden="true" />
+                  </div>
+                  <h3 className="font-serif font-semibold text-foreground text-lg leading-snug">
+                    {item.name}
+                  </h3>
+                </div>
+
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {item.description}
+                </p>
 
               <div className="space-y-1.5 pt-2 border-t border-border/60">
                 <div className="flex items-center justify-between text-[11px]">
@@ -315,7 +362,8 @@ export default function QuestionTypesPage() {
               </p>
             </div>
           </div>
-        ))}
+        );
+      })}
       </div>
     </div>
   );

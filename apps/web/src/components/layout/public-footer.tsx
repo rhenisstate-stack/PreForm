@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Linkedin, Twitter, Youtube, Facebook } from "lucide-react";
+import { Linkedin, Twitter, Youtube, Facebook, Mail, HelpCircle, ShieldCheck } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 
 interface FooterColumn {
@@ -117,6 +117,27 @@ export default function PublicFooter() {
               An independent, clinically grounded examination preparation platform dedicated to helping nursing candidates succeed on the NCLEX-RN® and NCLEX-PN® licensure exams.
             </p>
 
+            <div className="space-y-1.5 text-xs text-muted-foreground pt-1">
+              <a
+                href={`mailto:${BRAND.supportEmail}`}
+                className="inline-flex items-center gap-2 hover:text-secondary transition-colors"
+                aria-label={`Email candidate support at ${BRAND.supportEmail}`}
+              >
+                <Mail className="h-3.5 w-3.5 text-secondary shrink-0" />
+                <span>{BRAND.supportEmail}</span>
+              </a>
+              <div>
+                <Link
+                  href="/faq"
+                  className="inline-flex items-center gap-2 hover:text-secondary transition-colors"
+                  aria-label="View Candidate Help and FAQ Center"
+                >
+                  <HelpCircle className="h-3.5 w-3.5 text-secondary shrink-0" />
+                  <span>Candidate Help & FAQ Center</span>
+                </Link>
+              </div>
+            </div>
+
             {/* Social Profile Links */}
             <div className="pt-2">
               <p className="text-xs font-semibold uppercase tracking-wider text-foreground mb-3">
@@ -168,7 +189,8 @@ export default function PublicFooter() {
 
         {/* Bottom Section: Trademark Disclaimer & Copyright */}
         <div className="mt-12 pt-6 space-y-4">
-          <div className="rounded-xl bg-muted/45 p-4">
+          <div className="rounded-xl bg-muted/45 p-4 flex items-start gap-3">
+            <ShieldCheck className="h-4 w-4 text-secondary shrink-0 mt-0.5" aria-hidden="true" />
             <p className="text-xs text-muted-foreground leading-relaxed">
               <strong className="text-foreground">Official Examination Disclaimer: </strong>
               {BRAND.fullName} is an independent test preparation and educational platform. NCLEX-RN® and NCLEX-PN® are registered trademarks of the National Council of State Boards of Nursing, Inc. (NCSBN). {BRAND.fullName} is not affiliated with, sponsored by, or endorsed by the National Council of State Boards of Nursing, Inc. Diagnostic readiness indicators are signals based on practice performance and do not guarantee an official examination pass result.
