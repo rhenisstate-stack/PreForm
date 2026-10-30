@@ -5,12 +5,16 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Shield,
+  ShieldCheck,
+  ShieldAlert,
+  GraduationCap,
   BookOpen,
   LogOut,
   CheckCircle2,
   AlertCircle,
   Calendar,
   Lock,
+  KeyRound,
   Camera,
   Upload,
   Trash2,
@@ -400,11 +404,33 @@ export function ProfilePageClient() {
                   <Badge variant="secondary" className="text-xs font-semibold uppercase">
                     {pathway === "both" ? "NCLEX-RN & PN Dual Pathway" : `NCLEX-${pathway.toUpperCase()} Candidate`}
                   </Badge>
+                  {user.role === "superadmin" && (
+                    <Badge className="bg-purple-600 text-white font-mono text-[11px] gap-1 px-2.5 py-0.5 shadow-2xs">
+                      <ShieldAlert className="h-3 w-3" /> Super Admin
+                    </Badge>
+                  )}
+                  {user.role === "admin" && (
+                    <Badge className="bg-indigo-600 text-white font-mono text-[11px] gap-1 px-2.5 py-0.5 shadow-2xs">
+                      <ShieldCheck className="h-3 w-3" /> Administrator
+                    </Badge>
+                  )}
+                  {user.role === "instructor" && (
+                    <Badge className="bg-sky-600 text-white font-mono text-[11px] gap-1 px-2.5 py-0.5 shadow-2xs">
+                      <GraduationCap className="h-3 w-3" /> Nursing Faculty
+                    </Badge>
+                  )}
                   {user.provider === "google" && (
                     <Badge variant="outline" className="text-[11px] font-medium border-secondary/40 text-secondary">
                       Google Account
                     </Badge>
                   )}
+                  <span
+                    className="inline-flex items-center gap-1.5 text-[11px] font-mono font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20"
+                    title="Persistent session active across browser restarts"
+                  >
+                    <Lock className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                    <span>Durable Session Active</span>
+                  </span>
                 </div>
                 <p className="text-sm text-muted-foreground font-mono">{user.email}</p>
                 <p className="text-xs text-muted-foreground">
@@ -903,6 +929,36 @@ export function ProfilePageClient() {
                 </div>
               </form>
             )}
+
+            {/* Session Persistence & Security Policy */}
+            <div className="pt-6 border-t border-border space-y-4">
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-secondary shrink-0" />
+                <h3 className="text-sm font-semibold text-foreground">Session Security & Persistence Architecture</h3>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3.5 rounded-xl border border-border bg-muted/30 space-y-1">
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Durable Persistent Session
+                  </span>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Login sessions remain authenticated across browser restarts until you explicitly sign out or rotate credentials.
+                  </p>
+                </div>
+
+                <div className="p-3.5 rounded-xl border border-border bg-muted/30 space-y-1">
+                  <span className="font-semibold text-foreground flex items-center gap-1.5">
+                    <Shield className="h-3.5 w-3.5 text-secondary" />
+                    Server-Authoritative RBAC
+                  </span>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Role permissions (<span className="font-mono text-secondary font-medium">{user.role}</span>) are authoritative and enforced strictly by PostgreSQL and ASP.NET Core policies.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 

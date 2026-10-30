@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getBackendApiUrl } from "@/lib/api-services";
+import { getApiBaseUrl } from "@/lib/api-client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const pathway = searchParams.get("pathway") || "";
     const limit = searchParams.get("limit") || "20";
 
-    const backendUrl = `${getBackendApiUrl()}/api/v1/testimonials?pathway=${encodeURIComponent(pathway)}&limit=${encodeURIComponent(limit)}`;
+    const backendUrl = `${getApiBaseUrl()}/api/v1/testimonials?pathway=${encodeURIComponent(pathway)}&limit=${encodeURIComponent(limit)}`;
 
     const res = await fetch(backendUrl, {
       method: "GET",
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const backendUrl = `${getBackendApiUrl()}/api/v1/testimonials`;
+    const backendUrl = `${getApiBaseUrl()}/api/v1/testimonials`;
 
     const res = await fetch(backendUrl, {
       method: "POST",

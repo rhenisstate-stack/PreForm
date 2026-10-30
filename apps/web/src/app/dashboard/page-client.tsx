@@ -10,8 +10,15 @@ import {
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   ClipboardCheck,
+  Clock,
   Compass,
+  CircleDot,
+  Eye,
+  EyeOff,
+  FileEdit,
   FileQuestion,
   FileText,
   GraduationCap,
@@ -19,6 +26,7 @@ import {
   History,
   Info,
   Layers,
+  ListChecks,
   Menu,
   PanelLeftClose,
   PanelLeftOpen,
@@ -31,6 +39,7 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import { QuestionFlagButton } from "@/components/assessments/question-flag-button";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
 import { BRAND } from "@/lib/brand";
@@ -161,6 +170,31 @@ export function DashboardClient() {
   const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number | number[]>>({});
   const [activeQuestionIndex, setActiveQuestionIndex] = React.useState<number>(0);
   const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
+
+  // Cognitive fatigue relief: calm timer, note-taking scratchpad, collapsible rationales
+  const [isTimerVisible, setIsTimerVisible] = React.useState<boolean>(true);
+  const [sessionSeconds, setSessionSeconds] = React.useState<number>(0);
+  const [questionNotes, setQuestionNotes] = React.useState<Record<number, string>>({});
+  const [showNotePad, setShowNotePad] = React.useState<boolean>(false);
+  const [expandedRationales, setExpandedRationales] = React.useState<Record<string, boolean>>({});
+
+  // Calm timer ticking only when test is active
+  React.useEffect(() => {
+    if (!testInProgress) {
+      setSessionSeconds(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setSessionSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [testInProgress]);
+
+  const formatTimerDisplay = (totalSec: number) => {
+    const mins = Math.floor(totalSec / 60);
+    const secs = totalSec % 60;
+    return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+  };
 
   // Close mobile drawer on Escape key
   React.useEffect(() => {
@@ -1626,10 +1660,10 @@ export function DashboardClient() {
           data-testid="modal-create-test"
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
         >
-          <div className="relative w-full max-w-2xl rounded-2xl bg-card border border-border p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-6">
+          <div className="relative w-full max-w-3xl rounded-2xl bg-card border border-border p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-6">
             <div className="flex items-center justify-between border-b border-border pb-4">
-              <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
                   <Plus className="h-5 w-5" />
                 </div>
                 <div>
@@ -1643,17 +1677,37 @@ export function DashboardClient() {
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setCreateModalOpen(false);
-                  setTestInProgress(false);
-                }}
-                className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-                aria-label="Close modal"
-              >
-                <X className="h-5 w-5" />
-              </button>
+
+              <div className="flex items-center gap-3">
+                {testInProgress && (
+                  <button
+                    type="button"
+                    onClick={() => setIsTimerVisible(!isTimerVisible)}
+                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/60 hover:bg-muted text-xs font-mono text-muted-foreground hover:text-foreground transition-colors border border-border/60"
+                    aria-label={isTimerVisible ? "Hide session timer" : "Show session timer"}
+                    title={isTimerVisible ? "Click to minimize timer" : "Click to display timer"}
+                  >
+                    <Clock className="h-3.5 w-3.5 text-secondary" aria-hidden="true" />
+                    <span>{isTimerVisible ? formatTimerDisplay(sessionSeconds) : "Timer Hidden"}</span>
+                    {isTimerVisible ? (
+                      <EyeOff className="h-3 w-3 text-muted-foreground ml-0.5" />
+                    ) : (
+                      <Eye className="h-3 w-3 text-muted-foreground ml-0.5" />
+                    )}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateModalOpen(false);
+                    setTestInProgress(false);
+                  }}
+                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
+                  aria-label="Close modal"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {!testInProgress ? (
@@ -1769,30 +1823,69 @@ export function DashboardClient() {
 
                   return (
                     <div className="space-y-4">
-                      {/* Domain Badge & Progress */}
-                      <div className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono px-2 py-0.5 rounded bg-teal-500/10 text-teal-700 dark:text-teal-300 font-semibold">
+                      {/* Domain Badge, Question Type, Flagging & Progress */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs pb-1 border-b border-border/50">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-mono px-2 py-0.5 rounded bg-teal-500/10 text-teal-700 dark:text-teal-300 font-semibold border border-teal-500/20">
                             {activeQ.domain}
                           </span>
-                          {isMultiSelect && (
-                            <span className="font-mono px-2 py-0.5 rounded bg-sky-500/10 text-sky-700 dark:text-sky-300 font-semibold text-[11px]">
-                              Select All That Apply (SATA)
+                          {isMultiSelect ? (
+                            <span className="inline-flex items-center gap-1 font-mono px-2.5 py-0.5 rounded-full bg-sky-500/10 text-sky-700 dark:text-sky-300 font-semibold text-[11px] border border-sky-500/20">
+                              <ListChecks className="h-3 w-3" /> Select All That Apply (SATA)
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 font-mono px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 font-semibold text-[11px] border border-emerald-500/20">
+                              <CircleDot className="h-3 w-3" /> Single Choice
                             </span>
                           )}
                         </div>
-                        <span className="text-muted-foreground font-mono">
-                          {activeQuestionIndex + 1} / {qSlice.length}
-                        </span>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setShowNotePad(!showNotePad)}
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded-md hover:bg-muted transition-colors"
+                            title="Open clinical note scratchpad"
+                            aria-label="Toggle clinical note scratchpad"
+                          >
+                            <FileEdit className="h-3.5 w-3.5 text-secondary" />
+                            <span className="hidden sm:inline">Note</span>
+                          </button>
+                          <QuestionFlagButton questionId={`cq-${activeQuestionIndex}`} />
+                          <span className="text-muted-foreground font-mono font-medium pl-1">
+                            {activeQuestionIndex + 1} / {qSlice.length}
+                          </span>
+                        </div>
                       </div>
 
-                      {/* Question Stem */}
-                      <p className="text-sm sm:text-base font-medium text-foreground leading-relaxed">
-                        {activeQ.stem}
-                      </p>
+                      {/* Scratchpad note area if open */}
+                      {showNotePad && (
+                        <div className="rounded-xl border border-secondary/30 bg-muted/40 p-3 space-y-2 transition-all">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                              <FileEdit className="h-3.5 w-3.5 text-secondary" /> Clinical Scratchpad
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">Notes for Question #{activeQuestionIndex + 1}</span>
+                          </div>
+                          <textarea
+                            value={questionNotes[activeQuestionIndex] || ""}
+                            onChange={(e) => setQuestionNotes({ ...questionNotes, [activeQuestionIndex]: e.target.value })}
+                            placeholder="Jot down symptoms, ABC prioritization rules, or calculation scratch notes..."
+                            rows={2}
+                            className="w-full text-xs rounded-lg border border-border bg-background p-2.5 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary resize-none"
+                          />
+                        </div>
+                      )}
+
+                      {/* Question Stem (Calm typography, generous line-height 1.6-1.75, max-w-3xl) */}
+                      <div className="max-w-3xl py-1">
+                        <p className="text-sm sm:text-base md:text-[17px] font-sans font-medium text-foreground leading-relaxed sm:leading-7 tracking-normal">
+                          {activeQ.stem}
+                        </p>
+                      </div>
 
                       {/* Options */}
-                      <div className="space-y-2 pt-2">
+                      <div className="space-y-2.5 pt-1" role={isMultiSelect ? "group" : "radiogroup"} aria-label="Question options">
                         {activeQ.options.map((opt, optIdx) => {
                           const isSelected = selectedIndices.includes(optIdx);
 
@@ -1800,6 +1893,8 @@ export function DashboardClient() {
                             <button
                               key={optIdx}
                               type="button"
+                              role={isMultiSelect ? "checkbox" : "radio"}
+                              aria-checked={isSelected}
                               onClick={() => {
                                 if (isMultiSelect) {
                                   setCurrentTestAnswers((prev) => {
@@ -1824,22 +1919,22 @@ export function DashboardClient() {
                                   }));
                                 }
                               }}
-                              className={`w-full p-3.5 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all flex items-start gap-3 ${
+                              className={`w-full p-4 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all flex items-start gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary ${
                                 isSelected
                                   ? "border-teal-500 bg-teal-500/10 text-foreground ring-1 ring-teal-500"
-                                  : "border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                                  : "border-border hover:bg-muted/70 text-muted-foreground hover:text-foreground"
                               }`}
                             >
                               <span
                                 className={`h-5 w-5 ${
                                   isMultiSelect ? "rounded-md" : "rounded-full"
-                                } border border-current flex items-center justify-center text-[10px] shrink-0 font-mono ${
+                                } border border-current flex items-center justify-center text-[10px] shrink-0 font-mono mt-0.5 ${
                                   isSelected ? "bg-teal-600 text-white border-teal-600 font-bold" : ""
                                 }`}
                               >
                                 {isSelected && isMultiSelect ? "✓" : String.fromCharCode(65 + optIdx)}
                               </span>
-                              <span className="flex-1">{opt}</span>
+                              <span className="flex-1 leading-relaxed">{opt}</span>
                             </button>
                           );
                         })}
@@ -2041,13 +2136,50 @@ export function DashboardClient() {
                       })}
                     </div>
 
-                    {/* Clinical Rationale Box */}
-                    <div className="rounded-lg bg-teal-500/10 border border-teal-500/20 p-3 text-xs text-slate-800 dark:text-slate-200 space-y-1">
-                      <p className="font-bold text-teal-800 dark:text-teal-300 flex items-center gap-1.5">
-                        <Info className="h-3.5 w-3.5" />
-                        <span>Clinical Rationale & Explanation</span>
+                    {/* Clinical Rationale Box with collapsible details & safety takeaways */}
+                    <div className="rounded-xl bg-teal-500/10 border border-teal-500/25 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Info className="h-4 w-4 text-teal-700 dark:text-teal-300 shrink-0" />
+                          <h4 className="font-serif font-bold text-sm text-teal-900 dark:text-teal-200">
+                            Clinical Rationale & Evidence Breakdown
+                          </h4>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedRationales((prev) => ({
+                              ...prev,
+                              [q.id]: !prev[q.id],
+                            }))
+                          }
+                          className="text-xs font-semibold text-teal-800 dark:text-teal-300 hover:underline flex items-center gap-1"
+                          aria-label={expandedRationales[q.id] ? "Collapse clinical takeaway" : "Expand clinical takeaway"}
+                        >
+                          <span>{expandedRationales[q.id] ? "Collapse Takeaway" : "Detailed Takeaway"}</span>
+                          {expandedRationales[q.id] ? (
+                            <ChevronUp className="h-3 w-3" />
+                          ) : (
+                            <ChevronDown className="h-3 w-3" />
+                          )}
+                        </button>
+                      </div>
+
+                      <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed font-sans">
+                        {q.rationale}
                       </p>
-                      <p className="leading-relaxed">{q.rationale}</p>
+
+                      {expandedRationales[q.id] && (
+                        <div className="rounded-lg bg-amber-500/10 border border-amber-500/25 p-3 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                          <p className="font-bold uppercase tracking-wider text-[11px] flex items-center gap-1.5 text-amber-800 dark:text-amber-300">
+                            <ShieldCheck className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                            NCLEX Clinical Judgment & Client Safety Takeaway
+                          </p>
+                          <p className="leading-relaxed">
+                            Always prioritize acute physiologic instability (airway, breathing, circulation, and sudden neurological deterioration) over chronic stable symptoms. Review distractor rationales to confirm why non-urgent assessments must wait until priority interventions are secured.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

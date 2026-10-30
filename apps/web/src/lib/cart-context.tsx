@@ -66,12 +66,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const validatedItems: CartItem[] = [];
         for (const item of rawItems) {
           const castItem = item as { productId?: string; product?: { id?: string } };
-          const product = getProductById(castItem.productId || castItem.product?.id);
-          if (product) {
-            validatedItems.push({
-              product,
-              quantity: 1,
-            });
+          const productId = castItem.productId || castItem.product?.id;
+          if (productId) {
+            const product = getProductById(productId);
+            if (product) {
+              validatedItems.push({
+                product,
+                quantity: 1,
+              });
+            }
           }
         }
         setItems(validatedItems);
