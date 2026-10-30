@@ -200,7 +200,7 @@ describe("Phase 1 & 2 — Session Integrity & Server-Side Authorization Hardenin
       role: "candidate",
     });
 
-    mockSessionCookieValue = aliceToken;
+    mockPrepfordCookieValue = aliceToken;
 
     // Alice attempts to fetch Bob's image
     const req = new Request("http://localhost/api/profile/image?userId=usr_bob&email=bob@nursing.edu");
@@ -219,12 +219,52 @@ describe("Phase 1 & 2 — Session Integrity & Server-Side Authorization Hardenin
       pathway: "both", // tampered entitlement claim in cookie
     });
 
-    mockSessionCookieValue = forgedPathwayToken;
+    mockPrepfordCookieValue = forgedPathwayToken;
 
     // Call GET /api/profile
     const session = await resolveSession();
     // Authoritative pathway must come from database (which is "rn")
     expect(session?.pathway).toBe("rn");
+  });
+
+  it("11. resolves session from legacy preform_session cookie when prepford_session is absent", async () => {
+    const legacyToken = createSignedTestSession({
+      sub: candidateUserId,
+      email: candidateEmail,
+      role: "candidate",
+    });
+
+    mockPrepfordCookieValue = undefined;
+    mockLegacyCookieValue = legacyToken;
+
+    const session = await resolveSession();
+    expect(session).not.toBeNull();
+    expect(session?.userId).toBe(candidateUserId);
+    expect(session?.email).toBe(candidateEmail);
+  });
+
+  it("12. creates persistent sessions with multi-week longevity (no unintended idle timeout)", () => {
+    const standard = createServerSession({
+      userId: candidateUserId,
+      email: candidateEmail,
+      role: "candidate",
+      rememberMe: false,
+    });
+    // Standard session: at least 30 days
+    const standardExp = new Date(standard.session.expiresAt).getTime();
+    const thirtyDaysFromNow = Date.now() + 29 * 24 * 60 * 60 * 1000;
+    expect(standardExp).toBeGreaterThan(thirtyDaysFromNow);
+
+    const rememberMe = createServerSession({
+      userId: candidateUserId,
+      email: candidateEmail,
+      role: "candidate",
+      rememberMe: true,
+    });
+    // Remember-me session: at least 90 days
+    const rememberExp = new Date(rememberMe.session.expiresAt).getTime();
+    const ninetyDaysFromNow = Date.now() + 89 * 24 * 60 * 60 * 1000;
+    expect(rememberExp).toBeGreaterThan(ninetyDaysFromNow);
   });
 });
 
