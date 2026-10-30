@@ -33,14 +33,27 @@ export function CartPageClient() {
   const cart = useCart();
   const { isAuthenticated, user, refreshSession } = useAuth();
 
-  const [promoCode, setPromoCode] = React.useState("");
-  const [promoApplied, setPromoApplied] = React.useState<number | null>(null);
-  const [promoError, setPromoError] = React.useState<string | null>(null);
+  const [inputCode, setInputCode] = React.useState("");
   const [isCheckingOut, setIsCheckingOut] = React.useState(false);
   const [checkoutSuccess, setCheckoutSuccess] = React.useState(false);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
 
-  const { items, itemCount, subtotal, removeItem, clearCart, addItem } = cart;
+  const {
+    items,
+    itemCount,
+    subtotal,
+    total,
+    discountAmount,
+    appliedPromoCode,
+    promoDiscountPercent,
+    promoStatusMessage,
+    promoError,
+    applyPromoCode,
+    removePromoCode,
+    removeItem,
+    clearCart,
+    addItem,
+  } = cart;
 
   const hasRecurringSubscription = items.some(
     (item) => item.product.billingInterval !== "one-time"
@@ -68,22 +81,11 @@ export function CartPageClient() {
     }
   }, [searchParams, addItem, router]);
 
-  const discountAmount = promoApplied ? subtotal * promoApplied : 0;
-  const finalTotal = Math.max(0, subtotal - discountAmount);
-
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
-    setPromoError(null);
-
-    const cleanCode = promoCode.trim().toUpperCase();
-    if (cleanCode === "NURSE10" || cleanCode === "PREPFORD10" || cleanCode === "PREFORM10" || cleanCode === "FUTURENURSE") {
-      setPromoApplied(0.1); // 10% discount
-    } else if (cleanCode === "CLINICAL20") {
-      setPromoApplied(0.2); // 20% discount
-    } else if (cleanCode === "") {
-      setPromoError("Please enter a valid promotional code.");
-    } else {
-      setPromoError("Invalid code. Try using 'FUTURENURSE' for 10% off.");
+    const result = applyPromoCode(inputCode);
+    if (result.success) {
+      setInputCode("");
     }
   };
 
@@ -113,6 +115,7 @@ export function CartPageClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           planId: primaryItem.product.slug || primaryItem.product.id,
+          promoCode: appliedPromoCode || undefined,
         }),
       });
 
@@ -320,11 +323,11 @@ export function CartPageClient() {
                     <span className="font-medium text-foreground">${subtotal.toFixed(2)}</span>
                   </div>
 
-                  {promoApplied && (
+                  {appliedPromoCode && discountAmount > 0 && (
                     <div className="flex items-center justify-between text-sm text-secondary">
                       <span className="flex items-center gap-1">
                         <Tag className="h-3.5 w-3.5" />
-                        Promo Discount ({(promoApplied * 100).toFixed(0)}%)
+                        Promo ({appliedPromoCode} &middot; {promoDiscountPercent}%)
                       </span>
                       <span className="font-medium">-${discountAmount.toFixed(2)}</span>
                     </div>
@@ -344,39 +347,66 @@ export function CartPageClient() {
                       <p className="text-[11px] text-muted-foreground">Includes all platform study tools</p>
                     </div>
                     <span className="text-2xl font-serif font-bold text-foreground">
-                      ${finalTotal.toFixed(2)}
+                      ${total.toFixed(2)}
                     </span>
                   </div>
 
                   {/* Promo Code Form */}
-                  <form onSubmit={handleApplyPromo} className="pt-3 border-t border-border">
-                    <label htmlFor="promo-code" className="block text-xs font-medium text-muted-foreground mb-1.5">
-                      Have a promotional code?
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        id="promo-code"
-                        type="text"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                        placeholder="e.g. FUTURENURSE"
-                        className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-secondary uppercase"
-                      />
-                      <Button type="submit" variant="outline" size="sm" className="text-xs">
-                        Apply
-                      </Button>
+                  {appliedPromoCode ? (
+                    <div className="pt-3 border-t border-border">
+                      <div className="flex items-center justify-between p-2.5 rounded-md bg-secondary/10 border border-secondary/20">
+                        <div className="flex items-center gap-2">
+                          <Tag className="h-4 w-4 text-secondary shrink-0" />
+                          <div>
+                            <div className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                              <span>{appliedPromoCode}</span>
+                              <Badge variant="secondary" className="text-[10px] py-0 px-1.5">
+                                {promoDiscountPercent}% OFF
+                              </Badge>
+                            </div>
+                            {promoStatusMessage && (
+                              <p className="text-[11px] text-muted-foreground mt-0.5">{promoStatusMessage}</p>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={removePromoCode}
+                          className="text-xs text-muted-foreground hover:text-destructive h-7 px-2"
+                          aria-label={`Remove promotional code ${appliedPromoCode}`}
+                        >
+                          Remove
+                        </Button>
+                      </div>
                     </div>
-                    {promoApplied && (
-                      <p className="mt-1 text-xs text-secondary font-medium">
-                        Code applied: {(promoApplied * 100).toFixed(0)}% off your order!
-                      </p>
-                    )}
-                    {promoError && (
-                      <p className="mt-1 text-xs text-destructive">
-                        {promoError}
-                      </p>
-                    )}
-                  </form>
+                  ) : (
+                    <form onSubmit={handleApplyPromo} className="pt-3 border-t border-border">
+                      <label htmlFor="promo-code" className="block text-xs font-medium text-muted-foreground mb-1.5">
+                        Have a promotional code?
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          id="promo-code"
+                          type="text"
+                          value={inputCode}
+                          onChange={(e) => setInputCode(e.target.value)}
+                          placeholder="e.g. FUTURENURSE"
+                          className="flex-1 rounded-md border border-border bg-background px-3 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-secondary uppercase"
+                          aria-label="Promotional code input"
+                        />
+                        <Button type="submit" variant="outline" size="sm" className="text-xs">
+                          Apply
+                        </Button>
+                      </div>
+                      {promoError && (
+                        <p className="mt-1.5 text-xs text-destructive" role="alert">
+                          {promoError}
+                        </p>
+                      )}
+                    </form>
+                  )}
                 </CardContent>
 
                 <CardFooter className="p-6 pt-0 flex flex-col gap-3">
@@ -448,9 +478,18 @@ export function CartPageClient() {
                   </div>
                 ))}
               </div>
+              {appliedPromoCode && discountAmount > 0 && (
+                <div className="border-t border-border pt-2 flex justify-between text-secondary text-xs font-medium">
+                  <span className="flex items-center gap-1">
+                    <Tag className="h-3 w-3" />
+                    Promo ({appliedPromoCode} &middot; {promoDiscountPercent}% off):
+                  </span>
+                  <span>-${discountAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="border-t border-border pt-2 flex justify-between font-bold text-sm text-foreground">
                 <span>Total Amount:</span>
-                <span>${finalTotal.toFixed(2)} USD</span>
+                <span>${total.toFixed(2)} USD</span>
               </div>
             </div>
 
