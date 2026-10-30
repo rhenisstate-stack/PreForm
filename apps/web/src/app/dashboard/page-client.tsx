@@ -1201,12 +1201,13 @@ export function DashboardClient() {
             ) : (
               /* Honest Empty State When No Attempts Exist */
               <div className="rounded-2xl border border-dashed border-border p-8 text-center bg-card/50 space-y-4">
-                <div className="mx-auto max-w-[180px] overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs p-1">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
+                <div className="mx-auto max-w-[200px] w-full aspect-square relative overflow-hidden rounded-2xl bg-card border border-border/80 shadow-xs p-1">
+                  <Image
                     src="/images/illustrations/prepford-empty-recent-activity.png"
                     alt="Ready to begin NCLEX practice"
-                    className="w-full h-auto object-contain"
+                    fill
+                    sizes="200px"
+                    className="object-contain p-2"
                   />
                 </div>
                 <div className="max-w-md mx-auto space-y-2">
