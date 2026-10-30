@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, within, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HeroSection } from "@/components/home/hero-section";
 import { SubscriptionsPageClient } from "@/app/subscriptions/page-client";
@@ -48,7 +48,11 @@ describe("Homepage Hero Animated Carousel", () => {
     vi.clearAllMocks();
   });
 
-  it("renders the initial slide with Archer-inspired copy and controls", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("renders the initial slide with Archer-inspired copy and seamless visual integration without manual controls", () => {
     render(<HeroSection />);
 
     // Verify slide 1 headline
@@ -59,26 +63,34 @@ describe("Homepage Hero Animated Carousel", () => {
       })
     ).toBeInTheDocument();
 
-    // Verify counter
-    expect(screen.getByTestId("hero-slide-counter")).toHaveTextContent("Slide 01 of 04");
+    // Verify manual controls and counters are removed in accordance with Archer Review inspiration
+    expect(screen.queryByTestId("hero-slide-counter")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hero-carousel-prev")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hero-carousel-next")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hero-carousel-play-toggle")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("hero-carousel-dot-0")).not.toBeInTheDocument();
 
-    // Verify controls exist
-    expect(screen.getByTestId("hero-carousel-prev")).toBeInTheDocument();
-    expect(screen.getByTestId("hero-carousel-next")).toBeInTheDocument();
-    expect(screen.getByTestId("hero-carousel-play-toggle")).toBeInTheDocument();
-    expect(screen.getByTestId("hero-carousel-dot-0")).toBeInTheDocument();
+    // Verify right column image is seamlessly integrated without artificial white card frame
+    const rightCol = screen.getByTestId("hero-right-column");
+    expect(within(rightCol).getByRole("img")).toBeInTheDocument();
   });
 
-  it("advances slides when clicking next and wraps backwards when clicking previous", async () => {
-    const user = userEvent.setup();
+  it("automatically cycles slides using 7000ms autoplay interval", () => {
+    vi.useFakeTimers();
     render(<HeroSection />);
 
-    const nextBtn = screen.getByTestId("hero-carousel-next");
-    const prevBtn = screen.getByTestId("hero-carousel-prev");
+    // Initial: Slide 1
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Prepare for NCLEX with greater clarity and confidence\./i,
+      })
+    ).toBeInTheDocument();
 
-    // Click Next -> Slide 2 (EHR Unfolding Cases / NGN)
-    await user.click(nextBtn);
-    expect(screen.getByTestId("hero-slide-counter")).toHaveTextContent("Slide 02 of 04");
+    // Advance 7000ms -> Slide 2 (NGN Unfolding Cases)
+    act(() => {
+      vi.advanceTimersByTime(7000);
+    });
     expect(
       screen.getByRole("heading", {
         level: 1,
@@ -86,9 +98,10 @@ describe("Homepage Hero Animated Carousel", () => {
       })
     ).toBeInTheDocument();
 
-    // Click Next -> Slide 3 (Study Guide)
-    await user.click(nextBtn);
-    expect(screen.getByTestId("hero-slide-counter")).toHaveTextContent("Slide 03 of 04");
+    // Advance 7000ms -> Slide 3 (Study Guide)
+    act(() => {
+      vi.advanceTimersByTime(7000);
+    });
     expect(
       screen.getByRole("heading", {
         level: 1,
@@ -96,45 +109,95 @@ describe("Homepage Hero Animated Carousel", () => {
       })
     ).toBeInTheDocument();
 
-    // Click Prev -> back to Slide 2
-    await user.click(prevBtn);
-    expect(screen.getByTestId("hero-slide-counter")).toHaveTextContent("Slide 02 of 04");
-
-    // Click Prev twice -> Slide 1 then wrap to Slide 4
-    await user.click(prevBtn);
-    expect(screen.getByTestId("hero-slide-counter")).toHaveTextContent("Slide 01 of 04");
-    await user.click(prevBtn);
-    expect(screen.getByTestId("hero-slide-counter")).toHaveTextContent("Slide 04 of 04");
+    // Advance 7000ms -> Slide 4 (Readiness Insights)
+    act(() => {
+      vi.advanceTimersByTime(7000);
+    });
     expect(
       screen.getByRole("heading", {
         level: 1,
         name: /Transparent Clinical Readiness Insights for Confident Exam Day\./i,
       })
     ).toBeInTheDocument();
+
+    // Advance 7000ms -> Wrap back to Slide 1
+    act(() => {
+      vi.advanceTimersByTime(7000);
+    });
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Prepare for NCLEX with greater clarity and confidence\./i,
+      })
+    ).toBeInTheDocument();
   });
 
-  it("allows selecting a specific slide via dot indicator pills", async () => {
-    const user = userEvent.setup();
+  it("pauses automatic slide advancement when user hovers over hero section and resumes on leave", () => {
+    vi.useFakeTimers();
     render(<HeroSection />);
 
-    const dot2 = screen.getByTestId("hero-carousel-dot-2");
-    await user.click(dot2);
+    const hero = screen.getByTestId("hero-section");
 
-    expect(screen.getByTestId("hero-slide-counter")).toHaveTextContent("Slide 03 of 04");
+    // Mouse enters hero -> should pause
+    fireEvent.mouseEnter(hero);
+
+    // Advance 14000ms while hovered -> should stay on Slide 1
+    act(() => {
+      vi.advanceTimersByTime(14000);
+    });
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Prepare for NCLEX with greater clarity and confidence\./i,
+      })
+    ).toBeInTheDocument();
+
+    // Mouse leaves hero -> should resume
+    fireEvent.mouseLeave(hero);
+
+    // Advance 7000ms -> advances to Slide 2
+    act(() => {
+      vi.advanceTimersByTime(7000);
+    });
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Master Clinical Judgment with EHR Unfolding Cases\./i,
+      })
+    ).toBeInTheDocument();
   });
 
-  it("toggles autoplay pause state via the play/pause button", async () => {
-    const user = userEvent.setup();
+  it("pauses automatic slide advancement when user focuses within hero section and resumes on blur", () => {
+    vi.useFakeTimers();
     render(<HeroSection />);
 
-    const toggleBtn = screen.getByTestId("hero-carousel-play-toggle");
-    expect(toggleBtn).toHaveAttribute("aria-label", "Pause automatic slide rotation");
+    const hero = screen.getByTestId("hero-section");
 
-    await user.click(toggleBtn);
-    expect(toggleBtn).toHaveAttribute("aria-label", "Start automatic slide rotation");
+    // Focus enters hero -> should pause
+    fireEvent.focusIn(hero);
 
-    await user.click(toggleBtn);
-    expect(toggleBtn).toHaveAttribute("aria-label", "Pause automatic slide rotation");
+    act(() => {
+      vi.advanceTimersByTime(14000);
+    });
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Prepare for NCLEX with greater clarity and confidence\./i,
+      })
+    ).toBeInTheDocument();
+
+    // Blur from hero -> should resume
+    fireEvent.focusOut(hero);
+
+    act(() => {
+      vi.advanceTimersByTime(7000);
+    });
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Master Clinical Judgment with EHR Unfolding Cases\./i,
+      })
+    ).toBeInTheDocument();
   });
 
   it("supports keyboard arrow navigation (ArrowLeft & ArrowRight)", () => {
@@ -142,11 +205,23 @@ describe("Homepage Hero Animated Carousel", () => {
 
     const carousel = screen.getByRole("region", { name: /PrepFord NCLEX Hero/i });
 
+    // ArrowRight advances to Slide 2
     fireEvent.keyDown(carousel, { key: "ArrowRight" });
-    expect(screen.getByTestId("hero-slide-counter")).toHaveTextContent("Slide 02 of 04");
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Master Clinical Judgment with EHR Unfolding Cases\./i,
+      })
+    ).toBeInTheDocument();
 
+    // ArrowLeft goes back to Slide 1
     fireEvent.keyDown(carousel, { key: "ArrowLeft" });
-    expect(screen.getByTestId("hero-slide-counter")).toHaveTextContent("Slide 01 of 04");
+    expect(
+      screen.getByRole("heading", {
+        level: 1,
+        name: /Prepare for NCLEX with greater clarity and confidence\./i,
+      })
+    ).toBeInTheDocument();
   });
 });
 
