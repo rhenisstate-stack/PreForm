@@ -961,13 +961,13 @@ export function NCLEXPNPageClient() {
                 When a practice question highlights a topic you need to review, PrepFord&apos;s Nursing Study Guide gives you structured subject notes organized by clinical domain—complete with key takeaways, pharmacology warnings, and priority nursing alerts.
               </p>
 
-              <div className="rounded-3xl overflow-hidden shadow-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+              <div className="relative w-full aspect-video sm:aspect-[4/3] rounded-2xl overflow-hidden shadow-md bg-card border border-border/80">
+                <Image
                   src="/images/illustrations/prepford-study-guide-overview.png"
                   alt="Practical nursing candidate studying clinical notes and pharmacology guides"
-                  className="w-full h-60 sm:h-64 object-contain sm:object-cover"
-                  loading="lazy"
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 480px"
+                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-[1.02]"
                 />
               </div>
 

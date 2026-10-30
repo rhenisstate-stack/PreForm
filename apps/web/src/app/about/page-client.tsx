@@ -99,6 +99,56 @@ export function AboutPageClient() {
         </div>
       </section>
 
+      {/* Shared Container: Educator Mission & Student Collaboration (Archer Review-Inspired) */}
+      <section className="py-12 px-4 sm:px-6 lg:px-8">
+        <TextImageSection
+          id="educator-mission"
+          dataTestId="about-educator-mission"
+          variant="card"
+          imagePosition="right"
+          columnRatio="60-40"
+          imageAspectRatio="4/3"
+          eyebrow="Educator-Led Methodology"
+          heading="Connecting Clinical Reasoning to Real Bedside Safety"
+          description="Founded by veteran nurse educators, PrepFord bridges the gap between nursing school exams and modern computerized adaptive licensure tests. We believe every candidate deserves clear, respectful, and clinically transparent preparation."
+          imageSrc="/images/illustrations/prepford-landing-hero.png"
+          imageAlt="Nurse candidate studying with PrepFord digital learning workspace"
+          imageBadge="Clinical Faculty Mentorship"
+          imageCaption="Candidate engaged in interactive NCLEX clinical judgment preparation"
+          primaryAction={{
+            label: "Explore Nursing Courses",
+            href: "/courses",
+            icon: Stethoscope,
+          }}
+          secondaryAction={{
+            label: "Read FAQs",
+            href: "/faq",
+            icon: ArrowRight,
+          }}
+        >
+          <ul className="space-y-3 pt-2 text-sm text-foreground/90">
+            <li className="flex items-start gap-2.5">
+              <CheckCircle2 className="h-4 w-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+              <span>
+                <strong>Faculty-Authored Items:</strong> Every clinical vignette and distractor is written and peer-reviewed by active nursing faculty.
+              </span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <CheckCircle2 className="h-4 w-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+              <span>
+                <strong>Zero Marketing Fluff:</strong> No unsubstantiated 99% pass guarantees or high-pressure countdown clocks.
+              </span>
+            </li>
+            <li className="flex items-start gap-2.5">
+              <CheckCircle2 className="h-4 w-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+              <span>
+                <strong>Accessible Anywhere:</strong> Cloud-synchronized question progress and mobile-optimized study notes for busy clinical rotations.
+              </span>
+            </li>
+          </ul>
+        </TextImageSection>
+      </section>
+
       {/* Pathways Overview */}
       <section className="py-16 px-4 sm:px-6 lg:px-8 border-t border-border bg-card/40">
         <div className="mx-auto max-w-7xl">

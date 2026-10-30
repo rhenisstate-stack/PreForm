@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Stethoscope,
   Pill,
@@ -131,13 +132,15 @@ export function StudyGuideIndexClient() {
               </div>
             </div>
 
-            <div className="lg:col-span-5 hidden lg:block">
-              <div className="relative rounded-3xl overflow-hidden shadow-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 p-2">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+            <div className="lg:col-span-5 w-full mt-6 lg:mt-0">
+              <div className="relative w-full aspect-video sm:aspect-[4/3] lg:aspect-[4/3] rounded-3xl overflow-hidden shadow-xl bg-card border border-border/80 p-2">
+                <Image
                   src="/images/illustrations/prepford-study-guide-overview.png"
                   alt="PrepFord Clinical Nursing Notes & High-Yield NCLEX Study Guide"
-                  className="w-full h-auto object-contain"
+                  fill
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 80vw, 500px"
+                  priority
+                  className="w-full h-full object-contain sm:object-cover rounded-2xl"
                 />
               </div>
             </div>
