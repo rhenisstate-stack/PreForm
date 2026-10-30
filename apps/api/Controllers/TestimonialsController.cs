@@ -132,11 +132,11 @@ public class TestimonialsController : ControllerBase
         // Record Audit Log
         _context.AuditLogs.Add(new AuditLog
         {
-            UserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "admin",
+            ActorId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? "admin",
             Action = $"TESTIMONIAL_MODERATED_{request.Status.ToString().ToUpperInvariant()}",
             EntityType = "Testimonial",
             EntityId = testimonial.Id.ToString(),
-            Details = $"Testimonial status set to {request.Status} by {adminEmail}. Verified outcome: {testimonial.OutcomeVerified}."
+            Description = $"Testimonial status set to {request.Status} by {adminEmail}. Verified outcome: {testimonial.OutcomeVerified}."
         });
 
         await _context.SaveChangesAsync();
