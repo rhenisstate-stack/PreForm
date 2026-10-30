@@ -179,8 +179,8 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: "2026-10-18",
     updatedAt: "2026-10-22",
     readingTime: "7 min read",
-    featuredImage: "/images/illustrations/prepford-clinical-decision-making.png",
-    imageAlt: "Clinical decision making diagram showing prioritization nodes and nursing interventions",
+    featuredImage: "/images/blog/prepford-clinical-judgment-hero.jpg",
+    imageAlt: "Clinical workstation tablet showing the 6 cognitive operations of the NCSBN Clinical Judgment Measurement Model with stethoscope and nurse clipboard",
     tags: ["NGN", "CJMM", "Case Studies", "Clinical Judgment"],
     content: {
       lead: "The Next Generation NCLEX (NGN) fundamentally shifts assessment from simple factual recall to active clinical judgment. At the center of this transformation is the NCSBN Clinical Judgment Measurement Model (CJMM). Understanding how Layer 3 cognitive steps correspond directly to test questions is the most powerful strategy for both RN and PN candidates.",
@@ -239,8 +239,8 @@ export const BLOG_POSTS: BlogPost[] = [
     publishedAt: "2026-10-14",
     updatedAt: "2026-10-19",
     readingTime: "8 min read",
-    featuredImage: "/images/illustrations/prepford-pathophysiology-rationales.png",
-    imageAlt: "Pharmacology study notes and pathophysiology mechanism diagrams",
+    featuredImage: "/images/blog/prepford-high-alert-medications-hero.jpg",
+    imageAlt: "Hospital medication safety station with dual-channel smart infusion pump, electronic medication administration record, and high-alert medication protocols",
     tags: ["Pharmacology", "High-Alert Meds", "Patient Safety", "Antidotes"],
     content: {
       lead: "High-alert medications bear a heightened risk of causing significant patient harm when used in error. For the NCLEX-RN and NCLEX-PN, questions involving these medications focus on independent verification, narrow therapeutic indices, safe monitoring, and immediate reversal protocols.",
@@ -295,8 +295,8 @@ export const BLOG_POSTS: BlogPost[] = [
     },
     publishedAt: "2026-10-10",
     readingTime: "6 min read",
-    featuredImage: "/images/illustrations/prepford-rn-pathway-card.png",
-    imageAlt: "Registered Nurse in clinical scrubs evaluating patient care prioritization",
+    featuredImage: "/images/blog/prepford-prioritization-maslow-abcs-hero.jpg",
+    imageAlt: "Emergency department clinical triage desk comparing Airway, Breathing, Circulation hierarchy with Maslow's Hierarchy of Needs",
     tags: ["Prioritization", "ABCs", "Maslow", "Clinical Decision Making"],
     content: {
       lead: "Prioritization questions are among the most discriminating items on both NCLEX-RN and NCLEX-PN examinations. Candidates often memorize rules like 'ABCs always come first' or 'Maslow Physiological precedes Safety' without understanding the clinical nuances of acute vs. chronic and unstable vs. stable.",
