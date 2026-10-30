@@ -255,8 +255,12 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
     router.refresh();
   };
 
-  // The learner dashboard workspace uses its own dedicated application shell
-  if (pathname?.startsWith("/dashboard")) {
+  // The learner dashboard workspace and dedicated auth pages use their own full-screen shells
+  if (
+    pathname?.startsWith("/dashboard") ||
+    pathname?.startsWith("/sign-in") ||
+    pathname?.startsWith("/sign-up")
+  ) {
     return null;
   }
 

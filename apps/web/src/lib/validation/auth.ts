@@ -82,66 +82,66 @@ export const signInSchema = z.object({
 
 export type SignInInput = z.infer<typeof signInSchema>;
 
-export const signUpSchema = z
-  .object({
-    fullName: z
-      .string()
-      .trim()
-      .min(2, "Full name must be at least 2 characters")
-      .max(100, "Full name cannot exceed 100 characters")
-      .refine(
-        (val) => {
-          const segments = normalizeFullName(val).split(" ").filter(Boolean);
-          return segments.length >= 2;
-        },
-        {
-          message: "Please enter your full name using at least two names.",
-        }
-      ),
-    email: z
-      .string()
-      .trim()
-      .min(1, "Email address is required")
-      .email("Please enter a valid email address"),
-    pathway: z.enum(["rn", "pn"], {
-      errorMap: () => ({ message: "Please select an examination pathway (NCLEX-RN or NCLEX-PN)" }),
-    }),
-    password: z
-      .string()
-      .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
-      .max(MAX_PASSWORD_LENGTH, `Password cannot exceed ${MAX_PASSWORD_LENGTH} characters`)
-      .refine(
-        (val) => {
-          const result = zxcvbn(val);
-          return result.score >= MIN_ZXCVBN_SCORE;
-        },
-        {
-          message: "Password is too weak. Please include a mix of uppercase, lowercase, numbers, or symbols.",
-        }
-      ),
-    confirmPassword: z.string().optional(),
-    agreeTerms: z.literal(true, {
-      errorMap: () => ({
-        message: "You must accept the Terms and Conditions and acknowledge the Privacy Policy",
-      }),
-    }),
-  })
-  .refine(
-    (data) => {
-      if (data.confirmPassword !== undefined && data.confirmPassword !== "") {
-        return data.password === data.confirmPassword;
+export const signUpBaseSchema = z.object({
+  fullName: z
+    .string()
+    .trim()
+    .min(2, "Full name must be at least 2 characters")
+    .max(100, "Full name cannot exceed 100 characters")
+    .refine(
+      (val) => {
+        const segments = normalizeFullName(val).split(" ").filter(Boolean);
+        return segments.length >= 2;
+      },
+      {
+        message: "Please enter your full name using at least two names.",
       }
-      return true;
-    },
-    {
-      message: "Password confirmation does not match.",
-      path: ["confirmPassword"],
+    ),
+  email: z
+    .string()
+    .trim()
+    .min(1, "Email address is required")
+    .email("Please enter a valid email address"),
+  pathway: z.enum(["rn", "pn"], {
+    errorMap: () => ({ message: "Please select an examination pathway (NCLEX-RN or NCLEX-PN)" }),
+  }),
+  password: z
+    .string()
+    .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+    .max(MAX_PASSWORD_LENGTH, `Password cannot exceed ${MAX_PASSWORD_LENGTH} characters`)
+    .refine(
+      (val) => {
+        const result = zxcvbn(val);
+        return result.score >= MIN_ZXCVBN_SCORE;
+      },
+      {
+        message: "Password is too weak. Please include a mix of uppercase, lowercase, numbers, or symbols.",
+      }
+    ),
+  confirmPassword: z.string().optional(),
+  agreeTerms: z.literal(true, {
+    errorMap: () => ({
+      message: "You must accept the Terms and Conditions and acknowledge the Privacy Policy",
+    }),
+  }),
+});
+
+export const signUpSchema = signUpBaseSchema.refine(
+  (data) => {
+    if (data.confirmPassword !== undefined && data.confirmPassword !== "") {
+      return data.password === data.confirmPassword;
     }
-  );
+    return true;
+  },
+  {
+    message: "Password confirmation does not match.",
+    path: ["confirmPassword"],
+  }
+);
 
 export type SignUpInput = z.infer<typeof signUpSchema>;
 
-export const signUpFormSchema = signUpSchema
+export const signUpFormSchema = signUpBaseSchema
   .extend({
     confirmPassword: z.string().min(1, "Please confirm your password"),
   })
