@@ -122,7 +122,7 @@ const HERO_SLIDES: HeroSlide[] = [
     ],
     disclaimer: "Organized around NCSBN Client Needs and safety competencies.",
     image: {
-      src: "/images/illustrations/prepford-study-guide-overview.png",
+      src: "/images/illustrations/prepford-pathophysiology-rationales.png",
       alt: "Structured PrepFord 7-domain nursing study guide with core clinical topics and high-yield notes",
       testid: "hero-slide-image-studyguide",
     },
@@ -223,7 +223,7 @@ export function HeroSection() {
     <section
       id="main-content"
       data-testid="hero-section"
-      className="relative isolate w-full min-h-[600px] lg:min-h-[680px] flex flex-col justify-between overflow-hidden bg-gradient-to-b from-teal-50/50 via-slate-50/35 to-background dark:from-slate-950 dark:via-slate-900/90 dark:to-background text-foreground pt-8 sm:pt-12 lg:pt-16 pb-2 sm:pb-3"
+      className="relative isolate w-full min-h-[640px] lg:min-h-[720px] flex flex-col justify-between overflow-hidden bg-gradient-to-b from-teal-50/50 via-slate-50/35 to-background dark:from-slate-950 dark:via-slate-900/90 dark:to-background text-foreground pt-8 sm:pt-12 lg:pt-16 pb-2 sm:pb-3"
       aria-label="PrepFord NCLEX Hero"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
