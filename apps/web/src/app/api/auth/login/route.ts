@@ -23,7 +23,9 @@ export async function POST(request: NextRequest) {
 
     const { email, password, rememberMe } = result.data;
 
-    console.log("[Login API Route] Base URL:", getApiBaseUrl());
+    const baseUrl = getApiBaseUrl();
+    const fs = await import("node:fs");
+    fs.appendFileSync("C:/Users/gitau/Documents/PREform/login_debug.log", `Base URL: ${baseUrl}\n`);
 
     // Dispatch login request to authoritative ASP.NET Core API
     const apiRes = await authService.login({
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
       password,
       rememberMe,
     });
-    console.log("[Login API Route] apiRes status:", apiRes.status, "error:", apiRes.error);
+    fs.appendFileSync("C:/Users/gitau/Documents/PREform/login_debug.log", `apiRes: status=${apiRes.status}, error=${apiRes.error}, data=${JSON.stringify(apiRes.data)}\n`);
 
     if (!apiRes.success || !apiRes.data?.success) {
       const status = apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 401;
