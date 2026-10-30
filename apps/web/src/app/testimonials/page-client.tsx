@@ -372,65 +372,45 @@ export function TestimonialsPageClient() {
                 NCLEX-PN ({testimonials.filter((t) => t.pathway === "PN").length})
               </button>
             </div>
+
+            <div className="mt-4 flex items-center justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSubmitDialogOpen(true)}
+                className="gap-2 text-xs border-secondary/40 text-secondary hover:bg-secondary/10"
+              >
+                <MessageSquarePlus className="h-4 w-4" />
+                <span>Share Your Preparation Experience</span>
+              </Button>
+            </div>
           </div>
 
-          {/* Testimonials Cards Grid */}
+          {/* Testimonials Cards Grid using reusable TestimonialCard */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTestimonials.map((t) => {
-              const isExpanded = expandedId === t.id;
-              const isLong = t.content.length > 180;
-              const displayContent = isExpanded || !isLong ? t.content : `${t.content.slice(0, 180)}…`;
-
-              return (
-                <Card
-                  key={t.id}
-                  className="border-border/80 bg-card flex flex-col justify-between hover:border-secondary/50 transition-all shadow-xs hover:shadow-md"
-                >
-                  <CardContent className="pt-6 pb-6 flex flex-col justify-between h-full space-y-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <Quote className="h-6 w-6 text-secondary/40" aria-hidden="true" />
-                        <span className="inline-flex items-center gap-1 rounded-md border border-border bg-muted/60 px-2 py-0.5 text-xs font-bold text-foreground">
-                          {t.pathway === "RN" ? "NCLEX-RN" : "NCLEX-PN"}
-                        </span>
-                      </div>
-
-                      <p className="text-sm text-foreground leading-relaxed italic">
-                        &ldquo;{displayContent}&rdquo;
-                      </p>
-
-                      {isLong && (
-                        <button
-                          type="button"
-                          onClick={() => toggleExpand(t.id)}
-                          className="inline-flex items-center gap-1 text-xs text-secondary hover:underline font-medium pt-1"
-                        >
-                          <span>{isExpanded ? "Show less" : "Read full reflection"}</span>
-                          {isExpanded ? (
-                            <ChevronUp className="h-3.5 w-3.5" />
-                          ) : (
-                            <ChevronDown className="h-3.5 w-3.5" />
-                          )}
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="pt-4 border-t border-border/60">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm font-semibold text-foreground">
-                            {t.name}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{t.role} • {t.studyFocus}</p>
-                        </div>
-                        <span className="text-[11px] text-muted-foreground font-mono">{t.date}</span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+            {filteredTestimonials.map((t) => (
+              <TestimonialCard
+                key={t.id}
+                testimonial={{
+                  id: t.id,
+                  displayName: t.name,
+                  role: t.role,
+                  pathway: t.pathway,
+                  studyFocus: t.studyFocus,
+                  quote: t.content,
+                  createdAt: t.date,
+                }}
+                isExpanded={expandedId === t.id}
+                onToggleExpand={toggleExpand}
+              />
+            ))}
           </div>
+
+          {/* Candidate Feedback Submission Dialog */}
+          <SubmitTestimonialDialog
+            open={isSubmitDialogOpen}
+            onOpenChange={setIsSubmitDialogOpen}
+          />
 
           {/* Marketing & Provenance Disclosure Safeguard */}
           <div className="mt-12 mx-auto max-w-3xl rounded-xl border border-secondary/25 bg-secondary/5 p-4 text-xs text-muted-foreground leading-relaxed text-center sm:text-left shadow-xs">
