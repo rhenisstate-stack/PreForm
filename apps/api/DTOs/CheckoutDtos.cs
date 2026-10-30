@@ -9,6 +9,8 @@ public class CheckoutRequest
 
     public string? Pathway { get; set; }
 
+    public string? PromoCode { get; set; }
+
     public string? SuccessUrl { get; set; }
 
     public string? CancelUrl { get; set; }
@@ -20,6 +22,30 @@ public class CheckoutResponse
     public string? OrderId { get; set; }
     public string? SessionUrl { get; set; }
     public bool IsSimulated { get; set; }
+    public string? Message { get; set; }
+    public string? Error { get; set; }
+    public int? OriginalAmountCents { get; set; }
+    public int? DiscountAmountCents { get; set; }
+    public int? FinalAmountCents { get; set; }
+    public string? PromoCodeApplied { get; set; }
+}
+
+public class ValidatePromoRequest
+{
+    [Required]
+    public string Code { get; set; } = string.Empty;
+
+    public string? PlanId { get; set; }
+}
+
+public class PromoDiscountDto
+{
+    public bool Valid { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public decimal DiscountPercent { get; set; }
+    public int DiscountCents { get; set; }
+    public int OriginalPriceCents { get; set; }
+    public int FinalPriceCents { get; set; }
     public string? Message { get; set; }
     public string? Error { get; set; }
 }

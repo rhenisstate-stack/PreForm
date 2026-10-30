@@ -23,6 +23,8 @@ public interface ICheckoutService
         PaymentWebhookRequest webhook,
         string? signatureHeader,
         CancellationToken cancellationToken = default);
+
+    PromoDiscountDto ValidatePromoCode(string? code, string? planId = null, int? basePriceCents = null);
 }
 
 public class CheckoutService : ICheckoutService
@@ -30,6 +32,15 @@ public class CheckoutService : ICheckoutService
     private readonly AppDbContext _context;
     private readonly IConfiguration _configuration;
     private readonly ILogger<CheckoutService> _logger;
+
+    public static readonly Dictionary<string, (decimal Percent, string Description)> ActivePromoCodes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "FUTURENURSE", (10m, "10% Future Nurse Community Discount") },
+            { "NURSE10", (10m, "10% Nursing Student Discount") },
+            { "PREPFORD10", (10m, "10% PrepFord Welcome Discount") },
+            { "CLINICAL20", (20m, "20% Clinical Excellence Discount") }
+        };
 
     public CheckoutService(
         AppDbContext context,
@@ -39,6 +50,50 @@ public class CheckoutService : ICheckoutService
         _context = context;
         _configuration = configuration;
         _logger = logger;
+    }
+
+    public PromoDiscountDto ValidatePromoCode(string? code, string? planId = null, int? basePriceCents = null)
+    {
+        if (string.IsNullOrWhiteSpace(code))
+        {
+            return new PromoDiscountDto
+            {
+                Valid = false,
+                Error = "Please enter a promotional code."
+            };
+        }
+
+        var cleanCode = code.Trim().ToUpperInvariant();
+        if (!ActivePromoCodes.TryGetValue(cleanCode, out var promo))
+        {
+            return new PromoDiscountDto
+            {
+                Valid = false,
+                Code = cleanCode,
+                Error = $"The code '{cleanCode}' is invalid or expired."
+            };
+        }
+
+        int originalPrice = basePriceCents ?? 0;
+        if (originalPrice == 0 && !string.IsNullOrWhiteSpace(planId))
+        {
+            var plan = _context.SubscriptionPlans.FirstOrDefault(p => p.Id == planId || p.Slug == planId);
+            if (plan != null) originalPrice = plan.PriceCents;
+        }
+
+        int discountCents = originalPrice > 0 ? (int)Math.Round(originalPrice * (promo.Percent / 100m)) : 0;
+        int finalPrice = Math.Max(0, originalPrice - discountCents);
+
+        return new PromoDiscountDto
+        {
+            Valid = true,
+            Code = cleanCode,
+            DiscountPercent = promo.Percent,
+            DiscountCents = discountCents,
+            OriginalPriceCents = originalPrice,
+            FinalPriceCents = finalPrice,
+            Message = $"{promo.Percent:0}% discount applied: {promo.Description}"
+        };
     }
 
     private string GetAppEnvironment()
@@ -100,6 +155,28 @@ public class CheckoutService : ICheckoutService
         // Sandbox / Staging Checkout
         if (IsSandboxCheckoutPermitted())
         {
+            int originalAmountCents = plan.PriceCents;
+            int discountAmountCents = 0;
+            string? appliedCode = null;
+
+            if (!string.IsNullOrWhiteSpace(request.PromoCode))
+            {
+                var promoValidation = ValidatePromoCode(request.PromoCode, plan.Id, plan.PriceCents);
+                if (!promoValidation.Valid)
+                {
+                    return new CheckoutResponse
+                    {
+                        Success = false,
+                        Error = promoValidation.Error ?? $"The promotional code '{request.PromoCode}' is invalid."
+                    };
+                }
+
+                appliedCode = promoValidation.Code;
+                discountAmountCents = promoValidation.DiscountCents;
+            }
+
+            int finalAmountCents = Math.Max(0, originalAmountCents - discountAmountCents);
+
             await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
             try
             {
@@ -118,12 +195,12 @@ public class CheckoutService : ICheckoutService
                     Id = "ord_" + Guid.NewGuid().ToString("N"),
                     UserId = user.Id,
                     PlanId = plan.Id,
-                    AmountCents = plan.PriceCents,
+                    AmountCents = finalAmountCents,
                     Currency = plan.Currency,
                     Status = OrderStatus.Completed,
                     Provider = "simulated",
                     ProviderSessionId = "sim_sess_" + Guid.NewGuid().ToString("N"),
-                    ProviderPaymentId = "sim_pay_" + Guid.NewGuid().ToString("N"),
+                    ProviderPaymentId = appliedCode != null ? $"sim_pay_{appliedCode.ToLowerInvariant()}" : "sim_pay_" + Guid.NewGuid().ToString("N"),
                     CreatedAt = now,
                     UpdatedAt = now
                 };
@@ -156,7 +233,9 @@ public class CheckoutService : ICheckoutService
                     Action = "CheckoutCompleted",
                     EntityType = "Order",
                     EntityId = order.Id,
-                    Description = $"Completed simulated purchase of '{plan.Name}' (${plan.PriceCents / 100})",
+                    Description = appliedCode != null
+                        ? $"Completed simulated purchase of '{plan.Name}' (${finalAmountCents / 100.0:F2}) with {appliedCode} (Discount: ${discountAmountCents / 100.0:F2})"
+                        : $"Completed simulated purchase of '{plan.Name}' (${finalAmountCents / 100.0:F2})",
                     Outcome = "Success",
                     Timestamp = now
                 });
@@ -170,7 +249,13 @@ public class CheckoutService : ICheckoutService
                     OrderId = order.Id,
                     SessionUrl = request.SuccessUrl ?? "/dashboard?checkout=success",
                     IsSimulated = true,
-                    Message = "Simulated sandbox transaction completed. Paid entitlement activated."
+                    OriginalAmountCents = originalAmountCents,
+                    DiscountAmountCents = discountAmountCents,
+                    FinalAmountCents = finalAmountCents,
+                    PromoCodeApplied = appliedCode,
+                    Message = appliedCode != null
+                        ? $"Simulated sandbox transaction completed with {appliedCode} discount (${discountAmountCents / 100.0:F2} off). Paid entitlement activated."
+                        : "Simulated sandbox transaction completed. Paid entitlement activated."
                 };
             }
             catch (Exception ex)

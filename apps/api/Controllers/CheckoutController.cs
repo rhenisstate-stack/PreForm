@@ -35,4 +35,26 @@ public class CheckoutController : ControllerBase
 
         return Ok(response);
     }
+
+    [HttpPost("validate-promo")]
+    [AllowAnonymous]
+    public IActionResult ValidatePromoCode([FromBody] ValidatePromoRequest request)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.Code))
+        {
+            return BadRequest(new PromoDiscountDto
+            {
+                Valid = false,
+                Error = "Please enter a promotional code."
+            });
+        }
+
+        var result = _checkoutService.ValidatePromoCode(request.Code, request.PlanId);
+        if (!result.Valid)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
+    }
 }
