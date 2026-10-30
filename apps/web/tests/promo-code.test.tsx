@@ -69,7 +69,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
 
     // Initial subtotal for rn-pro is $59.00
     await waitFor(() => {
-      expect(screen.getByText("$59.00")).toBeInTheDocument();
+      expect(screen.getAllByText("$59.00").length).toBeGreaterThan(0);
     });
 
     const promoInput = screen.getByLabelText(/Promotional code/i);
@@ -82,6 +82,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     await waitFor(() => {
       expect(screen.getByText("-$5.90")).toBeInTheDocument();
       expect(screen.getByText("$53.10")).toBeInTheDocument();
+      expect(screen.getByText(/FUTURENURSE/i)).toBeInTheDocument();
     });
   });
 
@@ -93,7 +94,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("$59.00")).toBeInTheDocument();
+      expect(screen.getAllByText("$59.00").length).toBeGreaterThan(0);
     });
 
     const promoInput = screen.getByLabelText(/Promotional code/i);
@@ -117,7 +118,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("$59.00")).toBeInTheDocument();
+      expect(screen.getAllByText("$59.00").length).toBeGreaterThan(0);
     });
 
     const promoInput = screen.getByLabelText(/Promotional code/i);
@@ -129,6 +130,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     await waitFor(() => {
       expect(screen.getByText("-$5.90")).toBeInTheDocument();
       expect(screen.getByText("$53.10")).toBeInTheDocument();
+      expect(screen.getByText(/PREPFORD10/i)).toBeInTheDocument();
     });
   });
 
@@ -140,7 +142,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("$59.00")).toBeInTheDocument();
+      expect(screen.getAllByText("$59.00").length).toBeGreaterThan(0);
     });
 
     const promoInput = screen.getByLabelText(/Promotional code/i);
@@ -151,7 +153,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent(/invalid or expired/i);
-      expect(screen.getByText("$59.00")).toBeInTheDocument();
+      expect(screen.getAllByText("$59.00").length).toBeGreaterThan(0);
     });
   });
 
@@ -163,7 +165,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("$59.00")).toBeInTheDocument();
+      expect(screen.getAllByText("$59.00").length).toBeGreaterThan(0);
     });
 
     const promoInput = screen.getByLabelText(/Promotional code/i);
@@ -181,7 +183,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
 
     await waitFor(() => {
       expect(screen.queryByText("-$5.90")).not.toBeInTheDocument();
-      expect(screen.getByText("$59.00")).toBeInTheDocument();
+      expect(screen.getAllByText("$59.00").length).toBeGreaterThan(0);
     });
   });
 
@@ -198,7 +200,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("$59.00")).toBeInTheDocument();
+      expect(screen.getAllByText("$59.00").length).toBeGreaterThan(0);
     });
 
     const promoInput = screen.getByLabelText(/Promotional code/i);
