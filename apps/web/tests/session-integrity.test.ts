@@ -19,24 +19,32 @@ import type { NextRequest } from "next/server";
 import { GET as getAdminSubscriptions } from "@/app/api/admin/subscriptions/route";
 import { GET as getProfileImage } from "@/app/api/profile/image/route";
 
-let mockSessionCookieValue: string | undefined = undefined;
+let mockPrepfordCookieValue: string | undefined = undefined;
+let mockLegacyCookieValue: string | undefined = undefined;
 
 vi.mock("next/headers", () => ({
   cookies: async () => ({
     get: (name: string) => {
-      if (name === "preform_session" && mockSessionCookieValue) {
-        return { name: "preform_session", value: mockSessionCookieValue };
+      if (name === "prepford_session" && mockPrepfordCookieValue) {
+        return { name: "prepford_session", value: mockPrepfordCookieValue };
+      }
+      if (name === "preform_session" && mockLegacyCookieValue) {
+        return { name: "preform_session", value: mockLegacyCookieValue };
       }
       return undefined;
     },
     set: vi.fn((name: string, val: string) => {
-      if (name === "preform_session") {
-        mockSessionCookieValue = val;
+      if (name === "prepford_session") {
+        mockPrepfordCookieValue = val;
+      } else if (name === "preform_session") {
+        mockLegacyCookieValue = val;
       }
     }),
     delete: vi.fn((name: string) => {
-      if (name === "preform_session") {
-        mockSessionCookieValue = undefined;
+      if (name === "prepford_session") {
+        mockPrepfordCookieValue = undefined;
+      } else if (name === "preform_session") {
+        mockLegacyCookieValue = undefined;
       }
     }),
   }),
@@ -48,7 +56,8 @@ describe("Phase 1 & 2 — Session Integrity & Server-Side Authorization Hardenin
 
   beforeEach(() => {
     resetProfileDatabaseForTesting();
-    mockSessionCookieValue = undefined;
+    mockPrepfordCookieValue = undefined;
+    mockLegacyCookieValue = undefined;
     vi.clearAllMocks();
 
     upsertUserProfileMeta({
@@ -122,7 +131,7 @@ describe("Phase 1 & 2 — Session Integrity & Server-Side Authorization Hardenin
     expect(revoked).toBe(true);
 
     // Set cookie to revoked session token
-    mockSessionCookieValue = created.token;
+    mockPrepfordCookieValue = created.token;
 
     // Verifying admin or resolving session must return null/401
     const req = new Request("http://localhost/api/admin/subscriptions", {
