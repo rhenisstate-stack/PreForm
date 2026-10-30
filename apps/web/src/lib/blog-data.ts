@@ -510,8 +510,8 @@ export const BLOG_POSTS: BlogPost[] = [
     },
     publishedAt: "2026-09-05",
     readingTime: "7 min read",
-    featuredImage: "/landing-page1.jpg",
-    imageAlt: "Comparative evaluation of NCLEX-RN and NCLEX-PN exam plans on digital displays",
+    featuredImage: "/images/blog/prepford-rn-vs-pn-scoring-hero.jpg",
+    imageAlt: "Comparative testing analysis workstation displaying Computerized Adaptive Testing pass standards and scope-of-practice reference cards for RN and PN candidates",
     tags: ["NCLEX-RN", "NCLEX-PN", "Licensure", "Scope of Practice", "Nursing Education"],
     content: {
       lead: "While both examinations assess entry-level nursing competence using the CAT methodology, their test plans reflect distinct statutory scopes of practice. Understanding these core differences allows candidates to target their preparation effectively.",
@@ -546,8 +546,8 @@ export const BLOG_POSTS: BlogPost[] = [
     },
     publishedAt: "2026-08-28",
     readingTime: "6 min read",
-    featuredImage: "/images/illustrations/prepford-readiness-analytics.png",
-    imageAlt: "Clinical leadership and delegation matrix showing team assignments and responsibilities",
+    featuredImage: "/images/blog/prepford-delegation-rules-hero.jpg",
+    imageAlt: "Nurse station command clipboard detailing The Five Rights of Nursing Delegation alongside team shift assignments",
     tags: ["Delegation", "Management of Care", "LPN/VN", "UAP", "NCLEX-RN"],
     content: {
       lead: "Delegation questions consistently appear on every NCLEX-RN examination. The foundational principle is that a registered nurse can delegate tasks, but can never delegate ultimate professional nursing accountability.",
