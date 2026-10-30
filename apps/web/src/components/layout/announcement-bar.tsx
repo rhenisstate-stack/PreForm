@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { X } from "lucide-react";
 import type { Announcement } from "@/types";
 
@@ -11,6 +12,7 @@ interface AnnouncementBarProps {
 }
 
 export function AnnouncementBar({ announcements, isLoading }: AnnouncementBarProps) {
+  const pathname = usePathname();
   const [dismissedIds, setDismissedIds] = React.useState<Set<string>>(new Set());
 
   const active = React.useMemo(() => {
@@ -18,7 +20,14 @@ export function AnnouncementBar({ announcements, isLoading }: AnnouncementBarPro
     return announcements.find((a) => !dismissedIds.has(a.id));
   }, [announcements, isLoading, dismissedIds]);
 
-  if (!active) return null;
+  if (
+    !active ||
+    pathname?.startsWith("/dashboard") ||
+    pathname?.startsWith("/sign-in") ||
+    pathname?.startsWith("/sign-up")
+  ) {
+    return null;
+  }
 
   const handleDismiss = () => {
     setDismissedIds((prev) => new Set([...prev, active.id]));
