@@ -136,7 +136,7 @@ Or ensure a local PostgreSQL 16 service is running on port `5432` with database 
 Apply EF Core migrations using the .NET CLI or npm script:
 
 ```powershell
-npm run ef:database:update --workspace @preform/api
+npm run ef:database:update --workspace @prepford/api
 # or natively:
 dotnet ef database update --project apps/api/Preform.Api.csproj
 ```

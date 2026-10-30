@@ -86,7 +86,7 @@ npm run dev:api
 npm run dev
 
 # Start with hot reload (file watcher)
-npm run watch --workspace @preform/api
+npm run watch --workspace @prepford/api
 
 # Run automated tests
 npm run test:api
@@ -94,8 +94,8 @@ npm run test:api
 npm run test
 
 # Database migrations
-npm run ef:migrations:list --workspace @preform/api
-npm run ef:database:update --workspace @preform/api
+npm run ef:migrations:list --workspace @prepford/api
+npm run ef:database:update --workspace @prepford/api
 ```
 
 ### Using Native .NET CLI

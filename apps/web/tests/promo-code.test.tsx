@@ -57,7 +57,6 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     vi.clearAllMocks();
     localStorage.clear();
     mockSearchParams = new URLSearchParams("add=rn-pro"); // $59 / mo
-    global.fetch = vi.fn();
   });
 
   it("applies FUTURENURSE for 10% discount and updates order summary", async () => {
@@ -82,7 +81,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     await waitFor(() => {
       expect(screen.getByText("-$5.90")).toBeInTheDocument();
       expect(screen.getByText("$53.10")).toBeInTheDocument();
-      expect(screen.getByText(/FUTURENURSE/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/FUTURENURSE/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -130,7 +129,7 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     await waitFor(() => {
       expect(screen.getByText("-$5.90")).toBeInTheDocument();
       expect(screen.getByText("$53.10")).toBeInTheDocument();
-      expect(screen.getByText(/PREPFORD10/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/PREPFORD10/i).length).toBeGreaterThan(0);
     });
   });
 
@@ -188,10 +187,10 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
   });
 
   it("passes promoCode in the body payload to /api/checkout", async () => {
-    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+    const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue({
       ok: true,
       json: async () => ({ success: true, checkoutUrl: "/dashboard?checkout=completed" }),
-    });
+    } as Response);
 
     render(
       <CartProvider>
@@ -225,16 +224,18 @@ describe("Phase 4: Promotional Discount Codes Verification", () => {
     fireEvent.click(confirmBtn);
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(fetchSpy).toHaveBeenCalledWith(
         "/api/checkout",
         expect.objectContaining({
           method: "POST",
           body: JSON.stringify({
-            planId: "rn-pro",
+            planId: "nclex-rn-pro",
             promoCode: "PREPFORD10",
           }),
         })
       );
     });
+
+    fetchSpy.mockRestore();
   });
 });

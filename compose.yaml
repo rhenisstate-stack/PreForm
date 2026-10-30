@@ -3,13 +3,13 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-preform}
+      POSTGRES_USER: ${POSTGRES_USER:-prepford}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your local .env file}
-      POSTGRES_DB: ${POSTGRES_DB:-preform}
+      POSTGRES_DB: ${POSTGRES_DB:-prepford}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - preform-postgres:/var/lib/postgresql/data
+      - prepford-postgres:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 5s
@@ -17,4 +17,4 @@ services:
       retries: 10
 
 volumes:
-  preform-postgres:
+  prepford-postgres:
