@@ -2142,7 +2142,7 @@ export function DashboardClient() {
                         <div className="flex items-center gap-2">
                           <Info className="h-4 w-4 text-teal-700 dark:text-teal-300 shrink-0" />
                           <h4 className="font-serif font-bold text-sm text-teal-900 dark:text-teal-200">
-                            Clinical Rationale & Evidence Breakdown
+                            Clinical Rationale & Explanation Breakdown
                           </h4>
                         </div>
                         <button
