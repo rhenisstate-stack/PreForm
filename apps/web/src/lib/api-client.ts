@@ -59,7 +59,8 @@ export function getApiBaseUrl(): string {
     return envUrl.replace(/\/+$/, "");
   }
 
-  return "http://127.0.0.1:5000";
+  const port = process.env.PORT?.trim() || "4000";
+  return `http://127.0.0.1:${port}`;
 }
 
 /**

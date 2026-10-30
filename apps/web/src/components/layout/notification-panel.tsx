@@ -225,6 +225,7 @@ export function CartButton({ itemCount }: CartButtonProps) {
   return (
     <Link
       href="/cart"
+      prefetch={false}
       className="relative p-2 rounded-md text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
       aria-label={`Shopping cart (${effectiveCount} items)`}
     >

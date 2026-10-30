@@ -543,6 +543,7 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
                   </Link>
                   <Link
                     href="/cart"
+                    prefetch={false}
                     onClick={closeMobileMenu}
                     className="flex items-center justify-center gap-1.5 rounded-xl bg-muted/60 px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted"
                   >

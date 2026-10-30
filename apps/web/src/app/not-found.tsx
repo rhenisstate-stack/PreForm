@@ -18,6 +18,8 @@ export default function NotFound() {
           <img
             src="/images/illustrations/prepford-empty-recent-activity.png"
             alt="Page not found"
+            loading="lazy"
+            decoding="async"
             className="w-full h-auto object-contain"
           />
         </div>

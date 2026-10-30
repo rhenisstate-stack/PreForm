@@ -173,6 +173,8 @@ export function CartPageClient() {
               <img
                 src="/images/illustrations/prepford-empty-recent-activity.png"
                 alt="Empty study plan cart"
+                loading="lazy"
+                decoding="async"
                 className="w-full h-auto object-contain"
               />
             </div>

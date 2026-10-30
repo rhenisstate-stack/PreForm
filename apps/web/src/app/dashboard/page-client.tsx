@@ -1207,6 +1207,7 @@ export function DashboardClient() {
                     alt="Ready to begin NCLEX practice"
                     fill
                     sizes="200px"
+                    loading="lazy"
                     className="object-contain p-2"
                   />
                 </div>
