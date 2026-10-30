@@ -244,7 +244,7 @@ export function HeroSection() {
       </div>
 
       {/* Foreground Content Container (z-20, flex-1 to center split layout vertically in document flow) */}
-      <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 relative z-20 flex-1 flex items-center">
+      <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 relative z-20 flex-1 flex items-center mb-6 sm:mb-8 lg:mb-10">
         {/* Unified Editorial Split Layout (Archer Review-Inspired) */}
         <div
           key={currentSlide.id}
@@ -338,11 +338,11 @@ export function HeroSection() {
                   priority={activeSlide === 0}
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 640px"
                   className={cn(
-                    "w-full h-auto transition-transform duration-700",
-                    // Commercial photography hero: natural soft rounded corners and subtle depth
-                    currentSlide.id === "slide-pathways" && "object-cover aspect-[16/10] sm:aspect-video rounded-3xl shadow-xl shadow-teal-950/5",
-                    // Unfolding EHR, study guide, and readiness analytics mockups: natural device presentation with transparent drop shadow
-                    currentSlide.id !== "slide-pathways" && "object-contain drop-shadow-2xl"
+                    "w-full h-auto transition-transform duration-700 rounded-3xl shadow-xl shadow-teal-950/5",
+                    // Editorial clinical photography & dashboard showcase: soft rounded corners and restrained elevation
+                    currentSlide.id === "slide-pathways"
+                      ? "object-cover aspect-[16/10] sm:aspect-video"
+                      : "object-cover aspect-[4/3] sm:aspect-video lg:aspect-[16/10]"
                   )}
                 />
               </div>
