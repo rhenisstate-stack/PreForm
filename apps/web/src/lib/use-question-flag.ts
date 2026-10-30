@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { notify } from "@/lib/notifications";
 
 interface FlagPayload {
   questionId: string;
@@ -87,6 +88,7 @@ export function useQuestionFlag({
       if (context) {
         queryClient.setQueryData<boolean>(queryKey, context.previousFlagged);
       }
+      notify.error("Unable to update question flag. Check your connection.");
     },
   });
 

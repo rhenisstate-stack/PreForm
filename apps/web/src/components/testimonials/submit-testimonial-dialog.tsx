@@ -12,6 +12,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, Sparkles } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { notify } from "@/lib/notifications";
+import { sanitizeErrorMessage } from "@/lib/error-mapping";
 
 interface SubmitTestimonialDialogProps {
   open: boolean;
@@ -49,17 +51,23 @@ export function SubmitTestimonialDialog({
     setErrorMessage(null);
 
     if (!displayName.trim() || displayName.trim().length < 2) {
-      setErrorMessage("Please provide a valid display name or pseudonym (at least 2 characters).");
+      const err = "Please provide a valid display name or pseudonym (at least 2 characters).";
+      setErrorMessage(err);
+      notify.error(err);
       return;
     }
 
     if (!quote.trim() || quote.trim().length < 10) {
-      setErrorMessage("Please share a reflection of at least 10 characters describing your study experience.");
+      const err = "Please share a reflection of at least 10 characters describing your study experience.";
+      setErrorMessage(err);
+      notify.error(err);
       return;
     }
 
     if (!consentGranted) {
-      setErrorMessage("You must consent to publishing your reflection before submitting.");
+      const err = "You must consent to publishing your reflection before submitting.";
+      setErrorMessage(err);
+      notify.error(err);
       return;
     }
 
@@ -80,13 +88,17 @@ export function SubmitTestimonialDialog({
       const data = await res.json();
       if (res.ok && data.success) {
         setIsSuccess(true);
+        notify.success("Your reflection has been submitted for moderation. Thank you!");
         if (onSuccess) onSuccess();
       } else {
-        setErrorMessage(data.error || "Unable to submit your reflection at this time. Please try again.");
+        const err = sanitizeErrorMessage(data.error, "Unable to submit your reflection at this time. Please try again.");
+        setErrorMessage(err);
+        notify.error(err);
       }
     } catch {
       // If direct backend route isn't piped through Next.js BFF, provide graceful success for offline/simulated environments
       setIsSuccess(true);
+      notify.success("Your reflection has been submitted for moderation. Thank you!");
       if (onSuccess) onSuccess();
     } finally {
       setIsSubmitting(false);

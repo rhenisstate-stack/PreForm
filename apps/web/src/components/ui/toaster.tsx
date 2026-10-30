@@ -1,5 +1,3 @@
 "use client";
 
-import { Toaster as ToasterComponent } from "sonner";
-
-export const Toaster = ToasterComponent;
+export { Toaster } from "@/components/ui/sonner";

@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Quote, ChevronDown, ChevronUp, CheckCircle, User } from "lucide-react";
+import { Quote, ChevronDown, ChevronUp, CheckCircle } from "lucide-react";
+import { TestimonialAvatar } from "@/components/testimonials/testimonial-avatar";
 
 export interface TestimonialData {
   id: string;
@@ -25,13 +25,6 @@ interface TestimonialCardProps {
   className?: string;
 }
 
-function getInitials(name: string): string {
-  if (!name) return "C";
-  const parts = name.trim().split(/\s+/);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-}
-
 export function TestimonialCard({
   testimonial,
   isExpanded = false,
@@ -44,6 +37,7 @@ export function TestimonialCard({
   const displayQuote = isExpanded || !isLong ? quote : `${quote.slice(0, 180)}…`;
 
   const pathwayLabel = pathway === "Both" ? "NCLEX-RN & PN" : `NCLEX-${pathway}`;
+  const isAnonymous = displayName.toLowerCase().includes("anonymous") || displayName.toLowerCase().includes("candidate");
 
   return (
     <Card
@@ -98,24 +92,12 @@ export function TestimonialCard({
         <div className="pt-4 border-t border-border/60">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
-              {avatarUrl ? (
-                <div className="relative h-8 w-8 rounded-full overflow-hidden border border-border bg-muted shrink-0">
-                  <Image
-                    src={avatarUrl}
-                    alt={`${displayName} portrait`}
-                    width={32}
-                    height={32}
-                    className="object-cover"
-                  />
-                </div>
-              ) : (
-                <div
-                  className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/15 text-secondary font-bold text-xs shrink-0 select-none border border-secondary/20"
-                  aria-label={`${displayName} initials`}
-                >
-                  {getInitials(displayName)}
-                </div>
-              )}
+              <TestimonialAvatar
+                src={avatarUrl}
+                displayName={displayName}
+                isAnonymous={isAnonymous}
+                size="sm"
+              />
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-foreground truncate">
                   {displayName}

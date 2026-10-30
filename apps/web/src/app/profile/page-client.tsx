@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PasswordStrengthIndicator } from "@/components/auth/password-strength-indicator";
 import { useAuth } from "@/lib/auth-context";
+import { notify } from "@/lib/notifications";
+import { sanitizeErrorMessage } from "@/lib/error-mapping";
 
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 MB
 const ALLOWED_AVATAR_MIMES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
@@ -177,18 +179,23 @@ export function ProfilePageClient() {
           type: "success",
           text: "Profile photo uploaded and saved to your account.",
         });
+        notify.success("Profile photo uploaded and saved to your account.");
         await refreshSession();
       } else {
+        const cleanErr = sanitizeErrorMessage(data.error, "Failed to upload profile photo.");
         setImageStatus({
           type: "error",
-          text: data.error || "Failed to upload profile photo.",
+          text: cleanErr,
         });
+        notify.error(cleanErr);
       }
     } catch {
+      const netErr = "Network error occurred while uploading your profile photo.";
       setImageStatus({
         type: "error",
-        text: "Network error occurred while uploading your profile photo.",
+        text: netErr,
       });
+      notify.error(netErr);
     } finally {
       setImageUploading(false);
     }
@@ -214,18 +221,23 @@ export function ProfilePageClient() {
           type: "success",
           text: "Profile photo removed.",
         });
+        notify.info("Profile photo removed.");
         await refreshSession();
       } else {
+        const cleanErr = sanitizeErrorMessage(data.error, "Unable to remove profile photo.");
         setImageStatus({
           type: "error",
-          text: data.error || "Unable to remove profile photo.",
+          text: cleanErr,
         });
+        notify.error(cleanErr);
       }
     } catch {
+      const netErr = "An unexpected error occurred while removing your profile photo.";
       setImageStatus({
         type: "error",
-        text: "An unexpected error occurred while removing your profile photo.",
+        text: netErr,
       });
+      notify.error(netErr);
     } finally {
       setImageRemoving(false);
     }
@@ -245,12 +257,17 @@ export function ProfilePageClient() {
       const data = await res.json();
       if (res.ok && data.success) {
         setProfileMessage({ type: "success", text: "Profile details updated successfully." });
+        notify.success("Profile details updated successfully.");
         await refreshSession();
       } else {
-        setProfileMessage({ type: "error", text: data.error || "Failed to update profile." });
+        const cleanErr = sanitizeErrorMessage(data.error, "Failed to update profile.");
+        setProfileMessage({ type: "error", text: cleanErr });
+        notify.error(cleanErr);
       }
     } catch {
-      setProfileMessage({ type: "error", text: "An unexpected error occurred while saving." });
+      const netErr = "An unexpected error occurred while saving.";
+      setProfileMessage({ type: "error", text: netErr });
+      notify.error(netErr);
     } finally {
       setProfileSaving(false);
     }
@@ -263,6 +280,7 @@ export function ProfilePageClient() {
 
     if (newPassword !== confirmPassword) {
       setPasswordMessage({ type: "error", text: "New passwords do not match." });
+      notify.error("New passwords do not match.");
       setPasswordSaving(false);
       return;
     }
@@ -276,14 +294,19 @@ export function ProfilePageClient() {
       const data = await res.json();
       if (res.ok && data.success) {
         setPasswordMessage({ type: "success", text: "Password updated successfully." });
+        notify.success("Password updated successfully.");
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
       } else {
-        setPasswordMessage({ type: "error", text: data.error || "Failed to update password." });
+        const cleanErr = sanitizeErrorMessage(data.error, "Failed to update password.");
+        setPasswordMessage({ type: "error", text: cleanErr });
+        notify.error(cleanErr);
       }
     } catch {
-      setPasswordMessage({ type: "error", text: "An unexpected error occurred while updating password." });
+      const netErr = "An unexpected error occurred while updating password.";
+      setPasswordMessage({ type: "error", text: netErr });
+      notify.error(netErr);
     } finally {
       setPasswordSaving(false);
     }
@@ -298,8 +321,10 @@ export function ProfilePageClient() {
         body: JSON.stringify({ studyReminders, emailNotifications }),
       });
       setProfileMessage({ type: "success", text: "Notification preferences saved." });
+      notify.success("Notification preferences saved.");
     } catch {
       setProfileMessage({ type: "error", text: "Failed to update preferences." });
+      notify.error("Failed to update preferences.");
     } finally {
       setPrefSaving(false);
     }

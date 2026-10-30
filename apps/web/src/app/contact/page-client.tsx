@@ -21,6 +21,8 @@ import {
   ArrowRight,
   Clock,
 } from "lucide-react";
+import { notify } from "@/lib/notifications";
+import { sanitizeErrorMessage } from "@/lib/error-mapping";
 
 interface SubmissionSuccess {
   ticketId: string;
@@ -75,11 +77,15 @@ export function ContactPageClient() {
         category: result.details?.category || data.category,
         receivedAt: result.details?.receivedAt || new Date().toISOString(),
       });
+      notify.success("Your message has been sent successfully. A support ticket has been created.");
       reset();
     } catch (err: unknown) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Unable to submit message at this time. Please try again.";
-      setServerError(errorMessage);
+      const cleanError = sanitizeErrorMessage(
+        err instanceof Error ? err.message : null,
+        "Unable to submit message at this time. Please try again."
+      );
+      setServerError(cleanError);
+      notify.error(cleanError);
     }
   };
 

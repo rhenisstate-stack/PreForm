@@ -24,21 +24,15 @@ import { PasswordStrengthIndicator } from "@/components/auth/password-strength-i
 import { signUpSchema, sanitizeReturnUrl, type SignUpInput } from "@/lib/validation/auth";
 import { useAuth } from "@/lib/auth-context";
 import { BRAND } from "@/lib/brand";
+import { notify } from "@/lib/notifications";
+import { mapAuthErrorCode, sanitizeErrorMessage } from "@/lib/error-mapping";
 
 function getGoogleErrorMessage(errorParam: string | null): string | null {
-  if (errorParam === "google_not_configured") {
-    return "Google authentication is not yet configured. Please set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the server environment.";
-  }
-  if (errorParam === "google_cancelled") {
-    return "Google registration was cancelled or consent was not granted. Please try again.";
-  }
-  if (errorParam === "state_mismatch" || errorParam === "csrf_detected") {
-    return "Security verification failed (state mismatch). Please try again.";
-  }
-  if (errorParam === "token_exchange_failed" || errorParam === "auth_failed") {
-    return "Unable to complete Google registration at this time. Please try creating an account with email.";
-  }
-  return null;
+  if (!errorParam) return null;
+  return (
+    mapAuthErrorCode(errorParam) ||
+    "Google sign-in is temporarily unavailable. Please try again later or sign in using your email and password."
+  );
 }
 
 export function SignUpPageClient() {
@@ -51,6 +45,12 @@ export function SignUpPageClient() {
   const [showPassword, setShowPassword] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (urlError) {
+      notify.error(urlError, { id: "signup-url-error" });
+    }
+  }, [urlError]);
 
   const displayError = errorMessage || urlError;
 
@@ -82,15 +82,20 @@ export function SignUpPageClient() {
     try {
       const result = await registerUser(data);
       if (result.success) {
+        notify.success("Account created successfully! Welcome to PrepFord.");
         const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
         const from = sanitizeReturnUrl(rawReturn, "/courses");
         router.push(from);
         router.refresh();
       } else {
-        setErrorMessage(result.error || "Failed to create account. Please check your details.");
+        const cleanMsg = sanitizeErrorMessage(result.error, "Failed to create account. Please check your details.");
+        setErrorMessage(cleanMsg);
+        notify.error(cleanMsg);
       }
     } catch {
-      setErrorMessage("An unexpected network error occurred. Please try again.");
+      const netMsg = "We couldn't connect to the server. Check your connection and try again.";
+      setErrorMessage(netMsg);
+      notify.error(netMsg);
     } finally {
       setIsLoading(false);
     }

@@ -38,6 +38,8 @@ import {
   isValidHexColor,
   validateSubscriptionColors,
 } from "@/lib/color-contrast";
+import { notify } from "@/lib/notifications";
+import { sanitizeErrorMessage } from "@/lib/error-mapping";
 
 const adminNavItems = [
   { label: "Overview", href: "/admin", current: false },
@@ -295,17 +297,23 @@ export function AdminSubscriptionsClient() {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        const msg = `Plan "${payload.name}" has been successfully ${editingPlan ? "updated" : "created"}.`;
         setFeedbackMessage({
           type: "success",
-          text: `Plan "${payload.name}" has been successfully ${editingPlan ? "updated" : "created"}.`,
+          text: msg,
         });
+        notify.success(msg);
         setEditorOpen(false);
         loadPlans();
       } else {
-        setFeedbackMessage({ type: "error", text: data.error || "Save operation failed" });
+        const err = sanitizeErrorMessage(data.error, "Save operation failed");
+        setFeedbackMessage({ type: "error", text: err });
+        notify.error(err);
       }
     } catch {
-      setFeedbackMessage({ type: "error", text: "Network error saving plan" });
+      const netErr = "Network error saving plan";
+      setFeedbackMessage({ type: "error", text: netErr });
+      notify.error(netErr);
     } finally {
       setIsSubmitting(false);
     }
@@ -320,18 +328,24 @@ export function AdminSubscriptionsClient() {
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        const msg = `Plan "${planToArchive.name}" has been safely archived/deactivated. Historical purchase records are preserved.`;
         setFeedbackMessage({
           type: "success",
-          text: `Plan "${planToArchive.name}" has been safely archived/deactivated. Historical purchase records are preserved.`,
+          text: msg,
         });
+        notify.success(msg);
         setArchiveDialogOpen(false);
         setPlanToArchive(null);
         loadPlans();
       } else {
-        setFeedbackMessage({ type: "error", text: data.error || "Archive operation failed" });
+        const err = sanitizeErrorMessage(data.error, "Archive operation failed");
+        setFeedbackMessage({ type: "error", text: err });
+        notify.error(err);
       }
     } catch {
-      setFeedbackMessage({ type: "error", text: "Network error archiving plan" });
+      const netErr = "Network error archiving plan";
+      setFeedbackMessage({ type: "error", text: netErr });
+      notify.error(netErr);
     } finally {
       setIsSubmitting(false);
     }

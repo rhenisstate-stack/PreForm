@@ -18,6 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
+import { notify } from "@/lib/notifications";
+import { sanitizeErrorMessage } from "@/lib/error-mapping";
 import {
   Dialog,
   DialogContent,
@@ -86,6 +88,9 @@ export function CartPageClient() {
     const result = applyPromoCode(inputCode);
     if (result.success) {
       setInputCode("");
+      notify.success(result.message || "Promotional code applied successfully!");
+    } else if (result.error) {
+      notify.error(result.error);
     }
   };
 
@@ -121,17 +126,22 @@ export function CartPageClient() {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        notify.success("Enrollment confirmed! Preparing your study materials...");
         await refreshSession();
         clearCart();
         setIsCheckingOut(false);
         router.push(data.checkoutUrl || "/profile?enrolled=true");
       } else {
+        const cleanErr = sanitizeErrorMessage(data.error, "Checkout could not be processed. Please try again.");
         setCheckoutSuccess(false);
-        setCheckoutError(data.error || "Checkout could not be processed.");
+        setCheckoutError(cleanErr);
+        notify.error(cleanErr);
       }
     } catch {
+      const netErr = "Failed to communicate with the checkout service. Check your connection and try again.";
       setCheckoutSuccess(false);
-      setCheckoutError("Failed to communicate with the checkout service. Please try again.");
+      setCheckoutError(netErr);
+      notify.error(netErr);
     }
   };
 
