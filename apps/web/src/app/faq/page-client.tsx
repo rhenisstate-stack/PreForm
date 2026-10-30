@@ -153,21 +153,21 @@ export function buildOverallFaqItems(): OverallFaqItem[] {
       categoryId: "auth-access",
       question: "Where do I land after signing in to PrepFord?",
       answer:
-        "By default, signing in at /sign-in takes you directly to your authenticated Learner Dashboard (/dashboard). If you initiated sign-in from a specific internal workflow—such as clicking 'Proceed to Checkout' from /cart (/sign-in?from=/cart)—PrepFord validates that internal return path and returns you there after authentication.",
+        "By default, signing in takes you directly to your personalized Learner Dashboard (/dashboard) where you can resume your recent study modules. If you were in the middle of choosing a plan in your cart or opening a study guide, PrepFord safely remembers where you were and returns you straight to that step after you sign in.",
     },
     {
       id: "faq-overall-google-oauth",
       categoryId: "auth-access",
       question: "How does 'Continue with Google' authentication work?",
       answer:
-        "The 'Continue with Google' button on /sign-in and /sign-up initiates an OAuth 2.0 Authorization Code flow with PKCE and CSRF state verification via /api/auth/google. In local or staging environments where GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are not configured on the server, the page displays a clear configuration notice and you can sign in using email and password.",
+        "When you select 'Continue with Google', PrepFord securely confirms your identity with Google without ever seeing or storing your Google password. This provides one-click access to your study workspace. If you prefer, you can also create and sign in with a standard email and PrepFord password.",
     },
     {
       id: "faq-overall-redirect-security",
       categoryId: "auth-access",
-      question: "How does PrepFord protect my account session and post-login redirects?",
+      question: "How does PrepFord protect my account session and sign-in safety?",
       answer:
-        "Sessions are stored in an HTTP-only cookie (preform_session) verified on server routes. All return URLs (?from= or ?returnUrl=) are sanitized to allow only single-slash internal paths and block external domains, protocol-relative URLs (//), backslash bypasses (/\\), encoded-path tricks, and authentication loops.",
+        "Your login session stays active securely until you explicitly log out, so you don't lose study momentum between browser sessions. We safeguard your account by keeping session credentials encrypted in protected browser cookies and ensuring that login links only ever direct you to verified PrepFord study pages.",
     },
 
     // 3. NCLEX-RN & NCLEX-PN Preparation
@@ -232,9 +232,9 @@ export function buildOverallFaqItems(): OverallFaqItem[] {
     {
       id: "faq-overall-cat-and-telemetry-status",
       categoryId: "practice-assessments",
-      question: "Which question bank and adaptive testing features are currently live versus in development?",
+      question: "Which question bank and adaptive testing features are currently available?",
       answer:
-        "Interactive clinical scenario questions with option-by-option rationales, Study Guide quick-checks, and the Course Recommendation Quiz are live in the web application today. Full server-scored Computer Adaptive Testing (CAT) sessions and persistent backend attempt history are in active Phase 4 backend integration.",
+        "Interactive clinical scenario questions with detailed option-by-option rationales, comprehensive Study Guide quick-checks, and the Course Recommendation Quiz are fully available today. Computer Adaptive Testing (CAT) assessments and persistent progress tracking connect directly with your candidate study account.",
     },
 
     // 6. Study Progress, Dashboard Metrics & Saved Activity
