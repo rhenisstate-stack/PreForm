@@ -24,6 +24,7 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 builder.Services.AddScoped<IProgrammeService, ProgrammeService>();
 builder.Services.AddScoped<IProfileImageService, ProfileImageService>();
+builder.Services.AddScoped<IAdminBootstrapService, AdminBootstrapService>();
 
 // Authentication with PrepfordAuth scheme (Bearer Session Token & Gateway HMAC)
 builder.Services.AddAuthentication(options =>
@@ -148,6 +149,47 @@ if (!app.Environment.IsEnvironment("Testing"))
     {
         dbContext.Database.EnsureCreated();
         CatalogSeeder.SeedAsync(dbContext, logger).GetAwaiter().GetResult();
+    }
+}
+
+// Check for administrative bootstrap command
+if (args.Contains("--bootstrap-superadmin") || string.Equals(app.Configuration["BOOTSTRAP_SUPERADMIN_ENABLED"], "true", StringComparison.OrdinalIgnoreCase))
+{
+    using var scope = app.Services.CreateScope();
+    var bootstrapService = scope.ServiceProvider.GetRequiredService<IAdminBootstrapService>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    string email = app.Configuration["SUPERADMIN_EMAIL"] ?? string.Empty;
+    string password = app.Configuration["SUPERADMIN_PASSWORD"] ?? string.Empty;
+    string displayName = app.Configuration["SUPERADMIN_DISPLAY_NAME"] ?? "PrepFord Super Admin";
+    bool allowRecovery = string.Equals(app.Configuration["SUPERADMIN_ALLOW_RECOVERY"], "true", StringComparison.OrdinalIgnoreCase);
+
+    for (int i = 0; i < args.Length; i++)
+    {
+        if (args[i] == "--email" && i + 1 < args.Length) email = args[i + 1];
+        if (args[i] == "--password" && i + 1 < args.Length) password = args[i + 1];
+        if (args[i] == "--name" && i + 1 < args.Length) displayName = args[i + 1];
+        if (args[i] == "--allow-recovery") allowRecovery = true;
+    }
+
+    var result = bootstrapService.BootstrapSuperAdminAsync(email, password, displayName, allowRecovery).GetAwaiter().GetResult();
+    if (!result.Success)
+    {
+        logger.LogError("Super Admin bootstrap failed: {Message}", result.Message);
+        if (args.Contains("--bootstrap-superadmin"))
+        {
+            Environment.ExitCode = 1;
+            return;
+        }
+    }
+    else
+    {
+        logger.LogInformation("Super Admin bootstrap succeeded: {Message} (UserId: {UserId})", result.Message, result.UserId);
+        if (args.Contains("--bootstrap-superadmin"))
+        {
+            Environment.ExitCode = 0;
+            return;
+        }
     }
 }
 
