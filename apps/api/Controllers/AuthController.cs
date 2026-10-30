@@ -40,6 +40,13 @@ public class AuthController : ControllerBase
             return BadRequest(new AuthResponse { Success = false, Error = "Invalid registration parameters." });
         }
 
+        var normalizedDisplayName = string.Join(" ", request.DisplayName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        var nameSegments = normalizedDisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (nameSegments.Length < 2)
+        {
+            return BadRequest(new AuthResponse { Success = false, Error = "Please enter your full name using at least two names." });
+        }
+
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         if (await _context.Users.AnyAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken))
         {
@@ -51,7 +58,7 @@ public class AuthController : ControllerBase
         {
             Id = Guid.NewGuid().ToString(),
             Email = normalizedEmail,
-            DisplayName = request.DisplayName.Trim(),
+            DisplayName = normalizedDisplayName,
             Pathway = string.IsNullOrWhiteSpace(request.Pathway) ? "rn" : request.Pathway.Trim().ToLowerInvariant(),
             TargetExamDate = "2026-11-30",
             ActivePlan = "NCLEX-RN Complete Preparation Plan",

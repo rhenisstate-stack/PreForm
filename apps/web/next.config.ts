@@ -1,4 +1,11 @@
+import path from "node:path";
+import dotenv from "dotenv";
 import type { NextConfig } from "next";
+
+// Ensure root and local environment variables are loaded
+dotenv.config({ path: path.resolve(process.cwd(), "../../.env") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env.local") });
+dotenv.config({ path: path.resolve(process.cwd(), ".env") });
 
 const nextConfig: NextConfig = {
   /* config options here */

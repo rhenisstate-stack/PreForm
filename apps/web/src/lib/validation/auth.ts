@@ -5,6 +5,67 @@ export const MIN_PASSWORD_LENGTH = 8;
 export const MAX_PASSWORD_LENGTH = 128;
 export const MIN_ZXCVBN_SCORE = 3; // Baseline acceptable strength: Strong (3) or Very Strong (4)
 
+/**
+ * Normalizes a full name by trimming edge whitespace and collapsing multiple spaces.
+ */
+export function normalizeFullName(raw: string): string {
+  if (!raw) return "";
+  return raw.trim().replace(/\s+/g, " ");
+}
+
+/**
+ * Validates that a full name contains at least two distinct name parts.
+ * Preserves hyphenated, apostrophe-containing, and international name characters.
+ */
+export function validateFullName(raw: string): { isValid: boolean; error?: string } {
+  const normalized = normalizeFullName(raw);
+  if (!normalized) {
+    return { isValid: false, error: "Please enter your full name using at least two names." };
+  }
+  if (normalized.length < 2) {
+    return { isValid: false, error: "Full name must be at least 2 characters" };
+  }
+  const segments = normalized.split(" ").filter((s) => s.trim().length > 0);
+  if (segments.length < 2) {
+    return { isValid: false, error: "Please enter your full name using at least two names." };
+  }
+  return { isValid: true };
+}
+
+/**
+ * Validates email format with specific, contextual feedback.
+ * Does not arbitrarily restrict email domains.
+ */
+export function getEmailValidationError(value: string): string | null {
+  if (value === undefined || value === null) {
+    return "Email address is required.";
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return "Email address is required.";
+  }
+  if (!trimmed.includes("@")) {
+    return "Please enter a valid email address, including @ and a domain.";
+  }
+  const parts = trimmed.split("@");
+  if (parts.length < 2 || !parts[1] || parts[1].trim() === "") {
+    return "Please enter a complete email address.";
+  }
+  if (parts.length > 2) {
+    return "Please enter a valid email address.";
+  }
+  const domain = parts[1].trim();
+  if (!domain.includes(".") || domain.endsWith(".") || domain.startsWith(".") || domain.split(".").pop()?.length === 0) {
+    return "Please enter a valid email domain, such as gmail.com.";
+  }
+  // Standard RFC-compatible regex check for remaining syntactic validity
+  const standardEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!standardEmailRegex.test(trimmed)) {
+    return "Please enter a valid email address.";
+  }
+  return null;
+}
+
 export const signInSchema = z.object({
   email: z
     .string()
@@ -21,38 +82,75 @@ export const signInSchema = z.object({
 
 export type SignInInput = z.infer<typeof signInSchema>;
 
-export const signUpSchema = z.object({
-  fullName: z
-    .string()
-    .trim()
-    .min(2, "Full name must be at least 2 characters")
-    .max(100, "Full name cannot exceed 100 characters"),
-  email: z
-    .string()
-    .trim()
-    .min(1, "Email address is required")
-    .email("Please enter a valid email address"),
-  pathway: z.enum(["rn", "pn"], {
-    errorMap: () => ({ message: "Please select an examination pathway (NCLEX-RN or NCLEX-PN)" }),
-  }),
-  password: z
-    .string()
-    .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
-    .max(MAX_PASSWORD_LENGTH, `Password cannot exceed ${MAX_PASSWORD_LENGTH} characters`)
-    .refine((val) => {
-      const result = zxcvbn(val);
-      return result.score >= MIN_ZXCVBN_SCORE;
-    }, {
-      message: "Password is too weak. Please include a mix of uppercase, lowercase, numbers, or symbols.",
+export const signUpSchema = z
+  .object({
+    fullName: z
+      .string()
+      .trim()
+      .min(2, "Full name must be at least 2 characters")
+      .max(100, "Full name cannot exceed 100 characters")
+      .refine(
+        (val) => {
+          const segments = normalizeFullName(val).split(" ").filter(Boolean);
+          return segments.length >= 2;
+        },
+        {
+          message: "Please enter your full name using at least two names.",
+        }
+      ),
+    email: z
+      .string()
+      .trim()
+      .min(1, "Email address is required")
+      .email("Please enter a valid email address"),
+    pathway: z.enum(["rn", "pn"], {
+      errorMap: () => ({ message: "Please select an examination pathway (NCLEX-RN or NCLEX-PN)" }),
     }),
-  agreeTerms: z.literal(true, {
-    errorMap: () => ({
-      message: "You must accept the Terms and Conditions and acknowledge the Privacy Policy",
+    password: z
+      .string()
+      .min(MIN_PASSWORD_LENGTH, `Password must be at least ${MIN_PASSWORD_LENGTH} characters`)
+      .max(MAX_PASSWORD_LENGTH, `Password cannot exceed ${MAX_PASSWORD_LENGTH} characters`)
+      .refine(
+        (val) => {
+          const result = zxcvbn(val);
+          return result.score >= MIN_ZXCVBN_SCORE;
+        },
+        {
+          message: "Password is too weak. Please include a mix of uppercase, lowercase, numbers, or symbols.",
+        }
+      ),
+    confirmPassword: z.string().optional(),
+    agreeTerms: z.literal(true, {
+      errorMap: () => ({
+        message: "You must accept the Terms and Conditions and acknowledge the Privacy Policy",
+      }),
     }),
-  }),
-});
+  })
+  .refine(
+    (data) => {
+      if (data.confirmPassword !== undefined && data.confirmPassword !== "") {
+        return data.password === data.confirmPassword;
+      }
+      return true;
+    },
+    {
+      message: "Password confirmation does not match.",
+      path: ["confirmPassword"],
+    }
+  );
 
 export type SignUpInput = z.infer<typeof signUpSchema>;
+
+export const signUpFormSchema = signUpSchema
+  .extend({
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Password confirmation does not match.",
+    path: ["confirmPassword"],
+  });
+
+export type SignUpFormInput = z.infer<typeof signUpFormSchema>;
 
 export interface PasswordStrengthResult {
   score: 0 | 1 | 2 | 3 | 4;
