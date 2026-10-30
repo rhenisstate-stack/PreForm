@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronLeft, ChevronRight, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -209,12 +210,13 @@ export function QuestionLearningShowcase() {
 
             {/* Right Visual Column */}
             <div className="lg:col-span-6 relative h-72 sm:h-96 lg:h-full min-h-[320px] bg-muted overflow-hidden">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={currentStep.imageSrc}
                 alt={currentStep.imageAlt}
-                className="w-full h-full object-cover transition-opacity duration-300"
-                loading="lazy"
+                fill
+                sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 600px"
+                priority={activeStep === 0}
+                className="w-full h-full object-cover transition-all duration-500 hover:scale-[1.02]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent lg:hidden pointer-events-none" />
             </div>
