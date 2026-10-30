@@ -2,8 +2,8 @@ import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { signInSchema } from "@/lib/validation/auth";
 import { authService } from "@/lib/api-services";
-import { getApiBaseUrl } from "@/lib/api-client";
 import { createServerSession, setSessionCookie } from "@/lib/session";
+import { mapAuthHttpStatusToMessage } from "@/lib/error-mapping";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Invalid login credentials. Please verify your email and password.",
+          error: "Please review the information you entered.",
           fieldErrors: result.error.flatten().fieldErrors,
         },
         { status: 400 }
@@ -23,24 +23,24 @@ export async function POST(request: NextRequest) {
 
     const { email, password, rememberMe } = result.data;
 
-    const baseUrl = getApiBaseUrl();
-    const fs = await import("node:fs");
-    fs.appendFileSync("C:/Users/gitau/Documents/PREform/login_debug.log", `Base URL: ${baseUrl}\n`);
-
     // Dispatch login request to authoritative ASP.NET Core API
     const apiRes = await authService.login({
       email,
       password,
       rememberMe,
     });
-    fs.appendFileSync("C:/Users/gitau/Documents/PREform/login_debug.log", `apiRes: status=${apiRes.status}, error=${apiRes.error}, data=${JSON.stringify(apiRes.data)}\n`);
 
     if (!apiRes.success || !apiRes.data?.success) {
       const status = apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 401;
+      const userFacingError = mapAuthHttpStatusToMessage(
+        status,
+        apiRes.data?.error || apiRes.error
+      );
+
       return NextResponse.json(
         {
           success: false,
-          error: apiRes.error || apiRes.data?.error || "Invalid login credentials.",
+          error: userFacingError,
         },
         { status }
       );

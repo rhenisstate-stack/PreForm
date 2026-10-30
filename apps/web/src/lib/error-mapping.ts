@@ -99,6 +99,55 @@ export function mapHttpStatusToMessage(status: number): string {
 }
 
 /**
+ * Maps authentication HTTP status codes and backend responses to clear, actionable user messages.
+ * Replaces generic failures like "API request failed with status 404" with specific guidance.
+ */
+export function mapAuthHttpStatusToMessage(status: number, backendError?: string | null): string {
+  // If a specific, non-leaky backend message exists, prioritize it when appropriate
+  if (backendError && typeof backendError === "string") {
+    const trimmed = backendError.trim();
+    const isGenericFailure = /^API request failed with status \d+/i.test(trimmed);
+    if (!isLeakyError(trimmed) && !isGenericFailure) {
+      const codeMapped = mapAuthErrorCode(trimmed);
+      if (codeMapped) return codeMapped;
+      // Preserve explicit domain/validation messages returned by the backend
+      if (
+        trimmed.length > 5 &&
+        !trimmed.startsWith("<!DOCTYPE") &&
+        !trimmed.includes("Exception")
+      ) {
+        return trimmed;
+      }
+    }
+  }
+
+  switch (status) {
+    case 400:
+      return "Please review the information you entered.";
+    case 401:
+      return "The email or password is incorrect.";
+    case 403:
+      return "Your account does not currently have permission to access this resource.";
+    case 404:
+      return "The requested authentication service could not be found. Please try again or contact support.";
+    case 409:
+      return "An account with this email address already exists.";
+    case 422:
+      return "Some of the information provided is invalid.";
+    case 429:
+      return "Too many attempts. Please wait before trying again.";
+    case 500:
+      return "Something went wrong on our server. Please try again shortly.";
+    case 502:
+    case 503:
+    case 504:
+      return "We are temporarily unable to reach the authentication service. Please try again shortly.";
+    default:
+      return "We were unable to complete authentication. Please try again shortly.";
+  }
+}
+
+/**
  * Cleanses and sanitizes any raw error input, ensuring no technical internals leak to the UI.
  */
 export function sanitizeErrorMessage(raw: unknown, fallback: string = "An unexpected error occurred. Please try again."): string {

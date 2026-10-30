@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { SignInInput, SignUpInput } from "@/lib/validation/auth";
+import { mapAuthHttpStatusToMessage } from "@/lib/error-mapping";
 
 export interface AuthUser {
   id: string;
@@ -66,16 +67,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(data),
       });
 
-      const resData = await res.json();
-      if (!res.ok || !resData.success) {
-        return { success: false, error: resData.error || "Failed to sign in. Please verify your credentials." };
+      let resData: { success?: boolean; user?: AuthUser; error?: string } | null = null;
+      try {
+        resData = await res.json();
+      } catch {
+        resData = null;
       }
 
-      setUser(resData.user);
+      if (!res.ok || !resData?.success) {
+        const errorMsg =
+          mapAuthHttpStatusToMessage(res.status, resData?.error) ||
+          "The email or password is incorrect.";
+        return { success: false, error: errorMsg };
+      }
+
+      setUser(resData.user || null);
       return { success: true };
     } catch (err) {
       console.error("Login exception:", err);
-      return { success: false, error: "An unexpected network error occurred." };
+      return {
+        success: false,
+        error: "We are temporarily unable to reach the authentication service. Please try again shortly.",
+      };
     }
   };
 
@@ -87,16 +100,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         body: JSON.stringify(data),
       });
 
-      const resData = await res.json();
-      if (!res.ok || !resData.success) {
-        return { success: false, error: resData.error || "Failed to create account. Please check your inputs." };
+      let resData: { success?: boolean; user?: AuthUser; error?: string } | null = null;
+      try {
+        resData = await res.json();
+      } catch {
+        resData = null;
       }
 
-      setUser(resData.user);
+      if (!res.ok || !resData?.success) {
+        const errorMsg =
+          mapAuthHttpStatusToMessage(res.status, resData?.error) ||
+          "Failed to create account. Please review your details.";
+        return { success: false, error: errorMsg };
+      }
+
+      setUser(resData.user || null);
       return { success: true };
     } catch (err) {
       console.error("Registration exception:", err);
-      return { success: false, error: "An unexpected network error occurred." };
+      return {
+        success: false,
+        error: "We are temporarily unable to reach the authentication service. Please try again shortly.",
+      };
     }
   };
 

@@ -48,6 +48,7 @@ export function getMockApiHandler(): MockApiHandler | null {
 
 /**
  * Returns the base URL for the backend ASP.NET Core API.
+ * Never defaults to port 3000 (which is the Next.js frontend port).
  */
 export function getApiBaseUrl(): string {
   const envUrl =
@@ -59,8 +60,12 @@ export function getApiBaseUrl(): string {
     return envUrl.replace(/\/+$/, "");
   }
 
-  const port = process.env.PORT?.trim() || "4000";
-  return `http://127.0.0.1:${port}`;
+  // Default to backend API port 4000, avoiding collision with Next.js web server port (3000)
+  const backendPort =
+    process.env.BACKEND_PORT?.trim() ||
+    (process.env.PORT && process.env.PORT !== "3000" ? process.env.PORT.trim() : "4000");
+
+  return `http://127.0.0.1:${backendPort}`;
 }
 
 /**

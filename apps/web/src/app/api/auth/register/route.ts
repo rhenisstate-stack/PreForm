@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { signUpSchema } from "@/lib/validation/auth";
 import { authService } from "@/lib/api-services";
 import { createServerSession, setSessionCookie } from "@/lib/session";
+import { mapAuthHttpStatusToMessage } from "@/lib/error-mapping";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Registration validation failed. Please check your inputs.",
+          error: "Please review the information you entered.",
           fieldErrors: result.error.flatten().fieldErrors,
         },
         { status: 400 }
@@ -32,10 +33,15 @@ export async function POST(request: NextRequest) {
 
     if (!apiRes.success || !apiRes.data?.success) {
       const status = apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 503;
+      const userFacingError = mapAuthHttpStatusToMessage(
+        status,
+        apiRes.data?.error || apiRes.error
+      );
+
       return NextResponse.json(
         {
           success: false,
-          error: apiRes.error || apiRes.data?.error || "Registration failed on backend authority.",
+          error: userFacingError,
         },
         { status }
       );
