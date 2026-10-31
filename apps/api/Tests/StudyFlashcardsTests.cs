@@ -65,6 +65,16 @@ public class StudyFlashcardsTests : IClassFixture<WebApplicationFactory<Program>
         string Id, string DeckId, string Front, string Back, string Status,
         int RepetitionCount, int IntervalDays, double EaseFactor, DateTime DueAt);
 
+    /// <summary>
+    /// Study endpoints follow the API-wide contract of wrapping payloads in a
+    /// <c>{ "success": true, "&lt;field&gt;": ... }</c> envelope.
+    /// </summary>
+    private static async Task<T> ReadEnvelopeAsync<T>(HttpResponseMessage response, string field)
+    {
+        var envelope = await response.Content.ReadFromJsonAsync<JsonElement>(Json);
+        return envelope.GetProperty(field).Deserialize<T>(Json)!;
+    }
+
     // ── API behaviour ─────────────────────────────────────────────────────
 
     [Fact]
@@ -94,7 +104,7 @@ public class StudyFlashcardsTests : IClassFixture<WebApplicationFactory<Program>
             sourceReference = "PrepFord Study Guide — Pharmacology"
         }));
         Assert.Equal(HttpStatusCode.Created, createDeck.StatusCode);
-        var deck = await createDeck.Content.ReadFromJsonAsync<DeckDto>(Json);
+        var deck = await ReadEnvelopeAsync<DeckDto>(createDeck, "deck");
         Assert.NotNull(deck);
         Assert.Equal("rn", deck!.Programme);
         Assert.Equal(0, deck.CardCount);
@@ -108,7 +118,7 @@ public class StudyFlashcardsTests : IClassFixture<WebApplicationFactory<Program>
             difficulty = "high_yield"
         }));
         Assert.Equal(HttpStatusCode.Created, addCard.StatusCode);
-        var card = await addCard.Content.ReadFromJsonAsync<CardDto>(Json);
+        var card = await ReadEnvelopeAsync<CardDto>(addCard, "card");
         Assert.NotNull(card);
         Assert.Equal("personal_unreviewed", card!.Status);
         Assert.Equal(0, card.RepetitionCount);
@@ -120,7 +130,7 @@ public class StudyFlashcardsTests : IClassFixture<WebApplicationFactory<Program>
         // 4. Review: Good → first repetition scheduled 1 day out, status becomes active
         var review = await client.PostAsync($"/api/v1/study/flashcards/cards/{card!.Id}/review", JsonContent.Create(new { recallRating = 2 }));
         review.EnsureSuccessStatusCode();
-        var reviewPayload = await review.Content.ReadFromJsonAsync<CardDto>(Json);
+        var reviewPayload = await ReadEnvelopeAsync<CardDto>(review, "card");
         Assert.NotNull(reviewPayload);
         Assert.Equal("active", reviewPayload!.Status);
         Assert.Equal(1, reviewPayload.RepetitionCount);
@@ -145,13 +155,13 @@ public class StudyFlashcardsTests : IClassFixture<WebApplicationFactory<Program>
         AddGatewayHeaders(client, "study-user-2", "learner.two@nursing.edu", "candidate");
 
         var createDeck = await client.PostAsync("/api/v1/study/flashcards/decks", JsonContent.Create(new { name = "Fundamentals", programme = "rn" }));
-        var deck = await createDeck.Content.ReadFromJsonAsync<DeckDto>(Json);
+        var deck = await ReadEnvelopeAsync<DeckDto>(createDeck, "deck");
         var addCard = await client.PostAsync($"/api/v1/study/flashcards/decks/{deck!.Id}/cards", JsonContent.Create(new { front = "Q", back = "A" }));
-        var card = await addCard.Content.ReadFromJsonAsync<CardDto>(Json);
+        var card = await ReadEnvelopeAsync<CardDto>(addCard, "card");
 
         await client.PostAsync($"/api/v1/study/flashcards/cards/{card!.Id}/review", JsonContent.Create(new { recallRating = 2 }));
         var second = await client.PostAsync($"/api/v1/study/flashcards/cards/{card.Id}/review", JsonContent.Create(new { recallRating = 2 }));
-        var secondCard = await second.Content.ReadFromJsonAsync<CardDto>(Json);
+        var secondCard = await ReadEnvelopeAsync<CardDto>(second, "card");
 
         Assert.Equal(2, secondCard!.RepetitionCount);
         Assert.Equal(6, secondCard.IntervalDays);
@@ -163,7 +173,7 @@ public class StudyFlashcardsTests : IClassFixture<WebApplicationFactory<Program>
         var clientA = _factory.CreateClient();
         AddGatewayHeaders(clientA, "study-user-3", "learner.three@nursing.edu", "candidate");
         var createDeck = await clientA.PostAsync("/api/v1/study/flashcards/decks", JsonContent.Create(new { name = "Deck of A", programme = "rn" }));
-        var deck = await createDeck.Content.ReadFromJsonAsync<DeckDto>(Json);
+        var deck = await ReadEnvelopeAsync<DeckDto>(createDeck, "deck");
 
         var clientB = _factory.CreateClient();
         AddGatewayHeaders(clientB, "study-user-4", "learner.four@nursing.edu", "candidate");
@@ -193,8 +203,8 @@ public class StudyFlashcardsTests : IClassFixture<WebApplicationFactory<Program>
 
         var rnDeck = await client.PostAsync("/api/v1/study/flashcards/decks", JsonContent.Create(new { name = "RN Material", programme = "rn" }));
         var pnDeck = await client.PostAsync("/api/v1/study/flashcards/decks", JsonContent.Create(new { name = "PN Material", programme = "pn" }));
-        var rn = await rnDeck.Content.ReadFromJsonAsync<DeckDto>(Json);
-        var pn = await pnDeck.Content.ReadFromJsonAsync<DeckDto>(Json);
+        var rn = await ReadEnvelopeAsync<DeckDto>(rnDeck, "deck");
+        var pn = await ReadEnvelopeAsync<DeckDto>(pnDeck, "deck");
 
         await client.PostAsync($"/api/v1/study/flashcards/decks/{rn!.Id}/cards", JsonContent.Create(new { front = "RN Q", back = "RN A", programme = "rn" }));
         await client.PostAsync($"/api/v1/study/flashcards/decks/{pn!.Id}/cards", JsonContent.Create(new { front = "PN Q", back = "PN A", programme = "pn" }));
@@ -214,9 +224,9 @@ public class StudyFlashcardsTests : IClassFixture<WebApplicationFactory<Program>
         var client = _factory.CreateClient();
         AddGatewayHeaders(client, "study-user-6", "learner.six@nursing.edu", "candidate");
         var createDeck = await client.PostAsync("/api/v1/study/flashcards/decks", JsonContent.Create(new { name = "D", programme = "rn" }));
-        var deck = await createDeck.Content.ReadFromJsonAsync<DeckDto>(Json);
-        var card = await (await client.PostAsync($"/api/v1/study/flashcards/decks/{deck!.Id}/cards", JsonContent.Create(new { front = "Q", back = "A" })))
-            .Content.ReadFromJsonAsync<CardDto>(Json);
+        var deck = await ReadEnvelopeAsync<DeckDto>(createDeck, "deck");
+        var card = await ReadEnvelopeAsync<CardDto>(
+            await client.PostAsync($"/api/v1/study/flashcards/decks/{deck!.Id}/cards", JsonContent.Create(new { front = "Q", back = "A" })), "card");
 
         var bad = await client.PostAsync($"/api/v1/study/flashcards/cards/{card!.Id}/review", JsonContent.Create(new { recallRating = 9 }));
         Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
