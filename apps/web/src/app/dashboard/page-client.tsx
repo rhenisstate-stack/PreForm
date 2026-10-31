@@ -134,6 +134,21 @@ export function DashboardClient() {
   // Refresh trigger for stored learner attempts
   const [attemptRefreshKey, setAttemptRefreshKey] = React.useState<number>(0);
 
+  // Stored learner attempts computed from localStorage
+  const storedAttempts = React.useMemo(() => {
+    // attemptRefreshKey triggers re-reading when a new test attempt completes
+    void attemptRefreshKey;
+    return getStoredAttempts(user?.id);
+  }, [user?.id, attemptRefreshKey]);
+
+  // Synchronize authoritative attempt histories from PostgreSQL datastore
+  const userId = user?.id;
+  const userEmail = user?.email;
+  const userName = user?.name;
+  const userDisplayName = user?.displayName;
+  const userRole = user?.role;
+  const userPathway = user?.pathway;
+
   // AI Study Studio (Phase 1) live summary — real server data only; failures
   // surface an honest unavailable state rather than fabricated numbers.
   const [studyOverview, setStudyOverview] = React.useState<StudyOverview | null>(null);
@@ -158,21 +173,6 @@ export function DashboardClient() {
       cancelled = true;
     };
   }, [userId, userEmail, studyReloadKey]);
-
-  // Stored learner attempts computed from localStorage
-  const storedAttempts = React.useMemo(() => {
-    // attemptRefreshKey triggers re-reading when a new test attempt completes
-    void attemptRefreshKey;
-    return getStoredAttempts(user?.id);
-  }, [user?.id, attemptRefreshKey]);
-
-  // Synchronize authoritative attempt histories from PostgreSQL datastore
-  const userId = user?.id;
-  const userEmail = user?.email;
-  const userName = user?.name;
-  const userDisplayName = user?.displayName;
-  const userRole = user?.role;
-  const userPathway = user?.pathway;
 
   React.useEffect(() => {
     if (userId && userEmail) {
@@ -548,6 +548,63 @@ export function DashboardClient() {
             >
               <FileQuestion className="h-4 w-4 shrink-0 text-slate-400" />
               {!sidebarCollapsed && <span>Practice Activities</span>}
+            </Link>
+          </div>
+
+          {/* Group 1b: AI STUDY STUDIO (Phase 1 active-recall tools) */}
+          <div className="space-y-1">
+            {!sidebarCollapsed && (
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+                AI Study Studio
+              </div>
+            )}
+            <Link
+              href="/dashboard/study"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              title="AI Study Studio Overview"
+            >
+              <Sparkles className="h-4 w-4 shrink-0 text-teal-400" />
+              {!sidebarCollapsed ? (
+                <div className="flex-1 flex items-center justify-between">
+                  <span>Study Studio</span>
+                  {studyOverviewState === "ready" && studyOverview && studyOverview.dueCount > 0 && (
+                    <span className="text-[10px] bg-teal-500 text-slate-950 font-bold px-1.5 py-0.5 rounded-full">
+                      {studyOverview.dueCount} due
+                    </span>
+                  )}
+                </div>
+              ) : (
+                studyOverviewState === "ready" &&
+                studyOverview && studyOverview.dueCount > 0 && (
+                  <span className="absolute ml-6 text-[10px] bg-teal-500 text-slate-950 font-bold px-1 py-0.5 rounded-full">
+                    {studyOverview.dueCount}
+                  </span>
+                )
+              )}
+            </Link>
+            <Link
+              href="/dashboard/study/review"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              title="Flashcard review session"
+            >
+              <RotateCcw className="h-4 w-4 shrink-0 text-slate-400" />
+              {!sidebarCollapsed && <span>Review Flashcards</span>}
+            </Link>
+            <Link
+              href="/dashboard/study/flashcards"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              title="Flashcard decks"
+            >
+              <Layers className="h-4 w-4 shrink-0 text-slate-400" />
+              {!sidebarCollapsed && <span>Flashcard Decks</span>}
+            </Link>
+            <Link
+              href="/dashboard/study/quizzes"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              title="Quick topic drills"
+            >
+              <FileQuestion className="h-4 w-4 shrink-0 text-slate-400" />
+              {!sidebarCollapsed && <span>Topic Quizzes</span>}
             </Link>
           </div>
 
