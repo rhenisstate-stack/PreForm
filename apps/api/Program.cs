@@ -25,6 +25,9 @@ builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 builder.Services.AddScoped<IProgrammeService, ProgrammeService>();
 builder.Services.AddScoped<IProfileImageService, ProfileImageService>();
 builder.Services.AddScoped<IAdminBootstrapService, AdminBootstrapService>();
+// AI Study Studio (Phase 1): server-authoritative spaced repetition scheduling
+builder.Services.AddScoped<ISpacedRepetitionService, SpacedRepetitionService>();
+builder.Services.AddScoped<IFlashcardService, FlashcardService>();
 
 // Authentication with PrepfordAuth scheme (Bearer Session Token & Gateway HMAC)
 builder.Services.AddAuthentication(options =>
