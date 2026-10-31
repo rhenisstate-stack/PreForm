@@ -104,7 +104,8 @@ export function SignUpPageClient() {
       if (result.success) {
         notify.success("Account created successfully! Welcome to PrepFord.");
         const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
-        const from = sanitizeReturnUrl(rawReturn, "/courses");
+        // Newly registered learners land directly on their learner workspace.
+        const from = sanitizeReturnUrl(rawReturn, "/dashboard");
         router.push(from);
         router.refresh();
       } else {
