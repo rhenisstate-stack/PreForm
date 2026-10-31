@@ -46,6 +46,7 @@ import { useCart } from "@/lib/cart-context";
 import { BRAND } from "@/lib/brand";
 import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
 import { BrandedLoading } from "@/components/layout/branded-loading";
+import { LearnerAvatar } from "@/components/learner/learner-avatar";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -335,12 +336,6 @@ export function DashboardClient() {
   }
 
   const learnerName = user.displayName || user.name || "Candidate";
-  const userInitials = (learnerName || "Candidate")
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 
   // Chart coordinate calculations (width 760, height 260)
   const chartAttempts = filteredAttempts.slice().reverse(); // Chronological left-to-right
@@ -648,9 +643,12 @@ export function DashboardClient() {
         {/* Sidebar Footer User Info */}
         <div className="p-3 border-t border-[#153441] bg-[#0A1D25]">
           <div className="flex items-center gap-3">
-            <div className="h-9 w-9 rounded-full bg-teal-600/30 text-teal-300 flex items-center justify-center font-bold text-xs shrink-0 border border-teal-500/40">
-              {userInitials}
-            </div>
+            <LearnerAvatar
+              picture={user?.picture}
+              name={learnerName}
+              sizeClassName="h-9 w-9"
+              fallbackClassName="bg-teal-600/30 text-teal-300 border-teal-500/40"
+            />
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-semibold text-slate-200 truncate">{learnerName}</p>
@@ -764,9 +762,12 @@ export function DashboardClient() {
               data-testid="learner-account-menu"
               className="flex items-center gap-2 pl-2 border-l border-border hover:opacity-90 transition-opacity"
             >
-              <div className="h-8 w-8 rounded-full bg-teal-500/15 text-teal-600 dark:text-teal-400 font-bold text-xs flex items-center justify-center border border-teal-500/30">
-                {userInitials}
-              </div>
+              <LearnerAvatar
+                picture={user?.picture}
+                name={learnerName}
+                sizeClassName="h-8 w-8"
+                alt={`${learnerName} — profile & settings`}
+              />
               <span className="hidden md:inline-block text-xs font-semibold text-foreground max-w-[100px] truncate">
                 {learnerName}
               </span>

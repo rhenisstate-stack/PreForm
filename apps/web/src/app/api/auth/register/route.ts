@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { signUpSchema } from "@/lib/validation/auth";
 import { authService } from "@/lib/api-services";
 import { createServerSession, setSessionCookie } from "@/lib/session";
+import { resolveBrowserPictureUrl } from "@/lib/profile-picture";
 import { mapAuthHttpStatusToMessage } from "@/lib/error-mapping";
 
 export async function POST(request: NextRequest) {
@@ -61,6 +62,14 @@ export async function POST(request: NextRequest) {
     const cookieStore = await cookies();
     setSessionCookie(cookieStore, serverSession.token, serverSession.maxAgeSeconds);
 
+    // Newly registered learners have no profile picture yet; map anyway for
+    // OAuth-backed or resumed registrations that may reference one.
+    const picture = resolveBrowserPictureUrl({
+      hasProfileImage: backendUser?.hasProfileImage ?? false,
+      profileImageUpdatedAt: backendUser?.profileImageUpdatedAt,
+      picture: backendUser?.picture,
+    });
+
     return NextResponse.json({
       success: true,
       user: {
@@ -70,7 +79,7 @@ export async function POST(request: NextRequest) {
         displayName: backendUser?.displayName || fullName,
         role: backendUser?.role || "candidate",
         pathway: backendUser?.pathway || pathway || "rn",
-        picture: backendUser?.picture,
+        picture,
       },
     });
   } catch (err) {

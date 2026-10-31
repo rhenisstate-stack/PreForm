@@ -1,11 +1,27 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { profileService } from "@/lib/api-services";
+import type { BackendUserProfile } from "@/lib/api-services";
 import {
   getUserProfileMeta,
   upsertUserProfileMeta,
 } from "@/lib/profile-image-db";
+import { resolveBrowserPictureUrl } from "@/lib/profile-picture";
 import { resolveSession, signSessionPayload, setSessionCookie } from "@/lib/session";
+
+/**
+ * Maps the authoritative backend profile DTO to the browser-facing profile
+ * object. `picture` is always a relative URL served by this Next.js BFF
+ * (`/api/profile/image?v=...`) — never the backend-internal path, which is
+ * bearer-protected and cannot be loaded by a plain <img> tag.
+ */
+function mapProfilePicture(profile: BackendUserProfile): string | undefined {
+  return resolveBrowserPictureUrl({
+    hasProfileImage: profile.hasProfileImage,
+    profileImageUpdatedAt: profile.profileImageUpdatedAt,
+    picture: profile.picture || profile.pictureUrl,
+  });
+}
 
 export async function GET(request?: Request) {
   try {
@@ -21,7 +37,10 @@ export async function GET(request?: Request) {
     if (apiRes.success && apiRes.data?.profile) {
       return NextResponse.json({
         success: true,
-        profile: apiRes.data.profile,
+        profile: {
+          ...apiRes.data.profile,
+          picture: mapProfilePicture(apiRes.data.profile),
+        },
       });
     }
 

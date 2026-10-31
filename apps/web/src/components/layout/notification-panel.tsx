@@ -16,6 +16,7 @@ import {
 import { useNotifications } from "@/lib/notifications-context";
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
+import { LearnerAvatar } from "@/components/learner/learner-avatar";
 import type { Announcement } from "@/types";
 
 interface AnnouncementsData {
@@ -148,12 +149,12 @@ export function ProfileMenu({ user }: ProfileMenuProps) {
           aria-label="User profile menu"
         >
           {showAvatarImage && user.picture ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.picture}
-              alt={`${displayName} profile avatar`}
-              onError={() => setFailedPictureUrl(user.picture ?? null)}
-              className="h-7 w-7 rounded-full object-cover ring-2 ring-secondary/30"
+            <LearnerAvatar
+              picture={user.picture}
+              name={displayName}
+              sizeClassName="h-7 w-7"
+              fallbackClassName="bg-secondary text-secondary-foreground border-transparent"
+              className="ring-2 ring-secondary/30"
             />
           ) : (
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-bold">

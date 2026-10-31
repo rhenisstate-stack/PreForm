@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { signInSchema } from "@/lib/validation/auth";
 import { authService } from "@/lib/api-services";
 import { createServerSession, setSessionCookie } from "@/lib/session";
+import { resolveBrowserPictureUrl } from "@/lib/profile-picture";
 import { mapAuthHttpStatusToMessage } from "@/lib/error-mapping";
 
 export async function POST(request: NextRequest) {
@@ -68,6 +69,14 @@ export async function POST(request: NextRequest) {
     const cookieStore = await cookies();
     setSessionCookie(cookieStore, serverSession.token, serverSession.maxAgeSeconds);
 
+    // Profile picture reference is restored immediately from authoritative
+    // backend metadata so the avatar loads on the dashboard right after login.
+    const picture = resolveBrowserPictureUrl({
+      hasProfileImage: backendUser?.hasProfileImage ?? Boolean(backendUser?.picture),
+      profileImageUpdatedAt: backendUser?.profileImageUpdatedAt,
+      picture: backendUser?.picture,
+    });
+
     return NextResponse.json({
       success: true,
       user: {
@@ -77,7 +86,7 @@ export async function POST(request: NextRequest) {
         displayName,
         role,
         pathway: backendUser?.pathway || "rn",
-        picture: backendUser?.picture,
+        picture,
       },
     });
   } catch (err) {

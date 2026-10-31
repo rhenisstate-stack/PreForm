@@ -376,7 +376,10 @@ export function ProfilePageClient() {
   }
 
   const userInitial = (displayName || user.name || "C").charAt(0).toUpperCase();
-  const activeAvatarSrc = previewUrl || savedPictureUrl || null;
+  const [avatarImageFailed, setAvatarImageFailed] = React.useState(false);
+  // When the persisted image cannot load, fall back to the initials badge
+  // instead of ever rendering a broken-image icon.
+  const activeAvatarSrc = !avatarImageFailed ? previewUrl || savedPictureUrl || null : null;
 
   return (
     <div className="min-h-[calc(100vh-4.5rem)] bg-background py-10 px-4 sm:px-6 lg:px-8">
@@ -406,6 +409,7 @@ export function ProfilePageClient() {
                       src={activeAvatarSrc}
                       alt={`${displayName || user.name} profile picture`}
                       data-testid="profile-avatar-image"
+                      onError={() => setAvatarImageFailed(true)}
                       className="h-full w-full object-cover"
                     />
                   ) : (
