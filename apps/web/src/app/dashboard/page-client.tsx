@@ -32,8 +32,10 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
+  RotateCcw,
   ShieldCheck,
   ShoppingCart,
+  Sparkles,
   Stethoscope,
   TrendingUp,
   UserCheck,
@@ -45,6 +47,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
 import { BRAND } from "@/lib/brand";
 import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
+import { fetchStudyOverview, StudyOverview } from "@/lib/study-service";
 import { BrandedLoading } from "@/components/layout/branded-loading";
 import { LearnerAvatar } from "@/components/learner/learner-avatar";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
@@ -130,6 +133,31 @@ export function DashboardClient() {
 
   // Refresh trigger for stored learner attempts
   const [attemptRefreshKey, setAttemptRefreshKey] = React.useState<number>(0);
+
+  // AI Study Studio (Phase 1) live summary — real server data only; failures
+  // surface an honest unavailable state rather than fabricated numbers.
+  const [studyOverview, setStudyOverview] = React.useState<StudyOverview | null>(null);
+  const [studyOverviewState, setStudyOverviewState] = React.useState<"loading" | "ready" | "unavailable">("loading");
+  const [studyReloadKey, setStudyReloadKey] = React.useState<number>(0);
+
+  React.useEffect(() => {
+    if (!userId || !userEmail) return;
+    let cancelled = false;
+    setStudyOverviewState("loading");
+    fetchStudyOverview()
+      .then((overview) => {
+        if (cancelled) return;
+        setStudyOverview(overview);
+        setStudyOverviewState("ready");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setStudyOverviewState("unavailable");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, userEmail, studyReloadKey]);
 
   // Stored learner attempts computed from localStorage
   const storedAttempts = React.useMemo(() => {
