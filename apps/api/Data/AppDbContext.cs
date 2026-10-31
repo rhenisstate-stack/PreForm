@@ -48,6 +48,11 @@ public class AppDbContext : DbContext
     // Testimonials & Feedback
     public DbSet<Testimonial> Testimonials => Set<Testimonial>();
 
+    // AI Study Studio (Phase 1): personal flashcard decks & spaced repetition
+    public DbSet<FlashcardDeck> FlashcardDecks => Set<FlashcardDeck>();
+    public DbSet<Flashcard> Flashcards => Set<Flashcard>();
+    public DbSet<FlashcardReview> FlashcardReviews => Set<FlashcardReview>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -286,6 +291,39 @@ public class AppDbContext : DbContext
             entity.HasIndex(al => al.ActorId);
             entity.HasIndex(al => al.Action);
             entity.HasIndex(al => al.Timestamp);
+        });
+
+        // ── AI Study Studio: Flashcard Decks, Cards & Reviews ──
+        modelBuilder.Entity<FlashcardDeck>(entity =>
+        {
+            entity.HasIndex(fd => fd.UserId);
+            entity.HasIndex(fd => new { fd.UserId, fd.IsArchived });
+            entity.HasIndex(fd => new { fd.UserId, fd.Programme });
+            entity.HasOne(fd => fd.User)
+                  .WithMany()
+                  .HasForeignKey(fd => fd.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Flashcard>(entity =>
+        {
+            entity.HasIndex(f => f.DeckId);
+            entity.HasIndex(f => new { f.UserId, f.DueAt });
+            entity.HasIndex(f => new { f.UserId, f.Status });
+            entity.HasOne(f => f.Deck)
+                  .WithMany(d => d.Flashcards)
+                  .HasForeignKey(f => f.DeckId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<FlashcardReview>(entity =>
+        {
+            entity.HasIndex(fr => fr.FlashcardId);
+            entity.HasIndex(fr => new { fr.UserId, fr.ReviewedAt });
+            entity.HasOne(fr => fr.Flashcard)
+                  .WithMany(f => f.Reviews)
+                  .HasForeignKey(fr => fr.FlashcardId)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
