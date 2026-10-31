@@ -31,6 +31,33 @@ public class AuthController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Builds the user summary DTO consistently across register, login, validate-session and session endpoints.
+    /// Profile image reference is always included so that the web session/BFF layer can restore the
+    /// learner's profile picture immediately after authentication (not only after visiting /profile).
+    /// </summary>
+    private static UserSummaryDto BuildUserSummary(User user, string role)
+    {
+        return new UserSummaryDto
+        {
+            Id = user.Id,
+            Email = user.Email,
+            DisplayName = user.DisplayName,
+            Role = role,
+            Pathway = user.Pathway,
+            ActivePlan = user.ActivePlan,
+            TargetExamDate = user.TargetExamDate,
+            EmailNotifications = user.EmailNotifications,
+            StudyReminders = user.StudyReminders,
+            HasProfileImage = user.HasProfileImage,
+            // Stable cache-busting version token for the profile image resource.
+            ProfileImageUpdatedAt = user.ProfileImageUpdatedAt?.ToString("o"),
+            PictureUrl = user.HasProfileImage
+                ? $"/api/v1/profile/image?v={user.ProfileImageUpdatedAt?.ToString("o") ?? user.UpdatedAt.ToString("o")}"
+                : null
+        };
+    }
+
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
@@ -103,19 +130,7 @@ public class AuthController : ControllerBase
         {
             Success = true,
             Token = token,
-            User = new UserSummaryDto
-            {
-                Id = user.Id,
-                Email = user.Email,
-                DisplayName = user.DisplayName,
-                Role = session.Role,
-                Pathway = user.Pathway,
-                ActivePlan = user.ActivePlan,
-                TargetExamDate = user.TargetExamDate,
-                EmailNotifications = user.EmailNotifications,
-                StudyReminders = user.StudyReminders,
-                HasProfileImage = user.HasProfileImage
-            }
+            User = BuildUserSummary(user, session.Role)
         });
     }
 
@@ -176,19 +191,7 @@ public class AuthController : ControllerBase
         {
             Success = true,
             Token = token,
-            User = new UserSummaryDto
-            {
-                Id = user.Id,
-                Email = user.Email,
-                DisplayName = user.DisplayName,
-                Role = session.Role,
-                Pathway = user.Pathway,
-                ActivePlan = user.ActivePlan,
-                TargetExamDate = user.TargetExamDate,
-                EmailNotifications = user.EmailNotifications,
-                StudyReminders = user.StudyReminders,
-                HasProfileImage = user.HasProfileImage
-            }
+            User = BuildUserSummary(user, session.Role)
         });
     }
 
@@ -292,19 +295,7 @@ public class AuthController : ControllerBase
         {
             Valid = true,
             SessionId = session.Id,
-            User = new UserSummaryDto
-            {
-                Id = session.User.Id,
-                Email = session.User.Email,
-                DisplayName = session.User.DisplayName,
-                Role = session.Role,
-                Pathway = session.User.Pathway,
-                ActivePlan = session.User.ActivePlan,
-                TargetExamDate = session.User.TargetExamDate,
-                EmailNotifications = session.User.EmailNotifications,
-                StudyReminders = session.User.StudyReminders,
-                HasProfileImage = session.User.HasProfileImage
-            }
+            User = BuildUserSummary(session.User, session.Role)
         });
     }
 
@@ -329,19 +320,7 @@ public class AuthController : ControllerBase
         return Ok(new SessionResponse
         {
             Authenticated = true,
-            User = new UserSummaryDto
-            {
-                Id = user.Id,
-                Email = user.Email,
-                DisplayName = user.DisplayName,
-                Role = role,
-                Pathway = user.Pathway,
-                ActivePlan = user.ActivePlan,
-                TargetExamDate = user.TargetExamDate,
-                EmailNotifications = user.EmailNotifications,
-                StudyReminders = user.StudyReminders,
-                HasProfileImage = user.HasProfileImage
-            }
+            User = BuildUserSummary(user, role)
         });
     }
 }

@@ -62,6 +62,7 @@ public class UserSummaryDto
     public bool EmailNotifications { get; set; } = true;
     public bool StudyReminders { get; set; } = true;
     public bool HasProfileImage { get; set; } = false;
+    public string? ProfileImageUpdatedAt { get; set; }
     public string? PictureUrl { get; set; }
 }
 
