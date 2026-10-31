@@ -121,7 +121,7 @@ describe("Study Studio — Overview (/dashboard/study)", () => {
     render(<StudyStudioOverview />);
 
     expect(await screen.findByTestId("study-studio-due-banner")).toBeInTheDocument();
-    expect(within(screen.getByTestId("study-studio-stat-cards-due-today")).getByText("7")).toBeInTheDocument();
+    expect(within(screen.getByTestId("study-studio-stat-due-today")).getByText("7")).toBeInTheDocument();
     expect(screen.getByTestId("study-studio-stat-decks").textContent).toContain("2");
     expect(screen.queryByTestId("study-studio-empty-first-deck")).not.toBeInTheDocument();
   });
@@ -239,14 +239,14 @@ describe("Study Studio — Flashcard decks (/dashboard/study/flashcards)", () =>
   it("lists deck contents and allows adding a manual card", async () => {
     const deck = makeDeck({ id: "deck-1", name: "My Weak Spots" });
     mockFetchFlashcardDecks.mockResolvedValue([deck]);
+    mockFetchDeckCards.mockResolvedValue([]);
 
     const user = userEvent.setup();
     render(<StudyFlashcardsClient />);
 
     await user.click(await screen.findByTestId("study-deck-card-deck-1"));
 
-    // Deck detail loads cards
-    mockFetchDeckCards.mockResolvedValueOnce([]);
+    // Deck detail loads its (empty) card list
     await screen.findByText(/This deck has no cards yet/i);
 
     await user.type(screen.getByLabelText(/Front \(prompt\)/i), "What is priority question #1?");
