@@ -12,6 +12,8 @@ export interface BackendUserSummary {
   pathway: string;
   activePlan?: string;
   picture?: string;
+  hasProfileImage?: boolean;
+  profileImageUpdatedAt?: string;
   targetExamDate?: string;
 }
 
@@ -42,6 +44,7 @@ export interface BackendUserProfile {
   emailNotifications: boolean;
   studyReminders: boolean;
   hasProfileImage: boolean;
+  profileImageUpdatedAt?: string;
   pictureUrl?: string;
   picture?: string;
   provider?: string;
