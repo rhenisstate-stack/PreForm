@@ -977,6 +977,104 @@ export function DashboardClient() {
           </section>
 
           {/* =====================================================================
+              SECTION 1b: AI STUDY STUDIO LIVE SUMMARY (real data, honest empty states)
+             ===================================================================== */}
+          <section
+            data-testid="dashboard-study-studio"
+            aria-labelledby="dashboard-study-studio-heading"
+            className="rounded-2xl border border-teal-500/25 bg-gradient-to-br from-teal-500/10 via-card to-card p-5 sm:p-6 shadow-xs space-y-4"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2
+                  id="dashboard-study-studio-heading"
+                  className="text-lg sm:text-xl font-serif font-bold text-foreground flex items-center gap-2"
+                >
+                  <Sparkles className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                  <span>AI Study Studio</span>
+                  <Badge variant="outline" className="font-mono text-xs uppercase">
+                    Phase 1
+                  </Badge>
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  Active-recall flashcards with server-side spaced repetition, curated-guide decks, and quick topic drills
+                </p>
+              </div>
+              <Link
+                href="/dashboard/study"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 hover:bg-teal-500 text-white px-4 py-2.5 text-xs font-semibold rounded-xl shadow-xs transition-colors"
+              >
+                <span>Open Study Studio</span>
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </div>
+
+            {studyOverviewState === "loading" && (
+              <p className="text-xs text-muted-foreground">Loading your study summary…</p>
+            )}
+
+            {studyOverviewState === "unavailable" && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-900 dark:text-amber-200 space-y-1.5">
+                <p className="font-semibold">Study Studio summary is unavailable right now</p>
+                <p className="leading-relaxed">
+                  The study service could not be reached, so your live counts are hidden (PrepFord never
+                  displays made-up numbers). You can still open the studio or try again.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setStudyReloadKey((k) => k + 1)}
+                  className="rounded-lg border border-amber-500/40 px-3 py-1 text-[11px] font-semibold hover:bg-amber-500/10 transition-colors"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
+            {studyOverviewState === "ready" && studyOverview && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  {[
+                    { label: "Cards due today", value: studyOverview.dueCount, href: "/dashboard/study/review" },
+                    { label: "Reviewed today", value: studyOverview.reviewedToday, href: "/dashboard/study/review" },
+                    { label: "Active cards", value: studyOverview.cardCount, href: "/dashboard/study/flashcards" },
+                    { label: "Decks", value: studyOverview.deckCount, href: "/dashboard/study/flashcards" },
+                  ].map((tile) => (
+                    <Link
+                      key={tile.label}
+                      href={tile.href}
+                      data-testid={`dashboard-study-studio-stat-${tile.label.toLowerCase().replace(/\s+/g, "-")}`}
+                      className="rounded-xl border border-border/80 bg-background/60 p-3 hover:border-teal-500/50 transition-all"
+                    >
+                      <p className="text-xl font-serif font-bold text-foreground">{tile.value}</p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5 font-mono uppercase tracking-wide">{tile.label}</p>
+                    </Link>
+                  ))}
+                </div>
+
+                {studyOverview.deckCount === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    You have no flashcard decks yet — generate one from a curated study-guide subject in the
+                    Study Studio and let spaced repetition schedule it.
+                  </p>
+                ) : studyOverview.dueCount > 0 ? (
+                  <p className="text-xs text-teal-700 dark:text-teal-300 font-medium">
+                    {studyOverview.dueCount} {studyOverview.dueCount === 1 ? "card is" : "cards are"} scheduled for review right now — a short session keeps the streak alive.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Review schedule is clear — new cards and future reviews will surface here automatically.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <p className="text-[10px] text-muted-foreground pt-1 border-t border-border/40">
+              The conversational AI tutor and AI auto-generation from uploaded documents are planned for
+              later phases of the AI Study Studio and are not part of this release.
+            </p>
+          </section>
+
+          {/* =====================================================================
               SECTION 2: ASSESSMENT WORKSPACE & PERFORMANCE VISUALIZATION
              ===================================================================== */}
           <section className="space-y-6" aria-labelledby="assessment-section-heading">

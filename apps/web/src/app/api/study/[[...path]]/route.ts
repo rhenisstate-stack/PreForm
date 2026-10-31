@@ -58,7 +58,7 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
 
     // Route strictly by HTTP method — segment counts are incidental and must
     // not influence forwarding (e.g. GET /flashcards/due is two segments).
-    let res: { status: number; data: unknown };
+    let res: { status: number; data?: unknown };
     switch (method) {
       case "GET":
       case "HEAD":

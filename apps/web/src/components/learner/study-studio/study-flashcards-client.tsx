@@ -262,7 +262,7 @@ function CreateDeckModal({ onClose, onCreated }: { onClose: () => void; onCreate
 
   const submit = async () => {
     if (submitting) return;
-    const deckName = (source === "curated_guide" ? blueprint?.name : name).trim();
+    const deckName = source === "curated_guide" ? (blueprint?.name ?? "").trim() : name.trim();
     if (!deckName) {
       setError("Please give the deck a name.");
       return;
