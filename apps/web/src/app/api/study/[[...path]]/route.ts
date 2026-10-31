@@ -17,7 +17,9 @@ import { resolveSession } from "@/lib/session";
 
 const ALLOWED_PATH_PATTERN = /^[A-Za-z0-9_-]+$/;
 
-type RouteContext = { params: Promise<{ path: string[] }> };
+// Next.js generated route types treat the optional catch-all as potentially
+// undefined (`{ path?: string[] }`), so the RouteContext must accept that.
+type RouteContext = { params: Promise<{ path?: string[] }> };
 
 function buildBackendPath(segments: string[], searchParams: URLSearchParams): string {
   const query = searchParams.toString();
