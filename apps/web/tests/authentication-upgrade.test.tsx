@@ -399,7 +399,8 @@ describe("Authentication Connectivity & Experience Upgrade", () => {
 
       await waitFor(() => {
         expect(mockRegisterUser).toHaveBeenCalledTimes(1);
-        expect(mockPush).toHaveBeenCalledWith("/courses");
+        // Spec Part C: newly registered learners land directly on /dashboard.
+        expect(mockPush).toHaveBeenCalledWith("/dashboard");
       });
     });
 
