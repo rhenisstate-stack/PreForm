@@ -5,11 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ArrowLeft,
+  ArrowRight,
   BookOpen,
+  Compass,
   FileQuestion,
   Layers,
   Menu,
   RotateCcw,
+  ShieldCheck,
   Sparkles,
   X,
 } from "lucide-react";
@@ -18,7 +21,6 @@ import { BRAND } from "@/lib/brand";
 import { BrandedLoading } from "@/components/layout/branded-loading";
 import { LearnerAvatar } from "@/components/learner/learner-avatar";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
-import { ArrowRight, Compass, ShieldCheck } from "lucide-react";
 
 /**
  * Shared authenticated shell for the PrepFord AI Study Studio routes
