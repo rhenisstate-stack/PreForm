@@ -17,13 +17,12 @@ import { resolveSession } from "@/lib/session";
 
 const ALLOWED_PATH_PATTERN = /^[A-Za-z0-9_-]+$/;
 
-function buildBackendPath(segments: string[], searchParams: URLSearchParams): string {
-  const safePath = segments.filter((segment) => ALLOWED_PATH_PATTERN.test(segment)).join("/");
-  const query = searchParams.toString();
-  return `/api/v1/study/${safePath}${query ? `?${query}` : ""}`;
-}
-
 type RouteContext = { params: Promise<{ path: string[] }> };
+
+function buildBackendPath(segments: string[], searchParams: URLSearchParams): string {
+  const query = searchParams.toString();
+  return `/api/v1/study/${segments.join("/")}${query ? `?${query}` : ""}`;
+}
 
 async function proxy(request: NextRequest, ctx: RouteContext) {
   try {
@@ -37,6 +36,8 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
 
     const { path: segments = [] } = await ctx.params;
     if (segments.length === 0 || segments.some((s) => !ALLOWED_PATH_PATTERN.test(s))) {
+      // Reject rather than silently filter so a crafted URL can never be
+      // meaningfully rewritten into a different backend route.
       return NextResponse.json({ success: false, error: "Invalid study endpoint." }, { status: 400 });
     }
 
@@ -44,7 +45,7 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
     const method = request.method.toUpperCase();
 
     let payload: unknown = undefined;
-    if (method === "POST" || method === "PUT") {
+    if (method === "POST") {
       try {
         payload = await request.json();
       } catch {
@@ -55,24 +56,28 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
       }
     }
 
-    const options = { session };
-    if ((method === "GET" || method === "HEAD") && segments.length % 2 === 1) {
-      // Simple GET endpoints never carry a body.
-      const res = await apiClient.get<unknown>(backendPath, options);
-      return NextResponse.json(res.data ?? { success: false }, {
-        status: res.status,
-      });
+    // Route strictly by HTTP method — segment counts are incidental and must
+    // not influence forwarding (e.g. GET /flashcards/due is two segments).
+    let res: { status: number; data: unknown };
+    switch (method) {
+      case "GET":
+      case "HEAD":
+        res = await apiClient.get<unknown>(backendPath, { session });
+        break;
+      case "POST":
+        res = await apiClient.post<unknown>(backendPath, payload, { session });
+        break;
+      case "DELETE":
+        res = await apiClient.delete<unknown>(backendPath, { session });
+        break;
+      default:
+        return NextResponse.json(
+          { success: false, error: `Method ${method} is not supported by the study studio.` },
+          { status: 405 }
+        );
     }
 
-    if (method === "DELETE") {
-      const res = await apiClient.delete<unknown>(backendPath, options);
-      return NextResponse.json(res.data ?? { success: false }, { status: res.status });
-    }
-
-    const res = await apiClient.post<unknown>(backendPath, payload, options);
-    return NextResponse.json(res.data ?? { success: false }, {
-      status: res.status,
-    });
+    return NextResponse.json(res.data ?? { success: false }, { status: res.status });
   } catch (err) {
     if (err && typeof err === "object" && "digest" in err) {
       throw err;
@@ -86,6 +91,10 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
 }
 
 export async function GET(request: NextRequest, ctx: RouteContext) {
+  return proxy(request, ctx);
+}
+
+export async function HEAD(request: NextRequest, ctx: RouteContext) {
   return proxy(request, ctx);
 }
 

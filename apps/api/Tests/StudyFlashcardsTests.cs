@@ -146,6 +146,13 @@ public class StudyFlashcardsTests : IClassFixture<WebApplicationFactory<Program>
         history.EnsureSuccessStatusCode();
         var historyPayload = await history.Content.ReadFromJsonAsync<JsonElement>(Json);
         Assert.Equal(1, historyPayload.GetProperty("count").GetInt32());
+
+        // 7. Deck card listing returns the full owned card list
+        var deckCards = await client.GetAsync($"/api/v1/study/flashcards/decks/{deck.Id}/cards");
+        deckCards.EnsureSuccessStatusCode();
+        var deckCardsPayload = await deckCards.Content.ReadFromJsonAsync<JsonElement>(Json);
+        Assert.Equal(1, deckCardsPayload.GetProperty("count").GetInt32());
+        Assert.Equal("Hold digoxin when the apical pulse is below…", deckCardsPayload.GetProperty("cards")[0].GetProperty("front").GetString());
     }
 
     [Fact]

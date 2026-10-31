@@ -114,6 +114,23 @@ public class StudyController : ControllerBase
         }
     }
 
+    [HttpGet("flashcards/decks/{deckId}/cards")]
+    public async Task<IActionResult> GetDeckCards(string deckId, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        try
+        {
+            var cards = await _flashcards.GetDeckCardsAsync(userId, deckId, ct);
+            return Ok(new { success = true, count = cards.Count, cards });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Deck not found." });
+        }
+    }
+
     [HttpPost("flashcards/decks/{deckId}/archive")]
     public async Task<IActionResult> ArchiveDeck(string deckId, CancellationToken ct)
     {

@@ -191,6 +191,26 @@ public class FlashcardService : IFlashcardService
             deck.Flashcards.Count(c => c.Status != "archived" && c.DueAt <= DateTime.UtcNow));
     }
 
+    /// <summary>
+    /// Full card list for an owned deck (all scheduling states). Used by the
+    /// flashcard deck manager; new personal_unreviewed and scheduled cards are
+    /// both returned in creation order.
+    /// </summary>
+    public async Task<List<FlashcardDto>> GetDeckCardsAsync(string userId, string deckId, CancellationToken ct)
+    {
+        var deck = await _context.FlashcardDecks
+            .FirstOrDefaultAsync(d => d.Id == deckId && d.UserId == userId, ct)
+            ?? throw new KeyNotFoundException("Deck not found.");
+
+        var cards = await _context.Flashcards
+            .AsNoTracking()
+            .Where(c => c.DeckId == deck.Id && c.UserId == userId && c.Status != "archived")
+            .OrderBy(c => c.CreatedAt)
+            .ToListAsync(ct);
+
+        return cards.Select(MapCard).ToList();
+    }
+
     public async Task<bool> ArchiveDeckAsync(string userId, string deckId, CancellationToken ct)
     {
         var deck = await _context.FlashcardDecks

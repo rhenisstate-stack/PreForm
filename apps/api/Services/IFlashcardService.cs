@@ -17,6 +17,8 @@ public interface IFlashcardService
 
     Task<FlashcardDeckDto> GetDeckAsync(string userId, string deckId, CancellationToken ct);
 
+    Task<List<FlashcardDto>> GetDeckCardsAsync(string userId, string deckId, CancellationToken ct);
+
     Task<FlashcardDto> AddCardAsync(
         string userId, string deckId, CreateFlashcardRequest request, CancellationToken ct);
 
