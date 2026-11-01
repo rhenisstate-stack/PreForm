@@ -159,25 +159,26 @@ public class ProgrammeControllerTests : IClassFixture<WebApplicationFactory<Prog
     public async Task CreateProgramme_DuplicateCode_ReturnsConflict()
     {
         var client = _factory.CreateClient();
-        AddGatewayHeaders(client, "admin-202", "admin-duplicate@prepford.com", "superadmin");
 
-        // First create
+        // First create (fresh gateway nonce per request — replay protection)
         var request1 = new CreateProgrammeRequest
         {
             Code = "DUP",
             DisplayName = "Duplicate Programme",
             IsActive = true
         };
+        AddGatewayHeaders(client, "admin-202", "admin-duplicate@prepford.com", "superadmin");
         var response1 = await client.PostAsJsonAsync("/api/v1/programmes", request1);
         response1.EnsureSuccessStatusCode();
 
-        // Second create with same code
+        // Second create with same code (fresh signature/nonce)
         var request2 = new CreateProgrammeRequest
         {
             Code = "DUP",
             DisplayName = "Duplicate Programme 2",
             IsActive = true
         };
+        AddGatewayHeaders(client, "admin-202", "admin-duplicate@prepford.com", "superadmin");
         var response2 = await client.PostAsJsonAsync("/api/v1/programmes", request2);
 
         Assert.Equal(HttpStatusCode.Conflict, response2.StatusCode);

@@ -46,8 +46,12 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("RequireSuperAdmin", policy =>
         policy.RequireRole("superadmin"));
 
+    // Matches documented RoleHierarchy normalization (administrator -> admin):
+    // the super-admin/admin-type roles must be consistently privileged across
+    // RequireAdmin and RequireContentManager.Previously "administrator" was
+    // accepted by RequireAdmin but rejected here — an asymmetry fixed in P0.
     options.AddPolicy("RequireContentManager", policy =>
-        policy.RequireRole("content_manager", "admin", "superadmin"));
+        policy.RequireRole("content_manager", "admin", "superadmin", "administrator"));
 
     options.AddPolicy("RequireExamManager", policy =>
         policy.RequireRole("exam_manager", "superadmin"));
