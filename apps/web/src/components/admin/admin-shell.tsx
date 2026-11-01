@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowRight,
   BookOpen,
@@ -82,8 +82,6 @@ function setSidebarPref(value: boolean) {
 }
 
 /* ─────────────────────────────── Navigation ─────────────────────────────── */
-
-// css
 
 interface SidebarNavProps {
   groups: NavGroup[];
@@ -515,12 +513,13 @@ function AdminAccountMenu({
   roleTitle: string;
 }) {
   const { logout } = useAuth();
+  const router = useRouter();
   const initial = displayName.charAt(0).toUpperCase();
 
   const handleLogout = async () => {
     await logout();
-    // Root layout handles redirect via router-less sign-out; land on homepage.
-    window.location.assign("/");
+    router.push("/");
+    router.refresh();
   };
 
   return (
