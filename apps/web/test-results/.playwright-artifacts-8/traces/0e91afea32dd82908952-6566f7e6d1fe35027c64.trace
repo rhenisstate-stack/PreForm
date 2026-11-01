@@ -1,0 +1,14 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.1","options":{},"platform":"win32","wallTime":1793518862619,"monotonicTime":243983.315,"sdkLanguage":"javascript","title":"rbac-access.spec.ts:16 › Role-Based Access Control (RBAC) Enforcement › unauthenticated API request to /api/profile returns 401"}
+{"type":"before","callId":"ormk@32","startTime":244002.789,"class":"APIRequestContext","method":"fetch","params":{"url":"/api/profile","method":"GET"}}
+{"type":"log","callId":"ormk@32","time":244028.842,"message":"→ GET http://127.0.0.1:3000/api/profile"}
+{"type":"log","callId":"ormk@32","time":244028.975,"message":"  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Safari/537.36"}
+{"type":"log","callId":"ormk@32","time":244029.029,"message":"  accept: */*"}
+{"type":"log","callId":"ormk@32","time":244029.074,"message":"  accept-encoding: gzip,deflate,br"}
+{"type":"log","callId":"ormk@32","time":244382.765,"message":"← 401 Unauthorized"}
+{"type":"log","callId":"ormk@32","time":244382.864,"message":"  vary: rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"}
+{"type":"log","callId":"ormk@32","time":244382.909,"message":"  content-type: application/json"}
+{"type":"log","callId":"ormk@32","time":244382.953,"message":"  date: Sun, 01 Nov 2026 07:41:03 GMT"}
+{"type":"log","callId":"ormk@32","time":244383.009,"message":"  connection: keep-alive"}
+{"type":"log","callId":"ormk@32","time":244383.068,"message":"  keep-alive: timeout=5"}
+{"type":"log","callId":"ormk@32","time":244383.114,"message":"  transfer-encoding: chunked"}
+{"type":"after","callId":"ormk@32","endTime":244394.543,"result":{"response":{"url":"http://127.0.0.1:3000/api/profile","status":401,"statusText":"Unauthorized","headers":[{"name":"vary","value":"rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch"},{"name":"content-type","value":"application/json"},{"name":"Date","value":"Sun, 01 Nov 2026 07:41:03 GMT"},{"name":"Connection","value":"keep-alive"},{"name":"Keep-Alive","value":"timeout=5"},{"name":"Transfer-Encoding","value":"chunked"}],"serverAddr":{"ipAddress":"127.0.0.1","port":3000},"timing":{"startTime":1793518862650,"domainLookupStart":-1,"domainLookupEnd":-1,"connectStart":0,"secureConnectionStart":-1,"connectEnd":25.239000000001397,"requestStart":25.239000000001397,"responseStart":366.5449999999837},"responseEndTiming":372.1959999999963,"fetchUid":"0f3dde54e38c976ca0f274b79ba0f1a3"}}}
