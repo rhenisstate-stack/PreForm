@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
 import { render, screen } from "@testing-library/react";
 import * as React from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
@@ -15,6 +15,11 @@ import {
   getAdminBreadcrumbs,
   getAdminPageTitle,
 } from "@/lib/admin/navigation";
+
+/* jsdom lacks scrollIntoView, which cmdk invokes for keyboard navigation. */
+beforeAll(() => {
+  Element.prototype.scrollIntoView = vi.fn();
+});
 
 /* Mutable mock state so individual tests can set role and pathname. */
 let mockUser: { role: string; displayName?: string; email?: string } | null = null;
@@ -237,8 +242,8 @@ describe("AdminShell rendering by role", () => {
       </AdminShell>
     );
 
-    expect(screen.getByText("Overview content")).not.toBeUndefined();
-    // Loading page replaces structured content until the session resolves.
+    // Chrome and page body are withheld until the session resolves.
+    expect(screen.queryByText("Overview content")).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Admin navigation" })).not.toBeInTheDocument();
   });
 });

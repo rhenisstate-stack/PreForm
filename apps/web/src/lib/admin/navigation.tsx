@@ -112,7 +112,7 @@ export function getAdminBreadcrumbs(pathname: string): { label: string; href: st
 
   let acc = "";
   for (let i = 1; i < segments.length; i++) {
-    acc += `/${segments[i]}`;
+    acc = `/${segments.slice(0, i + 1).join("/")}`;
     if (acc === "/admin") continue;
     crumbs.push({
       label: groupLabelForHref(acc) ?? humanizeSegment(segments[i]),
