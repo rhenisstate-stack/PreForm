@@ -16,7 +16,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { BrandedLoading } from "@/components/layout/branded-loading";
-import { BRAND } from "@/lib/brand";
 import { isSubscriptionAdmin } from "@/lib/admin/authz";
 import { formatRoleTitle } from "@/components/layout/personalized-welcome";
 import { Button } from "@/components/ui/button";
