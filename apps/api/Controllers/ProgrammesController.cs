@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Preform.Api.DTOs;
 using Preform.Api.Services;
@@ -44,7 +45,13 @@ public class ProgrammesController : ControllerBase
         return Ok(programme);
     }
 
+    /// <summary>
+    /// Administrative programme creation. Requires an administrative role
+    /// (superadmin, admin, administrator or content_manager). Public catalog
+    /// reads (GET) remain anonymous; see IProgrammeService for validation.
+    /// </summary>
     [HttpPost]
+    [Authorize(Policy = "RequireContentManager")]
     public async Task<ActionResult<ProgrammeDto>> CreateProgramme(CreateProgrammeRequest request, CancellationToken cancellationToken)
     {
         try

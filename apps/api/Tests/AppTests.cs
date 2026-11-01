@@ -121,10 +121,22 @@ public class ProgrammeControllerTests : IClassFixture<WebApplicationFactory<Prog
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>
+    /// Signs canonical v1 gateway/HMAC bearer headers for administrative programme endpoints.
+    /// Reuses the shared helper from GatewayHmacAndReplaySecurityTests (same signature conventions).
+    /// </summary>
+    private static void AddGatewayHeaders(HttpClient client, string userId, string email, string role)
+    {
+        GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
+            client, "POST", "/api/v1/programmes", userId, email, role);
+    }
+
     [Fact]
     public async Task CreateProgramme_ValidRequest_CreatesProgramme()
     {
         var client = _factory.CreateClient();
+        AddGatewayHeaders(client, "admin-201", "admin-create@prepford.com", "superadmin");
+
         var request = new CreateProgrammeRequest
         {
             Code = "TEST",
@@ -147,6 +159,7 @@ public class ProgrammeControllerTests : IClassFixture<WebApplicationFactory<Prog
     public async Task CreateProgramme_DuplicateCode_ReturnsConflict()
     {
         var client = _factory.CreateClient();
+        AddGatewayHeaders(client, "admin-202", "admin-duplicate@prepford.com", "superadmin");
 
         // First create
         var request1 = new CreateProgrammeRequest
@@ -174,6 +187,8 @@ public class ProgrammeControllerTests : IClassFixture<WebApplicationFactory<Prog
     public async Task CreateProgramme_InvalidCode_ReturnsBadRequest()
     {
         var client = _factory.CreateClient();
+        AddGatewayHeaders(client, "admin-203", "admin-invalid@prepford.com", "superadmin");
+
         var request = new CreateProgrammeRequest
         {
             Code = "",
@@ -184,6 +199,108 @@ public class ProgrammeControllerTests : IClassFixture<WebApplicationFactory<Prog
         var response = await client.PostAsJsonAsync("/api/v1/programmes", request);
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    // ── P0 Security Hotfix: POST /api/v1/programmes requires administrative auth ──
+
+    [Fact]
+    public async Task CreateProgramme_UnauthenticatedRequest_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        // No gateway headers, no bearer session
+        var request = new CreateProgrammeRequest
+        {
+            Code = "TEST",
+            DisplayName = "Unauthenticated Programme",
+            IsActive = true
+        };
+
+        var response = await client.PostAsJsonAsync("/api/v1/programmes", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateProgramme_SpoofedHeadersWithoutSignature_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        // Attacker injects identity headers without a valid HMAC signature
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", "attacker-1");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", "attacker@prepford.com");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Role", "superadmin");
+
+        var request = new CreateProgrammeRequest
+        {
+            Code = "TEST",
+            DisplayName = "Spoofed Programme",
+            IsActive = true
+        };
+
+        var response = await client.PostAsJsonAsync("/api/v1/programmes", request);
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("candidate")]
+    [InlineData("instructor")]
+    [InlineData("reviewer")]
+    [InlineData("exam_manager")]
+    public async Task CreateProgramme_NonContentManagerRole_ReturnsForbidden403(string role)
+    {
+        var client = _factory.CreateClient();
+        AddGatewayHeaders(client, $"user-{role}-deny", $"{role}.programme@prepford.com", role);
+
+        var request = new CreateProgrammeRequest
+        {
+            Code = "TEST",
+            DisplayName = $"Forbidden {role} Programme",
+            IsActive = true
+        };
+
+        var response = await client.PostAsJsonAsync("/api/v1/programmes", request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("superadmin")]
+    [InlineData("admin")]
+    [InlineData("administrator")]
+    [InlineData("content_manager")]
+    public async Task CreateProgramme_ContentManagerRoles_AuthorizationIsAccepted(string role)
+    {
+        var client = _factory.CreateClient();
+        AddGatewayHeaders(client, $"user-{role}-allow", $"{role}.programme@prepford.com", role);
+
+        var request = new CreateProgrammeRequest
+        {
+            Code = "TEST",
+            DisplayName = $"Authorized {role} Programme",
+            IsActive = true
+        };
+
+        var response = await client.PostAsJsonAsync("/api/v1/programmes", request);
+
+        // Authorized roles must pass authorization: the request reaches controller
+        // validation, yielding either 201 (created) or 409 (duplicate code "TEST"
+        // already inserted by another test — never an authorization rejection).
+        Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
+        Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetProgrammes_RemainsPubliclyAccessible_WithoutAuthentication()
+    {
+        var client = _factory.CreateClient();
+        // Public catalog reads must not require authentication
+
+        var response = await client.GetAsync("/api/v1/programmes");
+
+        response.EnsureSuccessStatusCode();
+        var programmes = await response.Content.ReadFromJsonAsync<List<ProgrammeDto>>();
+        Assert.NotNull(programmes);
+        Assert.True(programmes.Count >= 2);
     }
 }
 
