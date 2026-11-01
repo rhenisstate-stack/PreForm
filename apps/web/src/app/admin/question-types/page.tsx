@@ -1,9 +1,7 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import {
-  ArrowLeft,
   Search,
   CircleDot,
   CheckSquare,
@@ -254,24 +252,15 @@ export default function QuestionTypesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 space-y-8">
-      {/* Back to Admin & Header */}
+    <div className="mx-auto max-w-7xl space-y-8">
+      {/* Header (page title/breadcrumbs are rendered by the admin shell) */}
       <div>
-        <Link
-          href="/admin"
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors mb-3"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to Admin Overview
-        </Link>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <span className="rounded-full bg-secondary/15 px-2.5 py-0.5 text-xs font-mono font-semibold text-secondary">
                 18 Formats Verified
               </span>
-              <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground tracking-tight">
-                Question-Type Registry
-              </h1>
             </div>
             <p className="text-sm text-muted-foreground mt-1">
               Authoritative catalog of supported NCLEX question interactions, response schemas, and scoring strategies.
