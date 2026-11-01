@@ -1,0 +1,1 @@
+{"version":10,"type":"context-options","origin":"library","browserName":"","playwrightVersion":"1.64.1","options":{},"platform":"win32","wallTime":1793519017581,"monotonicTime":398944.565,"sdkLanguage":"javascript","title":"student-auth.spec.ts:67 › Student Authentication & Session Lifecycle › logout invalidates session and prevents reuse of old session token"}
