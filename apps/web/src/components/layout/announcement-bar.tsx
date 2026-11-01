@@ -23,6 +23,7 @@ export function AnnouncementBar({ announcements, isLoading }: AnnouncementBarPro
   if (
     !active ||
     pathname?.startsWith("/dashboard") ||
+    pathname?.startsWith("/admin") ||
     pathname?.startsWith("/sign-in") ||
     pathname?.startsWith("/sign-up")
   ) {

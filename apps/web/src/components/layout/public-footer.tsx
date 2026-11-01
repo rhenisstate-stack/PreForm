@@ -78,9 +78,10 @@ const socialLinks = [
 export default function PublicFooter() {
   const pathname = usePathname();
 
-  // The learner dashboard workspace and dedicated auth pages use their own full-screen shells
+  // The learner dashboard, administrative workspace and auth pages use their own full-screen shells
   if (
     pathname?.startsWith("/dashboard") ||
+    pathname?.startsWith("/admin") ||
     pathname?.startsWith("/sign-in") ||
     pathname?.startsWith("/sign-up")
   ) {
