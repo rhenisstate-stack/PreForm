@@ -75,11 +75,37 @@ npm run lint --workspace @prepford/web
 
 ---
 
-## P2 — Existing admin surfaces tests: pending
+## P2 — Existing admin surfaces tests: IN PROGRESS
 
-- Overview metrics: no tests yet (P2 to be executed).
-- Subscriptions page migration: TanStack Query integration and double-fetch deduplication (P2 to be executed).
-- /admin/question-types protection: already integrated into shared layout; no new backend auth required.
+### Command (future)
+```
+npx vitest run tests/admin-subscriptions.test.tsx
+```
+
+### Current Status
+
+| Component | Implemented | Tests Required |
+|---|---|---|
+| Overview page | ✅ Data-driven foundation | TBD (as real APIs become available) |
+| Subscriptions page | ✅ TanStack Query integration | TBD (UI/UX validation) |
+| Question-Type Registry | ✅ Already integrated and protected | ✅ Existing admin-shell tests cover RBAC |
+
+### Test coverage planned
+
+#### Admin subscriptions unit tests
+- TanStack Query hooks behavior (query key, staleTime, mutations)
+- RBAC enforcement (isSubscriptionAdmin)
+- CRUD mutation success/error flows
+- Loading/error UI states
+
+#### Integration tests
+- Real API call validation (admin-subscriptions endpoint)
+- Role-based access scenarios (superadmin, reviewer, etc.)
+- Form submission flows (create/update/archive)
+
+### Coverage notes
+- P2 scope does not add new lint errors; follows existing patterns.
+- No impact on P1 admin shell tests.
 
 ---
 
@@ -89,17 +115,18 @@ npm run lint --workspace @prepford/web
    - Core admin shell unit tests pass; learner/auth flows (student-auth, checkout, profile-security, rbac-access) remain failing.
    - Suspected environment/CORS/API-state issues unrelated to admin shell work.
    - Diagnosed registration POST no 200 in browser despite curl success; requires separate investigation.
-2. **Existing lint errors** (10 files outside current work) – not addressed per requirement to limit scope to P1.
+2. **Existing lint errors** (10 files outside current work) – not addressed per requirement to limit scope to P1/P2.
 3. **Production server integration** – e2e tests against port 3000 (HMR) show poor reliability; manual testing on port 3100 shows CORS/API issues; separate environment verification required.
+4. **Real data integration** – P2 overview and subscriptions pages currently use placeholder/TBD data; real API integration will occur as P3–P7 backends land.
 
 ---
 
 ## Recommendations
 
-1. **Proceed to P2** once E2E environment is stable or the failing tests are diagnosed as pre-existing environment issues.
-2. **Update implementation documentation** after P2 completion.
+1. **Proceed to P3** once P2 validation and E2E environment are stable.
+2. **Update implementation documentation** after P2 validation and real data integration.
 3. **Monitor lint/typecheck** for any regressions as the codebase evolves.
 
 ---
 
-**Summary**: P0 security hotfix fully implemented with all backend tests passing; P1 admin shell complete with unit tests passing, lint and typecheck clean; P2 scope remains pending pending e2e environment resolution or separate investigation.
+**Summary**: P0 security hotfix fully implemented with all backend tests passing; P1 admin shell complete with unit tests passing, lint and typecheck clean; P2 scope in progress (TanStack Query migration, data-truth foundation). E2E failures remain but are unrelated to admin shell functionality.
