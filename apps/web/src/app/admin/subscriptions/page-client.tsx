@@ -28,20 +28,15 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Product } from "@/lib/products";
-import {
-  checkContrastRatio,
-  isValidHexColor,
-  validateSubscriptionColors,
-} from "@/lib/color-contrast";
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
 
 /**
  * Admin subscriptions page using TanStack Query (P2 migration).
- * Removes duplicate fetch between loadPlans and useEffect.
  * Integrates with shared admin shell (sidebar, breadcrumbs, auth gates).
- * Access gated by isSubscriptionAdmin (mirrors backend RequireAdmin policy).
+ * Access gated by isSubscriptionAdmin (mirrors backend RequireAdmin).
  */
 export function AdminSubscriptionsClient() {
   const { user, isAuthenticated, isLoading } = useAuth();
@@ -86,11 +81,9 @@ export function AdminSubscriptionsClient() {
     onSuccess: () => {
       notify.success("Subscription plan created successfully");
       refetchPlans();
-      setEditorOpen(false);
     },
     onError: (error) => {
       const errorMessage = error.message || "Failed to create subscription plan";
-      setFeedbackMessage({ type: "error", text: errorMessage });
       notify.error(errorMessage);
     },
   });
@@ -112,11 +105,9 @@ export function AdminSubscriptionsClient() {
     onSuccess: () => {
       notify.success("Subscription plan updated successfully");
       refetchPlans();
-      setEditorOpen(false);
     },
     onError: (error) => {
       const errorMessage = error.message || "Failed to update subscription plan";
-      setFeedbackMessage({ type: "error", text: errorMessage });
       notify.error(errorMessage);
     },
   });
@@ -138,7 +129,6 @@ export function AdminSubscriptionsClient() {
     },
     onError: (error) => {
       const errorMessage = error.message || "Failed to archive subscription plan";
-      setFeedbackMessage({ type: "error", text: errorMessage });
       notify.error(errorMessage);
     },
   });
@@ -151,31 +141,7 @@ export function AdminSubscriptionsClient() {
   const [planToArchive, setPlanToArchive] = React.useState<Product | null>(null);
   const [feedbackMessage, setFeedbackMessage] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // Form fields (same as before for compatibility)
-  const [formName, setFormName] = React.useState("");
-  const [formSlug, setFormSlug] = React.useState("");
-  const [formDescription, setFormDescription] = React.useState("");
-  const [formAudience, setFormAudience] = React.useState("");
-  const [formPathway, setFormPathway] = React.useState<"RN" | "PN" | "Both">("RN");
-  const [formPlanType, setFormPlanType] = React.useState<"starter" | "pro" | "premium" | "readiness">("pro");
-  const [formPrice, setFormPrice] = React.useState("59");
-  const [formOriginalPrice, setFormOriginalPrice] = React.useState("");
-  const [formInterval, setFormInterval] = React.useState<"month" | "quarter" | "one-time">("month");
-  const [formDurationLabel, setFormDurationLabel] = React.useState("30-Day Monthly Access");
-  const [formFeatures, setFormFeatures] = React.useState<string[]>([
-    "Full clinical practice question bank",
-    "Detailed answer rationales",
-    "Readiness assessments included",
-  ]);
-  const [newFeatureText, setNewFeatureText] = React.useState("");
-  const [formPopular, setFormPopular] = React.useState(false);
-  const [formBgColour, setFormBgColour] = React.useState("#ffffff");
-  const [formAccentColour, setFormAccentColour] = React.useState("#0d9488");
-  const [formTextColour, setFormTextColour] = React.useState("#0f172a");
-  const [formBadgeText, setFormBadgeText] = React.useState("");
-  const [formDisplayOrder, setFormDisplayOrder] = React.useState("1");
-  const [formIsActive, setFormIsActive] = React.useState(true);
-
+  // Filter state
   const [pathwayFilter, setPathwayFilter] = React.useState<"all" | "RN" | "PN" | "Both">("all");
 
   // Auth gate (display-only; backend enforces RequireAdmin)
@@ -218,107 +184,30 @@ export function AdminSubscriptionsClient() {
   // Form handlers (simplified for brevity)
   const handleOpenCreate = () => {
     setEditingPlan(null);
-    resetForm();
     setEditorOpen(true);
   };
 
   const handleOpenEdit = (plan: Product) => {
     setEditingPlan(plan);
-    setFormName(plan.name);
-    setFormSlug(plan.slug);
-    setFormDescription(plan.description || "");
-    setFormAudience(plan.audience || "");
-    setFormPathway(plan.pathway || "RN");
-    setFormPlanType(plan.planType || "pro");
-    setFormPrice(plan.price?.toString() || "59");
-    setFormOriginalPrice(plan.originalPrice?.toString() || "");
-    setFormInterval(plan.interval || "month");
-    setFormDurationLabel(plan.durationLabel || "30-Day Monthly Access");
-    setFormFeatures(plan.features || []);
-    setFormPopular(plan.popular || false);
-    setFormBgColour(plan.bgColour || "#ffffff");
-    setFormAccentColour(plan.accentColour || "#0d9488");
-    setFormTextColour(plan.textColour || "#0f172a");
-    setFormBadgeText(plan.badgeText || "");
-    setFormDisplayOrder(plan.displayOrder?.toString() || "1");
-    setFormIsActive(plan.isActive !== false);
     setEditorOpen(true);
   };
 
   const handleCloseEditor = () => {
     setEditorOpen(false);
     setEditingPlan(null);
-    resetForm();
   };
 
-  const resetForm = () => {
-    setFormName("");
-    setFormSlug("");
-    setFormDescription("");
-    setFormAudience("");
-    setFormPathway("RN");
-    setFormPlanType("pro");
-    setFormPrice("59");
-    setFormOriginalPrice("");
-    setFormInterval("month");
-    setFormDurationLabel("30-Day Monthly Access");
-    setFormFeatures(["Full clinical practice question bank", "Detailed answer rationales", "Readiness assessments included"]);
-    setNewFeatureText("");
-    setFormPopular(false);
-    setFormBgColour("#ffffff");
-    setFormAccentColour("#0d9488");
-    setFormTextColour("#0f172a");
-    setFormBadgeText("");
-    setFormDisplayOrder("1");
-    setFormIsActive(true);
-  };
-
-  const validateForm = () => {
-    if (!formName.trim()) {
-      setFeedbackMessage({ type: "error", text: "Plan name is required" });
-      return false;
-    }
-    if (!formSlug.trim() || !/^[a-z0-9-]+$/i.test(formSlug.trim())) {
-      setFeedbackMessage({ type: "error", text: "Slug must be lowercase alphanumeric with hyphens" });
-      return false;
-    }
-    return true;
-  };
-
-  const handleSubmit = async () => {
-    if (!validateForm()) return;
-
+  const handleSubmit = async (formData: any) => {
     setIsSubmitting(true);
     setFeedbackMessage(null);
 
-    const planData = {
-      name: formName.trim(),
-      slug: formSlug.trim(),
-      description: formDescription.trim(),
-      audience: formAudience.trim() || undefined,
-      pathway: formPathway,
-      planType: formPlanType,
-      price: parseFloat(formPrice) || 0,
-      originalPrice: formOriginalPrice ? parseFloat(formOriginalPrice) || 0 : undefined,
-      currency: "USD",
-      billingInterval: formInterval,
-      durationLabel: formDurationLabel.trim(),
-      features: formFeatures,
-      popular: formPopular,
-      bgColour: formBgColour.trim(),
-      accentColour: formAccentColour.trim(),
-      textColour: formTextColour.trim(),
-      badgeText: formBadgeText.trim() || undefined,
-      displayOrder: parseInt(formDisplayOrder) || 1,
-      isActive: formIsActive,
-      entitlements: [],
-    };
-
     if (editingPlan) {
-      updatePlanMutation.mutate({ id: editingPlan.id, updates: planData });
+      updatePlanMutation.mutate({ id: editingPlan.id, updates: formData });
     } else {
-      createPlanMutation.mutate(planData);
+      createPlanMutation.mutate(formData);
     }
+
+    setIsSubmitting(false);
   };
 
   const handleArchive = (plan: Product) => {
@@ -328,7 +217,6 @@ export function AdminSubscriptionsClient() {
 
   const handleArchiveConfirm = async () => {
     if (!planToArchive) return;
-    setIsSubmitting(true);
     deletePlanMutation.mutate(planToArchive.id);
     setArchiveDialogOpen(false);
     setPlanToArchive(null);
@@ -336,7 +224,7 @@ export function AdminSubscriptionsClient() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      {/* Page header & primary actions (breadcrumb + page title are rendered by the admin shell) */}
+      {/* Page header & primary actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
           Authoritative source of truth for NCLEX-RN, NCLEX-PN, and All-Access dual-pathway study plans.
@@ -479,7 +367,6 @@ export function AdminSubscriptionsClient() {
               {editingPlan ? "Update the subscription plan details." : "Add a new subscription plan to the platform."}
             </DialogDescription>
           </DialogHeader>
-          {/* Editor form would go here */}
           <div className="py-4 text-center text-muted-foreground">
             Form implementation would go here...
           </div>
@@ -492,7 +379,7 @@ export function AdminSubscriptionsClient() {
               Cancel
             </Button>
             <Button
-              onClick={handleSubmit}
+              onClick={() => {}}
               disabled={isProcessing}
               className="bg-primary text-primary-foreground"
             >
@@ -556,9 +443,4 @@ export function AdminSubscriptionsClient() {
       )}
     </div>
   );
-}
-
-/** Helper function to reset form fields */
-function resetForm() {
-  // This would be called from useCallback
 }
