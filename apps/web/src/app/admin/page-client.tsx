@@ -10,6 +10,8 @@ import {
   AlertCircle,
   ArrowRight,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { BrandedLoading } from "@/components/layout/branded-loading";
 
 /**
  * Admin overview content. The shared admin chrome (sidebar, breadcrumbs,
@@ -19,17 +21,29 @@ import {
  * production figures).
  */
 export function AdminOverviewClient() {
+  const { isLoading, isAuthenticated } = useAuth();
+
+  // Loading state
+  if (isLoading) {
+    return <BrandedLoading message="Preparing admin workspace..." fullScreen={false} />;
+  }
+
+  // If not authenticated, auth gates in AdminShell will handle this
+  // This component only renders for authenticated admin users
+
   return (
     <div className="space-y-8">
-      {/* Overview Metric Cards */}
+      {/* Overview Metric Cards - Data will be populated from real APIs during P2 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Candidate Cohort - Real data would come from API */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Candidate Cohort</span>
             <Users className="h-4 w-4 text-secondary" aria-hidden="true" />
           </div>
           <p className="text-2xl font-serif font-bold text-foreground">
-            1,280
+            {/* TODO: Replace with real data or explicit unavailable state */}
+            TBD
           </p>
           <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
@@ -37,42 +51,50 @@ export function AdminOverviewClient() {
           </p>
         </div>
 
+        {/* Question Repository - Real data would come from API */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Question Repository</span>
             <FileQuestion className="h-4 w-4 text-primary" aria-hidden="true" />
           </div>
           <p className="text-2xl font-serif font-bold text-foreground">
-            2,450
+            {/* TODO: Replace with real data or explicit unavailable state */}
+            TBD
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
             Across 18 validated question formats
           </p>
         </div>
 
+        {/* Review Queue - Real data would come from API */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Review Queue</span>
             <AlertCircle className="h-4 w-4 text-amber-500" aria-hidden="true" />
           </div>
           <p className="text-2xl font-serif font-bold text-foreground">
-            14
+            {/* TODO: Replace with real data or explicit unavailable state */}
+            TBD
           </p>
           <p className="mt-2 text-xs text-amber-700 dark:text-amber-400 font-medium">
-            Awaiting nurse educator approval
+            {/* TODO: Update based on real data or show unavailable state */}
+            Review queue will be available once question bank access is implemented
           </p>
         </div>
 
+        {/* Published Exams - Real data would come from API */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Published Exams</span>
             <Award className="h-4 w-4 text-secondary" aria-hidden="true" />
           </div>
           <p className="text-2xl font-serif font-bold text-foreground">
-            12
+            {/* TODO: Replace with real data or explicit unavailable state */}
+            TBD
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            CAT, Mock, and Diagnostic forms
+            {/* TODO: Update based on real data or show unavailable state */}
+            Exam management will be available with P5 backend implementation
           </p>
         </div>
       </div>
