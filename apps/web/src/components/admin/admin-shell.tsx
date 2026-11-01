@@ -44,12 +44,52 @@ import { AdminCommandMenu, AdminSearchTrigger } from "@/components/admin/admin-c
 
 const SIDEBAR_COLLAPSE_KEY = "prepford.admin.sidebar.collapsed";
 
+/**
+ * External-store-backed sidebar collapse preference. Persisted in localStorage;
+ * `useSyncExternalStore` keeps the client/server snapshot consistent without
+ * setState-in-effect.
+ */
+const sidebarPrefListeners = new Set<() => void>();
+
+function subscribeSidebarPref(callback: () => void) {
+  sidebarPrefListeners.add(callback);
+  window.addEventListener("storage", callback);
+  return () => {
+    sidebarPrefListeners.delete(callback);
+    window.removeEventListener("storage", callback);
+  };
+}
+
+function getSidebarPrefSnapshot(): boolean {
+  try {
+    return window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+function getSidebarPrefServerSnapshot(): boolean {
+  return false;
+}
+
+function setSidebarPref(value: boolean) {
+  try {
+    window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY, String(value));
+  } catch {
+    // Storage unavailable — preference applies for this session only.
+  }
+  sidebarPrefListeners.forEach((listener) => listener());
+}
+
 /* ─────────────────────────────── Navigation ─────────────────────────────── */
+
+// css
 
 interface SidebarNavProps {
   groups: NavGroup[];
   pathname: string;
   collapsed?: boolean;
+  onNavigateMobile?: () => void;
 }
 
 function isActiveRoute(href: string, pathname: string): boolean {
@@ -57,7 +97,12 @@ function isActiveRoute(href: string, pathname: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function SidebarNav({ groups, pathname, collapsed = false }: SidebarNavProps) {
+function SidebarNav({
+  groups,
+  pathname,
+  collapsed = false,
+  onNavigateMobile,
+}: SidebarNavProps) {
   return (
     <nav aria-label="Admin navigation" className="flex-1 space-y-4 overflow-y-auto px-2">
       {groups.map((group) => (
@@ -66,6 +111,7 @@ function SidebarNav({ groups, pathname, collapsed = false }: SidebarNavProps) {
           group={group}
           pathname={pathname}
           collapsed={collapsed}
+          onNavigateMobile={onNavigateMobile}
         />
       ))}
     </nav>
@@ -80,17 +126,16 @@ function CollapsibleNavGroup({
   group,
   pathname,
   collapsed,
+  onNavigateMobile,
 }: {
   group: NavGroup;
   pathname: string;
   collapsed: boolean;
+  onNavigateMobile?: () => void;
 }) {
-  const [expanded, setExpanded] = React.useState(() => defaultGroupExpanded(group, pathname));
-
-  // Keep the group containing the active route accessible in collapsed mode.
-  React.useEffect(() => {
-    if (defaultGroupExpanded(group, pathname)) setExpanded(true);
-  }, [group, pathname]);
+  // null = derive from the active route; otherwise the user's explicit choice.
+  const [userChoice, setUserChoice] = React.useState<boolean | null>(null);
+  const expanded = userChoice ?? defaultGroupExpanded(group, pathname);
 
   return (
     <div>
@@ -100,7 +145,7 @@ function CollapsibleNavGroup({
           className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-[10px] font-mono font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-expanded={expanded}
           aria-controls={`admin-nav-group-${group.id}`}
-          onClick={() => setExpanded((prev) => !prev)}
+          onClick={() => setUserChoice(!expanded)}
         >
           {group.label}
           <ChevronDown
@@ -120,6 +165,7 @@ function CollapsibleNavGroup({
             <Link
               key={item.id}
               href={item.href}
+              onClick={onNavigateMobile}
               title={collapsed ? item.title : undefined}
               aria-current={active ? "page" : undefined}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
@@ -237,22 +283,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   const [isCommandOpen, setIsCommandOpen] = React.useState(false);
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
-  const [collapsed, setCollapsed] = React.useState(false);
-
-  React.useEffect(() => {
-    // Restore collapsed state after hydration to avoid SSR mismatch.
-    try {
-      const stored = window.localStorage.getItem(SIDEBAR_COLLAPSE_KEY);
-      if (stored === "true") setCollapsed(true);
-    } catch {
-      // Storage unavailable — default expanded.
-    }
-  }, []);
-
-  // Close the mobile drawer on route change.
-  React.useEffect(() => {
-    setIsMobileOpen(false);
-  }, [pathname]);
+  const collapsed = React.useSyncExternalStore(
+    subscribeSidebarPref,
+    getSidebarPrefSnapshot,
+    getSidebarPrefServerSnapshot
+  );
 
   // Global command palette shortcut.
   React.useEffect(() => {
@@ -339,14 +374,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   const pageTitle = getAdminPageTitle(pathname);
 
   const toggleCollapsed = () => {
-    setCollapsed((prev) => {
-      try {
-        window.localStorage.setItem(SIDEBAR_COLLAPSE_KEY, String(!prev));
-      } catch {
-        // Ignore storage failures.
-      }
-      return !prev;
-    });
+    setSidebarPref(!collapsed);
   };
 
   return (
