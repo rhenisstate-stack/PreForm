@@ -121,7 +121,7 @@ export default function RootLayout({
             __html: JSON.stringify(organizationStructuredData),
           }}
         />
-        <Providers attribute="class" defaultTheme="system" enableSystem>
+        <Providers attribute="class" defaultTheme="light" enableSystem>
           <AnnouncementBar announcements={null} isLoading={false} />
           <PublicHeader />
           <main className="min-h-screen">{children}</main>
