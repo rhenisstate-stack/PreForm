@@ -156,6 +156,6 @@ The run covers the existing provider-independent regression suite and new tests 
 
 - `PostgresIntegrationTests` were excluded. The fixture has a hard-coded connection to the shared `prepford` database; no isolated/disposable database was configured. Although the local PostgreSQL port is reachable, tests were not run against a potentially shared database.
 - Migration 0006 execution, Npgsql transaction behavior, PostgreSQL unique-index enforcement, and runtime reconciliation on PostgreSQL remain unverified.
-- The previous Gate A report recorded 133 passing tests. That historical count is not a direct apples-to-apples comparison with the current 171-pass run because the current command excludes PostgreSQL tests and adds Gate B coverage.
+- The previous Gate A report recorded 133 passing tests. That historical count is not a direct apples-to-apples comparison with the current 172-pass run because the current command excludes PostgreSQL tests and adds Gate B coverage.
 
 **Required follow-up:** execute the migration and seeding integration tests using an explicitly disposable PostgreSQL database before considering Gate B fully verified.

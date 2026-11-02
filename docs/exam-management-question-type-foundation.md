@@ -98,7 +98,7 @@ These are Gate B contract notes, not a claim that each payload has been finalize
 - requires an available option count from 1 to 250, unique non-negative indices within that count, and exactly one selection for single-choice/true-false;
 - rejects all content payloads and unsupported response kinds instead of accepting arbitrary JSON.
 
-This validator is a foundation and is not wired into the attempt endpoint. The existing attempt response contract and learner behavior were not changed. No type-specific content schema is finalized for the other 13 cases, and no new public payload endpoint accepts arbitrary JSON.
+This validator is a foundation and is not wired into the attempt endpoint. The existing attempt response contract and learner behavior were not changed. No type-specific content schema is finalized for any key, and no new public payload endpoint accepts arbitrary JSON. Validation is limited to the five non-specialized option-response types.
 
 ## Safe seeding and database impact
 
