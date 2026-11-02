@@ -138,8 +138,8 @@ public class GradingSecurityTests : IClassFixture<WebApplicationFactory<Program>
             .FirstAsync(ea => ea.Id == attemptId);
 
         var responseRecord = attempt.Responses.First(r => r.QuestionId == questionId);
-        Assert.False(responseRecord.IsCorrect, "Server must not trust client-supplied IsCorrect=true for a wrong answer.");
-        Assert.Equal(0, responseRecord.ScoreAwarded, "Server must not trust client-supplied ScoreAwarded.");
+        Assert.False(responseRecord.IsCorrect);
+        Assert.Equal(0, responseRecord.ScoreAwarded);
     }
 
     [Fact]
@@ -171,8 +171,8 @@ public class GradingSecurityTests : IClassFixture<WebApplicationFactory<Program>
             .FirstAsync(ea => ea.Id == attemptId);
 
         var responseRecord = attempt.Responses.First(r => r.QuestionId == questionId);
-        Assert.True(responseRecord.IsCorrect, "Server must compute IsCorrect=true for the right answer regardless of client claim.");
-        Assert.Equal(1, responseRecord.ScoreAwarded, "Server must award full marks for correct answer.");
+        Assert.True(responseRecord.IsCorrect);
+        Assert.Equal(1, responseRecord.ScoreAwarded);
     }
 
     [Fact]
