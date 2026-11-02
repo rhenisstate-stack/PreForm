@@ -78,9 +78,17 @@ public class QuestionTypeRegistryTests
             Assert.Equal(QuestionTypeStatus.GradingSupported, descriptor.ImplementationStatus);
             Assert.Equal(1, descriptor.ContractVersion);
             Assert.Equal(new[] { QuestionScoringMode.AutomaticExactMatch }, descriptor.SupportedScoringModes);
-            Assert.True(descriptor.SupportsDelivery);
             Assert.False(descriptor.SupportsAuthoring);
         });
+
+        Assert.All(
+            gradedTypes.Where(descriptor =>
+                (descriptor.Capabilities & QuestionTypeCapability.RequiresSpecializedRenderer) == 0),
+            descriptor => Assert.True(descriptor.SupportsDelivery));
+        Assert.All(
+            gradedTypes.Where(descriptor =>
+                (descriptor.Capabilities & QuestionTypeCapability.RequiresSpecializedRenderer) != 0),
+            descriptor => Assert.False(descriptor.SupportsDelivery));
 
         var sata = QuestionTypeRegistry.Instance.All.Single(descriptor => descriptor.Key == "sata");
         Assert.False((sata.Capabilities & QuestionTypeCapability.SupportsPartialCredit) != 0);

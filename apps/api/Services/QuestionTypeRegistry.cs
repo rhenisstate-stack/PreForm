@@ -24,8 +24,9 @@ public sealed record QuestionTypeDescriptor(
     IReadOnlyList<QuestionScoringMode> SupportedScoringModes)
 {
     public bool SupportsAuthoring { get; init; }
-    public bool SupportsDelivery { get; init; } =
-        GradingStrategy == QuestionTypeGradingStrategy.OptionExactMatch;
+    public bool SupportsDelivery =>
+        GradingStrategy == QuestionTypeGradingStrategy.OptionExactMatch
+        && (Capabilities & QuestionTypeCapability.RequiresSpecializedRenderer) == 0;
 
     public bool SupportsAutomaticGrading =>
         (Capabilities & QuestionTypeCapability.SupportsAutomaticGrading) != 0;
