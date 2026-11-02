@@ -179,8 +179,13 @@ public class OptionBasedQuestionGrader : IQuestionGrader
             scoreAwarded = isCorrect ? context.MaxScore : 0;
         }
 
-        return Task.FromResult(GradingResult.Correct(scoreAwarded, context.MaxScore,
-            isCorrect ? "Response matches the correct answer key." : "Response does not match the correct answer key."));
+        if (isCorrect)
+        {
+            return Task.FromResult(GradingResult.Correct(scoreAwarded, context.MaxScore,
+                "Response matches the correct answer key."));
+        }
+        return Task.FromResult(GradingResult.Incorrect(scoreAwarded, context.MaxScore,
+            "Response does not match the correct answer key."));
     }
 }
 
