@@ -34,19 +34,30 @@ public static class CatalogSeeder
             await context.SaveChangesAsync(cancellationToken);
         }
 
-        // 2. Seed Default Roles
-        if (!await context.Roles.AnyAsync(cancellationToken))
+        // 2. Seed Default Roles (idempotent and resilient to partial or historical role sets)
+        var canonicalRoles = new[]
         {
-            logger.LogInformation("Seeding RBAC roles...");
-            context.Roles.AddRange(
-                new Role { Name = "superadmin", Description = "System Super Administrator", IsSystem = true },
-                new Role { Name = "admin", Description = "Operations Administrator", IsSystem = true },
-                new Role { Name = "content_manager", Description = "Curriculum & Question Bank Manager", IsSystem = true },
-                new Role { Name = "exam_manager", Description = "Examination & CAT Manager", IsSystem = true },
-                new Role { Name = "reviewer", Description = "Clinical Content Reviewer", IsSystem = true },
-                new Role { Name = "instructor", Description = "Faculty & Course Instructor", IsSystem = true },
-                new Role { Name = "candidate", Description = "Nursing Candidate / Learner", IsSystem = true }
-            );
+            new Role { Name = "superadmin", Description = "System Super Administrator", IsSystem = true },
+            new Role { Name = "admin", Description = "Operations Administrator", IsSystem = true },
+            new Role { Name = "content_manager", Description = "Curriculum & Question Bank Manager", IsSystem = true },
+            new Role { Name = "exam_manager", Description = "Examination & CAT Manager", IsSystem = true },
+            new Role { Name = "reviewer", Description = "Clinical Content Reviewer", IsSystem = true },
+            new Role { Name = "instructor", Description = "Faculty & Course Instructor", IsSystem = true },
+            new Role { Name = "candidate", Description = "Nursing Candidate / Learner", IsSystem = true }
+        };
+
+        var existingRoles = await context.Roles
+            .Where(r => canonicalRoles.Select(c => c.Name).Contains(r.Name))
+            .ToDictionaryAsync(r => r.Name, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        var missingRoles = canonicalRoles
+            .Where(role => !existingRoles.ContainsKey(role.Name))
+            .ToList();
+
+        if (missingRoles.Count > 0)
+        {
+            logger.LogInformation("Seeding missing RBAC roles: {MissingRoles}", string.Join(", ", missingRoles.Select(r => r.Name)));
+            context.Roles.AddRange(missingRoles);
             await context.SaveChangesAsync(cancellationToken);
         }
 
