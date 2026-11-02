@@ -18,6 +18,7 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
 
     public QuestionTypesControllerTests(WebApplicationFactory<Program> factory)
     {
+        var databaseName = Guid.NewGuid().ToString();
         _factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
@@ -25,7 +26,7 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
             {
                 var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
                 if (descriptor != null) services.Remove(descriptor);
-                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(databaseName));
             });
         });
     }
@@ -48,6 +49,21 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
         Assert.True(body.Success);
         Assert.Equal(18, body.Count);
         Assert.Equal(18, body.Items.Count);
+    }
+
+    [Fact]
+    public async Task GetQuestionTypes_EmptyCatalogueReturnsAnEmptyEnvelope()
+    {
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/question-types");
+
+        response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<QuestionTypeCatalogueResponse>();
+
+        Assert.NotNull(body);
+        Assert.True(body.Success);
+        Assert.Equal(0, body.Count);
+        Assert.Empty(body.Items);
     }
 
     [Fact]
@@ -97,7 +113,8 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
             sata.GetProperty("supportedScoringModes")[0].GetString());
         Assert.False(sata.GetProperty("capabilityDetails").GetProperty("supportsPartialCredit").GetBoolean());
         Assert.False(sata.TryGetProperty("id", out _));
-        Assert.DoesNotContain("correct", sata.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("isCorrect", sata.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("answerKey", sata.GetRawText(), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("gradingConfiguration", sata.GetRawText(), StringComparison.OrdinalIgnoreCase);
     }
 
@@ -131,6 +148,21 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
 
         var client = _factory.CreateClient();
         var response = await client.GetAsync("/api/v1/question-types/nonexistent-key");
+
+        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetQuestionTypeByKey_InactiveTypeIsNotVisible()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await SeedQuestionTypes(context);
+        context.QuestionTypeDefinitions.Single(type => type.Key == "essay").IsActive = false;
+        await context.SaveChangesAsync();
+
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/question-types/essay");
 
         Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
     }

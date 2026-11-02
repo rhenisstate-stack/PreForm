@@ -6,9 +6,10 @@ namespace Preform.Api.Services;
 
 public interface IQuestionTypeContractValidator
 {
-    QuestionTypePayloadValidationResult Validate(
+    Task<QuestionTypePayloadValidationResult> ValidateAsync(
         QuestionTypePayloadEnvelope? envelope,
-        int? optionCount = null);
+        int? optionCount = null,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed class QuestionTypeContractValidator : IQuestionTypeContractValidator
@@ -17,15 +18,20 @@ public sealed class QuestionTypeContractValidator : IQuestionTypeContractValidat
     private const int MaximumOptionCount = 250;
 
     private readonly IQuestionTypeRegistry _registry;
+    private readonly IQuestionTypeService _questionTypeService;
 
-    public QuestionTypeContractValidator(IQuestionTypeRegistry registry)
+    public QuestionTypeContractValidator(
+        IQuestionTypeRegistry registry,
+        IQuestionTypeService questionTypeService)
     {
         _registry = registry;
+        _questionTypeService = questionTypeService;
     }
 
-    public QuestionTypePayloadValidationResult Validate(
+    public async Task<QuestionTypePayloadValidationResult> ValidateAsync(
         QuestionTypePayloadEnvelope? envelope,
-        int? optionCount = null)
+        int? optionCount = null,
+        CancellationToken cancellationToken = default)
     {
         if (envelope is null || string.IsNullOrWhiteSpace(envelope.TypeKey))
         {
@@ -50,6 +56,11 @@ public sealed class QuestionTypeContractValidator : IQuestionTypeContractValidat
         if (Encoding.UTF8.GetByteCount(envelope.Payload.GetRawText()) > MaximumPayloadBytes)
         {
             return Invalid("payload-too-large");
+        }
+
+        if (await _questionTypeService.GetQuestionTypeByKeyAsync(envelope.TypeKey, cancellationToken) is null)
+        {
+            return Invalid("unknown-type");
         }
 
         if (envelope.Kind != QuestionTypePayloadKind.Response

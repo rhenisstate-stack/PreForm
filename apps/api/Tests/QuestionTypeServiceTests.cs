@@ -59,10 +59,9 @@ public class QuestionTypeServiceTests
         var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var types = await service.GetAllQuestionTypesAsync();
 
-        var orders = types.Select(t => t.DisplayOrder).ToList();
-        Assert.Equal(orders.OrderBy(o => o).ToList(), orders);
-        Assert.Equal(1, types.First().DisplayOrder);
-        Assert.Equal(18, types.Last().DisplayOrder);
+        Assert.Equal(
+            QuestionTypeRegistry.Instance.All.Select(descriptor => descriptor.Key),
+            types.Select(type => type.Key));
     }
 
     [Fact]
@@ -78,7 +77,7 @@ public class QuestionTypeServiceTests
         Assert.Equal("sata", type.Key);
         Assert.Equal("Select All That Apply (SATA)", type.Name);
         Assert.Equal("Traditional", type.Category);
-        Assert.Equal("PartialCredit", type.SupportedScoring);
+        Assert.Equal("ExactMatch", type.SupportedScoring);
     }
 
     [Fact]

@@ -27,7 +27,7 @@ builder.Services.AddScoped<IProgrammeService, ProgrammeService>();
 builder.Services.AddScoped<IProfileImageService, ProfileImageService>();
 builder.Services.AddSingleton<IQuestionTypeRegistry>(QuestionTypeRegistry.Instance);
 builder.Services.AddScoped<IQuestionTypeService, QuestionTypeService>();
-builder.Services.AddSingleton<IQuestionTypeContractValidator, QuestionTypeContractValidator>();
+builder.Services.AddScoped<IQuestionTypeContractValidator, QuestionTypeContractValidator>();
 builder.Services.AddScoped<IAdminBootstrapService, AdminBootstrapService>();
 // Examination grading foundation (P2)
 builder.Services.AddSingleton<IQuestionGraderResolver, QuestionGraderResolver>();
