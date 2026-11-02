@@ -596,11 +596,11 @@ public class ExamAttemptsController : ControllerBase
             Id = attemptId,
             UserId = candidateUserId, // Server-derived candidate ownership
             ExamId = exam.Id,
-            Status = AttemptStatus.Completed,
+            Status = AttemptStatus.InProgress,
             ScorePercent = 0.0m,
             Passed = false,
             StartedAt = startedAt,
-            CompletedAt = now,
+            CompletedAt = null,
             Exam = exam
         };
 

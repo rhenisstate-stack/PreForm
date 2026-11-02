@@ -905,6 +905,46 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
         var candidateId = "cand_sync_002";
         var candidateEmail = "sync.cand@prepford.com";
 
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            db.Questions.AddRange(
+                new Question
+                {
+                    Id = "q_sync_101",
+                    Stem = "Patient exhibits signs of fluid volume overload. Priority action?",
+                    Pathway = "rn",
+                    QuestionTypeKey = "single-choice",
+                    Status = QuestionStatus.Published,
+                    Options = new List<QuestionOption>
+                    {
+                        new() { Id = "q_sync_101_opt_0", QuestionId = "q_sync_101", OptionKey = "A", Content = "Administer IV fluids", DisplayOrder = 0, IsCorrect = false },
+                        new() { Id = "q_sync_101_opt_1", QuestionId = "q_sync_101", OptionKey = "B", Content = "Place patient in high-Fowler's position", DisplayOrder = 1, IsCorrect = false },
+                        new() { Id = "q_sync_101_opt_2", QuestionId = "q_sync_101", OptionKey = "C", Content = "Restrict sodium intake and monitor daily weight", DisplayOrder = 2, IsCorrect = true },
+                        new() { Id = "q_sync_101_opt_3", QuestionId = "q_sync_101", OptionKey = "D", Content = "Administer a vasopressor", DisplayOrder = 3, IsCorrect = false },
+                    }
+                },
+                new Question
+                {
+                    Id = "q_sync_102",
+                    Stem = "Which medications require dual nurse verification?",
+                    Pathway = "rn",
+                    QuestionTypeKey = "multiple-choice",
+                    Status = QuestionStatus.Published,
+                    Options = new List<QuestionOption>
+                    {
+                        new() { Id = "q_sync_102_opt_0", QuestionId = "q_sync_102", OptionKey = "A", Content = "Heparin", DisplayOrder = 0, IsCorrect = true },
+                        new() { Id = "q_sync_102_opt_1", QuestionId = "q_sync_102", OptionKey = "B", Content = "Metoprolol", DisplayOrder = 1, IsCorrect = false },
+                        new() { Id = "q_sync_102_opt_2", QuestionId = "q_sync_102", OptionKey = "C", Content = "Insulin", DisplayOrder = 2, IsCorrect = true },
+                        new() { Id = "q_sync_102_opt_3", QuestionId = "q_sync_102", OptionKey = "D", Content = "Acetaminophen", DisplayOrder = 3, IsCorrect = false },
+                    }
+                }
+            );
+
+            await db.SaveChangesAsync();
+        }
+
         GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
             client, "POST", "/api/v1/attempts/sync", candidateId, candidateEmail, "candidate");
 
@@ -955,10 +995,9 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
         Assert.True(body.GetProperty("success").GetBoolean());
         Assert.Equal("client_att_777", body.GetProperty("attemptId").GetString());
 
-        // Verify persisted in PostgreSQL ExamAttempts and AttemptResponses
-        using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var attempt = await db.ExamAttempts.Include(ea => ea.Responses).FirstOrDefaultAsync(ea => ea.Id == "client_att_777");
+        using var scope2 = _factory.Services.CreateScope();
+        var db2 = scope2.ServiceProvider.GetRequiredService<AppDbContext>();
+        var attempt = await db2.ExamAttempts.Include(ea => ea.Responses).FirstOrDefaultAsync(ea => ea.Id == "client_att_777");
         Assert.NotNull(attempt);
         Assert.Equal(candidateId, attempt.UserId);
         Assert.Equal(80.0m, attempt.ScorePercent);
