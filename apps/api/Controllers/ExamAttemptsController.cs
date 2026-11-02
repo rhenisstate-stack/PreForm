@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Preform.Api.Data;
 using Preform.Api.Models;
 using Preform.Api.Services;
+using Preform.Api.Services.Grading;
 
 namespace Preform.Api.Controllers;
 
@@ -132,6 +133,11 @@ public class ExamAttemptsController : ControllerBase
             "image-based" or "imagebased" => "image-based",
             _ => normalized
         };
+    }
+
+    private ResponseValidationService CreateSyncValidationService()
+    {
+        return new ResponseValidationService(_context, new QuestionGraderResolver(QuestionTypeRegistry.Instance));
     }
 
     private async Task<Exam> GetOrCreateDefaultExamAsync(string pathway, CancellationToken cancellationToken)
@@ -463,6 +469,7 @@ public class ExamAttemptsController : ControllerBase
         CancellationToken cancellationToken)
     {
         _context.ExamAttempts.Add(attempt);
+        await _context.SaveChangesAsync(cancellationToken);
 
         if (request.Questions != null && request.Questions.Count > 0)
         {
@@ -506,7 +513,8 @@ public class ExamAttemptsController : ControllerBase
 
                 if (persistedQuestion.Options.Count > 0)
                 {
-                    var validation = await _responseValidationService.ValidateAndGradeAsync(
+                    var syncValidationService = CreateSyncValidationService();
+                    var validation = await syncValidationService.ValidateAndGradeAsync(
                         attempt.Id,
                         persistedQuestion.Id,
                         selectedIndices,

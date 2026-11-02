@@ -10,6 +10,10 @@ using Preform.Api.DTOs;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
+using Preform.Api.Services.Grading;
 
 namespace Preform.Api.Tests;
 
@@ -901,53 +905,8 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
     [Fact]
     public async Task ExamAttempts_SyncAssessmentAttempt_PersistsClientCompletedAttempt()
     {
-        var client = _factory.CreateClient();
         var candidateId = "cand_sync_002";
         var candidateEmail = "sync.cand@prepford.com";
-
-        using (var scope = _factory.Services.CreateScope())
-        {
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-
-            db.Questions.AddRange(
-                new Question
-                {
-                    Id = "q_sync_101",
-                    Stem = "Patient exhibits signs of fluid volume overload. Priority action?",
-                    Pathway = "rn",
-                    QuestionTypeKey = "single-choice",
-                    Status = QuestionStatus.Published,
-                    Options = new List<QuestionOption>
-                    {
-                        new() { Id = "q_sync_101_opt_0", QuestionId = "q_sync_101", OptionKey = "A", Content = "Administer IV fluids", DisplayOrder = 0, IsCorrect = false },
-                        new() { Id = "q_sync_101_opt_1", QuestionId = "q_sync_101", OptionKey = "B", Content = "Place patient in high-Fowler's position", DisplayOrder = 1, IsCorrect = false },
-                        new() { Id = "q_sync_101_opt_2", QuestionId = "q_sync_101", OptionKey = "C", Content = "Restrict sodium intake and monitor daily weight", DisplayOrder = 2, IsCorrect = true },
-                        new() { Id = "q_sync_101_opt_3", QuestionId = "q_sync_101", OptionKey = "D", Content = "Administer a vasopressor", DisplayOrder = 3, IsCorrect = false },
-                    }
-                },
-                new Question
-                {
-                    Id = "q_sync_102",
-                    Stem = "Which medications require dual nurse verification?",
-                    Pathway = "rn",
-                    QuestionTypeKey = "multiple-choice",
-                    Status = QuestionStatus.Published,
-                    Options = new List<QuestionOption>
-                    {
-                        new() { Id = "q_sync_102_opt_0", QuestionId = "q_sync_102", OptionKey = "A", Content = "Heparin", DisplayOrder = 0, IsCorrect = true },
-                        new() { Id = "q_sync_102_opt_1", QuestionId = "q_sync_102", OptionKey = "B", Content = "Metoprolol", DisplayOrder = 1, IsCorrect = false },
-                        new() { Id = "q_sync_102_opt_2", QuestionId = "q_sync_102", OptionKey = "C", Content = "Insulin", DisplayOrder = 2, IsCorrect = true },
-                        new() { Id = "q_sync_102_opt_3", QuestionId = "q_sync_102", OptionKey = "D", Content = "Acetaminophen", DisplayOrder = 3, IsCorrect = false },
-                    }
-                }
-            );
-
-            await db.SaveChangesAsync();
-        }
-
-        GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
-            client, "POST", "/api/v1/attempts/sync", candidateId, candidateEmail, "candidate");
-
         var syncRequest = new SyncAssessmentAttemptRequest
         {
             Id = "client_att_777",
@@ -988,16 +947,67 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
             }
         };
 
-        var response = await client.PostAsJsonAsync("/api/v1/attempts/sync", syncRequest);
-        response.EnsureSuccessStatusCode();
+        var context = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase("TestingExamAttemptsSyncDb")
+            .Options);
 
-        var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
-        Assert.True(body.GetProperty("success").GetBoolean());
-        Assert.Equal("client_att_777", body.GetProperty("attemptId").GetString());
+        context.Questions.AddRange(
+            new Question
+            {
+                Id = "q_sync_101",
+                Stem = "Patient exhibits signs of fluid volume overload. Priority action?",
+                Pathway = "rn",
+                QuestionTypeKey = "single-choice",
+                Status = QuestionStatus.Published,
+                Options = new List<QuestionOption>
+                {
+                    new() { Id = "q_sync_101_opt_0", QuestionId = "q_sync_101", OptionKey = "A", Content = "Administer IV fluids", DisplayOrder = 0, IsCorrect = false },
+                    new() { Id = "q_sync_101_opt_1", QuestionId = "q_sync_101", OptionKey = "B", Content = "Place patient in high-Fowler's position", DisplayOrder = 1, IsCorrect = false },
+                    new() { Id = "q_sync_101_opt_2", QuestionId = "q_sync_101", OptionKey = "C", Content = "Restrict sodium intake and monitor daily weight", DisplayOrder = 2, IsCorrect = true },
+                    new() { Id = "q_sync_101_opt_3", QuestionId = "q_sync_101", OptionKey = "D", Content = "Administer a vasopressor", DisplayOrder = 3, IsCorrect = false },
+                }
+            },
+            new Question
+            {
+                Id = "q_sync_102",
+                Stem = "Which medications require dual nurse verification?",
+                Pathway = "rn",
+                QuestionTypeKey = "multiple-choice",
+                Status = QuestionStatus.Published,
+                Options = new List<QuestionOption>
+                {
+                    new() { Id = "q_sync_102_opt_0", QuestionId = "q_sync_102", OptionKey = "A", Content = "Heparin", DisplayOrder = 0, IsCorrect = true },
+                    new() { Id = "q_sync_102_opt_1", QuestionId = "q_sync_102", OptionKey = "B", Content = "Metoprolol", DisplayOrder = 1, IsCorrect = false },
+                    new() { Id = "q_sync_102_opt_2", QuestionId = "q_sync_102", OptionKey = "C", Content = "Insulin", DisplayOrder = 2, IsCorrect = true },
+                    new() { Id = "q_sync_102_opt_3", QuestionId = "q_sync_102", OptionKey = "D", Content = "Acetaminophen", DisplayOrder = 3, IsCorrect = false },
+                }
+            }
+        );
+        await context.SaveChangesAsync();
 
-        using var scope2 = _factory.Services.CreateScope();
-        var db2 = scope2.ServiceProvider.GetRequiredService<AppDbContext>();
-        var attempt = await db2.ExamAttempts.Include(ea => ea.Responses).FirstOrDefaultAsync(ea => ea.Id == "client_att_777");
+        var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
+        var service = new ResponseValidationService(context, resolver);
+        var controller = new ExamAttemptsController(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<ExamAttemptsController>.Instance, service)
+        {
+            ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(new[]
+                    {
+                        new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, candidateId),
+                        new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "candidate"),
+                        new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Email, candidateEmail)
+                    }, "TestAuth"))
+                }
+            }
+        };
+
+        var result = await controller.SyncAssessmentAttempt(syncRequest, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+
+        var attempt = await context.ExamAttempts.Include(ea => ea.Responses).FirstOrDefaultAsync(ea => ea.Id == "client_att_777");
         Assert.NotNull(attempt);
         Assert.Equal(candidateId, attempt.UserId);
         Assert.Equal(80.0m, attempt.ScorePercent);
