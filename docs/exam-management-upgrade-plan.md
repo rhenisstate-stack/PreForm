@@ -11,7 +11,7 @@
 - Migration 0006 adds capability/status columns. Its EF discovery metadata is corrected; applying it against PostgreSQL remains unverified.
 - The backend registry, capability/status contract, safe reconciliation, versioned DTOs, read-only catalogue API, and response validation foundation are implemented.
 - Seven option-based keys have an automatic exact-match grader. No type has authoring support, complete type-specific delivery, or full support.
-- Provider-independent backend tests: 171 passed, 0 failed, 0 skipped. PostgreSQL integration tests were not run because their fixture targets the shared `prepford` database and no disposable database is configured.
+- Provider-independent backend tests: 172 passed, 0 failed, 0 skipped. PostgreSQL integration tests were not run because their fixture targets the shared `prepford` database and no disposable database is configured.
 - The admin page remains a static catalogue. Key and category compatibility is verified; label, scoring, and response-schema differences are documented in `exam-management-question-type-foundation.md`.
 
 ## Gate B completion actions

@@ -146,7 +146,7 @@ The Phase 1.1 statements above are historical and remain unchanged. Gate B verif
 
 | Command | Result |
 |---|---|
-| `dotnet test apps\api\Tests\Preform.Api.Tests.csproj --no-restore --filter "FullyQualifiedName!~PostgresIntegrationTests" "-p:BaseOutputPath=C:\Users\gitau\AppData\Local\Temp\PREformGateB\bin\"` | **171 passed, 0 failed, 0 skipped** |
+| `dotnet test apps\api\Tests\Preform.Api.Tests.csproj --no-restore --filter "FullyQualifiedName!~PostgresIntegrationTests" "-p:BaseOutputPath=C:\Users\gitau\AppData\Local\Temp\PREformGateB\bin\"` | **172 passed, 0 failed, 0 skipped** |
 
 The separate base output directory avoids overwriting binaries held by a running `Preform.Api` process. The build emitted NU1900 warnings because NuGet vulnerability metadata could not be fetched from `api.nuget.org`; test compilation and execution completed successfully.
 

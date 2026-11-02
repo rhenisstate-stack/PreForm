@@ -174,6 +174,6 @@ The preceding Phase 1.1 report is preserved as a historical audit snapshot. Its 
 ### Verification
 
 `dotnet test apps\api\Tests\Preform.Api.Tests.csproj --no-restore --filter "FullyQualifiedName!~PostgresIntegrationTests" "-p:BaseOutputPath=C:\Users\gitau\AppData\Local\Temp\PREformGateB\bin\"`  
-Result: **171 passed, 0 failed, 0 skipped**. This excluded PostgreSQL integration tests. The prior Gate A report's 133 passing tests are a historical baseline; the counts are not directly comparable because this run excludes PostgreSQL tests and includes new Gate B coverage.
+Result: **172 passed, 0 failed, 0 skipped**. This excluded PostgreSQL integration tests. The prior Gate A report's 133 passing tests are a historical baseline; the counts are not directly comparable because this run excludes PostgreSQL tests and includes new Gate B coverage.
 
 Gate B must not proceed to Gate C until the owner reviews this report. First verify migration 0006 and reconciliation against a disposable PostgreSQL database; then approve any next gate explicitly.
