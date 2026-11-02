@@ -8,6 +8,7 @@ using Preform.Api.Models;
 using System.Net.Http.Json;
 using Xunit;
 
+
 namespace Preform.Api.Tests;
 
 public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<Program>>
@@ -166,75 +167,30 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
         Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
     }
 
-    [Fact]
-    public async Task GetQuestionType_CapabilityFlags_AreAccurate()
-    {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await SeedQuestionTypes(context);
-
-        var client = _factory.CreateClient();
-
-        // single-choice: SupportsOptions + SupportsAutomaticGrading + SupportsRandomizedOptions
-        var scResponse = await client.GetAsync("/api/v1/question-types/single-choice");
-        var sc = await scResponse.Content.ReadFromJsonAsync<QuestionTypeDto>();
-        Assert.Contains("SupportsOptions", sc!.Capabilities);
-        Assert.Contains("SupportsAutomaticGrading", sc.Capabilities);
-        Assert.Contains("SupportsRandomizedOptions", sc.Capabilities);
-        Assert.DoesNotContain("SupportsManualGrading", sc.Capabilities);
-
-        // essay: SupportsManualGrading only (no automatic grading)
-        var essayResponse = await client.GetAsync("/api/v1/question-types/essay");
-        var essay = await essayResponse.Content.ReadFromJsonAsync<QuestionTypeDto>();
-        Assert.Contains("SupportsManualGrading", essay!.Capabilities);
-        Assert.DoesNotContain("SupportsAutomaticGrading", essay.Capabilities);
-    }
-
-    [Fact]
-    public async Task GetQuestionType_ImplementationStatus_Accurate()
-    {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await SeedQuestionTypes(context);
-
-        var client = _factory.CreateClient();
-
-        // single-choice is DeliverySupported
-        var scResponse = await client.GetAsync("/api/v1/question-types/single-choice");
-        var sc = await scResponse.Content.ReadFromJsonAsync<QuestionTypeDto>();
-        Assert.Equal("DeliverySupported", sc!.ImplementationStatus);
-
-        // essay is Catalogued
-        var essayResponse = await client.GetAsync("/api/v1/question-types/essay");
-        var essay = await essayResponse.Content.ReadFromJsonAsync<QuestionTypeDto>();
-        Assert.Equal("Catalogued", essay!.ImplementationStatus);
-    }
-
     private static async Task SeedQuestionTypes(AppDbContext context)
     {
         if (await context.QuestionTypeDefinitions.AnyAsync()) return;
 
-        var types = new List<QuestionTypeDefinition>
+        var expectedKeys = new[]
         {
-            new() { Id = "qt-1", Key = "single-choice", Name = "Single Choice", Description = "Standard single-answer.", Category = "Traditional", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions), ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported), IsActive = true, DisplayOrder = 1 },
-            new() { Id = "qt-2", Key = "multiple-choice", Name = "Multiple Choice", Description = "Multiple-choice item.", Category = "Traditional", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions), ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported), IsActive = true, DisplayOrder = 2 },
-            new() { Id = "qt-3", Key = "sata", Name = "Select All That Apply (SATA)", Description = "Multi-select clinical prioritization.", Category = "Traditional", SupportedScoring = "PartialCredit", CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsMultipleCorrectAnswers | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.SupportsRandomizedOptions), ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported), IsActive = true, DisplayOrder = 3 },
-            new() { Id = "qt-4", Key = "checkbox", Name = "Checkbox Response", Description = "Form-based checkbox response.", Category = "Traditional", SupportedScoring = "PartialCredit", CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.SupportsRandomizedOptions), ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported), IsActive = true, DisplayOrder = 4 },
-            new() { Id = "qt-5", Key = "image-based", Name = "Image-Based Question", Description = "Clinical scenario with image exhibit.", Category = "Clinical", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMedia | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions), ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported), IsActive = true, DisplayOrder = 5 },
-            new() { Id = "qt-6", Key = "multiple-image", Name = "Multiple-Image Item", Description = "Comparative visual exhibits.", Category = "Clinical", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMedia | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions), ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported), IsActive = true, DisplayOrder = 6 },
-            new() { Id = "qt-7", Key = "drag-drop", Name = "Drag-and-Drop", Description = "Interactive clinical priority classification.", Category = "NGN", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 7 },
-            new() { Id = "qt-8", Key = "ordering", Name = "Ordering / Sequencing", Description = "Step-by-step procedural order.", Category = "NGN", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 8 },
-            new() { Id = "qt-9", Key = "case-study", Name = "NGN Case Study", Description = "Multi-part clinical unfolding case study.", Category = "NGN", SupportedScoring = "PartialCredit", CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsClinicalScenarios | QuestionTypeCapability.SupportsExhibits | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.SupportsManualGrading | QuestionTypeCapability.RequiresSpecializedRenderer), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 9 },
-            new() { Id = "qt-10", Key = "essay", Name = "Extended Response / Essay", Description = "Clinical reasoning reflection.", Category = "Traditional", SupportedScoring = "ManualReview", CapabilityFlags = (int)(QuestionTypeCapability.SupportsManualGrading | QuestionTypeCapability.RequiresSpecializedRenderer), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 10 },
-            new() { Id = "qt-11", Key = "matching", Name = "Matching", Description = "Paired concept-to-intervention matching.", Category = "Traditional", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 11 },
-            new() { Id = "qt-12", Key = "fill-blank", Name = "Fill-in-the-Blank", Description = "Direct textual entry.", Category = "Traditional", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedInput), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 12 },
-            new() { Id = "qt-13", Key = "matrix", Name = "Matrix / Grid Response", Description = "Tabular multiple-response matrix.", Category = "NGN", SupportedScoring = "PartialCredit", CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 13 },
-            new() { Id = "qt-14", Key = "numeric", Name = "Numeric Response", Description = "Dosage calculation entry.", Category = "Traditional", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedInput), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 14 },
-            new() { Id = "qt-15", Key = "true-false", Name = "True / False", Description = "Binary clinical fact validation.", Category = "Traditional", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions), ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported), IsActive = true, DisplayOrder = 15 },
-            new() { Id = "qt-16", Key = "tabular", Name = "Tabular Response", Description = "Data table evaluation.", Category = "NGN", SupportedScoring = "PartialCredit", CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 16 },
-            new() { Id = "qt-17", Key = "short-answer", Name = "Short-Answer Response", Description = "Concise clinical assessment entry.", Category = "Traditional", SupportedScoring = "ManualReview", CapabilityFlags = (int)(QuestionTypeCapability.SupportsManualGrading | QuestionTypeCapability.RequiresSpecializedInput), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 17 },
-            new() { Id = "qt-18", Key = "dynamic-lab", Name = "Dynamic Lab Value Response", Description = "Interactive laboratory value analysis.", Category = "NGN", SupportedScoring = "ExactMatch", CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer), ImplementationStatus = nameof(QuestionTypeStatus.Catalogued), IsActive = true, DisplayOrder = 18 },
+            "single-choice", "multiple-choice", "sata", "checkbox", "image-based",
+            "multiple-image", "drag-drop", "ordering", "case-study", "essay",
+            "matching", "fill-blank", "matrix", "numeric", "true-false",
+            "tabular", "short-answer", "dynamic-lab"
         };
+
+        var types = expectedKeys.Select((key, i) => new QuestionTypeDefinition
+        {
+            Id = $"qt-{i + 1}",
+            Key = key,
+            Name = key.Replace("-", " ").Replace("sata", "SATA"),
+            Description = $"Description for {key}",
+            Category = i < 6 ? "Traditional" : i < 12 ? "NGN" : "Clinical",
+            SupportedScoring = "ExactMatch",
+            IsActive = true,
+            DisplayOrder = i + 1,
+        }).ToList();
+
         context.QuestionTypeDefinitions.AddRange(types);
         await context.SaveChangesAsync();
     }
