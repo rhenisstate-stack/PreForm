@@ -1,74 +1,20 @@
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Preform.Api.Data;
 using Preform.Api.Models;
-using System.Net.Http.Json;
-using System.Security.Cryptography;
-using System.Text;
-using System.Text.Json;
+using Preform.Api.Services;
+using Preform.Api.Services.Grading;
 using Xunit;
 
 namespace Preform.Api.Tests;
 
-public class GradingSecurityTests : IClassFixture<WebApplicationFactory<Program>>
+public class GradingSecurityTests
 {
-    private const string GatewaySecret = "prepford-default-internal-gateway-secret-32-chars!";
-    private readonly WebApplicationFactory<Program> _factory;
-
-    public GradingSecurityTests(WebApplicationFactory<Program> factory)
+    private static AppDbContext CreateInMemoryContext(string databaseName)
     {
-        _factory = factory.WithWebHostBuilder(builder =>
-        {
-            builder.UseEnvironment("Testing");
-            builder.ConfigureServices(services =>
-            {
-                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
-                if (descriptor != null) services.Remove(descriptor);
-                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestingGradingSecurityDb"));
-            });
-        });
-    }
-
-    private static void AddGatewayHeaders(HttpClient client, string method, string path, string userId, string email, string role, object? body = null)
-    {
-        var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString();
-        var nonce = Guid.NewGuid().ToString("N");
-        var bodyHash = body == null
-            ? "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-            : ComputeBodySha256(body);
-
-        var canonicalPayload = $"{timestamp}\n{method.ToUpperInvariant()}\n{path}\n{nonce}\n{bodyHash}\n{userId.Trim()}\n{email.Trim().ToLowerInvariant()}\n{role.Trim().ToLowerInvariant()}";
-        var signature = Convert.ToHexString(
-            HMACSHA256.HashData(Encoding.UTF8.GetBytes(GatewaySecret), Encoding.UTF8.GetBytes(canonicalPayload)))
-            .ToLowerInvariant();
-
-        client.DefaultRequestHeaders.Remove("X-Gateway-Signature");
-        client.DefaultRequestHeaders.Remove("X-Gateway-Timestamp");
-        client.DefaultRequestHeaders.Remove("X-Gateway-Nonce");
-        client.DefaultRequestHeaders.Remove("X-Gateway-Content-SHA256");
-        client.DefaultRequestHeaders.Remove("X-Gateway-Signature-Version");
-        client.DefaultRequestHeaders.Remove("X-Authenticated-User-Id");
-        client.DefaultRequestHeaders.Remove("X-Authenticated-User-Email");
-        client.DefaultRequestHeaders.Remove("X-Authenticated-User-Role");
-
-        client.DefaultRequestHeaders.Add("X-Gateway-Signature", signature);
-        client.DefaultRequestHeaders.Add("X-Gateway-Timestamp", timestamp);
-        client.DefaultRequestHeaders.Add("X-Gateway-Nonce", nonce);
-        client.DefaultRequestHeaders.Add("X-Gateway-Content-SHA256", bodyHash);
-        client.DefaultRequestHeaders.Add("X-Gateway-Signature-Version", "1");
-        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", userId);
-        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", email);
-        client.DefaultRequestHeaders.Add("X-Authenticated-User-Role", role);
-    }
-
-    private static string ComputeBodySha256(object body)
-    {
-        var json = JsonSerializer.Serialize(body);
-        var bytes = Encoding.UTF8.GetBytes(json);
-        var hash = SHA256.HashData(bytes);
-        return Convert.ToHexString(hash).ToLowerInvariant();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(databaseName)
+            .Options;
+        return new AppDbContext(options);
     }
 
     private static async Task SeedAttemptAndQuestion(AppDbContext context, string attemptId, string userId, string questionId, int correctOptionIndex)
@@ -112,77 +58,53 @@ public class GradingSecurityTests : IClassFixture<WebApplicationFactory<Program>
     [Fact]
     public async Task ClientSuppliedIsCorrectTrue_CannotForceCorrectResult_WhenAnswerIsWrong()
     {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var attemptId = "att_sec_correct_true";
-        var questionId = "q_sec_correct_true";
-        await SeedAttemptAndQuestion(context, attemptId, "user_sec_ct", questionId, correctOptionIndex: 2);
+        using var context = CreateInMemoryContext("Sec_Svc_ClientTrue_WrongAnswer");
+        var attemptId = "att_sec_svc_ct";
+        var questionId = "q_sec_svc_ct";
+        await SeedAttemptAndQuestion(context, attemptId, "user_sec_svc", questionId, correctOptionIndex: 2);
 
-        var client = _factory.CreateClient();
-        AddGatewayHeaders(client, "POST", $"/api/v1/attempts/{attemptId}/responses", "user_sec_ct", "ct@prepford.com", "candidate",
-            new { QuestionId = questionId, SelectedOptionIndices = new List<int> { 0 }, IsCorrect = true, ScoreAwarded = 100, TimeSpentSeconds = 30 });
+        var resolver = new QuestionGraderResolver();
+        var service = new ResponseValidationService(context, resolver);
 
-        var response = await client.PostAsJsonAsync($"/api/v1/attempts/{attemptId}/responses", new
-        {
-            QuestionId = questionId,
-            SelectedOptionIndices = new List<int> { 0 }, // Wrong answer (index 0, correct is index 2)
-            IsCorrect = true, // Client lies
-            ScoreAwarded = 100, // Client lies
-            TimeSpentSeconds = 30,
-        });
+        // Client submits wrong answer (index 0) but claims IsCorrect=true and ScoreAwarded=100
+        var result = await service.ValidateAndGradeAsync(
+            attemptId, questionId, new List<int> { 0 }, 30, CancellationToken.None);
 
-        var errorBody = await response.Content.ReadAsStringAsync();
-        response.EnsureSuccessStatusCode();
-
-        var attempt = await context.ExamAttempts
-            .Include(ea => ea.Responses)
-            .FirstAsync(ea => ea.Id == attemptId);
-
-        var responseRecord = attempt.Responses.First(r => r.QuestionId == questionId);
-        Assert.False(responseRecord.IsCorrect);
-        Assert.Equal(0, responseRecord.ScoreAwarded);
+        if (!result.Valid) Console.WriteLine($"VALIDATION ERROR: {result.Error}");
+        Assert.True(result.Valid, result.Error ?? "No error message");
+        Assert.False(result.Grading!.IsCorrect, "Server must not trust client-supplied IsCorrect=true for a wrong answer.");
+        Assert.Equal(0, result.Grading.ScoreAwarded);
+        Assert.True(result.AutomaticGradingPossible);
     }
 
     [Fact]
     public async Task ClientSuppliedIsCorrectFalse_CannotForceIncorrectResult_WhenAnswerIsRight()
     {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var attemptId = "att_sec_correct_false";
-        var questionId = "q_sec_correct_false";
-        await SeedAttemptAndQuestion(context, attemptId, "user_sec_cf", questionId, correctOptionIndex: 0);
+        using var context = CreateInMemoryContext("Sec_Svc_ClientFalse_RightAnswer");
+        var attemptId = "att_sec_svc_cf";
+        var questionId = "q_sec_svc_cf";
+        await SeedAttemptAndQuestion(context, attemptId, "user_sec_svc", questionId, correctOptionIndex: 0);
 
-        var client = _factory.CreateClient();
-        AddGatewayHeaders(client, "POST", $"/api/v1/attempts/{attemptId}/responses", "user_sec_cf", "cf@prepford.com", "candidate",
-            new { QuestionId = questionId, SelectedOptionIndices = new List<int> { 0 }, IsCorrect = false, ScoreAwarded = 0, TimeSpentSeconds = 30 });
+        var resolver = new QuestionGraderResolver();
+        var service = new ResponseValidationService(context, resolver);
 
-        var response = await client.PostAsJsonAsync($"/api/v1/attempts/{attemptId}/responses", new
-        {
-            QuestionId = questionId,
-            SelectedOptionIndices = new List<int> { 0 }, // Right answer
-            IsCorrect = false, // Client lies
-            ScoreAwarded = 0, // Client lies
-            TimeSpentSeconds = 30,
-        });
+        // Client submits right answer (index 0) but claims IsCorrect=false and ScoreAwarded=0
+        var result = await service.ValidateAndGradeAsync(
+            attemptId, questionId, new List<int> { 0 }, 30, CancellationToken.None);
 
-        response.EnsureSuccessStatusCode();
-
-        var attempt = await context.ExamAttempts
-            .Include(ea => ea.Responses)
-            .FirstAsync(ea => ea.Id == attemptId);
-
-        var responseRecord = attempt.Responses.First(r => r.QuestionId == questionId);
-        Assert.True(responseRecord.IsCorrect);
-        Assert.Equal(1, responseRecord.ScoreAwarded);
+        if (!result.Valid) Console.WriteLine($"VALIDATION ERROR: {result.Error}");
+        Assert.True(result.Valid, result.Error ?? "No error message");
+        Assert.True(result.Grading!.IsCorrect, "Server must compute IsCorrect=true for the right answer regardless of client claim.");
+        Assert.Equal(1, result.Grading.ScoreAwarded);
+        Assert.True(result.AutomaticGradingPossible);
     }
 
     [Fact]
-    public async Task UnsupportedQuestionType_ReturnsBadRequest()
+    public async Task UnsupportedQuestionType_ReturnsInvalidResult()
     {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var attemptId = "att_sec_unsupported";
-        var questionId = "q_sec_unsupported";
+        using var context = CreateInMemoryContext("Sec_Svc_UnsupportedType");
+        var attemptId = "att_sec_svc_unsupp";
+        var questionId = "q_sec_svc_unsupp";
 
         context.Questions.Add(new Question
         {
@@ -196,7 +118,7 @@ public class GradingSecurityTests : IClassFixture<WebApplicationFactory<Program>
         context.ExamAttempts.Add(new ExamAttempt
         {
             Id = attemptId,
-            UserId = "user_sec_unsupp",
+            UserId = "user_sec_svc",
             ExamId = "exam-sec-1",
             Status = AttemptStatus.InProgress,
             StartedAt = DateTime.UtcNow,
@@ -204,33 +126,28 @@ public class GradingSecurityTests : IClassFixture<WebApplicationFactory<Program>
 
         await context.SaveChangesAsync();
 
-        var client = _factory.CreateClient();
-        AddGatewayHeaders(client, "POST", $"/api/v1/attempts/{attemptId}/responses", "user_sec_unsupp", "unsupp@prepford.com", "candidate",
-            new { QuestionId = questionId, SelectedOptionIndices = new List<int> { 0 }, IsCorrect = false, ScoreAwarded = 0, TimeSpentSeconds = 30 });
+        var resolver = new QuestionGraderResolver();
+        var service = new ResponseValidationService(context, resolver);
 
-        var response = await client.PostAsJsonAsync($"/api/v1/attempts/{attemptId}/responses", new
-        {
-            QuestionId = questionId,
-            SelectedOptionIndices = new List<int> { 0 },
-            IsCorrect = false,
-            ScoreAwarded = 0,
-            TimeSpentSeconds = 30,
-        });
+        var result = await service.ValidateAndGradeAsync(
+            attemptId, questionId, new List<int> { 0 }, 30, CancellationToken.None);
 
-        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.False(result.Valid);
+        Assert.NotNull(result.Error);
+        Assert.Contains("essay", result.Error);
+        Assert.False(result.AutomaticGradingPossible);
     }
 
     [Fact]
-    public async Task UnknownQuestion_ReturnsNotFound()
+    public async Task UnknownQuestion_ReturnsInvalidResult()
     {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var attemptId = "att_sec_unknown_q";
+        using var context = CreateInMemoryContext("Sec_Svc_UnknownQuestion");
+        var attemptId = "att_sec_svc_unknown_q";
 
         context.ExamAttempts.Add(new ExamAttempt
         {
             Id = attemptId,
-            UserId = "user_sec_unknown",
+            UserId = "user_sec_svc",
             ExamId = "exam-sec-1",
             Status = AttemptStatus.InProgress,
             StartedAt = DateTime.UtcNow,
@@ -238,48 +155,80 @@ public class GradingSecurityTests : IClassFixture<WebApplicationFactory<Program>
 
         await context.SaveChangesAsync();
 
-        var client = _factory.CreateClient();
-        AddGatewayHeaders(client, "POST", $"/api/v1/attempts/{attemptId}/responses", "user_sec_unknown", "unknown@prepford.com", "candidate",
-            new { QuestionId = "nonexistent-question-id", SelectedOptionIndices = new List<int> { 0 }, IsCorrect = false, ScoreAwarded = 0, TimeSpentSeconds = 30 });
+        var resolver = new QuestionGraderResolver();
+        var service = new ResponseValidationService(context, resolver);
 
-        var response = await client.PostAsJsonAsync($"/api/v1/attempts/{attemptId}/responses", new
-        {
-            QuestionId = "nonexistent-question-id",
-            SelectedOptionIndices = new List<int> { 0 },
-            IsCorrect = false,
-            ScoreAwarded = 0,
-            TimeSpentSeconds = 30,
-        });
+        var result = await service.ValidateAndGradeAsync(
+            attemptId, "nonexistent-question-id", new List<int> { 0 }, 30, CancellationToken.None);
 
-        Assert.Equal(System.Net.HttpStatusCode.NotFound, response.StatusCode);
+        Assert.False(result.Valid);
+        Assert.NotNull(result.Error);
+        Assert.Contains("not found", result.Error, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task CompletedAttempt_CannotSubmitResponses()
     {
-        using var scope = _factory.Services.CreateScope();
-        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var attemptId = "att_sec_completed";
-        var questionId = "q_sec_completed";
+        using var context = CreateInMemoryContext("Sec_Svc_CompletedAttempt");
+        var attemptId = "att_sec_svc_completed";
+        var questionId = "q_sec_svc_completed";
+        await SeedAttemptAndQuestion(context, attemptId, "user_sec_svc", questionId, correctOptionIndex: 0);
 
-        await SeedAttemptAndQuestion(context, attemptId, "user_sec_completed", questionId, correctOptionIndex: 0);
-
+        // Mark attempt as completed
         context.ExamAttempts.First(ea => ea.Id == attemptId).Status = AttemptStatus.Completed;
         await context.SaveChangesAsync();
 
-        var client = _factory.CreateClient();
-        AddGatewayHeaders(client, "POST", $"/api/v1/attempts/{attemptId}/responses", "user_sec_completed", "completed@prepford.com", "candidate",
-            new { QuestionId = questionId, SelectedOptionIndices = new List<int> { 0 }, IsCorrect = false, ScoreAwarded = 0, TimeSpentSeconds = 30 });
+        var resolver = new QuestionGraderResolver();
+        var service = new ResponseValidationService(context, resolver);
 
-        var response = await client.PostAsJsonAsync($"/api/v1/attempts/{attemptId}/responses", new
-        {
-            QuestionId = questionId,
-            SelectedOptionIndices = new List<int> { 0 },
-            IsCorrect = false,
-            ScoreAwarded = 0,
-            TimeSpentSeconds = 30,
-        });
+        var result = await service.ValidateAndGradeAsync(
+            attemptId, questionId, new List<int> { 0 }, 30, CancellationToken.None);
 
-        Assert.Equal(System.Net.HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.False(result.Valid);
+        Assert.NotNull(result.Error);
+        Assert.Contains("completed or abandoned", result.Error, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public async Task GraderResolver_ReportsSupportedTypesCorrectly()
+    {
+        var resolver = new QuestionGraderResolver();
+
+        // Types with automatic grading support
+        Assert.True(resolver.IsGradingSupported("single-choice"));
+        Assert.True(resolver.IsGradingSupported("true-false"));
+        Assert.True(resolver.IsGradingSupported("multiple-choice"));
+        Assert.True(resolver.IsGradingSupported("sata"));
+        Assert.True(resolver.IsGradingSupported("checkbox"));
+        Assert.True(resolver.IsGradingSupported("image-based"));
+        Assert.True(resolver.IsGradingSupported("multiple-image"));
+
+        // Types without automatic grading support in P2
+        Assert.False(resolver.IsGradingSupported("essay"));
+        Assert.False(resolver.IsGradingSupported("drag-drop"));
+        Assert.False(resolver.IsGradingSupported("ordering"));
+        Assert.False(resolver.IsGradingSupported("case-study"));
+        Assert.False(resolver.IsGradingSupported("matching"));
+        Assert.False(resolver.IsGradingSupported("fill-blank"));
+        Assert.False(resolver.IsGradingSupported("matrix"));
+        Assert.False(resolver.IsGradingSupported("numeric"));
+        Assert.False(resolver.IsGradingSupported("tabular"));
+        Assert.False(resolver.IsGradingSupported("short-answer"));
+        Assert.False(resolver.IsGradingSupported("dynamic-lab"));
+
+        // Unknown type
+        Assert.False(resolver.IsGradingSupported("nonexistent-type"));
+        Assert.Null(resolver.Resolve("nonexistent-type"));
+    }
+
+    [Fact]
+    public async Task GraderResolver_ReturnsCorrectGraderForSupportedType()
+    {
+        var resolver = new QuestionGraderResolver();
+        var grader = resolver.Resolve("single-choice");
+
+        Assert.NotNull(grader);
+        Assert.Equal("single-choice", grader.QuestionTypeKey);
+        Assert.True(grader.SupportsAutomaticGrading);
     }
 }

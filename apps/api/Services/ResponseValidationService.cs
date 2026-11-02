@@ -67,7 +67,6 @@ public class ResponseValidationService : IResponseValidationService
 
         // Load the attempt and question together
         var attempt = await _context.ExamAttempts
-            .Include(ea => ea.Exam)
             .FirstOrDefaultAsync(ea => ea.Id == attemptId, cancellationToken);
 
         if (attempt == null)
@@ -106,6 +105,7 @@ public class ResponseValidationService : IResponseValidationService
 
         var options = await _context.QuestionOptions
             .Where(qo => qo.QuestionId == questionId)
+            .OrderBy(qo => qo.DisplayOrder)
             .ToListAsync(cancellationToken);
 
         var optionInfos = options
