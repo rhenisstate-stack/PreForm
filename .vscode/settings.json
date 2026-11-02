@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^dotnet test apps\\\\api\\\\Tests\\\\Preform\\.Api\\.Tests\\.csproj --no-restore$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
