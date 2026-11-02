@@ -110,6 +110,30 @@ public class ExamAttemptsController : ControllerBase
         return (userId, role.Trim().ToLowerInvariant());
     }
 
+    private static string NormalizeQuestionTypeKey(string? rawKey)
+    {
+        if (string.IsNullOrWhiteSpace(rawKey))
+        {
+            return "single-choice";
+        }
+
+        var normalized = rawKey.Trim();
+        normalized = normalized.Replace("_", "-");
+        normalized = normalized.Replace(" ", "-");
+        normalized = normalized.ToLowerInvariant();
+
+        return normalized switch
+        {
+            "single-choice" or "single-choice" => "single-choice",
+            "multiple-choice" or "multi-choice" or "multi-select" => "multiple-choice",
+            "sata" or "select-all-that-apply" => "sata",
+            "checkbox" or "checkbox-response" => "checkbox",
+            "true-false" or "truefalse" => "true-false",
+            "image-based" or "imagebased" => "image-based",
+            _ => normalized
+        };
+    }
+
     private async Task<Exam> GetOrCreateDefaultExamAsync(string pathway, CancellationToken cancellationToken)
     {
         var normalizedPathway = string.Equals(pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn";
@@ -445,29 +469,65 @@ public class ExamAttemptsController : ControllerBase
             foreach (var q in request.Questions)
             {
                 var questionId = !string.IsNullOrWhiteSpace(q.Id) ? q.Id : "q_" + Guid.NewGuid().ToString("N");
+                var normalizedQuestionType = NormalizeQuestionTypeKey(q.QuestionType);
 
-                // Ensure question stub exists if referenced by foreign key
-                var questionExists = await _context.Questions.AnyAsync(existingQ => existingQ.Id == questionId, cancellationToken);
-                if (!questionExists)
+                var persistedQuestion = await _context.Questions
+                    .Include(question => question.Options)
+                    .FirstOrDefaultAsync(existingQ => existingQ.Id == questionId, cancellationToken);
+
+                if (persistedQuestion == null)
                 {
-                    var newQuestion = new Question
+                    persistedQuestion = new Question
                     {
                         Id = questionId,
                         Stem = q.Stem ?? "Clinical scenario assessment question",
                         Pathway = request.Pathway ?? "rn",
-                        QuestionTypeKey = q.QuestionType ?? "single_choice",
+                        QuestionTypeKey = normalizedQuestionType,
                         Status = QuestionStatus.Published,
                         CreatedAt = now,
                         UpdatedAt = now
                     };
-                    _context.Questions.Add(newQuestion);
+                    _context.Questions.Add(persistedQuestion);
                 }
 
-                var selectedJson = q.UserAnswerIndices != null && q.UserAnswerIndices.Count > 0
-                    ? JsonSerializer.Serialize(q.UserAnswerIndices)
+                var selectedIndices = q.UserAnswerIndices != null && q.UserAnswerIndices.Count > 0
+                    ? q.UserAnswerIndices
                     : q.UserAnswerIndex.HasValue
-                        ? JsonSerializer.Serialize(new[] { q.UserAnswerIndex.Value })
-                        : "[]";
+                        ? new List<int> { q.UserAnswerIndex.Value }
+                        : new List<int>();
+
+                var selectedJson = JsonSerializer.Serialize(selectedIndices);
+
+                // The sync route is a compatibility import path; however, when the canonical
+                // question answer key exists in the authoritative datastore, the server must
+                // not trust client-supplied IsCorrect/ScoreAwarded values.
+                var isCorrect = q.IsCorrect;
+                var scoreAwarded = q.ScoreAwarded;
+
+                if (persistedQuestion.Options.Count > 0)
+                {
+                    var validation = await _responseValidationService.ValidateAndGradeAsync(
+                        attempt.Id,
+                        persistedQuestion.Id,
+                        selectedIndices,
+                        60,
+                        cancellationToken);
+
+                    if (validation.Valid && validation.Grading is not null)
+                    {
+                        isCorrect = validation.Grading.IsCorrect;
+                        scoreAwarded = validation.Grading.ScoreAwarded;
+                    }
+                    else
+                    {
+                        isCorrect = false;
+                        scoreAwarded = 0m;
+                        _logger.LogWarning(
+                            "Sync assessment answer was rejected by the server authority for question {QuestionId}: {Reason}",
+                            persistedQuestion.Id,
+                            validation.Error ?? "Unknown validation failure");
+                    }
+                }
 
                 var resp = new AttemptResponse
                 {
@@ -475,8 +535,8 @@ public class ExamAttemptsController : ControllerBase
                     ExamAttemptId = attempt.Id,
                     QuestionId = questionId,
                     SelectedOptionsJson = selectedJson,
-                    IsCorrect = q.IsCorrect,
-                    ScoreAwarded = q.ScoreAwarded,
+                    IsCorrect = isCorrect,
+                    ScoreAwarded = scoreAwarded,
                     TimeSpentSeconds = 60,
                     AnsweredAt = now
                 };
