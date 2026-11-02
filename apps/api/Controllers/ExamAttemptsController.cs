@@ -620,6 +620,8 @@ public class ExamAttemptsController : ControllerBase
                     ? Math.Round((decimal)correctResponses / totalResponses * 100m, 2)
                     : 0.0m;
                 attempt.Passed = attempt.ScorePercent >= (attempt.Exam?.PassingScorePercent ?? 75.0m);
+                attempt.Status = AttemptStatus.Completed;
+                attempt.CompletedAt = now;
 
                 await _context.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
@@ -644,6 +646,8 @@ public class ExamAttemptsController : ControllerBase
                 ? Math.Round((decimal)correctResponses / totalResponses * 100m, 2)
                 : 0.0m;
             attempt.Passed = attempt.ScorePercent >= (attempt.Exam?.PassingScorePercent ?? 75.0m);
+            attempt.Status = AttemptStatus.Completed;
+            attempt.CompletedAt = now;
 
             await _context.SaveChangesAsync(cancellationToken);
         }
