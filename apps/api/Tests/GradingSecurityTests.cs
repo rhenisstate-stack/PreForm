@@ -1,4 +1,9 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Preform.Api.Controllers;
 using Preform.Api.Data;
 using Preform.Api.Models;
 using Preform.Api.Services;
@@ -97,6 +102,81 @@ public class GradingSecurityTests
         Assert.True(result.Grading!.IsCorrect, "Server must compute IsCorrect=true for the right answer regardless of client claim.");
         Assert.Equal(1, result.Grading.ScoreAwarded);
         Assert.True(result.AutomaticGradingPossible);
+    }
+
+    [Fact]
+    public async Task SyncAssessmentAttempt_IgnoresClientSuppliedCorrectnessWhenServerAnswerKeyExists()
+    {
+        using var context = CreateInMemoryContext("Sec_Sync_IgnoresClientCorrectness");
+        var attemptId = "att_sec_sync_server_authoritative";
+        var questionId = "q_sec_sync_server_authoritative";
+
+        context.Questions.Add(new Question
+        {
+            Id = questionId,
+            Stem = "Which intervention is priority?",
+            QuestionTypeKey = "single-choice",
+            Pathway = "rn",
+            Status = QuestionStatus.Published,
+            Options = new List<QuestionOption>
+            {
+                new() { Id = "opt_1", QuestionId = questionId, OptionKey = "A", Content = "Option A", DisplayOrder = 0, IsCorrect = false },
+                new() { Id = "opt_2", QuestionId = questionId, OptionKey = "B", Content = "Option B", DisplayOrder = 1, IsCorrect = true },
+                new() { Id = "opt_3", QuestionId = questionId, OptionKey = "C", Content = "Option C", DisplayOrder = 2, IsCorrect = false },
+                new() { Id = "opt_4", QuestionId = questionId, OptionKey = "D", Content = "Option D", DisplayOrder = 3, IsCorrect = false },
+            }
+        });
+
+        var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
+        var service = new ResponseValidationService(context, resolver);
+        var controller = new ExamAttemptsController(context, NullLogger<ExamAttemptsController>.Instance, service)
+        {
+            ControllerContext = new ControllerContext
+            {
+                HttpContext = new DefaultHttpContext
+                {
+                    User = new ClaimsPrincipal(new ClaimsIdentity(new[]
+                    {
+                        new Claim(ClaimTypes.NameIdentifier, "candidate_sync_secure"),
+                        new Claim(ClaimTypes.Role, "candidate")
+                    }, "TestAuth"))
+                }
+            }
+        };
+
+        var result = await controller.SyncAssessmentAttempt(new SyncAssessmentAttemptRequest
+        {
+            Id = attemptId,
+            Name = "Server-authoritative sync",
+            ScorePercent = 99m,
+            CorrectCount = 1,
+            TotalQuestions = 1,
+            Pathway = "rn",
+            Questions = new List<SyncAttemptQuestionItem>
+            {
+                new()
+                {
+                    Id = questionId,
+                    QuestionNumber = 1,
+                    QuestionType = "single_choice",
+                    UserAnswerIndex = 0,
+                    CorrectAnswerIndex = 1,
+                    IsCorrect = true,
+                    ScoreAwarded = 1m
+                }
+            }
+        }, CancellationToken.None);
+
+        Assert.IsType<OkObjectResult>(result);
+        var persisted = await context.ExamAttempts
+            .Include(ea => ea.Responses)
+            .SingleAsync(ea => ea.Id == attemptId);
+
+        Assert.Equal(0m, persisted.ScorePercent);
+        Assert.False(persisted.Passed);
+        Assert.Single(persisted.Responses);
+        Assert.False(persisted.Responses.First().IsCorrect);
+        Assert.Equal(0m, persisted.Responses.First().ScoreAwarded);
     }
 
     [Fact]

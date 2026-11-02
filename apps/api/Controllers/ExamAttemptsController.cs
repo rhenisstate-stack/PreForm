@@ -501,8 +501,8 @@ public class ExamAttemptsController : ControllerBase
                 // The sync route is a compatibility import path; however, when the canonical
                 // question answer key exists in the authoritative datastore, the server must
                 // not trust client-supplied IsCorrect/ScoreAwarded values.
-                var isCorrect = q.IsCorrect;
-                var scoreAwarded = q.ScoreAwarded;
+                var isCorrect = false;
+                var scoreAwarded = 0m;
 
                 if (persistedQuestion.Options.Count > 0)
                 {
@@ -520,13 +520,17 @@ public class ExamAttemptsController : ControllerBase
                     }
                     else
                     {
-                        isCorrect = false;
-                        scoreAwarded = 0m;
                         _logger.LogWarning(
                             "Sync assessment answer was rejected by the server authority for question {QuestionId}: {Reason}",
                             persistedQuestion.Id,
                             validation.Error ?? "Unknown validation failure");
                     }
+                }
+                else
+                {
+                    _logger.LogWarning(
+                        "Sync assessment import for question {QuestionId} did not have an authoritative answer key; the client-submitted correctness score was ignored.",
+                        persistedQuestion.Id);
                 }
 
                 var resp = new AttemptResponse
@@ -593,10 +597,11 @@ public class ExamAttemptsController : ControllerBase
             UserId = candidateUserId, // Server-derived candidate ownership
             ExamId = exam.Id,
             Status = AttemptStatus.Completed,
-            ScorePercent = request.ScorePercent,
-            Passed = request.ScorePercent >= 75.0m,
+            ScorePercent = 0.0m,
+            Passed = false,
             StartedAt = startedAt,
-            CompletedAt = now
+            CompletedAt = now,
+            Exam = exam
         };
 
         if (_context.Database.IsRelational())
@@ -605,6 +610,17 @@ public class ExamAttemptsController : ControllerBase
             try
             {
                 await SaveSyncedAttemptAsync(attempt, request, now, candidateUserId, cancellationToken);
+                var syncedResponses = await _context.AttemptResponses
+                    .Where(response => response.ExamAttemptId == attempt.Id)
+                    .ToListAsync(cancellationToken);
+
+                var totalResponses = syncedResponses.Count;
+                var correctResponses = syncedResponses.Count(response => response.IsCorrect);
+                attempt.ScorePercent = totalResponses > 0
+                    ? Math.Round((decimal)correctResponses / totalResponses * 100m, 2)
+                    : 0.0m;
+                attempt.Passed = attempt.ScorePercent >= (attempt.Exam?.PassingScorePercent ?? 75.0m);
+
                 await _context.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
             }
@@ -618,6 +634,17 @@ public class ExamAttemptsController : ControllerBase
         else
         {
             await SaveSyncedAttemptAsync(attempt, request, now, candidateUserId, cancellationToken);
+            var syncedResponses = await _context.AttemptResponses
+                .Where(response => response.ExamAttemptId == attempt.Id)
+                .ToListAsync(cancellationToken);
+
+            var totalResponses = syncedResponses.Count;
+            var correctResponses = syncedResponses.Count(response => response.IsCorrect);
+            attempt.ScorePercent = totalResponses > 0
+                ? Math.Round((decimal)correctResponses / totalResponses * 100m, 2)
+                : 0.0m;
+            attempt.Passed = attempt.ScorePercent >= (attempt.Exam?.PassingScorePercent ?? 75.0m);
+
             await _context.SaveChangesAsync(cancellationToken);
         }
 
