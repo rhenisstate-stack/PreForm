@@ -86,16 +86,21 @@ public class ExamAttemptsController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ILogger<ExamAttemptsController> _logger;
+    private readonly IResponseValidationService _responseValidationService;
 
     private static readonly HashSet<string> AdminRoles = new(StringComparer.OrdinalIgnoreCase)
     {
         "admin", "superadmin", "administrator", "exam_manager"
     };
 
-    public ExamAttemptsController(AppDbContext context, ILogger<ExamAttemptsController> logger)
+    public ExamAttemptsController(
+        AppDbContext context,
+        ILogger<ExamAttemptsController> logger,
+        IResponseValidationService responseValidationService)
     {
         _context = context;
         _logger = logger;
+        _responseValidationService = responseValidationService;
     }
 
     private (string? userId, string? role) ResolveCaller()
@@ -292,12 +297,32 @@ public class ExamAttemptsController : ControllerBase
             return BadRequest(new { success = false, error = "Cannot add responses to a completed or abandoned attempt." });
         }
 
+        // Parse selected option indices from the request
+        var selectedOptionIndices = request.SelectedOptionIndices ?? new List<int>();
+
+        // Server-authoritative validation and grading — never trust client-supplied IsCorrect/ScoreAwarded
+        var validation = await _responseValidationService.ValidateAndGradeAsync(
+            attempt.Id,
+            request.QuestionId,
+            selectedOptionIndices,
+            request.TimeSpentSeconds,
+            cancellationToken);
+
+        if (!validation.Valid)
+        {
+            return BadRequest(new { success = false, error = validation.Error });
+        }
+
+        var grading = validation.Grading!;
+
+        var selectedOptionsJson = JsonSerializer.Serialize(selectedOptionIndices);
+
         var existingResponse = attempt.Responses.FirstOrDefault(r => r.QuestionId == request.QuestionId);
         if (existingResponse != null)
         {
-            existingResponse.SelectedOptionsJson = JsonSerializer.Serialize(request.SelectedOptionIndices);
-            existingResponse.IsCorrect = request.IsCorrect;
-            existingResponse.ScoreAwarded = request.ScoreAwarded;
+            existingResponse.SelectedOptionsJson = selectedOptionsJson;
+            existingResponse.IsCorrect = grading.IsCorrect;
+            existingResponse.ScoreAwarded = grading.ScoreAwarded;
             existingResponse.TimeSpentSeconds = request.TimeSpentSeconds;
             existingResponse.AnsweredAt = DateTime.UtcNow;
         }
@@ -308,9 +333,9 @@ public class ExamAttemptsController : ControllerBase
                 Id = "resp_" + Guid.NewGuid().ToString("N"),
                 ExamAttemptId = attempt.Id,
                 QuestionId = request.QuestionId,
-                SelectedOptionsJson = JsonSerializer.Serialize(request.SelectedOptionIndices),
-                IsCorrect = request.IsCorrect,
-                ScoreAwarded = request.ScoreAwarded,
+                SelectedOptionsJson = selectedOptionsJson,
+                IsCorrect = grading.IsCorrect,
+                ScoreAwarded = grading.ScoreAwarded,
                 TimeSpentSeconds = request.TimeSpentSeconds,
                 AnsweredAt = DateTime.UtcNow
             };
@@ -318,7 +343,13 @@ public class ExamAttemptsController : ControllerBase
         }
 
         await _context.SaveChangesAsync(cancellationToken);
-        return Ok(new { success = true, message = "Response recorded successfully." });
+        return Ok(new
+        {
+            success = true,
+            message = "Response recorded successfully.",
+            isCorrect = grading.IsCorrect,
+            scoreAwarded = grading.ScoreAwarded,
+        });
     }
 
     [HttpPost("{id}/submit")]

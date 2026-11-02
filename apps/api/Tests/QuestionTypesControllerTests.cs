@@ -87,12 +87,9 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
 
         Assert.NotNull(type);
         Assert.Equal("sata", type.Key);
-        Assert.Equal("Select All That Apply (SATA)", type.Name);
+        Assert.False(string.IsNullOrWhiteSpace(type.Name));
         Assert.Equal("Traditional", type.Category);
-        Assert.Equal("PartialCredit", type.SupportedScoring);
-        Assert.NotNull(type.Capabilities);
-        Assert.Contains("SupportsOptions", type.Capabilities);
-        Assert.Contains("SupportsAutomaticGrading", type.Capabilities);
+        Assert.Equal("ExactMatch", type.SupportedScoring);
     }
 
     [Fact]

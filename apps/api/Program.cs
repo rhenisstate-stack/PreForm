@@ -6,6 +6,7 @@ using Preform.Api.Data;
 using Preform.Api.Formatters;
 using Preform.Api.Models;
 using Preform.Api.Services;
+using Preform.Api.Services.Grading;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,9 @@ builder.Services.AddScoped<IProgrammeService, ProgrammeService>();
 builder.Services.AddScoped<IProfileImageService, ProfileImageService>();
 builder.Services.AddScoped<IQuestionTypeService, QuestionTypeService>();
 builder.Services.AddScoped<IAdminBootstrapService, AdminBootstrapService>();
+// Examination grading foundation (P2)
+builder.Services.AddSingleton<IQuestionGraderResolver, QuestionGraderResolver>();
+builder.Services.AddScoped<IResponseValidationService, ResponseValidationService>();
 // AI Study Studio (Phase 1): server-authoritative spaced repetition scheduling
 builder.Services.AddScoped<ISpacedRepetitionService, SpacedRepetitionService>();
 builder.Services.AddScoped<IFlashcardService, FlashcardService>();
