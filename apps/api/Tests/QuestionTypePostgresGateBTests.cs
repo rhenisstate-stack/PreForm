@@ -109,9 +109,12 @@ public sealed class QuestionTypePostgresGateBTests : IClassFixture<PostgresTestF
 
             var duplicateId = Guid.NewGuid().ToString();
             const string duplicateKey = "sata";
+            const string duplicateName = "Duplicate";
+            const string duplicateCategory = "Test";
+            const string duplicateScoring = "ExactMatch";
             await Assert.ThrowsAsync<PostgresException>(() =>
                 context.Database.ExecuteSqlInterpolatedAsync(
-                    $"INSERT INTO public.\"QuestionTypeDefinitions\" (\"Id\", \"Key\", \"Name\", \"Description\", \"Category\", \"SupportedScoring\", \"IsActive\", \"DisplayOrder\") VALUES ({duplicateId}, {duplicateKey}, {\"Duplicate\"}, {string.Empty}, {\"Test\"}, {\"ExactMatch\"}, {true}, {1000})"));
+                    $"INSERT INTO public.\"QuestionTypeDefinitions\" (\"Id\", \"Key\", \"Name\", \"Description\", \"Category\", \"SupportedScoring\", \"IsActive\", \"DisplayOrder\") VALUES ({duplicateId}, {duplicateKey}, {duplicateName}, {string.Empty}, {duplicateCategory}, {duplicateScoring}, {true}, {1000})"));
 
             await context.QuestionTypeDefinitions
                 .Where(item => item.Key == "gateb-unknown-key")
