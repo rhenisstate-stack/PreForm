@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Preform.Api.Data;
 using Preform.Api.Models;
 
@@ -440,74 +441,109 @@ public static class CatalogSeeder
     /// Migration 0002 already creates the table and seeds base rows; this method
     /// ensures CapabilityFlags, ImplementationStatus, and other metadata are present
     /// and inserts any types missing from the database.
+    ///
+    /// This method is resilient to databases where migration 0006 has not yet been
+    /// applied (i.e. CapabilityFlags / ImplementationStatus columns may not exist).
+    /// In that case, it logs a warning and continues without updating metadata.
     /// </summary>
     private static async Task SeedQuestionTypesAsync(
         AppDbContext context,
         ILogger logger,
         CancellationToken cancellationToken = default)
     {
+        try
+        {
+            await SeedQuestionTypesAsyncInternal(context, logger, cancellationToken);
+        }
+        catch (Exception ex) when (ex is Microsoft.EntityFrameworkCore.DbUpdateException or Npgsql.PostgresException)
+        {
+            logger.LogWarning(ex, "Question-type catalogue metadata seeding skipped: required columns may not exist yet. Apply migration 0006 to enable full catalogue metadata.");
+        }
+    }
+
+    private static async Task SeedQuestionTypesAsyncInternal(
+        AppDbContext context,
+        ILogger logger,
+        CancellationToken cancellationToken = default)
+    {
         var definitions = QuestionTypeCatalogue();
+        var existingKeys = await context.QuestionTypeDefinitions
+            .Select(q => q.Key)
+            .ToListAsync(cancellationToken);
+        var existingByKey = new HashSet<string>(existingKeys);
+
         var changed = false;
+        var toAdd = new List<QuestionTypeDefinition>();
+        var updatedKeys = new List<string>();
 
         foreach (var definition in definitions)
         {
-            var existing = await context.QuestionTypeDefinitions
-                .FirstOrDefaultAsync(q => q.Key == definition.Key, cancellationToken);
-
-            if (existing == null)
+            if (existingByKey.Contains(definition.Key))
             {
-                context.QuestionTypeDefinitions.Add(definition);
-                changed = true;
-                continue;
+                var existing = await context.QuestionTypeDefinitions
+                    .FirstOrDefaultAsync(q => q.Key == definition.Key, cancellationToken);
+
+                if (existing == null) continue;
+
+                bool needsUpdate = false;
+
+                if (existing.CapabilityFlags != definition.CapabilityFlags)
+                {
+                    existing.CapabilityFlags = definition.CapabilityFlags;
+                    needsUpdate = true;
+                }
+
+                if (existing.ImplementationStatus != definition.ImplementationStatus)
+                {
+                    existing.ImplementationStatus = definition.ImplementationStatus;
+                    needsUpdate = true;
+                }
+
+                if (existing.IsActive != definition.IsActive)
+                {
+                    existing.IsActive = definition.IsActive;
+                    needsUpdate = true;
+                }
+
+                if (existing.DisplayOrder != definition.DisplayOrder)
+                {
+                    existing.DisplayOrder = definition.DisplayOrder;
+                    needsUpdate = true;
+                }
+
+                if (existing.Category != definition.Category)
+                {
+                    existing.Category = definition.Category;
+                    needsUpdate = true;
+                }
+
+                if (existing.SupportedScoring != definition.SupportedScoring)
+                {
+                    existing.SupportedScoring = definition.SupportedScoring;
+                    needsUpdate = true;
+                }
+
+                if (needsUpdate)
+                {
+                    changed = true;
+                    updatedKeys.Add(definition.Key);
+                }
             }
-
-            bool needsUpdate = false;
-
-            if (existing.CapabilityFlags != definition.CapabilityFlags)
+            else
             {
-                existing.CapabilityFlags = definition.CapabilityFlags;
-                needsUpdate = true;
-            }
-
-            if (existing.ImplementationStatus != definition.ImplementationStatus)
-            {
-                existing.ImplementationStatus = definition.ImplementationStatus;
-                needsUpdate = true;
-            }
-
-            if (existing.IsActive != definition.IsActive)
-            {
-                existing.IsActive = definition.IsActive;
-                needsUpdate = true;
-            }
-
-            if (existing.DisplayOrder != definition.DisplayOrder)
-            {
-                existing.DisplayOrder = definition.DisplayOrder;
-                needsUpdate = true;
-            }
-
-            if (existing.Category != definition.Category)
-            {
-                existing.Category = definition.Category;
-                needsUpdate = true;
-            }
-
-            if (existing.SupportedScoring != definition.SupportedScoring)
-            {
-                existing.SupportedScoring = definition.SupportedScoring;
-                needsUpdate = true;
-            }
-
-            if (needsUpdate)
-            {
+                toAdd.Add(definition);
                 changed = true;
             }
         }
 
+        if (toAdd.Count > 0)
+        {
+            context.QuestionTypeDefinitions.AddRange(toAdd);
+        }
+
         if (changed)
         {
-            logger.LogInformation("Updating question-type catalogue metadata...");
+            logger.LogInformation("Updating question-type catalogue metadata (added: {AddedCount}, updated: {UpdatedCount})...", toAdd.Count, updatedKeys.Count);
             await context.SaveChangesAsync(cancellationToken);
         }
         else
