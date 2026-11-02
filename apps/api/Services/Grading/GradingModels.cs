@@ -194,7 +194,7 @@ public class OptionBasedQuestionGrader : IQuestionGrader
 /// </summary>
 public class QuestionGraderResolver : IQuestionGraderResolver
 {
-    private readonly Dictionary<string, IQuestionGrader> _graders = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, IQuestionGrader> _graders = new(StringComparer.OrdinalIgnoreCase);
 
     public QuestionGraderResolver(IQuestionTypeRegistry questionTypeRegistry)
     {

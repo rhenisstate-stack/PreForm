@@ -43,10 +43,12 @@ public sealed class QuestionTypeService : IQuestionTypeService
                 $"Question-type catalogue contains duplicate canonical keys: {string.Join(", ", duplicateKeys)}.");
         }
 
-        return records
-            .Where(definition => _registry.TryGet(definition.Key, out _))
-            .Select(ToDto)
-            .ToList();
+        if (records.Any(definition => !_registry.TryGet(definition.Key, out _)))
+        {
+            throw new InvalidOperationException("Question-type catalogue contains unregistered keys.");
+        }
+
+        return records.Select(ToDto).ToList();
     }
 
     public async Task<QuestionTypeDto?> GetQuestionTypeByKeyAsync(
@@ -113,7 +115,7 @@ public sealed class QuestionTypeService : IQuestionTypeService
             Name = definition.Name,
             Description = definition.Description,
             Category = definition.Category,
-            SupportedScoring = LegacyScoringValue(descriptor),
+            SupportedScoring = ScoringLabel(descriptor),
             SupportedScoringModes = descriptor.SupportedScoringModes
                 .Select(ToScoringModeKey)
                 .ToList(),
@@ -156,14 +158,18 @@ public sealed class QuestionTypeService : IQuestionTypeService
         };
     }
 
-    private static string LegacyScoringValue(QuestionTypeDescriptor descriptor)
+    private static string ScoringLabel(QuestionTypeDescriptor descriptor)
     {
         return descriptor.SupportedScoringModes.Single() switch
         {
             QuestionScoringMode.AutomaticExactMatch => "ExactMatch",
             QuestionScoringMode.AutomaticPartialCredit => "PartialCredit",
             QuestionScoringMode.Manual => "Manual",
-            _ => "NotImplemented",
+            QuestionScoringMode.NotImplemented => "NotImplemented",
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(descriptor),
+                descriptor.SupportedScoringModes.Single(),
+                "Unknown question scoring mode."),
         };
     }
 

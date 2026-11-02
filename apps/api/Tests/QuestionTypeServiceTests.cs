@@ -184,6 +184,23 @@ public class QuestionTypeServiceTests
         Assert.False(essay.CapabilityDetails.SupportsManualGrading);
     }
 
+    [Fact]
+    public async Task GetAllQuestionTypesAsync_RejectsUnregisteredCatalogueRows()
+    {
+        using var context = CreateInMemoryContext("Qts_GetAll_Unregistered");
+        context.QuestionTypeDefinitions.Add(new QuestionTypeDefinition
+        {
+            Id = "unsupported",
+            Key = "unsupported-type",
+            Name = "Unsupported",
+            IsActive = true,
+        });
+        await context.SaveChangesAsync();
+
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => service.GetAllQuestionTypesAsync());
+    }
+
     private static async Task SeedQuestionTypes(AppDbContext context)
     {
         var types = new List<QuestionTypeDefinition>

@@ -33,6 +33,8 @@ public class QuestionTypeCatalogueSeederTests
         Assert.Equal(18, records.Count);
         Assert.Equal(Enumerable.Range(1, 18).Select(index => $"qt-{index}"), records.Select(item => item.Id));
         Assert.Equal(18, records.Select(item => item.Key).Distinct().Count());
+        Assert.Equal("ExactMatch", records.Single(item => item.Key == "sata").SupportedScoring);
+        Assert.Equal("NotImplemented", records.Single(item => item.Key == "essay").SupportedScoring);
     }
 
     [Fact]
@@ -89,7 +91,7 @@ public class QuestionTypeCatalogueSeederTests
                 Name = descriptor.DefaultName,
                 Description = descriptor.DefaultDescription,
                 Category = descriptor.DefaultCategory,
-                SupportedScoring = descriptor.LegacyScoringLabel,
+                SupportedScoring = descriptor.DefaultScoringLabel,
                 IsActive = true,
                 DisplayOrder = descriptor.DefaultDisplayOrder,
             }));

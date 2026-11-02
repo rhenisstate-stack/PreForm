@@ -56,7 +56,7 @@ public sealed class QuestionTypeCatalogueSeeder
                     Name = descriptor.DefaultName,
                     Description = descriptor.DefaultDescription,
                     Category = descriptor.DefaultCategory,
-                    SupportedScoring = descriptor.LegacyScoringLabel,
+                    SupportedScoring = descriptor.DefaultScoringLabel,
                     CapabilityFlags = (int)descriptor.Capabilities,
                     ImplementationStatus = descriptor.ImplementationStatus.ToString(),
                     IsActive = true,

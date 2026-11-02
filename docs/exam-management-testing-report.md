@@ -135,3 +135,27 @@ No source code, test files, controllers, services, models, migrations, or fronte
 ---
 
 **STOP CONDITION:** Phase 1.1 audit and all associated reports are complete. Do not begin Phase 2 implementation until the audit has been reviewed and approved.
+
+---
+
+## Gate B Testing Update — Question-Type Foundation
+
+The Phase 1.1 statements above are historical and remain unchanged. Gate B verification was run after adding registry, API, seeding, serialization, validation, and migration-metadata tests.
+
+### Executed
+
+| Command | Result |
+|---|---|
+| `dotnet test apps\api\Tests\Preform.Api.Tests.csproj --no-restore --filter "FullyQualifiedName!~PostgresIntegrationTests" "-p:BaseOutputPath=C:\Users\gitau\AppData\Local\Temp\PREformGateB\bin\"` | **171 passed, 0 failed, 0 skipped** |
+
+The separate base output directory avoids overwriting binaries held by a running `Preform.Api` process. The build emitted NU1900 warnings because NuGet vulnerability metadata could not be fetched from `api.nuget.org`; test compilation and execution completed successfully.
+
+The run covers the existing provider-independent regression suite and new tests for canonical registry keys, scoring/status accuracy, safe DTOs, active/inactive visibility, empty/partial/full catalogue seeding, ID and metadata preservation, duplicate detection, payload limits/schema checks, and EF migration/index metadata.
+
+### Not executed
+
+- `PostgresIntegrationTests` were excluded. The fixture has a hard-coded connection to the shared `prepford` database; no isolated/disposable database was configured. Although the local PostgreSQL port is reachable, tests were not run against a potentially shared database.
+- Migration 0006 execution, Npgsql transaction behavior, PostgreSQL unique-index enforcement, and runtime reconciliation on PostgreSQL remain unverified.
+- The previous Gate A report recorded 133 passing tests. That historical count is not a direct apples-to-apples comparison with the current 171-pass run because the current command excludes PostgreSQL tests and adds Gate B coverage.
+
+**Required follow-up:** execute the migration and seeding integration tests using an explicitly disposable PostgreSQL database before considering Gate B fully verified.
