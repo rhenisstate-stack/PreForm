@@ -32,6 +32,17 @@ public sealed class QuestionTypeService : IQuestionTypeService
             .ThenBy(definition => definition.Key)
             .ToListAsync(cancellationToken);
 
+        var duplicateKeys = records
+            .GroupBy(definition => definition.Key, StringComparer.Ordinal)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToArray();
+        if (duplicateKeys.Length > 0)
+        {
+            throw new InvalidOperationException(
+                $"Question-type catalogue contains duplicate canonical keys: {string.Join(", ", duplicateKeys)}.");
+        }
+
         return records
             .Where(definition => _registry.TryGet(definition.Key, out _))
             .Select(ToDto)
@@ -109,20 +120,20 @@ public sealed class QuestionTypeService : IQuestionTypeService
             CapabilityFlags = (int)descriptor.Capabilities,
             Capabilities = Enum.GetValues<QuestionTypeCapability>()
                 .Where(capability => capability != QuestionTypeCapability.None
-                    && (descriptor.Capabilities & capability) != 0
-                    && capability != QuestionTypeCapability.SupportsClinicalScenarios)
+                    && (descriptor.Capabilities & capability) != 0)
                 .Select(capability => capability.ToString())
+                .Distinct(StringComparer.Ordinal)
                 .ToList(),
-            CapabilityDetails = ToCapabilityDto(descriptor.Capabilities),
+            CapabilityDetails = ToCapabilityDto(descriptor),
             ImplementationStatus = descriptor.ImplementationStatus.ToString(),
             ContractVersion = descriptor.ContractVersion,
             IsActive = definition.IsActive,
-            DisplayOrder = definition.DisplayOrder,
         };
     }
 
-    private static QuestionTypeCapabilitiesDto ToCapabilityDto(QuestionTypeCapability capabilities)
+    private static QuestionTypeCapabilitiesDto ToCapabilityDto(QuestionTypeDescriptor descriptor)
     {
+        var capabilities = descriptor.Capabilities;
         bool Includes(QuestionTypeCapability capability) => (capabilities & capability) != 0;
 
         return new QuestionTypeCapabilitiesDto

@@ -22,7 +22,7 @@ public class QuestionTypesController : ControllerBase
 
     /// <summary>
     /// Returns all active question-type definitions, ordered by display order.
-    /// Public metadata endpoint — no answer keys or private scoring information is exposed.
+    /// Public metadata endpoint — no answer keys or private grading configuration is exposed.
     /// </summary>
     [HttpGet]
     public async Task<ActionResult<QuestionTypeCatalogueResponse>> GetQuestionTypes(CancellationToken cancellationToken = default)
@@ -45,7 +45,7 @@ public class QuestionTypesController : ControllerBase
         var type = await _questionTypeService.GetQuestionTypeByKeyAsync(key, cancellationToken);
         if (type == null)
         {
-            return NotFound(new { success = false, error = $"Question type '{key}' not found." });
+            return NotFound(new { success = false, error = "Question type not found." });
         }
         return Ok(type);
     }

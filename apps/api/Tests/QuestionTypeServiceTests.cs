@@ -23,7 +23,7 @@ public class QuestionTypeServiceTests
         using var context = CreateInMemoryContext("Qts_GetAll_Active");
         await SeedQuestionTypes(context);
 
-        var service = new QuestionTypeService(context);
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var types = await service.GetAllQuestionTypesAsync();
 
         Assert.Equal(18, types.Count);
@@ -43,7 +43,7 @@ public class QuestionTypeServiceTests
         typeToDeactivate.IsActive = false;
         await context.SaveChangesAsync();
 
-        var service = new QuestionTypeService(context);
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var types = await service.GetAllQuestionTypesAsync();
 
         Assert.Equal(17, types.Count);
@@ -56,7 +56,7 @@ public class QuestionTypeServiceTests
         using var context = CreateInMemoryContext("Qts_GetAll_Ordered");
         await SeedQuestionTypes(context);
 
-        var service = new QuestionTypeService(context);
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var types = await service.GetAllQuestionTypesAsync();
 
         var orders = types.Select(t => t.DisplayOrder).ToList();
@@ -71,7 +71,7 @@ public class QuestionTypeServiceTests
         using var context = CreateInMemoryContext("Qts_GetByKey_Existing");
         await SeedQuestionTypes(context);
 
-        var service = new QuestionTypeService(context);
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var type = await service.GetQuestionTypeByKeyAsync("sata");
 
         Assert.NotNull(type);
@@ -87,7 +87,7 @@ public class QuestionTypeServiceTests
         using var context = CreateInMemoryContext("Qts_GetByKey_Unknown");
         await SeedQuestionTypes(context);
 
-        var service = new QuestionTypeService(context);
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var type = await service.GetQuestionTypeByKeyAsync("nonexistent-key");
 
         Assert.Null(type);
@@ -99,7 +99,7 @@ public class QuestionTypeServiceTests
         using var context = CreateInMemoryContext("Qts_GetByKey_Empty");
         await SeedQuestionTypes(context);
 
-        var service = new QuestionTypeService(context);
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var type = await service.GetQuestionTypeByKeyAsync("");
 
         Assert.Null(type);
@@ -111,7 +111,7 @@ public class QuestionTypeServiceTests
         using var context = CreateInMemoryContext("Qts_Validate_Valid");
         await SeedQuestionTypes(context);
 
-        var service = new QuestionTypeService(context);
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var result = await service.ValidateQuestionTypeKeyAsync("single-choice");
 
         Assert.True(result.Valid);
@@ -126,12 +126,12 @@ public class QuestionTypeServiceTests
         using var context = CreateInMemoryContext("Qts_Validate_Unknown");
         await SeedQuestionTypes(context);
 
-        var service = new QuestionTypeService(context);
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var result = await service.ValidateQuestionTypeKeyAsync("not-a-type");
 
         Assert.False(result.Valid);
         Assert.NotNull(result.Error);
-        Assert.Contains("not-a-type", result.Error);
+        Assert.DoesNotContain("not-a-type", result.Error);
     }
 
     [Fact]
@@ -140,7 +140,7 @@ public class QuestionTypeServiceTests
         using var context = CreateInMemoryContext("Qts_Validate_Empty");
         await SeedQuestionTypes(context);
 
-        var service = new QuestionTypeService(context);
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var result = await service.ValidateQuestionTypeKeyAsync("");
 
         Assert.False(result.Valid);
@@ -157,46 +157,32 @@ public class QuestionTypeServiceTests
         essay.IsActive = false;
         await context.SaveChangesAsync();
 
-        var service = new QuestionTypeService(context);
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
         var result = await service.ValidateQuestionTypeKeyAsync("essay");
 
-        Assert.True(result.Valid); // Key is known
-        Assert.False(result.IsActive); // But inactive
+        Assert.False(result.Valid);
+        Assert.False(result.IsActive);
         Assert.NotNull(result.Error);
     }
 
     [Fact]
-    public async Task EnsureCatalogueSeededAsync_Idempotent_NoDuplicates()
+    public async Task GetAllQuestionTypesAsync_ReportsOnlyImplementedScoring()
     {
-        using var context = CreateInMemoryContext("Qts_Seed_Idempotent");
-        var service = new QuestionTypeService(context);
+        using var context = CreateInMemoryContext("Qts_GetAll_ActualScoring");
+        await SeedQuestionTypes(context);
 
-        // Run twice
-        await service.EnsureCatalogueSeededAsync();
-        await service.EnsureCatalogueSeededAsync();
+        var service = new QuestionTypeService(context, QuestionTypeRegistry.Instance);
+        var types = await service.GetAllQuestionTypesAsync();
+        var sata = types.Single(type => type.Key == "sata");
+        var essay = types.Single(type => type.Key == "essay");
 
-        var count = await context.QuestionTypeDefinitions.CountAsync();
-        Assert.Equal(18, count);
-    }
-
-    [Fact]
-    public async Task EnsureCatalogueSeededAsync_SetsCapabilityFlagsAndStatus()
-    {
-        using var context = CreateInMemoryContext("Qts_Seed_Metadata");
-        var service = new QuestionTypeService(context);
-
-        await service.EnsureCatalogueSeededAsync();
-
-        var singleChoice = await context.QuestionTypeDefinitions
-            .FirstAsync(t => t.Key == "single-choice");
-
-        Assert.True((singleChoice.CapabilityFlags & (int)QuestionTypeCapability.SupportsOptions) != 0);
-        Assert.True((singleChoice.CapabilityFlags & (int)QuestionTypeCapability.SupportsAutomaticGrading) != 0);
-        Assert.Equal(nameof(QuestionTypeStatus.DeliverySupported), singleChoice.ImplementationStatus);
-
-        var essay = await context.QuestionTypeDefinitions.FirstAsync(t => t.Key == "essay");
-        Assert.True((essay.CapabilityFlags & (int)QuestionTypeCapability.SupportsManualGrading) != 0);
+        Assert.Equal("ExactMatch", sata.SupportedScoring);
+        Assert.Equal(new[] { "automatic-exact-match" }, sata.SupportedScoringModes);
+        Assert.Equal(nameof(QuestionTypeStatus.GradingSupported), sata.ImplementationStatus);
+        Assert.Equal("NotImplemented", essay.SupportedScoring);
+        Assert.Equal(new[] { "not-implemented" }, essay.SupportedScoringModes);
         Assert.Equal(nameof(QuestionTypeStatus.Catalogued), essay.ImplementationStatus);
+        Assert.False(essay.CapabilityDetails.SupportsManualGrading);
     }
 
     private static async Task SeedQuestionTypes(AppDbContext context)

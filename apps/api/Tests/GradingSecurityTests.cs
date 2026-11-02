@@ -63,7 +63,7 @@ public class GradingSecurityTests
         var questionId = "q_sec_svc_ct";
         await SeedAttemptAndQuestion(context, attemptId, "user_sec_svc", questionId, correctOptionIndex: 2);
 
-        var resolver = new QuestionGraderResolver();
+        var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
         var service = new ResponseValidationService(context, resolver);
 
         // Client submits wrong answer (index 0) but claims IsCorrect=true and ScoreAwarded=100
@@ -85,7 +85,7 @@ public class GradingSecurityTests
         var questionId = "q_sec_svc_cf";
         await SeedAttemptAndQuestion(context, attemptId, "user_sec_svc", questionId, correctOptionIndex: 0);
 
-        var resolver = new QuestionGraderResolver();
+        var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
         var service = new ResponseValidationService(context, resolver);
 
         // Client submits right answer (index 0) but claims IsCorrect=false and ScoreAwarded=0
@@ -126,7 +126,7 @@ public class GradingSecurityTests
 
         await context.SaveChangesAsync();
 
-        var resolver = new QuestionGraderResolver();
+        var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
         var service = new ResponseValidationService(context, resolver);
 
         var result = await service.ValidateAndGradeAsync(
@@ -155,7 +155,7 @@ public class GradingSecurityTests
 
         await context.SaveChangesAsync();
 
-        var resolver = new QuestionGraderResolver();
+        var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
         var service = new ResponseValidationService(context, resolver);
 
         var result = await service.ValidateAndGradeAsync(
@@ -178,7 +178,7 @@ public class GradingSecurityTests
         context.ExamAttempts.First(ea => ea.Id == attemptId).Status = AttemptStatus.Completed;
         await context.SaveChangesAsync();
 
-        var resolver = new QuestionGraderResolver();
+        var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
         var service = new ResponseValidationService(context, resolver);
 
         var result = await service.ValidateAndGradeAsync(
@@ -192,7 +192,7 @@ public class GradingSecurityTests
     [Fact]
     public async Task GraderResolver_ReportsSupportedTypesCorrectly()
     {
-        var resolver = new QuestionGraderResolver();
+        var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
 
         // Types with automatic grading support
         Assert.True(resolver.IsGradingSupported("single-choice"));
@@ -224,7 +224,7 @@ public class GradingSecurityTests
     [Fact]
     public async Task GraderResolver_ReturnsCorrectGraderForSupportedType()
     {
-        var resolver = new QuestionGraderResolver();
+        var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
         var grader = resolver.Resolve("single-choice");
 
         Assert.NotNull(grader);

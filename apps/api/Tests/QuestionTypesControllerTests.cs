@@ -6,6 +6,7 @@ using Preform.Api.Data;
 using Preform.Api.DTOs;
 using Preform.Api.Models;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Xunit;
 
 
@@ -24,7 +25,7 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
             {
                 var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
                 if (descriptor != null) services.Remove(descriptor);
-                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestingQuestionTypesControllerDb"));
+                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
             });
         });
     }
@@ -73,6 +74,34 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
     }
 
     [Fact]
+    public async Task GetQuestionTypes_ExposesSafeVersionedMetadataWithoutDatabaseIds()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await SeedQuestionTypes(context);
+
+        var client = _factory.CreateClient();
+        var response = await client.GetAsync("/api/v1/question-types");
+
+        response.EnsureSuccessStatusCode();
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var json = document.RootElement;
+        var sata = json.GetProperty("items").EnumerateArray()
+            .Single(item => item.GetProperty("key").GetString() == "sata");
+
+        Assert.True(json.GetProperty("success").GetBoolean());
+        Assert.Equal(18, json.GetProperty("count").GetInt32());
+        Assert.Equal(1, sata.GetProperty("contractVersion").GetInt32());
+        Assert.Equal("GradingSupported", sata.GetProperty("implementationStatus").GetString());
+        Assert.Equal("automatic-exact-match",
+            sata.GetProperty("supportedScoringModes")[0].GetString());
+        Assert.False(sata.GetProperty("capabilityDetails").GetProperty("supportsPartialCredit").GetBoolean());
+        Assert.False(sata.TryGetProperty("id", out _));
+        Assert.DoesNotContain("correct", sata.GetRawText(), StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("gradingConfiguration", sata.GetRawText(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
     public async Task GetQuestionTypeByKey_ExistingKey_ReturnsType()
     {
         using var scope = _factory.Services.CreateScope();
@@ -90,6 +119,7 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
         Assert.False(string.IsNullOrWhiteSpace(type.Name));
         Assert.Equal("Traditional", type.Category);
         Assert.Equal("ExactMatch", type.SupportedScoring);
+        Assert.Equal(new[] { "automatic-exact-match" }, type.SupportedScoringModes);
     }
 
     [Fact]
