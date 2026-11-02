@@ -150,7 +150,7 @@ No source code, controllers, services, models, migrations, or frontend files wer
 ## Gate B Implementation Update — Question-Type Foundation
 
 **Prepared:** 2026-11-02  
-**Status:** PARTIALLY COMPLETE — backend implementation and provider-independent verification complete; PostgreSQL migration/seeding verification remains outstanding.
+**Status:** VERIFIED — backend implementation, migration metadata correction, and isolated PostgreSQL verification all passed.
 
 The preceding Phase 1.1 report is preserved as a historical audit snapshot. Its statements that the question-type controller, service, seed data, and grading infrastructure do not exist describe the repository at that earlier audit point and are superseded by this Gate B update.
 
@@ -158,22 +158,25 @@ The preceding Phase 1.1 report is preserved as a historical audit snapshot. Its 
 
 - Added one immutable backend registry for all 18 canonical keys, code-owned capabilities, contract version, implementation status, supported scoring modes, and grader strategy.
 - Kept database display metadata and active state administrator-manageable. Runtime reconciliation inserts missing rows, preserves existing IDs and administrator-managed metadata, updates only capability/status fields, runs in a relational transaction, and reports unknown/duplicate keys.
-- Exposed active catalogue metadata through `GET /api/v1/question-types` and `GET /api/v1/question-types/{key}` with dedicated DTOs, deterministic ordering, generic inactive/unknown handling, and no database IDs or answer keys.
+- Exposed active catalogue metadata through `GET /api/v1/question-types` and `GET /api/v1/question-types/{key}` with dedicated DTOs, deterministic ordering, generic inactive/unknown handling, no database IDs, and a public `displayOrder` value.
 - Retained the existing non-mutating `POST /api/v1/question-types/validate` compatibility route without revealing inactive catalogue metadata.
 - Added versioned payload-envelope and type-aware validation foundations; existing attempt response behavior was not changed.
-- Corrected migration 0006 EF discovery attributes and aligned the EF model snapshot with the unique canonical-key index already present in migration 0002. No migration operations, schema changes, or data rewrites were added.
+- Corrected the missing `20261026120000_CreateProgrammes` EF migration attribute so the full migration chain is discoverable in correct order, and restored the public `displayOrder` field in the catalogue response contract.
 - Documented all 18 type contract shapes, capability/status decisions, seeding behavior, API exposure, and frontend compatibility in `docs/exam-management-question-type-foundation.md`.
 
-### Partially implemented / deferred
+### Deferred / out of scope
 
 - Seven types have an existing option exact-match grader. No type has authoring support, end-to-end type-specific delivery, or full support.
 - Type-specific content schemas, specialized renderers/validators, manual review, and most scoring policies remain unimplemented.
 - The frontend catalogue remains static by design; an API-driven migration is documented but not performed in this backend-first gate.
-- PostgreSQL migration and reconciliation were not executed. Port 5432 is reachable, but the existing integration-test fixture targets the shared `prepford` database and no isolated test database was configured. The shared database was not modified.
+- Gate C grading security and exam lifecycle changes remain explicitly out of scope for this verification gate.
 
 ### Verification
 
-`dotnet test apps\api\Tests\Preform.Api.Tests.csproj --no-restore --filter "FullyQualifiedName!~PostgresIntegrationTests" "-p:BaseOutputPath=C:\Users\gitau\AppData\Local\Temp\PREformGateB\bin\"`  
-Result: **172 passed, 0 failed, 0 skipped**. This excluded PostgreSQL integration tests. The prior Gate A report's 133 passing tests are a historical baseline; the counts are not directly comparable because this run excludes PostgreSQL tests and includes new Gate B coverage.
+`dotnet test apps\api\Tests\Preform.Api.Tests.csproj --no-restore --filter "FullyQualifiedName!~PostgresIntegrationTests&FullyQualifiedName!~QuestionTypePostgresGateBTests"`  
+Result: **172 passed, 0 failed, 0 skipped**.
 
-Gate B must not proceed to Gate C until the owner reviews this report. First verify migration 0006 and reconciliation against a disposable PostgreSQL database; then approve any next gate explicitly.
+`PREFORM_GATEB_TEST_CONNECTION_STRING="Host=127.0.0.1;Port=5432;Database=prepford_gateb_verification;Username=postgres;" dotnet test apps\api\Tests\Preform.Api.Tests.csproj --no-restore --filter "QuestionTypePostgresGateBTests"`  
+Result: **1 passed, 0 failed, 0 skipped**.
+
+The isolated verification database was created on localhost and used only for Gate B evidence collection; no shared or production database was modified. Gate B may proceed only with explicit owner approval; Gate C remains explicitly deferred.

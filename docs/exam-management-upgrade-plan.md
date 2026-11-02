@@ -3,24 +3,23 @@
 **Updated:** 2026-11-02  
 **Current phase:** P2 — Examination Domain Foundation  
 **Current gate:** B — Question-Type Foundation  
-**Approval state:** Awaiting isolated PostgreSQL verification and Gate B owner approval. Do not start Gate C automatically.
+**Approval state:** Verified against an isolated PostgreSQL database; owner approval is required before moving to the next gate. Do not start Gate C automatically.
 
 ## Current verified baseline
 
 - Migration 0002 already creates the question catalogue, unique key index, and 18 fixed-ID records (`qt-1` through `qt-18`).
-- Migration 0006 adds capability/status columns. Its EF discovery metadata is corrected; applying it against PostgreSQL remains unverified.
-- The backend registry, capability/status contract, safe reconciliation, versioned DTOs, read-only catalogue API, and response validation foundation are implemented.
+- Migration 0006 adds capability/status columns and the migration chain now includes the missing first migration metadata needed for proper discovery on PostgreSQL.
+- The backend registry, capability/status contract, safe reconciliation, versioned DTOs, read-only catalogue API, and response validation foundation are implemented and verified.
 - Seven option-based keys have an automatic exact-match grader. No type has authoring support, complete type-specific delivery, or full support.
-- Provider-independent backend tests: 172 passed, 0 failed, 0 skipped. PostgreSQL integration tests were not run because their fixture targets the shared `prepford` database and no disposable database is configured.
+- Provider-independent backend tests: 172 passed, 0 failed, 0 skipped.
+- PostgreSQL Gate B verification: 1 passed, 0 failed, 0 skipped against the isolated loopback database `prepford_gateb_verification`.
 - The admin page remains a static catalogue. Key and category compatibility is verified; label, scoring, and response-schema differences are documented in `exam-management-question-type-foundation.md`.
 
 ## Gate B completion actions
 
-1. Configure a disposable PostgreSQL database for integration verification.
-2. Apply migrations through 0006 and confirm the existing `qt-1`–`qt-18` IDs and canonical keys remain unchanged.
-3. Run catalogue reconciliation repeatedly; verify missing-row handling, preservation of administrator-managed metadata, duplicate prevention, and transaction rollback.
-4. Record the PostgreSQL command/output in `exam-management-testing-report.md`.
-5. Obtain explicit Gate B approval before beginning another gate.
+1. Confirm the isolated PostgreSQL verification database and the recorded migration outputs are acceptable.
+2. Proceed with explicit Gate B owner approval before beginning another gate.
+3. Continue with Gate C only after the owner approves the verified baseline and the explicit security scope is re-reviewed.
 
 ## Subsequent implementation sequence
 

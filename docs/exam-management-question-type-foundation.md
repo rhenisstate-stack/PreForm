@@ -1,6 +1,6 @@
 # PrepFord Question-Type Foundation — Gate B
 
-**Status:** Implemented with PostgreSQL verification outstanding  
+**Status:** Verified against an isolated PostgreSQL database  
 **Date:** 2026-11-02  
 **Scope:** Backend-authoritative catalogue, capability metadata, safe reconciliation, read-only API and contract-validation foundation.
 
@@ -11,7 +11,7 @@ The existing domain was reused; this gate did not create a replacement catalogue
 | Area | Verified source state |
 |---|---|
 | Entity | `QuestionTypeDefinition` maps to `public."QuestionTypeDefinitions"`. `Id` is the primary key; `Key` is required and limited to 64 characters; `Name` to 128; `Description` and `Category` to 512 and 64; `SupportedScoring` is a string limited to 64; `CapabilityFlags` is an integer bitmask; `ImplementationStatus` is a 32-character string; `IsActive` and `DisplayOrder` are persisted. |
-| Initial rows | Migration `20261027150000_AddMasterDomainModels` inserts 18 records with IDs `qt-1` through `qt-18`, canonical keys, names, descriptions, categories, initial scoring labels, and display orders 1-18. The live PostgreSQL rows were not queried in this gate. |
+| Initial rows | Migration `20261027150000_AddMasterDomainModels` inserts 18 records with IDs `qt-1` through `qt-18`, canonical keys, names, descriptions, categories, initial scoring labels, and display orders 1-18. These rows were verified against the isolated PostgreSQL database using the Gate B integration test. |
 | Key uniqueness | Migration 0002 already creates unique index `IX_QuestionTypeDefinitions_Key`. The EF model and model snapshot now declare the same unique index. `Questions.QuestionTypeKey` has an index but no foreign key to the catalogue. |
 | Capability migration | Migration `20261102060000_AddQuestionTypeCapabilityAndStatus` adds the capability bitmask and status columns. It lacked EF discovery attributes; those attributes are now present. No data migration was added or executed. |
 | Runtime initialization | `CatalogSeeder.SeedAsync` invokes `QuestionTypeCatalogueSeeder`. It uses the registry for missing-row defaults, transactionally adds missing keys, and reconciles only code-owned capability/status fields. |

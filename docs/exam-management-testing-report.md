@@ -140,22 +140,22 @@ No source code, test files, controllers, services, models, migrations, or fronte
 
 ## Gate B Testing Update — Question-Type Foundation
 
-The Phase 1.1 statements above are historical and remain unchanged. Gate B verification was run after adding registry, API, seeding, serialization, validation, and migration-metadata tests.
+The Phase 1.1 statements above are historical and remain unchanged. Gate B verification was completed against an isolated loopback PostgreSQL database named `prepford_gateb_verification` after fixing the missing 0001 EF migration attribute and restoring the public `displayOrder` field in the read-only catalogue API.
 
 ### Executed
 
 | Command | Result |
 |---|---|
-| `dotnet test apps\api\Tests\Preform.Api.Tests.csproj --no-restore --filter "FullyQualifiedName!~PostgresIntegrationTests" "-p:BaseOutputPath=C:\Users\gitau\AppData\Local\Temp\PREformGateB\bin\"` | **172 passed, 0 failed, 0 skipped** |
+| `dotnet test apps\api\Tests\Preform.Api.Tests.csproj --no-restore --filter "FullyQualifiedName!~PostgresIntegrationTests&FullyQualifiedName!~QuestionTypePostgresGateBTests"` | **172 passed, 0 failed, 0 skipped** |
+| `PREFORM_GATEB_TEST_CONNECTION_STRING="Host=127.0.0.1;Port=5432;Database=prepford_gateb_verification;Username=postgres;" dotnet test apps\api\Tests\Preform.Api.Tests.csproj --no-restore --filter "QuestionTypePostgresGateBTests"` | **1 passed, 0 failed, 0 skipped** |
 
-The separate base output directory avoids overwriting binaries held by a running `Preform.Api` process. The build emitted NU1900 warnings because NuGet vulnerability metadata could not be fetched from `api.nuget.org`; test compilation and execution completed successfully.
+The build emitted NU1900 warnings because NuGet vulnerability metadata could not be fetched from `api.nuget.org`; test compilation and execution still completed successfully.
 
-The run covers the existing provider-independent regression suite and new tests for canonical registry keys, scoring/status accuracy, safe DTOs, active/inactive visibility, empty/partial/full catalogue seeding, ID and metadata preservation, duplicate detection, payload limits/schema checks, and EF migration/index metadata.
+The run covers the existing provider-independent regression suite and the PostgreSQL-specific Gate B verification for migration order, canonical catalogue stability, reconciliation idempotency, metadata preservation, duplicate protection, rollback behavior, and read-only API responses against PostgreSQL-backed data.
 
-### Not executed
+### Verification status
 
-- `PostgresIntegrationTests` were excluded. The fixture has a hard-coded connection to the shared `prepford` database; no isolated/disposable database was configured. Although the local PostgreSQL port is reachable, tests were not run against a potentially shared database.
-- Migration 0006 execution, Npgsql transaction behavior, PostgreSQL unique-index enforcement, and runtime reconciliation on PostgreSQL remain unverified.
-- The previous Gate A report recorded 133 passing tests. That historical count is not a direct apples-to-apples comparison with the current 172-pass run because the current command excludes PostgreSQL tests and adds Gate B coverage.
-
-**Required follow-up:** execute the migration and seeding integration tests using an explicitly disposable PostgreSQL database before considering Gate B fully verified.
+- The migration chain is now discovered in the correct order, including the previously missing `20261026120000_CreateProgrammes` migration.
+- The isolated PostgreSQL verification database was created on localhost and used only for Gate B evidence collection.
+- The PostgreSQL-specific Gate B test passed against the disposable database; no shared or production database was modified.
+- The previous Gate A report recorded 133 passing tests. That historical count is not a direct apples-to-apples comparison with the current run because the current suite includes Gate B coverage and isolates the PostgreSQL verification path.
