@@ -24,6 +24,7 @@ builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
 builder.Services.AddScoped<ICheckoutService, CheckoutService>();
 builder.Services.AddScoped<IProgrammeService, ProgrammeService>();
 builder.Services.AddScoped<IProfileImageService, ProfileImageService>();
+builder.Services.AddScoped<IQuestionTypeService, QuestionTypeService>();
 builder.Services.AddScoped<IAdminBootstrapService, AdminBootstrapService>();
 // AI Study Studio (Phase 1): server-authoritative spaced repetition scheduling
 builder.Services.AddScoped<ISpacedRepetitionService, SpacedRepetitionService>();

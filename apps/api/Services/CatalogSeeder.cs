@@ -50,7 +50,10 @@ public static class CatalogSeeder
             await context.SaveChangesAsync(cancellationToken);
         }
 
-        // 3. Seed Canonical 12 Subscription Plans
+        // 3. Seed Question-Type Catalogue (idempotent upsert by Key)
+        await SeedQuestionTypesAsync(context, logger, cancellationToken);
+
+        // 4. Seed Canonical 12 Subscription Plans
         if (!await context.SubscriptionPlans.AnyAsync(cancellationToken))
         {
             logger.LogInformation("Seeding canonical PrepFord subscription plans catalogue...");
@@ -430,5 +433,309 @@ public static class CatalogSeeder
             context.SubscriptionPlans.AddRange(canonicalPlans);
             await context.SaveChangesAsync(cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Idempotently seeds or updates question-type definitions by canonical Key.
+    /// Migration 0002 already creates the table and seeds base rows; this method
+    /// ensures CapabilityFlags, ImplementationStatus, and other metadata are present
+    /// and inserts any types missing from the database.
+    /// </summary>
+    private static async Task SeedQuestionTypesAsync(
+        AppDbContext context,
+        ILogger logger,
+        CancellationToken cancellationToken = default)
+    {
+        var definitions = QuestionTypeCatalogue();
+        var changed = false;
+
+        foreach (var definition in definitions)
+        {
+            var existing = await context.QuestionTypeDefinitions
+                .FirstOrDefaultAsync(q => q.Key == definition.Key, cancellationToken);
+
+            if (existing == null)
+            {
+                context.QuestionTypeDefinitions.Add(definition);
+                changed = true;
+                continue;
+            }
+
+            bool needsUpdate = false;
+
+            if (existing.CapabilityFlags != definition.CapabilityFlags)
+            {
+                existing.CapabilityFlags = definition.CapabilityFlags;
+                needsUpdate = true;
+            }
+
+            if (existing.ImplementationStatus != definition.ImplementationStatus)
+            {
+                existing.ImplementationStatus = definition.ImplementationStatus;
+                needsUpdate = true;
+            }
+
+            if (existing.IsActive != definition.IsActive)
+            {
+                existing.IsActive = definition.IsActive;
+                needsUpdate = true;
+            }
+
+            if (existing.DisplayOrder != definition.DisplayOrder)
+            {
+                existing.DisplayOrder = definition.DisplayOrder;
+                needsUpdate = true;
+            }
+
+            if (existing.Category != definition.Category)
+            {
+                existing.Category = definition.Category;
+                needsUpdate = true;
+            }
+
+            if (existing.SupportedScoring != definition.SupportedScoring)
+            {
+                existing.SupportedScoring = definition.SupportedScoring;
+                needsUpdate = true;
+            }
+
+            if (needsUpdate)
+            {
+                changed = true;
+            }
+        }
+
+        if (changed)
+        {
+            logger.LogInformation("Updating question-type catalogue metadata...");
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        else
+        {
+            logger.LogDebug("Question-type catalogue is already up to date.");
+        }
+    }
+
+    private static List<QuestionTypeDefinition> QuestionTypeCatalogue()
+    {
+        return new List<QuestionTypeDefinition>
+        {
+            new()
+            {
+                Key = "single-choice",
+                Name = "Single Choice",
+                Description = "Standard single-answer multiple-choice question.",
+                Category = "Traditional",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions),
+                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
+                IsActive = true,
+                DisplayOrder = 1,
+            },
+            new()
+            {
+                Key = "multiple-choice",
+                Name = "Multiple Choice",
+                Description = "Multiple-choice item with single or multiple keys.",
+                Category = "Traditional",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions),
+                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
+                IsActive = true,
+                DisplayOrder = 2,
+            },
+            new()
+            {
+                Key = "sata",
+                Name = "Select All That Apply (SATA)",
+                Description = "Multi-select clinical prioritization question.",
+                Category = "Traditional",
+                SupportedScoring = "PartialCredit",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsMultipleCorrectAnswers | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.SupportsRandomizedOptions),
+                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
+                IsActive = true,
+                DisplayOrder = 3,
+            },
+            new()
+            {
+                Key = "checkbox",
+                Name = "Checkbox Response",
+                Description = "Form-based checkbox response interaction.",
+                Category = "Traditional",
+                SupportedScoring = "PartialCredit",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.SupportsRandomizedOptions),
+                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
+                IsActive = true,
+                DisplayOrder = 4,
+            },
+            new()
+            {
+                Key = "image-based",
+                Name = "Image-Based Question",
+                Description = "Clinical scenario with diagnostic radiograph or photo exhibit.",
+                Category = "Clinical",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMedia | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions),
+                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
+                IsActive = true,
+                DisplayOrder = 5,
+            },
+            new()
+            {
+                Key = "multiple-image",
+                Name = "Multiple-Image Item",
+                Description = "Comparative visual exhibits for diagnostic identification.",
+                Category = "Clinical",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMedia | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions),
+                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
+                IsActive = true,
+                DisplayOrder = 6,
+            },
+            new()
+            {
+                Key = "drag-drop",
+                Name = "Drag-and-Drop",
+                Description = "Interactive clinical priority classification.",
+                Category = "NGN",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 7,
+            },
+            new()
+            {
+                Key = "ordering",
+                Name = "Ordering / Sequencing",
+                Description = "Step-by-step procedural or nursing intervention order.",
+                Category = "NGN",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 8,
+            },
+            new()
+            {
+                Key = "case-study",
+                Name = "NGN Case Study",
+                Description = "Multi-part clinical unfolding case study with EHR tabs.",
+                Category = "NGN",
+                SupportedScoring = "PartialCredit",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsClinicalScenarios | QuestionTypeCapability.SupportsExhibits | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.SupportsManualGrading | QuestionTypeCapability.RequiresSpecializedRenderer),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 9,
+            },
+            new()
+            {
+                Key = "essay",
+                Name = "Extended Response / Essay",
+                Description = "Clinical reasoning reflection requiring instructor review.",
+                Category = "Traditional",
+                SupportedScoring = "ManualReview",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsManualGrading | QuestionTypeCapability.RequiresSpecializedRenderer),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 10,
+            },
+            new()
+            {
+                Key = "matching",
+                Name = "Matching",
+                Description = "Paired concept-to-intervention clinical matching.",
+                Category = "Traditional",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 11,
+            },
+            new()
+            {
+                Key = "fill-blank",
+                Name = "Fill-in-the-Blank",
+                Description = "Direct textual entry for clinical terms or dosage.",
+                Category = "Traditional",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedInput),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 12,
+            },
+            new()
+            {
+                Key = "matrix",
+                Name = "Matrix / Grid Response",
+                Description = "Tabular multiple-response clinical evaluation matrix.",
+                Category = "NGN",
+                SupportedScoring = "PartialCredit",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 13,
+            },
+            new()
+            {
+                Key = "numeric",
+                Name = "Numeric Response",
+                Description = "Dosage calculation and clinical measurement entry.",
+                Category = "Traditional",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedInput),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 14,
+            },
+            new()
+            {
+                Key = "true-false",
+                Name = "True / False",
+                Description = "Binary clinical fact and safety validation.",
+                Category = "Traditional",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions),
+                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
+                IsActive = true,
+                DisplayOrder = 15,
+            },
+            new()
+            {
+                Key = "tabular",
+                Name = "Tabular Response",
+                Description = "Data table evaluation for clinical interventions.",
+                Category = "NGN",
+                SupportedScoring = "PartialCredit",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 16,
+            },
+            new()
+            {
+                Key = "short-answer",
+                Name = "Short-Answer Response",
+                Description = "Concise clinical assessment entry.",
+                Category = "Traditional",
+                SupportedScoring = "ManualReview",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsManualGrading | QuestionTypeCapability.RequiresSpecializedInput),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 17,
+            },
+            new()
+            {
+                Key = "dynamic-lab",
+                Name = "Dynamic Lab Value Response",
+                Description = "Interactive laboratory value and trend analysis.",
+                Category = "NGN",
+                SupportedScoring = "ExactMatch",
+                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer),
+                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
+                IsActive = true,
+                DisplayOrder = 18,
+            },
+        };
     }
 }

@@ -20,6 +20,80 @@ public enum QuestionStatus
     Archived = 4
 }
 
+/// <summary>
+/// Bitmask capabilities describing what a question type can do and how it is handled.
+/// These are technical capabilities, not clinical validity claims.
+/// </summary>
+[Flags]
+public enum QuestionTypeCapability : int
+{
+    None = 0,
+
+    /// <summary>Answer is expressed as one or more option keys.</summary>
+    SupportsOptions = 1 << 0,
+
+    /// <summary>More than one option may be selected.</summary>
+    SupportsMultipleSelections = 1 << 1,
+
+    /// <summary>Question references media assets (images, audio, video).</summary>
+    SupportsMedia = 1 << 2,
+
+    /// <summary>Question includes a clinical scenario vignette.</summary>
+    SupportsClinicalScenarios = 1 << 3,
+
+    /// <summary>Question includes exhibit data (labs, vitals, provider notes).</summary>
+    SupportsExhibits = 1 << 4,
+
+    /// <summary>Response payload is structured JSON, not just option indices.</summary>
+    SupportsStructuredResponse = 1 << 5,
+
+    /// <summary>Backend can automatically determine correctness.</summary>
+    SupportsAutomaticGrading = 1 << 6,
+
+    /// <summary>Requires human/manual review for scoring.</summary>
+    SupportsManualGrading = 1 << 7,
+
+    /// <summary>Supports partial credit scoring.</summary>
+    SupportsPartialCredit = 1 << 8,
+
+    /// <summary>More than one option can be correct.</summary>
+    SupportsMultipleCorrectAnswers = 1 << 9,
+
+    /// <summary>Option order may be randomized per delivery.</summary>
+    SupportsRandomizedOptions = 1 << 10,
+
+    /// <summary>Requires a specialized frontend renderer component.</summary>
+    RequiresSpecializedRenderer = 1 << 11,
+
+    /// <summary>Requires a specialized frontend answer-input component.</summary>
+    RequiresSpecializedInput = 1 << 12,
+}
+
+/// <summary>
+/// Implementation maturity status for a question type.
+/// A type is not "fully supported" simply because it has a database record.
+/// </summary>
+public enum QuestionTypeStatus
+{
+    /// <summary>Defined in the catalogue only. No backend contract or behavior.</summary>
+    Catalogued = 0,
+
+    /// <summary>Request/response contract is defined.</summary>
+    ContractDefined = 1,
+
+    /// <summary>Can be authored and managed in the question bank.</summary>
+    AuthoringSupported = 2,
+
+    /// <summary>Can be delivered to candidates and answered.</summary>
+    DeliverySupported = 3,
+
+    /// <summary>Backend can automatically grade responses.</summary>
+    GradingSupported = 4,
+
+    /// <summary>All capabilities implemented and tested.</summary>
+    FullySupported = 5,
+}
+
 [Table("QuestionTypeDefinitions", Schema = "public")]
 public class QuestionTypeDefinition
 {
@@ -28,7 +102,7 @@ public class QuestionTypeDefinition
 
     [Required]
     [MaxLength(64)]
-    public string Key { get; set; } = string.Empty; // e.g. "single-choice", "sata", "drag-drop", etc.
+    public string Key { get; set; } = string.Empty;
 
     [Required]
     [MaxLength(128)]
@@ -38,10 +112,22 @@ public class QuestionTypeDefinition
     public string Description { get; set; } = string.Empty;
 
     [MaxLength(64)]
-    public string Category { get; set; } = "Traditional"; // "Traditional", "NGN", "Clinical"
+    public string Category { get; set; } = "Traditional";
 
     [MaxLength(64)]
-    public string SupportedScoring { get; set; } = "ExactMatch"; // "ExactMatch", "PartialCredit", "ManualReview"
+    public string SupportedScoring { get; set; } = "ExactMatch";
+
+    /// <summary>
+    /// Bitmask of technical capabilities for this question type.
+    /// </summary>
+    public int CapabilityFlags { get; set; } = (int)QuestionTypeCapability.None;
+
+    /// <summary>
+    /// Implementation maturity status. Not automatically upgraded to FullySupported
+    /// by seeding — requires implementation and test evidence.
+    /// </summary>
+    [MaxLength(32)]
+    public string ImplementationStatus { get; set; } = nameof(QuestionTypeStatus.Catalogued);
 
     public bool IsActive { get; set; } = true;
     public int DisplayOrder { get; set; } = 0;
