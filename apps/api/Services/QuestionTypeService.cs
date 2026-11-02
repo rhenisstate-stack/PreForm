@@ -115,7 +115,8 @@ public sealed class QuestionTypeService : IQuestionTypeService
             Name = definition.Name,
             Description = definition.Description,
             Category = definition.Category,
-            SupportedScoring = ScoringLabel(descriptor),
+            DisplayOrder = definition.DisplayOrder,
+            SupportedScoring = definition.SupportedScoring,
             SupportedScoringModes = descriptor.SupportedScoringModes
                 .Select(ToScoringModeKey)
                 .ToList(),

@@ -18,6 +18,8 @@ public sealed class QuestionTypeDto
     [MaxLength(64)]
     public string Category { get; set; } = string.Empty;
 
+    public int DisplayOrder { get; set; }
+
     public string SupportedScoring { get; set; } = "NotImplemented";
 
     public List<string> SupportedScoringModes { get; set; } = new();

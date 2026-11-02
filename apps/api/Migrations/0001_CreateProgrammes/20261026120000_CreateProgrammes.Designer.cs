@@ -10,6 +10,7 @@ using Preform.Api.Models;
 namespace Preform.Api.Migrations;
 
 [DbContext(typeof(AppDbContext))]
+[Migration("20261026120000_CreateProgrammes")]
 partial class CreateProgrammes : Migration
 {
     // This partial class is required by EF Core tooling conventions.
