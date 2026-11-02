@@ -310,7 +310,13 @@ public class ExamAttemptsController : ControllerBase
 
         if (!validation.Valid)
         {
-            return BadRequest(new { success = false, error = validation.Error });
+            var error = validation.Error ?? "Validation failed.";
+            var status = error switch
+            {
+                var e when e.Contains("not found", StringComparison.OrdinalIgnoreCase) => StatusCodes.Status404NotFound,
+                _ => StatusCodes.Status400BadRequest,
+            };
+            return StatusCode(status, new { success = false, error = error });
         }
 
         var grading = validation.Grading!;

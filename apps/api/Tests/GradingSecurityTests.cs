@@ -131,6 +131,7 @@ public class GradingSecurityTests : IClassFixture<WebApplicationFactory<Program>
             TimeSpentSeconds = 30,
         });
 
+        var errorBody = await response.Content.ReadAsStringAsync();
         response.EnsureSuccessStatusCode();
 
         var attempt = await context.ExamAttempts

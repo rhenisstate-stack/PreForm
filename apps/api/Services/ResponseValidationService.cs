@@ -85,7 +85,6 @@ public class ResponseValidationService : IResponseValidationService
         }
 
         var question = await _context.Questions
-            .Include(q => q.Options)
             .FirstOrDefaultAsync(q => q.Id == questionId, cancellationToken);
 
         if (question == null)
@@ -105,7 +104,11 @@ public class ResponseValidationService : IResponseValidationService
             };
         }
 
-        var optionInfos = question.Options
+        var options = await _context.QuestionOptions
+            .Where(qo => qo.QuestionId == questionId)
+            .ToListAsync(cancellationToken);
+
+        var optionInfos = options
             .Select(o => new QuestionOptionGradingInfo
             {
                 OptionKey = o.OptionKey,
