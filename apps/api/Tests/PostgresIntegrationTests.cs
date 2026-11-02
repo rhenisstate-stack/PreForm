@@ -10,6 +10,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 using Preform.Api.Data;
 using Preform.Api.DTOs;
 using Preform.Api.Models;
@@ -20,7 +21,33 @@ namespace Preform.Api.Tests;
 
 public class PostgresTestFixture : WebApplicationFactory<Program>
 {
-    public const string ConnectionString = "Host=localhost;Port=5432;Database=prepford;Username=postgres;Password=postgres";
+    private const string RequiredDatabaseName = "prepford_gateb_verification";
+    private const string ConnectionStringEnvironmentVariable = "PREFORM_GATEB_TEST_CONNECTION_STRING";
+
+    public static string ConnectionString
+    {
+        get
+        {
+            var configured = Environment.GetEnvironmentVariable(ConnectionStringEnvironmentVariable);
+            if (string.IsNullOrWhiteSpace(configured))
+            {
+                throw new InvalidOperationException(
+                    $"Set {ConnectionStringEnvironmentVariable} to an isolated loopback PostgreSQL database named {RequiredDatabaseName}.");
+            }
+
+            var connectionString = new NpgsqlConnectionStringBuilder(configured);
+            if (!IPAddress.TryParse(connectionString.Host, out var address)
+                || !IPAddress.IsLoopback(address)
+                || !string.Equals(connectionString.Database, RequiredDatabaseName, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"PostgreSQL integration tests only accept a loopback connection to the isolated {RequiredDatabaseName} database.");
+            }
+
+            return connectionString.ConnectionString;
+        }
+    }
+
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -44,7 +71,7 @@ public class PostgresTestFixture : WebApplicationFactory<Program>
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<PostgresTestFixture>>();
 
-        await context.Database.EnsureCreatedAsync();
+        await context.Database.MigrateAsync();
         await CatalogSeeder.SeedAsync(context, logger);
     }
 
@@ -70,6 +97,7 @@ public class PostgresTestFixture : WebApplicationFactory<Program>
     }
 }
 
+[Collection("PostgreSQL integration tests")]
 public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
 {
     private readonly PostgresTestFixture _factory;
