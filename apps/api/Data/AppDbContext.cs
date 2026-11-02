@@ -228,6 +228,11 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.Restrict);
         });
 
+        modelBuilder.Entity<QuestionTypeDefinition>(entity =>
+        {
+            entity.HasIndex(questionType => questionType.Key).IsUnique();
+        });
+
         modelBuilder.Entity<QuestionOption>(entity =>
         {
             entity.HasIndex(qo => qo.QuestionId);

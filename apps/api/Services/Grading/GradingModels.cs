@@ -196,19 +196,12 @@ public class QuestionGraderResolver : IQuestionGraderResolver
 {
     private readonly Dictionary<string, IQuestionGrader> _graders = new(StringComparer.OrdinalIgnoreCase);
 
-    public QuestionGraderResolver()
+    public QuestionGraderResolver(IQuestionTypeRegistry questionTypeRegistry)
     {
-        // Register graders for option-based types that support automatic grading.
-        // Types not listed here do not have automatic grading support in P2.
-        var optionBasedKeys = new[]
+        foreach (var descriptor in questionTypeRegistry.All.Where(
+            item => item.GradingStrategy == QuestionTypeGradingStrategy.OptionExactMatch))
         {
-            "single-choice", "multiple-choice", "sata", "checkbox",
-            "image-based", "multiple-image", "true-false"
-        };
-
-        foreach (var key in optionBasedKeys)
-        {
-            _graders[key] = new OptionBasedQuestionGrader(key);
+            _graders[descriptor.Key] = new OptionBasedQuestionGrader(descriptor.Key);
         }
     }
 

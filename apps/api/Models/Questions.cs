@@ -39,7 +39,9 @@ public enum QuestionTypeCapability : int
     SupportsMedia = 1 << 2,
 
     /// <summary>Question includes a clinical scenario vignette.</summary>
-    SupportsClinicalScenarios = 1 << 3,
+    SupportsClinicalScenario = 1 << 3,
+
+    SupportsClinicalScenarios = SupportsClinicalScenario,
 
     /// <summary>Question includes exhibit data (labs, vitals, provider notes).</summary>
     SupportsExhibits = 1 << 4,
@@ -67,6 +69,9 @@ public enum QuestionTypeCapability : int
 
     /// <summary>Requires a specialized frontend answer-input component.</summary>
     RequiresSpecializedInput = 1 << 12,
+
+    /// <summary>Requires type-specific validation beyond the existing option response contract.</summary>
+    RequiresSpecializedResponseValidator = 1 << 13,
 }
 
 /// <summary>
@@ -92,6 +97,14 @@ public enum QuestionTypeStatus
 
     /// <summary>All capabilities implemented and tested.</summary>
     FullySupported = 5,
+}
+
+public enum QuestionScoringMode
+{
+    AutomaticExactMatch,
+    AutomaticPartialCredit,
+    Manual,
+    NotImplemented,
 }
 
 [Table("QuestionTypeDefinitions", Schema = "public")]

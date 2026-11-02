@@ -815,6 +815,9 @@ namespace Preform.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("Key")
+                        .IsUnique();
+
                     b.ToTable("QuestionTypeDefinitions", "public");
                 });
 

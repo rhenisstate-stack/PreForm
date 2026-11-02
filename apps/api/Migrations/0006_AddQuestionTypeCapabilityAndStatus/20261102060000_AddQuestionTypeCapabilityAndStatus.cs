@@ -1,10 +1,14 @@
 using System;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Preform.Api.Data;
 
 #nullable disable
 
 namespace Preform.Api.Migrations._0006_AddQuestionTypeCapabilityAndStatus
 {
+    [DbContext(typeof(AppDbContext))]
+    [Migration("20261102060000_AddQuestionTypeCapabilityAndStatus")]
     /// <inheritdoc />
     public partial class AddQuestionTypeCapabilityAndStatus : Migration
     {

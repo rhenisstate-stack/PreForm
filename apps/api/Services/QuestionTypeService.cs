@@ -5,417 +5,166 @@ using Preform.Api.Models;
 
 namespace Preform.Api.Services;
 
-/// <summary>
-/// Read-only service for the authoritative question-type catalogue.
-/// Does not expose answer keys, scoring secrets, or private authoring metadata.
-/// </summary>
 public interface IQuestionTypeService
 {
     Task<List<QuestionTypeDto>> GetAllQuestionTypesAsync(CancellationToken cancellationToken = default);
     Task<QuestionTypeDto?> GetQuestionTypeByKeyAsync(string key, CancellationToken cancellationToken = default);
     Task<ValidateQuestionTypeResponse> ValidateQuestionTypeKeyAsync(string key, CancellationToken cancellationToken = default);
-    Task<bool> EnsureCatalogueSeededAsync(CancellationToken cancellationToken = default);
 }
 
-public class QuestionTypeService : IQuestionTypeService
+public sealed class QuestionTypeService : IQuestionTypeService
 {
     private readonly AppDbContext _context;
+    private readonly IQuestionTypeRegistry _registry;
 
-    public QuestionTypeService(AppDbContext context)
+    public QuestionTypeService(AppDbContext context, IQuestionTypeRegistry registry)
     {
         _context = context;
+        _registry = registry;
     }
 
-    public async Task<List<QuestionTypeDto>> GetAllQuestionTypesAsync(CancellationToken cancellationToken = default)
+    public async Task<List<QuestionTypeDto>> GetAllQuestionTypesAsync(
+        CancellationToken cancellationToken = default)
     {
-        return await _context.QuestionTypeDefinitions
-            .Where(q => q.IsActive)
-            .OrderBy(q => q.DisplayOrder)
-            .Select(q => new QuestionTypeDto
-            {
-                Id = q.Id,
-                Key = q.Key,
-                Name = q.Name,
-                Description = q.Description,
-                Category = q.Category,
-                SupportedScoring = q.SupportedScoring,
-                CapabilityFlags = q.CapabilityFlags,
-                Capabilities = CapabilityFlagsToNames(q.CapabilityFlags),
-                ImplementationStatus = q.ImplementationStatus,
-                IsActive = q.IsActive,
-                DisplayOrder = q.DisplayOrder,
-            })
+        var records = await _context.QuestionTypeDefinitions
+            .Where(definition => definition.IsActive)
+            .OrderBy(definition => definition.DisplayOrder)
+            .ThenBy(definition => definition.Key)
             .ToListAsync(cancellationToken);
+
+        return records
+            .Where(definition => _registry.TryGet(definition.Key, out _))
+            .Select(ToDto)
+            .ToList();
     }
 
-    public async Task<QuestionTypeDto?> GetQuestionTypeByKeyAsync(string key, CancellationToken cancellationToken = default)
+    public async Task<QuestionTypeDto?> GetQuestionTypeByKeyAsync(
+        string key,
+        CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(key)) return null;
-
-        var q = await _context.QuestionTypeDefinitions
-            .Where(q => q.IsActive && q.Key == key.Trim())
-            .Select(q => new QuestionTypeDto
-            {
-                Id = q.Id,
-                Key = q.Key,
-                Name = q.Name,
-                Description = q.Description,
-                Category = q.Category,
-                SupportedScoring = q.SupportedScoring,
-                CapabilityFlags = q.CapabilityFlags,
-                Capabilities = CapabilityFlagsToNames(q.CapabilityFlags),
-                ImplementationStatus = q.ImplementationStatus,
-                IsActive = q.IsActive,
-                DisplayOrder = q.DisplayOrder,
-            })
-            .FirstOrDefaultAsync(cancellationToken);
-
-        return q;
-    }
-
-    public async Task<ValidateQuestionTypeResponse> ValidateQuestionTypeKeyAsync(string key, CancellationToken cancellationToken = default)
-    {
-        var response = new ValidateQuestionTypeResponse { Valid = false };
-
-        if (string.IsNullOrWhiteSpace(key))
+        if (!_registry.TryGet(key, out _))
         {
-            response.Error = "Question-type key is required.";
-            return response;
+            return null;
         }
 
         var normalizedKey = key.Trim();
-        var q = await _context.QuestionTypeDefinitions
-            .Where(q => q.Key == normalizedKey)
-            .FirstOrDefaultAsync(cancellationToken);
+        var definition = await _context.QuestionTypeDefinitions
+            .FirstOrDefaultAsync(
+                item => item.Key == normalizedKey && item.IsActive,
+                cancellationToken);
 
-        if (q == null)
-        {
-            response.Error = $"Unknown question-type key '{normalizedKey}'.";
-            return response;
-        }
-
-        response.Valid = true;
-        response.IsActive = q.IsActive;
-        response.Key = q.Key;
-
-        if (!q.IsActive)
-        {
-            response.Error = $"Question-type key '{normalizedKey}' is inactive.";
-        }
-
-        return response;
+        return definition is null ? null : ToDto(definition);
     }
 
-    public async Task<bool> EnsureCatalogueSeededAsync(CancellationToken cancellationToken = default)
+    public async Task<ValidateQuestionTypeResponse> ValidateQuestionTypeKeyAsync(
+        string key,
+        CancellationToken cancellationToken = default)
     {
-        var types = CatalogueDefinitions();
-        var changed = false;
-
-        foreach (var definition in types)
+        if (!_registry.TryGet(key, out var descriptor))
         {
-            var existing = await _context.QuestionTypeDefinitions
-                .FirstOrDefaultAsync(q => q.Key == definition.Key, cancellationToken);
-
-            if (existing == null)
+            return new ValidateQuestionTypeResponse
             {
-                _context.QuestionTypeDefinitions.Add(definition);
-                changed = true;
-            }
-            else
-            {
-                // Update capability/status metadata if it differs (non-destructive for Name/Description).
-                // Only overwrite metadata fields, never overwrite administrator-managed content.
-                bool needsUpdate = false;
-
-                if (existing.CapabilityFlags != definition.CapabilityFlags)
-                {
-                    existing.CapabilityFlags = definition.CapabilityFlags;
-                    needsUpdate = true;
-                }
-
-                if (existing.ImplementationStatus != definition.ImplementationStatus)
-                {
-                    existing.ImplementationStatus = definition.ImplementationStatus;
-                    needsUpdate = true;
-                }
-
-                if (existing.IsActive != definition.IsActive)
-                {
-                    existing.IsActive = definition.IsActive;
-                    needsUpdate = true;
-                }
-
-                if (existing.DisplayOrder != definition.DisplayOrder)
-                {
-                    existing.DisplayOrder = definition.DisplayOrder;
-                    needsUpdate = true;
-                }
-
-                if (existing.Category != definition.Category)
-                {
-                    existing.Category = definition.Category;
-                    needsUpdate = true;
-                }
-
-                if (existing.SupportedScoring != definition.SupportedScoring)
-                {
-                    existing.SupportedScoring = definition.SupportedScoring;
-                    needsUpdate = true;
-                }
-
-                if (needsUpdate)
-                {
-                    changed = true;
-                }
-            }
+                Valid = false,
+                Error = "Question type is unknown or unavailable.",
+            };
         }
 
-        if (changed)
-        {
-            await _context.SaveChangesAsync(cancellationToken);
-        }
+        var normalizedKey = descriptor.Key;
+        var isActive = await _context.QuestionTypeDefinitions
+            .AnyAsync(item => item.Key == normalizedKey && item.IsActive, cancellationToken);
 
-        return true;
+        return isActive
+            ? new ValidateQuestionTypeResponse
+            {
+                Valid = true,
+                IsActive = true,
+                Key = descriptor.Key,
+            }
+            : new ValidateQuestionTypeResponse
+            {
+                Valid = false,
+                IsActive = false,
+                Error = "Question type is unknown or unavailable.",
+            };
     }
 
-    private static List<string> CapabilityFlagsToNames(int flags)
+    private QuestionTypeDto ToDto(QuestionTypeDefinition definition)
     {
-        var names = new List<string>();
-        foreach (QuestionTypeCapability capability in Enum.GetValues(typeof(QuestionTypeCapability)))
+        if (!_registry.TryGet(definition.Key, out var descriptor))
         {
-            if (capability == QuestionTypeCapability.None) continue;
-            if ((flags & (int)capability) != 0)
-            {
-                names.Add(capability.ToString());
-            }
+            throw new InvalidOperationException(
+                $"Question-type definition '{definition.Key}' is not registered.");
         }
-        return names;
+
+        return new QuestionTypeDto
+        {
+            Key = descriptor.Key,
+            Name = definition.Name,
+            Description = definition.Description,
+            Category = definition.Category,
+            SupportedScoring = LegacyScoringValue(descriptor),
+            SupportedScoringModes = descriptor.SupportedScoringModes
+                .Select(ToScoringModeKey)
+                .ToList(),
+            CapabilityFlags = (int)descriptor.Capabilities,
+            Capabilities = Enum.GetValues<QuestionTypeCapability>()
+                .Where(capability => capability != QuestionTypeCapability.None
+                    && (descriptor.Capabilities & capability) != 0
+                    && capability != QuestionTypeCapability.SupportsClinicalScenarios)
+                .Select(capability => capability.ToString())
+                .ToList(),
+            CapabilityDetails = ToCapabilityDto(descriptor.Capabilities),
+            ImplementationStatus = descriptor.ImplementationStatus.ToString(),
+            ContractVersion = descriptor.ContractVersion,
+            IsActive = definition.IsActive,
+            DisplayOrder = definition.DisplayOrder,
+        };
     }
 
-    /// <summary>
-    /// Authoritative catalogue definitions for all 18 question types.
-    /// Keys must match the frontend catalogue exactly and never change.
-    /// </summary>
-    private static List<QuestionTypeDefinition> CatalogueDefinitions()
+    private static QuestionTypeCapabilitiesDto ToCapabilityDto(QuestionTypeCapability capabilities)
     {
-        return new List<QuestionTypeDefinition>
+        bool Includes(QuestionTypeCapability capability) => (capabilities & capability) != 0;
+
+        return new QuestionTypeCapabilitiesDto
         {
-            new()
-            {
-                Key = "single-choice",
-                Name = "Single Choice",
-                Description = "Standard single-answer multiple-choice question.",
-                Category = "Traditional",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions),
-                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
-                IsActive = true,
-                DisplayOrder = 1,
-            },
-            new()
-            {
-                Key = "multiple-choice",
-                Name = "Multiple Choice",
-                Description = "Multiple-choice item with single or multiple keys.",
-                Category = "Traditional",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions),
-                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
-                IsActive = true,
-                DisplayOrder = 2,
-            },
-            new()
-            {
-                Key = "sata",
-                Name = "Select All That Apply (SATA)",
-                Description = "Multi-select clinical prioritization question.",
-                Category = "Traditional",
-                SupportedScoring = "PartialCredit",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsMultipleCorrectAnswers | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.SupportsRandomizedOptions),
-                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
-                IsActive = true,
-                DisplayOrder = 3,
-            },
-            new()
-            {
-                Key = "checkbox",
-                Name = "Checkbox Response",
-                Description = "Form-based checkbox response interaction.",
-                Category = "Traditional",
-                SupportedScoring = "PartialCredit",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.SupportsRandomizedOptions),
-                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
-                IsActive = true,
-                DisplayOrder = 4,
-            },
-            new()
-            {
-                Key = "image-based",
-                Name = "Image-Based Question",
-                Description = "Clinical scenario with diagnostic radiograph or photo exhibit.",
-                Category = "Clinical",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMedia | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions),
-                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
-                IsActive = true,
-                DisplayOrder = 5,
-            },
-            new()
-            {
-                Key = "multiple-image",
-                Name = "Multiple-Image Item",
-                Description = "Comparative visual exhibits for diagnostic identification.",
-                Category = "Clinical",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsMedia | QuestionTypeCapability.SupportsMultipleSelections | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions),
-                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
-                IsActive = true,
-                DisplayOrder = 6,
-            },
-            new()
-            {
-                Key = "drag-drop",
-                Name = "Drag-and-Drop",
-                Description = "Interactive clinical priority classification.",
-                Category = "NGN",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 7,
-            },
-            new()
-            {
-                Key = "ordering",
-                Name = "Ordering / Sequencing",
-                Description = "Step-by-step procedural or nursing intervention order.",
-                Category = "NGN",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 8,
-            },
-            new()
-            {
-                Key = "case-study",
-                Name = "NGN Case Study",
-                Description = "Multi-part clinical unfolding case study with EHR tabs.",
-                Category = "NGN",
-                SupportedScoring = "PartialCredit",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsClinicalScenarios | QuestionTypeCapability.SupportsExhibits | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.SupportsManualGrading | QuestionTypeCapability.RequiresSpecializedRenderer),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 9,
-            },
-            new()
-            {
-                Key = "essay",
-                Name = "Extended Response / Essay",
-                Description = "Clinical reasoning reflection requiring instructor review.",
-                Category = "Traditional",
-                SupportedScoring = "ManualReview",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsManualGrading | QuestionTypeCapability.RequiresSpecializedRenderer),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 10,
-            },
-            new()
-            {
-                Key = "matching",
-                Name = "Matching",
-                Description = "Paired concept-to-intervention clinical matching.",
-                Category = "Traditional",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 11,
-            },
-            new()
-            {
-                Key = "fill-blank",
-                Name = "Fill-in-the-Blank",
-                Description = "Direct textual entry for clinical terms or dosage.",
-                Category = "Traditional",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedInput),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 12,
-            },
-            new()
-            {
-                Key = "matrix",
-                Name = "Matrix / Grid Response",
-                Description = "Tabular multiple-response clinical evaluation matrix.",
-                Category = "NGN",
-                SupportedScoring = "PartialCredit",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 13,
-            },
-            new()
-            {
-                Key = "numeric",
-                Name = "Numeric Response",
-                Description = "Dosage calculation and clinical measurement entry.",
-                Category = "Traditional",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedInput),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 14,
-            },
-            new()
-            {
-                Key = "true-false",
-                Name = "True / False",
-                Description = "Binary clinical fact and safety validation.",
-                Category = "Traditional",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsRandomizedOptions),
-                ImplementationStatus = nameof(QuestionTypeStatus.DeliverySupported),
-                IsActive = true,
-                DisplayOrder = 15,
-            },
-            new()
-            {
-                Key = "tabular",
-                Name = "Tabular Response",
-                Description = "Data table evaluation for clinical interventions.",
-                Category = "NGN",
-                SupportedScoring = "PartialCredit",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit | QuestionTypeCapability.RequiresSpecializedRenderer | QuestionTypeCapability.RequiresSpecializedInput),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 16,
-            },
-            new()
-            {
-                Key = "short-answer",
-                Name = "Short-Answer Response",
-                Description = "Concise clinical assessment entry.",
-                Category = "Traditional",
-                SupportedScoring = "ManualReview",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsManualGrading | QuestionTypeCapability.RequiresSpecializedInput),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 17,
-            },
-            new()
-            {
-                Key = "dynamic-lab",
-                Name = "Dynamic Lab Value Response",
-                Description = "Interactive laboratory value and trend analysis.",
-                Category = "NGN",
-                SupportedScoring = "ExactMatch",
-                CapabilityFlags = (int)(QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.RequiresSpecializedRenderer),
-                ImplementationStatus = nameof(QuestionTypeStatus.Catalogued),
-                IsActive = true,
-                DisplayOrder = 18,
-            },
+            SupportsOptions = Includes(QuestionTypeCapability.SupportsOptions),
+            SupportsMultipleSelections = Includes(QuestionTypeCapability.SupportsMultipleSelections),
+            SupportsAuthoring = descriptor.SupportsAuthoring,
+            SupportsDelivery = descriptor.SupportsDelivery,
+            SupportsMedia = Includes(QuestionTypeCapability.SupportsMedia),
+            SupportsClinicalScenario = Includes(QuestionTypeCapability.SupportsClinicalScenario),
+            SupportsExhibits = Includes(QuestionTypeCapability.SupportsExhibits),
+            SupportsStructuredResponse = Includes(QuestionTypeCapability.SupportsStructuredResponse),
+            SupportsAutomaticGrading = Includes(QuestionTypeCapability.SupportsAutomaticGrading),
+            SupportsManualGrading = Includes(QuestionTypeCapability.SupportsManualGrading),
+            SupportsPartialCredit = Includes(QuestionTypeCapability.SupportsPartialCredit),
+            SupportsRandomization = Includes(QuestionTypeCapability.SupportsRandomizedOptions),
+            RequiresSpecializedRenderer = Includes(QuestionTypeCapability.RequiresSpecializedRenderer),
+            RequiresSpecializedResponseValidator =
+                Includes(QuestionTypeCapability.RequiresSpecializedResponseValidator),
+        };
+    }
+
+    private static string LegacyScoringValue(QuestionTypeDescriptor descriptor)
+    {
+        return descriptor.SupportedScoringModes.Single() switch
+        {
+            QuestionScoringMode.AutomaticExactMatch => "ExactMatch",
+            QuestionScoringMode.AutomaticPartialCredit => "PartialCredit",
+            QuestionScoringMode.Manual => "Manual",
+            _ => "NotImplemented",
+        };
+    }
+
+    private static string ToScoringModeKey(QuestionScoringMode mode)
+    {
+        return mode switch
+        {
+            QuestionScoringMode.AutomaticExactMatch => "automatic-exact-match",
+            QuestionScoringMode.AutomaticPartialCredit => "automatic-partial-credit",
+            QuestionScoringMode.Manual => "manual",
+            QuestionScoringMode.NotImplemented => "not-implemented",
+            _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, "Unknown question scoring mode."),
         };
     }
 }
