@@ -99,12 +99,16 @@ public class CandidateAttemptDetailDto
     public string Name { get; set; } = string.Empty;
     public string Type { get; set; } = "tutored_cat";
     public string Status { get; set; } = "InProgress";
-    /// <summary>Authoritative score, disclosed only after finalization.</summary>
+    /// <summary>Authoritative score, disclosed only after finalization. Omitted from the payload while in progress.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public decimal? ScorePercent { get; set; }
-    /// <summary>Pass/fail outcome, disclosed only after finalization.</summary>
+    /// <summary>Pass/fail outcome, disclosed only after finalization. Omitted from the payload while in progress.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? Passed { get; set; }
-    /// <summary>Performance tier, disclosed only after finalization.</summary>
+    /// <summary>Performance tier, disclosed only after finalization. Omitted from the payload while in progress.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? PerformanceTier { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public int? CorrectCount { get; set; }
     public int TotalResponses { get; set; }
     public int DurationMinutes { get; set; }
@@ -121,9 +125,11 @@ public class CandidateAttemptResponseDto
     public string SelectedOptionsJson { get; set; } = "[]";
     public int TimeSpentSeconds { get; set; }
     public DateTime AnsweredAt { get; set; }
-    /// <summary>Disclosed only after finalization; null while in progress.</summary>
+    /// <summary>Disclosed only after finalization; null (and omitted from the payload) while in progress.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsCorrect { get; set; }
-    /// <summary>Disclosed only after finalization; null while in progress.</summary>
+    /// <summary>Disclosed only after finalization; null (and omitted from the payload) while in progress.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public decimal? ScoreAwarded { get; set; }
 }
 
