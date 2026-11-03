@@ -1349,6 +1349,48 @@ public class ExamLifecycleService : IExamLifecycleService
         return true;
     }
 
+    public async Task<List<ExamQuestionMembershipDto>> GetEligibleQuestionsAsync(string? pathway, string? search, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (_, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin, RoleHierarchy.RoleReviewer }, "GetEligibleQuestions");
+
+        var query = _context.Questions
+            .Include(q => q.Options)
+            .Where(q => q.Status == QuestionStatus.Approved || q.Status == QuestionStatus.Published)
+            .AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(pathway))
+        {
+            var normalizedPathway = pathway.Trim().ToLowerInvariant();
+            query = query.Where(q => q.Pathway.ToLower() == normalizedPathway);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLowerInvariant();
+            query = query.Where(q => q.Stem.ToLower().Contains(term) || q.QuestionTypeKey.ToLower().Contains(term));
+        }
+
+        var questions = await query
+            .OrderByDescending(q => q.UpdatedAt)
+            .Take(50)
+            .ToListAsync(ct);
+
+        return questions.Select(q => new ExamQuestionMembershipDto
+        {
+            Id = q.Id,
+            ExamId = string.Empty,
+            QuestionId = q.Id,
+            DisplayOrder = 0,
+            Stem = q.Stem,
+            QuestionTypeKey = q.QuestionTypeKey,
+            Pathway = q.Pathway,
+            Difficulty = q.Difficulty.ToString(),
+            Status = q.Status.ToString(),
+            OptionCount = q.Options.Count
+        }).ToList();
+    }
+
     private static ExaminationDto MapToExaminationDto(Examination examination, List<Exam> revisions)
     {
         var revisionDtos = revisions.Select(r => MapToRevisionDto(r, examination.Code, r.ExamQuestions?.Count ?? 0)).ToList();

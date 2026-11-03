@@ -563,6 +563,21 @@ export const examinationsService = {
     );
   },
 
+  getEligibleQuestions: async (
+    pathway?: string,
+    search?: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; questions: BackendExamQuestionMembershipDto[] }>> => {
+    const params = new URLSearchParams();
+    if (pathway) params.set("pathway", pathway);
+    if (search) params.set("search", search);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get<{ success: boolean; questions: BackendExamQuestionMembershipDto[] }>(
+      `/api/v1/examinations/eligible-questions${qs}`,
+      { session }
+    );
+  },
+
   getExaminationById: async (
     id: string,
     session?: VerifiedSession | null

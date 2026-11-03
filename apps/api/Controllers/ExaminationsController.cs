@@ -38,6 +38,16 @@ public class ExaminationsController : ControllerBase
         return Ok(new { success = true, examinations });
     }
 
+    [HttpGet("eligible-questions")]
+    public async Task<IActionResult> GetEligibleQuestions([FromQuery] string? pathway, [FromQuery] string? search, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var questions = await _lifecycleService.GetEligibleQuestionsAsync(pathway, search, User, ct);
+            return Ok(new { success = true, questions });
+        });
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetExamination(string id, CancellationToken ct)
     {

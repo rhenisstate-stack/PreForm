@@ -30,4 +30,5 @@ public interface IExamLifecycleService
     Task<List<ExamQuestionMembershipDto>> ReorderQuestionsAsync(string revisionId, ReorderExamQuestionsRequest request, ClaimsPrincipal user, CancellationToken ct = default);
     Task<ExaminationDto> UpdateExaminationFamilyAsync(string examinationId, UpdateExaminationFamilyRequest request, ClaimsPrincipal user, CancellationToken ct = default);
     Task<bool> DiscardDraftRevisionAsync(string revisionId, long concurrencyToken, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<List<ExamQuestionMembershipDto>> GetEligibleQuestionsAsync(string? pathway, string? search, ClaimsPrincipal user, CancellationToken ct = default);
 }
