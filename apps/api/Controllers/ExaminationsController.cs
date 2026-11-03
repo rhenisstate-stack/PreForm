@@ -49,6 +49,16 @@ public class ExaminationsController : ControllerBase
         return Ok(new { success = true, examination });
     }
 
+    [HttpPatch("{id}")]
+    public async Task<IActionResult> UpdateExaminationFamily(string id, [FromBody] UpdateExaminationFamilyRequest request, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var examination = await _lifecycleService.UpdateExaminationFamilyAsync(id, request, User, ct);
+            return Ok(new { success = true, examination });
+        });
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateExamination([FromBody] CreateExaminationRequest request, CancellationToken ct)
     {
@@ -102,6 +112,76 @@ public class ExaminationsController : ControllerBase
             return NotFound(new { success = false, error = $"Exam revision '{revisionId}' not found or not accessible." });
         }
         return Ok(new { success = true, revision });
+    }
+
+    [HttpPut("revisions/{revisionId}")]
+    public async Task<IActionResult> UpdateRevisionMetadata(string revisionId, [FromBody] UpdateRevisionMetadataRequest request, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var revision = await _lifecycleService.UpdateRevisionMetadataAsync(revisionId, request, User, ct);
+            return Ok(new { success = true, revision });
+        });
+    }
+
+    [HttpGet("revisions/{revisionId}/validate")]
+    public async Task<IActionResult> ValidateRevision(string revisionId, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var result = await _lifecycleService.ValidateRevisionAsync(revisionId, User, ct);
+            return Ok(new { success = true, validation = result });
+        });
+    }
+
+    [HttpDelete("revisions/{revisionId}")]
+    public async Task<IActionResult> DiscardDraftRevision(string revisionId, [FromQuery] long concurrencyToken, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var discarded = await _lifecycleService.DiscardDraftRevisionAsync(revisionId, concurrencyToken, User, ct);
+            return Ok(new { success = true, discarded });
+        });
+    }
+
+    [HttpGet("revisions/{revisionId}/questions")]
+    public async Task<IActionResult> GetRevisionQuestions(string revisionId, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var questions = await _lifecycleService.GetRevisionQuestionsAsync(revisionId, User, ct);
+            return Ok(new { success = true, questions });
+        });
+    }
+
+    [HttpPost("revisions/{revisionId}/questions")]
+    public async Task<IActionResult> AddQuestionToRevision(string revisionId, [FromBody] AddExamQuestionRequest request, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var question = await _lifecycleService.AddQuestionToRevisionAsync(revisionId, request, User, ct);
+            return Ok(new { success = true, question });
+        });
+    }
+
+    [HttpDelete("revisions/{revisionId}/questions/{questionId}")]
+    public async Task<IActionResult> RemoveQuestionFromRevision(string revisionId, string questionId, [FromQuery] long concurrencyToken, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var removed = await _lifecycleService.RemoveQuestionFromRevisionAsync(revisionId, questionId, concurrencyToken, User, ct);
+            return Ok(new { success = true, removed });
+        });
+    }
+
+    [HttpPut("revisions/{revisionId}/questions/order")]
+    public async Task<IActionResult> ReorderQuestions(string revisionId, [FromBody] ReorderExamQuestionsRequest request, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var questions = await _lifecycleService.ReorderQuestionsAsync(revisionId, request, User, ct);
+            return Ok(new { success = true, questions });
+        });
     }
 
     [HttpPost("{id}/revisions")]
