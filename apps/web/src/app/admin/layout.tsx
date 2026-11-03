@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import { BRAND } from "@/lib/brand";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { BrandedLoading } from "@/components/layout/branded-loading";
 
 export const metadata: Metadata = {
   title: `Administration Workspace | ${BRAND.name}`,
@@ -18,7 +19,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Shared admin chrome: sidebar, breadcrumbs, search, theme/account controls.
           Auth display gates live inside AdminShell; every data operation is still
           authorized server-side by the API and BFF verifyAdminAuth(). */}
-      <AdminShell>{children}</AdminShell>
+      <Suspense fallback={<BrandedLoading message="Loading PrepFord Administration..." />}>
+        <AdminShell>{children}</AdminShell>
+      </Suspense>
     </div>
   );
 }

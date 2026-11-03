@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AdminExaminationsClient } from "./page-client";
+import { BrandedLoading } from "@/components/layout/branded-loading";
 
 export const metadata: Metadata = {
   title: "Examination Catalogue & Governance",
@@ -11,5 +13,9 @@ export const metadata: Metadata = {
 };
 
 export default function AdminExaminationsPage() {
-  return <AdminExaminationsClient />;
+  return (
+    <Suspense fallback={<BrandedLoading message="Loading examination catalogue..." fullScreen={false} />}>
+      <AdminExaminationsClient />
+    </Suspense>
+  );
 }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import { type ReactNode, Suspense } from "react";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
@@ -122,10 +122,14 @@ export default function RootLayout({
           }}
         />
         <Providers attribute="class" defaultTheme="light" enableSystem>
-          <AnnouncementBar announcements={null} isLoading={false} />
-          <PublicHeader />
+          <Suspense fallback={null}>
+            <AnnouncementBar announcements={null} isLoading={false} />
+            <PublicHeader />
+          </Suspense>
           <main className="min-h-screen">{children}</main>
-          <PublicFooter />
+          <Suspense fallback={null}>
+            <PublicFooter />
+          </Suspense>
           <Toaster position="bottom-right" richColors />
         </Providers>
       </body>
