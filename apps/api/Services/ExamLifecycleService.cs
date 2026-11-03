@@ -791,6 +791,187 @@ public class ExamLifecycleService : IExamLifecycleService
         return result;
     }
 
+    public async Task<ExaminationLibraryResponseDto> QueryExaminationsAsync(ExaminationQueryParameters parameters, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var role = RoleHierarchy.GetEffectiveRole(user);
+        var isRestrictedViewer = string.Equals(role, RoleHierarchy.RoleInstructor, StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(role, RoleHierarchy.RoleCandidate, StringComparison.OrdinalIgnoreCase);
+
+        var query = _context.Examinations
+            .AsNoTracking()
+            .AsQueryable();
+
+        // 1. Pathway filter
+        if (!string.IsNullOrWhiteSpace(parameters.Pathway) && !string.Equals(parameters.Pathway.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            var normalizedPathway = parameters.Pathway.Trim().ToLowerInvariant();
+            query = query.Where(e => e.Pathway == normalizedPathway);
+        }
+
+        // 2. Restricted viewers only see families with published revisions
+        if (isRestrictedViewer)
+        {
+            query = query.Where(e => e.Revisions.Any(r => r.LifecycleState == ExamLifecycleState.Published));
+        }
+
+        // 3. Revision Lifecycle Status filter
+        if (!string.IsNullOrWhiteSpace(parameters.RevisionStatus) && !string.Equals(parameters.RevisionStatus.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            if (Enum.TryParse<ExamLifecycleState>(parameters.RevisionStatus.Trim(), true, out var targetLifecycle))
+            {
+                query = query.Where(e => e.Revisions.Any(r => r.LifecycleState == targetLifecycle));
+            }
+        }
+
+        // 4. Text Search
+        if (!string.IsNullOrWhiteSpace(parameters.Search))
+        {
+            var term = parameters.Search.Trim().ToLower();
+            query = query.Where(e =>
+                e.Title.ToLower().Contains(term) ||
+                e.Code.ToLower().Contains(term) ||
+                e.Pathway.ToLower().Contains(term) ||
+                e.Revisions.Any(r => r.Title.ToLower().Contains(term) || r.Description.ToLower().Contains(term)));
+        }
+
+        // 5. Total count before pagination
+        var totalItems = await query.CountAsync(ct);
+
+        // 6. Pagination Bounds
+        var page = Math.Max(1, parameters.Page);
+        var pageSize = Math.Clamp(parameters.PageSize, 1, 100);
+        var totalPages = totalItems == 0 ? 0 : (int)Math.Ceiling((double)totalItems / pageSize);
+
+        // 7. Deterministic Sorting with secondary tie-breaker
+        var sortBy = (parameters.SortBy ?? "code").Trim().ToLowerInvariant();
+        var isDesc = string.Equals(parameters.SortDirection?.Trim(), "desc", StringComparison.OrdinalIgnoreCase);
+
+        IOrderedQueryable<Examination> orderedQuery = sortBy switch
+        {
+            "title" => isDesc
+                ? query.OrderByDescending(e => e.Title).ThenBy(e => e.Code).ThenBy(e => e.Id)
+                : query.OrderBy(e => e.Title).ThenBy(e => e.Code).ThenBy(e => e.Id),
+            "pathway" => isDesc
+                ? query.OrderByDescending(e => e.Pathway).ThenBy(e => e.Code).ThenBy(e => e.Id)
+                : query.OrderBy(e => e.Pathway).ThenBy(e => e.Code).ThenBy(e => e.Id),
+            "createdat" => isDesc
+                ? query.OrderByDescending(e => e.CreatedAt).ThenBy(e => e.Id)
+                : query.OrderBy(e => e.CreatedAt).ThenBy(e => e.Id),
+            "revisions" => isDesc
+                ? query.OrderByDescending(e => e.Revisions.Count).ThenBy(e => e.Code).ThenBy(e => e.Id)
+                : query.OrderBy(e => e.Revisions.Count).ThenBy(e => e.Code).ThenBy(e => e.Id),
+            "latestrevisionnumber" => isDesc
+                ? query.OrderByDescending(e => e.Revisions.Max(r => (int?)r.RevisionNumber) ?? 0).ThenBy(e => e.Id)
+                : query.OrderBy(e => e.Revisions.Max(r => (int?)r.RevisionNumber) ?? 0).ThenBy(e => e.Id),
+            "updatedat" => isDesc
+                ? query.OrderByDescending(e => e.Revisions.Max(r => (DateTime?)r.UpdatedAt) ?? e.CreatedAt).ThenBy(e => e.Id)
+                : query.OrderBy(e => e.Revisions.Max(r => (DateTime?)r.UpdatedAt) ?? e.CreatedAt).ThenBy(e => e.Id),
+            _ => isDesc // default is "code"
+                ? query.OrderByDescending(e => e.Code).ThenBy(e => e.Id)
+                : query.OrderBy(e => e.Code).ThenBy(e => e.Id)
+        };
+
+        // 8. Paged Slice Execution
+        var pagedExaminations = await orderedQuery
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Include(e => e.Revisions.OrderByDescending(r => r.RevisionNumber))
+                .ThenInclude(r => r.ExamQuestions)
+            .ToListAsync(ct);
+
+        var items = new List<ExaminationLibraryItemDto>();
+        var legacyList = new List<ExaminationDto>();
+
+        foreach (var examFamily in pagedExaminations)
+        {
+            var visibleRevisions = isRestrictedViewer
+                ? examFamily.Revisions.Where(r => r.LifecycleState == ExamLifecycleState.Published).ToList()
+                : examFamily.Revisions.ToList();
+
+            var summaryDtos = visibleRevisions.Select(r => MapToRevisionSummaryDto(r, examFamily.Code, r.ExamQuestions.Count)).ToList();
+            var publishedSummary = summaryDtos.FirstOrDefault(r => r.LifecycleState == ExamLifecycleState.Published.ToString());
+            var latestSummary = summaryDtos.OrderByDescending(r => r.RevisionNumber).FirstOrDefault();
+            var currentSummary = summaryDtos.FirstOrDefault(r => r.Id == examFamily.CurrentRevisionId)
+                                 ?? publishedSummary
+                                 ?? latestSummary;
+
+            items.Add(new ExaminationLibraryItemDto
+            {
+                Id = examFamily.Id,
+                Code = examFamily.Code,
+                Title = examFamily.Title,
+                Pathway = examFamily.Pathway,
+                CreatedAt = examFamily.CreatedAt,
+                CreatedBy = examFamily.CreatedBy,
+                CurrentRevisionId = examFamily.CurrentRevisionId,
+                SuccessorExaminationId = examFamily.SuccessorExaminationId,
+                RevisionCount = summaryDtos.Count,
+                PublishedRevision = publishedSummary,
+                LatestRevision = latestSummary,
+                CurrentRevision = currentSummary
+            });
+
+            legacyList.Add(MapToExaminationDto(examFamily, visibleRevisions));
+        }
+
+        return new ExaminationLibraryResponseDto
+        {
+            Success = true,
+            Items = items,
+            Pagination = new PaginationMetadata
+            {
+                Page = page,
+                PageSize = pageSize,
+                TotalItems = totalItems,
+                TotalPages = totalPages
+            },
+            Examinations = legacyList
+        };
+    }
+
+    public async Task<FamilyRevisionsResponseDto> GetFamilyRevisionsAsync(string examinationId, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var role = RoleHierarchy.GetEffectiveRole(user);
+        var isRestrictedViewer = string.Equals(role, RoleHierarchy.RoleInstructor, StringComparison.OrdinalIgnoreCase)
+                              || string.Equals(role, RoleHierarchy.RoleCandidate, StringComparison.OrdinalIgnoreCase);
+
+        var family = await _context.Examinations
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == examinationId, ct);
+
+        if (family == null)
+        {
+            throw new KeyNotFoundException($"Examination family '{examinationId}' not found.");
+        }
+
+        var revisionsQuery = _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.ExamQuestions)
+            .AsNoTracking()
+            .Where(e => e.ExaminationId == examinationId);
+
+        if (isRestrictedViewer)
+        {
+            revisionsQuery = revisionsQuery.Where(e => e.LifecycleState == ExamLifecycleState.Published);
+        }
+
+        var revisions = await revisionsQuery
+            .OrderByDescending(r => r.RevisionNumber)
+            .ToListAsync(ct);
+
+        var revisionDtos = revisions.Select(r => MapToRevisionDto(r, family.Code, r.ExamQuestions.Count)).ToList();
+
+        return new FamilyRevisionsResponseDto
+        {
+            Success = true,
+            ExaminationId = family.Id,
+            ExaminationCode = family.Code,
+            ExaminationTitle = family.Title,
+            Pathway = family.Pathway,
+            Revisions = revisionDtos
+        };
+    }
+
     public async Task<ExamRevisionDto?> GetRevisionAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default)
     {
         var role = RoleHierarchy.GetEffectiveRole(user);
@@ -1445,6 +1626,29 @@ public class ExamLifecycleService : IExamLifecycleService
             ArchivedAt = r.ArchivedAt,
             RetiredBy = r.RetiredBy,
             RetiredAt = r.RetiredAt
+        };
+    }
+
+    private static ExamRevisionSummaryDto MapToRevisionSummaryDto(Exam r, string? examinationCode, int questionCount)
+    {
+        return new ExamRevisionSummaryDto
+        {
+            Id = r.Id,
+            ExaminationId = r.ExaminationId ?? string.Empty,
+            ExaminationCode = examinationCode,
+            RevisionNumber = r.RevisionNumber,
+            LifecycleState = r.LifecycleState.ToString(),
+            Title = r.Title,
+            Description = r.Description,
+            Pathway = r.Pathway,
+            ExamType = r.ExamType,
+            TimeLimitMinutes = r.TimeLimitMinutes,
+            PassingScorePercent = r.PassingScorePercent,
+            IsPublished = r.IsPublished,
+            QuestionCount = questionCount,
+            CreatedAt = r.CreatedAt,
+            UpdatedAt = r.UpdatedAt,
+            PublishedAt = r.PublishedAt
         };
     }
 }
