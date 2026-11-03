@@ -987,6 +987,23 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
 
         var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
         var service = new ResponseValidationService(context, resolver);
+
+        var preflightAttempt = new ExamAttempt
+        {
+            Id = "client_att_777_preflight",
+            UserId = candidateId,
+            ExamId = "exam_sync_preflight",
+            Status = AttemptStatus.InProgress,
+            StartedAt = DateTime.UtcNow,
+            Exam = new Exam { Id = "exam_sync_preflight", Title = "Sync Preflight", Pathway = "rn", PassingScorePercent = 75m }
+        };
+        context.ExamAttempts.Add(preflightAttempt);
+        await context.SaveChangesAsync();
+
+        var preflight = await service.ValidateAndGradeAsync(preflightAttempt.Id, "q_sync_101", new[] { 2 }, 60, CancellationToken.None);
+        Assert.True(preflight.Valid, preflight.Error ?? "Preflight validation failed");
+        Assert.True(preflight.Grading!.IsCorrect);
+
         var controller = new ExamAttemptsController(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<ExamAttemptsController>.Instance, service)
         {
             ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
