@@ -36,9 +36,7 @@ namespace Preform.Api.Migrations
                         .HasColumnType("text");
 
                     b.Property<int>("GradingState")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsCorrect")
                         .HasColumnType("boolean");

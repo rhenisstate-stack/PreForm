@@ -12,7 +12,7 @@ using Preform.Api.Data;
 namespace Preform.Api.Migrations._0006_AddQuestionTypeCapabilityAndStatus
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261103053957_AddAttemptQuestionSetAndGradingState")]
+    [Migration("20261103054224_AddAttemptQuestionSetAndGradingState")]
     partial class AddAttemptQuestionSetAndGradingState
     {
         /// <inheritdoc />
@@ -39,9 +39,7 @@ namespace Preform.Api.Migrations._0006_AddQuestionTypeCapabilityAndStatus
                         .HasColumnType("text");
 
                     b.Property<int>("GradingState")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(1);
+                        .HasColumnType("integer");
 
                     b.Property<bool>("IsCorrect")
                         .HasColumnType("boolean");

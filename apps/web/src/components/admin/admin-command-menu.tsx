@@ -107,7 +107,7 @@ export function AdminSearchTrigger({ onOpen }: { onOpen: () => void }) {
       <Search aria-hidden="true" className="h-3.5 w-3.5" />
       <span className="hidden sm:inline text-foreground/80">Search</span>
       <kbd className="hidden sm:inline-flex items-center rounded border border-border bg-muted px-1 font-mono text-[10px] text-muted-foreground">
-        ⌘K
+        <span className="sr-only">Press </span>
       </kbd>
     </button>
   );

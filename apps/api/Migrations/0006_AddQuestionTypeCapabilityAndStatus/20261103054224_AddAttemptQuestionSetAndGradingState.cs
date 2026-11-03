@@ -746,7 +746,7 @@ namespace Preform.Api.Migrations._0006_AddQuestionTypeCapabilityAndStatus
                     SelectedOptionsJson = table.Column<string>(type: "text", nullable: false),
                     IsCorrect = table.Column<bool>(type: "boolean", nullable: false),
                     ScoreAwarded = table.Column<decimal>(type: "numeric", nullable: false),
-                    GradingState = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
+                    GradingState = table.Column<int>(type: "integer", nullable: false),
                     TimeSpentSeconds = table.Column<int>(type: "integer", nullable: false),
                     AnsweredAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
