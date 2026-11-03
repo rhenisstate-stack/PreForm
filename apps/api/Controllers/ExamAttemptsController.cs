@@ -116,6 +116,7 @@ public class CandidateAttemptDetailDto
     public DateTime? CompletedAt { get; set; }
     /// <summary>True when authoritative grading is incomplete (e.g. missing answer keys).</summary>
     public bool GradingIncomplete { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyName("metadataSnapshot")]
     public object? MetadataSnapshot { get; set; }
     public List<CandidateAttemptResponseDto> Responses { get; set; } = new();
@@ -380,7 +381,7 @@ public class ExamAttemptsController : ControllerBase
             StartedAt = attempt.StartedAt,
             CompletedAt = attempt.CompletedAt,
             GradingIncomplete = ungradedCount > 0,
-            MetadataSnapshot = metadataSnapshotObj,
+            MetadataSnapshot = isCompleted ? metadataSnapshotObj : null,
             Responses = attempt.Responses
                 .OrderBy(r => r.AnsweredAt)
                 .Select(r => new CandidateAttemptResponseDto

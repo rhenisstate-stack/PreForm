@@ -194,8 +194,9 @@ public class AttemptSnapshotTests
             UserId = "cand_legacy_01",
             ExamId = legacyExam.Id,
             Exam = legacyExam,
-            Status = AttemptStatus.InProgress,
+            Status = AttemptStatus.Completed,
             StartedAt = DateTime.UtcNow.AddMinutes(-30),
+            CompletedAt = DateTime.UtcNow,
             MetadataSnapshot = null // Legacy attempt without snapshot
         };
         context.ExamAttempts.Add(legacyAttempt);
