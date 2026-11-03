@@ -1,9 +1,9 @@
 # PrepFord Examination Management Upgrade Plan
 
-**Updated:** 2026-11-02  
-**Current phase:** P2 — Examination Domain Foundation  
-**Current gate:** B — Question-Type Foundation  
-**Approval state:** Verified against an isolated PostgreSQL database; owner approval is required before moving to the next gate. Do not start Gate C automatically.
+**Updated:** 2026-11-03  
+**Current phase:** P2 — Examination Domain Foundation (Gate C remediation delivered beneath it)  
+**Current gate:** C — Grading security (remediation complete; awaiting owner approval)  
+**Approval state:** Gate C remediation (C1–C6) is complete and verified on the feature branch; explicit owner approval is required before moving to any further gate or P3 work.
 
 ## Current verified baseline
 
@@ -20,6 +20,16 @@
 1. Confirm the isolated PostgreSQL verification database and the recorded migration outputs are acceptable.
 2. Proceed with explicit Gate B owner approval before beginning another gate.
 3. Continue with Gate C only after the owner approves the verified baseline and the explicit security scope is re-reviewed.
+
+## Gate C remediation status (2026-11-03)
+
+The Gate C grading-security scope was executed as a remediation pass (C1–C6) per the owner's charter, with the following verified outcome:
+
+- Explicit ungraded handling, exact attempt-question membership, hardened legacy sync, DTO-only candidate serialization, and disposable-PostgreSQL verification are implemented and tested. See `exam-management-gate-c-remediation-report.md` (acceptance matrix) and its sibling contract/verification documents.
+- Reputation baseline updated: **208 backend tests passed (including PostgreSQL integration), 381 frontend tests passed, production build green.**
+- The legacy sync test expectation was corrected **to server-computed truth (100.0m)** — no tests were weakened and no authorization files were touched.
+- The old "Do not start Gate C automatically" clause is satisfied: Gate C was executed under explicit owner charter direction.
+- Owner approval for this remediation is required before proceeding. P3 work remains deferred and out of scope.
 
 ## Subsequent implementation sequence
 

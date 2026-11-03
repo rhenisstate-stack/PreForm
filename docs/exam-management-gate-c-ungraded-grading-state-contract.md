@@ -23,8 +23,7 @@ An explicit persistence-level grading state is introduced and enforced everywher
 |---|---|
 | Candidate answer data | Sync (recovery) **persists** the candidate's submitted answer with `GradingState = Ungraded` so nothing is lost; direct submission rejects the response and **persists nothing**. |
 | Score denominators | `Ungraded` responses are **excluded** from every score calculation. The completed score is `graded correct / graded total`, never normalized as if the ungraded question were worth zero. |
-| Authoritative finalization | **Blocked** while any response in the attempt is `Ungraded`:
-| Direct submission (`POST {id}/responses`) | Returns **409 Conflict** with `ungradable = true`; no response row is written. |
+| Authoritative finalization | **Blocked** while any response in the attempt is `Ungraded`. || Direct submission (`POST {id}/responses`) | Returns **409 Conflict** with `ungradable = true`; no response row is written. |
 | Finalization (`POST {id}/submit`) | Returns **409 Conflict** with `gradingIncomplete` and `ungradedResponseCount`; the attempt stays `InProgress` and no score/pass flags are computed. |
 | Sync import (new attempt) | Response rows are persisted as `Ungraded`; the attempt remains `InProgress` with no `scorePercent`/`passed` discloses; sync response carries `gradingIncomplete = true`. |
 | Sync import (existing in-progress attempt) | Ungraded answers are appended (idempotent — an existing ungraded row is not duplicated); finalization is deferred. |
