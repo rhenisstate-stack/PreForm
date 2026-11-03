@@ -131,6 +131,19 @@ The following sequence is a **recommendation only**; no work has been started.
 
 ---
 
+## 🟩 GATE C REMEDIATION UPDATE (2026-11-03)
+
+Appended during the Gate C remediation. What Gate C changed on top of the state described above:
+
+- Grading integrity: explicit `ResponseGradingState` (`Graded/Ungraded`) persisted on `AttemptResponse`; missing answer keys are never silently graded incorrect (see `exam-management-gate-c-ungraded-grading-state-contract.md`).
+- Attempt integrity: `ExamAttemptQuestion` snapshot with unique `(ExamAttemptId, QuestionId)`; two-level membership enforced on all response mutations including the legacy sync path (see `exam-management-gate-c-attempt-question-membership-contract.md`).
+- Candidate data: DTO-only serialization for attempt detail; grading data disclosed only after authoritative finalization; no EF entities, answer keys, or grading internals on the wire (see `exam-management-gate-c-candidate-data-contract.md`).
+- Storage proof: full 7-migration chain + idempotent seeding verified on a disposable PostgreSQL database (see `exam-management-gate-c-postgresql-verification-report.md`).
+
+Reports: `exam-management-gate-c-remediation-report.md` (acceptance matrix) and `exam-management-gate-c-remediation-testing-report.md` (208 backend / 381 frontend tests green). Work stopped before P3 pending owner approval; the phase sequence above is unchanged.
+
+---
+
 ## 📁 FILES CHANGED
 
 | File | Action |

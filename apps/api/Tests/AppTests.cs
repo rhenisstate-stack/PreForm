@@ -1012,7 +1012,6 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
             ExamId = "exam_sync_rn",
             Status = AttemptStatus.InProgress,
             StartedAt = DateTime.UtcNow,
-            Exam = new Exam { Id = "exam_sync_rn", Title = "Sync Verification Exam", Pathway = "rn", PassingScorePercent = 75m }
         };
         context.ExamAttempts.Add(preflightAttempt);
         await context.SaveChangesAsync();

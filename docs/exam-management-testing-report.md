@@ -134,6 +134,25 @@ No source code, test files, controllers, services, models, migrations, or fronte
 
 ---
 
+## 🟩 SECTION 5 — GATE C REMEDIATION UPDATE (2026-11-03)
+
+Appendix added during the Gate C remediation; the audit-only statements above describe the state **before** Gate C and remain historically accurate.
+
+Backend (xUnit, `apps/api/Tests/Preform.Api.Tests.csproj`):
+
+| Suite | Result |
+|---|---|
+| Full suite incl. PostgreSQL (`PREFORM_GATEB_TEST_CONNECTION_STRING` → disposable `prepford_gateb_verification`) | **208 passed, 0 failed, 0 skipped** |
+| `AttemptMembershipSecurityTests` (new, C2) | **11 passed, 0 failed** |
+| `CandidateDataContractTests` (new, C4 — serialized HTTP contract) | **4 passed, 0 failed** |
+| `GradingSecurityTests` (incl. C1 ungraded cases) | **15 passed, 0 failed** |
+
+Frontend (Vitest, `apps/web`): **44 test files, 381 tests passed, 0 failed**; `npm run build` succeeds.
+
+Detail and exact commands: `docs/exam-management-gate-c-remediation-testing-report.md`. Examination-management coverage gaps above (exam library/builder/preview E2E) remain open and are unchanged by Gate C.
+
+---
+
 **STOP CONDITION:** Phase 1.1 audit and all associated reports are complete. Do not begin Phase 2 implementation until the audit has been reviewed and approved.
 
 ---
