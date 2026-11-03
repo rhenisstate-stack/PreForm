@@ -365,6 +365,29 @@ export const apiClient = {
     });
   },
 
+  patch: <T = unknown>(endpoint: string, body?: unknown, options?: ApiClientOptions) => {
+    const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+    const isBuffer = Buffer.isBuffer(body) || body instanceof Uint8Array;
+    const headers = new Headers(options?.headers || {});
+
+    let requestBody: BodyInit | undefined;
+    if (isFormData || isBuffer) {
+      requestBody = body as BodyInit;
+    } else if (body !== undefined) {
+      if (!headers.has("Content-Type")) {
+        headers.set("Content-Type", "application/json");
+      }
+      requestBody = JSON.stringify(body);
+    }
+
+    return apiRequest<T>(endpoint, {
+      ...options,
+      method: "PATCH",
+      headers,
+      body: requestBody,
+    });
+  },
+
   delete: <T = unknown>(endpoint: string, options?: ApiClientOptions) =>
     apiRequest<T>(endpoint, { ...options, method: "DELETE" }),
 };

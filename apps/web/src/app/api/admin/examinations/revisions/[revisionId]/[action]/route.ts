@@ -23,8 +23,10 @@ export async function POST(
     return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
   }
 
+  let actionName = "lifecycle";
   try {
     const { revisionId, action } = await props.params;
+    actionName = action;
     if (!VALID_ACTIONS.has(action)) {
       return NextResponse.json({ success: false, error: `Invalid lifecycle action: ${action}` }, { status: 400 });
     }
@@ -53,7 +55,7 @@ export async function POST(
 
     return NextResponse.json(res.data);
   } catch (error) {
-    console.error(`Admin revision ${action} POST error:`, error);
+    console.error(`Admin revision ${actionName} POST error:`, error);
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
