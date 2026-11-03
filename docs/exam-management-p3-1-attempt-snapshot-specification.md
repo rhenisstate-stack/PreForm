@@ -1,116 +1,79 @@
 # PrepFord Examination Management — P3.1 Attempt Snapshot Specification
 
 ## Status
-- Decision ID: D3
+- Decision IDs: D3, D15
 - Status: OWNER APPROVED
-- Approved direction: immutable server-generated attempt-level metadata snapshot at attempt start
-- Related authority: `ExamAttemptQuestion` remains the exact question-membership authority
+- Approved storage model: Option A — Versioned JSONB metadata snapshot on `ExamAttempt` + relational `ExamAttemptQuestion` membership
+- Authority boundaries:
+  - `ExamAttempt.MetadataSnapshot` (JSONB): Authoritative for examination-level configuration at attempt start
+  - `ExamAttemptQuestion` (Relational): Authoritative for exact question membership, order, and response linkage
 
 ## Repository evidence
-The current repository preserves the exact attempt-member set through `ExamAttemptQuestion`, as described in `apps/api/Models/Assessments.cs` and configured in `apps/api/Data/AppDbContext.cs`. There is no current attempt snapshot that captures the historical examination configuration used by the candidate. The existing `Exam` entity contains several candidate-relevant fields, but they are not versioned or frozen at attempt creation time.
+In `apps/api/Models/Assessments.cs`, `ExamAttempt` represents a candidate's attempt at an exam. Gate C established `ExamAttemptQuestion` as the authoritative relational table for question membership, randomized order, and server-authoritative grading isolation. Currently, `ExamAttempt` has no frozen examination configuration metadata.
 
-## Core principle
-The snapshot must preserve the examination configuration that was active when the candidate started the attempt. It is not a duplicate of the question-membership table and must not be treated as the same thing as `ExamAttemptQuestion`.
+## Approved snapshot architecture
 
-## Snapshot contract
+### Storage format
+The metadata snapshot is stored directly on `ExamAttempt` as a PostgreSQL `JSONB` column named `MetadataSnapshot` (mapped in EF Core as a strongly typed owned/value entity or serialized document).
 
-### Recommended storage model
-The safe default is an immutable relational snapshot table or equivalent serialized snapshot payload stored against each attempt, plus version metadata. The table should be created only when implementation begins, but the contract below is the approved design.
+### Relational membership preservation
+- `ExamAttemptQuestion` remains completely intact and continues to serve as the relational source of truth for:
+  - Exact question IDs assigned to the candidate
+  - Assigned sequence order
+  - Question response binding (`AttemptResponse`)
+  - Server-authoritative grading scores
+- The JSONB snapshot **does not duplicate question text or replace `ExamAttemptQuestion`**.
 
-### Snapshot lifecycle
-- created once, when the attempt begins
-- immutable after creation
-- server-generated only
-- client-submitted values rejected or ignored
-- kept even when the underlying revision is later archived or retired
+### Snapshot lifecycle & immutability
+1. **Creation timing:** Created atomically in the same database transaction that initializes the `ExamAttempt` row.
+2. **Server-authoritative:** Generated entirely by backend services from the authoritative `Exam` revision and `Examination` records. Client-provided snapshot payloads are strictly rejected.
+3. **Immutable:** Once written, `MetadataSnapshot` is read-only. No API endpoint or background job modifies historical attempt snapshots.
 
-## Proposed snapshot field set
+## JSONB Snapshot Schema (Version 1)
 
-| Field | Type | Source | Required | Candidate delivery impact | Result interpretation impact | Sensitive | Immutable |
-|---|---|---|---|---|---|---|---|
-| `AttemptId` | string | `ExamAttempt.Id` | Yes | No | No | No | Yes |
-| `ExamRevisionId` | string | `Exam.Id` | Yes | No | Yes | No | Yes |
-| `ExaminationId` | string | stable identity / parent | Yes | No | Yes | No | Yes |
-| `Title` | string | `Exam.Title` | Yes | Yes | Yes | No | Yes |
-| `Description` | string | `Exam.Description` | No | Yes | No | No | Yes |
-| `Pathway` | string | `Exam.Pathway` | Yes | Yes | Yes | No | Yes |
-| `ExamType` | enum or string | `Exam.ExamType` | Yes | Yes | Yes | No | Yes |
-| `DurationMinutes` | int | `Exam.TimeLimitMinutes` | Yes | Yes | Yes | No | Yes |
-| `PassingScorePercent` | decimal | `Exam.PassingScorePercent` | Yes | No | Yes | No | Yes |
-| `ScoringConfiguration` | JSON or string reference | `Exam` configuration if later introduced | Conditional | No | Yes | No | Yes |
-| `Instructions` | string | `Exam` candidate-facing instructions if present | No | Yes | No | No | Yes |
-| `Category` | string | `Exam` category if later introduced | No | Yes | No | No | Yes |
-| `Level` | string | `Exam` level if later introduced | No | Yes | No | No | Yes |
-| `SnapshotVersion` | int | implementation-defined | Yes | No | No | No | Yes |
-| `CreatedAt` | datetime | server time | Yes | No | No | No | Yes |
+```json
+{
+  "schemaVersion": 1,
+  "snapshotCreatedAtUtc": "2026-11-03T10:00:00Z",
+  "examination": {
+    "id": "0192e210-aaaa-7000-8000-000000000001",
+    "code": "RN-EX-000001",
+    "pathway": "RN"
+  },
+  "revision": {
+    "id": "0192e210-bbbb-7000-8000-000000000001",
+    "revisionNumber": 1,
+    "title": "Comprehensive Nursing Licensure Exam - Core Practice",
+    "description": "Standard preparatory practice exam for RN candidates.",
+    "examType": "Practice",
+    "timeLimitMinutes": 150,
+    "passingScorePercent": 75.0,
+    "publishedAtUtc": "2026-11-01T08:00:00Z"
+  },
+  "deliverySettings": {
+    "shuffleQuestions": true,
+    "allowReview": true,
+    "showFeedbackImmediately": false
+  }
+}
+```
 
-## Required evidence-based interpretation
-The snapshot should include only the metadata that is both:
-- necessary to interpret a historical attempt, and
-- already present or clearly justified by the current domain model
+## Schema evolution & versioning
+- The snapshot schema includes a top-level `schemaVersion` integer property (currently `1`).
+- When future examination settings are added, `schemaVersion` will be incremented.
+- The snapshot deserializer supports version-tolerant polymorphic mapping.
 
-This means the initial snapshot should not include speculative fields invented for a future question-builder or exam-library feature.
-
-## Proposed snapshot creation timing
-The snapshot must be created at the start of a candidate attempt, immediately after the attempt is created and before candidate interactions are accepted as authoritative for grading or completion.
-
-Recommended transactional boundaries:
-- create attempt row
-- create exact membership records if required
-- create metadata snapshot in same transaction if the database and service architecture support it
-- if the full transaction is not possible, ensure snapshot creation occurs before the attempt is considered active for candidate work
-
-## Serialization strategy
-Two implementation options are valid if approved during implementation:
-
-1. relational snapshot table (preferred if the data is mostly flat metadata)
-2. JSON payload stored in a dedicated column, with a `SnapshotVersion` field for evolution
-
-Recommended preference for this repository:
-- relational table for clarity and integrity, unless the future exam metadata becomes highly nested
-- include `SnapshotVersion` precisely to protect future compatibility
-
-## Immutability enforcement
-- do not allow updates after creation
-- do not expose a write path that accepts user-supplied snapshot payloads
-- use server-side generation only
-- enforce immutability at the application and database layers if available
-
-## Interaction with `ExamAttemptQuestion`
-`ExamAttemptQuestion` must remain the exact authoritative source for:
-- which questions are in the attempt
-- order of question membership
-- answer eligibility and validation
-
-The metadata snapshot is complementary. It does not replace or duplicate membership logic.
-
-## Historical attempts without snapshots
-For existing attempts created before the snapshot pipeline exists:
-- preserve the current behavior
-- do not fabricate missing metadata
-- do not guess an original title or passing score when the repository lacks a reliable source
-- document any fallback as conservative and limited to current known data
-
-## Candidate API exposure
-The snapshot should not be submitted or accepted as an input payload from the candidate client. It is a server-side historical record. Candidate-facing APIs may expose a read-only summary of the metadata where it is already authorized, but the snapshot itself must remain server-controlled.
-
-## Required safeguards
-- no client override of snapshot values
-- no snapshot edits after creation
-- no snapshot creation for existing historical attempts without explicit data recovery policy
-- no re-creation of the snapshot when an attempt already exists
-
-## Remaining owner decisions
-The following product decisions remain open and must be approved before implementation:
-- whether to store the snapshot relationally or as a JSON payload
-- whether the snapshot should include category, level, and instructions immediately or only after they are implemented in the actual Exam model
-- whether archived or retired revisions keep their snapshot data in the same table or require a historical archive table
-
-## Final recommendation
-The approved architecture is sound: create a server-generated immutable metadata snapshot at attempt start, and keep `ExamAttemptQuestion` as the exact question-membership authority. This preserves historical result interpretation without conflating membership and configuration metadata.
+## Legacy attempt compatibility (Fallback path)
+- Existing historical `ExamAttempt` records in the database lack a `MetadataSnapshot` (the column will be `NULL`).
+- **Strict rule:** The system will **never fabricate snapshots** for historical attempts.
+- When an API or report queries an attempt where `MetadataSnapshot IS NULL`:
+  - The service executes a documented fallback reader: it reads the associated `Exam` revision row dynamically.
+  - The API response explicitly marks `snapshotSource = "legacy_fallback"`.
+  - No retroactive write to `MetadataSnapshot` is performed during reads.
 
 ## Status summary
-- Product policy: OWNER APPROVED
-- Implementation detail: REQUIRED before code changes
-- Historicalfallback: REQUIRED for legacy attempts
-- Next gate: OWNER REVIEW REQUIRED
+- Product policy: OWNER APPROVED (Option A)
+- Entity representation: JSONB column on `ExamAttempt` (`MetadataSnapshot`)
+- Relational membership: `ExamAttemptQuestion` preserved
+- Legacy handling: Explicit documented fallback without fabrication
+- Next gate: Implementation upon owner authorization

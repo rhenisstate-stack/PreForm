@@ -1,177 +1,93 @@
 # PrepFord Examination Management — P3.1 Implementation Readiness Plan
 
 ## Status
-- Scope: implementation-ready documentation only
-- Execution mode: backend-first, documentation-only
-- Final recommendation: PARTIALLY READY — OWNER DECISIONS REQUIRED
+- Scope: Implementation readiness assessment and consolidated planning
+- Execution mode: Backend-first, documentation-only
+- Final recommendation: SPECIFICATIONS COMPLETE & OWNER APPROVED — READY FOR POSTGRESQL PREFLIGHT & IMPLEMENTATION AUTHORIZATION
 
-## 1. Approved owner decisions summary
+---
 
-| Decision | Status |
-|---|---|
-| D1: stable examination identity + version-specific revision model | OWNER APPROVED |
-| D2: six-state lifecycle model | OWNER APPROVED |
-| D3: immutable metadata snapshot at attempt start | OWNER APPROVED |
-| D4: separation of duties in authorization | OWNER APPROVED |
-| D5: application-managed optimistic concurrency token | OWNER APPROVED |
-| D6: sequential, pathway-scoped examination codes | OWNER APPROVED |
-| D7: lifecycle is source of truth; `IsPublished` is compatibility only | OWNER APPROVED |
-| D8: isolated local PostgreSQL verification | OWNER APPROVED |
+## 1. Approved Owner Decisions Summary
 
-## 2. Recommended final domain model
+All 15 architectural and policy decisions are formally OWNER APPROVED:
 
-### Stable identity model
-- `Examination` stable identity record
-- unique family for all revisions of one examination
-- carries stable pathway and code identity
+| Decision | Area | Approved Policy | Status |
+|---|---|---|---|
+| D1 | Identity Architecture | Separate stable `Examination` identity + version-specific `Exam` revisions (Option B) | OWNER APPROVED |
+| D2 | Lifecycle | 6-state lifecycle model: Draft, InReview, Approved, Published, Archived, Retired | OWNER APPROVED |
+| D3 | Attempt Snapshot | Immutable server-generated snapshot at attempt start; relational membership preserved | OWNER APPROVED |
+| D4 | Authorization | Separation of duties: revision creator cannot approve that revision | OWNER APPROVED |
+| D5 | Concurrency | Application-managed optimistic concurrency token on revision rows | OWNER APPROVED |
+| D6 | Code System | Sequential, pathway-scoped codes; retained across revisions | OWNER APPROVED |
+| D7 | Publication Source | Lifecycle state is canonical source of truth; `IsPublished` is derived bridge | OWNER APPROVED |
+| D8 | Verification | Isolated local PostgreSQL verification (`prepford_gateb_verification`) | OWNER APPROVED |
+| D9 | Code Format | Option A: Pathway-prefixed 6-digit codes (`RN-EX-000001` / `PN-EX-000001`) | OWNER APPROVED |
+| D10 | Lifecycle Roles | Option A: Reviewer recommends; Admin approves; Exam Manager publishes; Content Mgr no lifecycle authority | OWNER APPROVED |
+| D11 | Overrides | Option A: Narrow, explicitly audited administrative overrides; attempts/snapshots immutable | OWNER APPROVED |
+| D12 | Instructor Access | Option A: Instructors see Published examinations only | OWNER APPROVED |
+| D13 | Restoration Window| Option A: 30-day restoration window from Archived; retirement is terminal | OWNER APPROVED |
+| D14 | Active Attempts | Option A: Existing attempts continue undisturbed; new attempts blocked; count recorded | OWNER APPROVED |
+| D15 | Snapshot Storage | Option A: Versioned JSONB metadata snapshot on `ExamAttempt` + relational question membership | OWNER APPROVED |
 
-### Revision model
-- existing `Exam` may be retained as the revision record or renamed during implementation
-- revision row stores the exact configuration and lifecycle state
-- revision row is the record that `ExamAttempt` references
+---
 
-### Attempt metadata snapshot
-- `AttemptSnapshot` or equivalent immutable server-generated payload linked to `ExamAttempt`
-- contains the metadata required to interpret historical results
-- does not duplicate exact question membership logic
+## 2. Technical Architecture & Domain Mapping
 
-### Lifecycle state
-- `Draft`, `InReview`, `Approved`, `Published`, `Archived`, `Retired`
-- reject is a return to `Draft` with reason and audit event
+### 2.1 Stable Identity Model
+- `Examination` entity represents the examination family.
+- Assigned unique pathway-scoped code (`RN-EX-000001` or `PN-EX-000001`).
+- Contains pointers to `CurrentRevisionId` and `SuccessorExaminationId`.
 
-### Concurrency model
-- application-managed optimistic concurrency token on revision row
-- no SQL Server `rowversion` semantics
+### 2.2 Revision Model
+- Existing `Exam` entity functions as the revision row.
+- Tracks `RevisionNumber`, `LifecycleState`, `ConcurrencyToken`, and audit metadata.
+- Referenced directly by `ExamAttempt.ExamId` to preserve all historical attempt relationships.
 
-### Code generation model
-- sequence-based allocation within a pathway
-- database-enforced uniqueness
-- no max-plus-one allocation without uniqueness protection
+### 2.3 Attempt Metadata Snapshot
+- Captured atomically at attempt initialization as a PostgreSQL `JSONB` document on `ExamAttempt.MetadataSnapshot`.
+- Validated against schema version 1.
+- Exact question membership remains in `ExamAttemptQuestion` (preserving Gate C protections).
+- Legacy attempts handled via dynamic fallback reader without data fabrication.
 
-## 3. Entity relationship model
+### 2.4 State Machine & Authorization
+- 6 states, 9 transitions.
+- Rejection returns to `Draft` with mandatory reason.
+- Creator cannot self-approve (`CreatedBy != ActorId`).
+- Instructors view `Published` examinations only.
 
-```text
-Examination (stable identity)
-  1 ────< Exam (revision)
-             1 ────< ExamQuestion
-             1 ────< ExamAttempt
-                         1 ────< AttemptResponse
-                         1 ────< ExamAttemptQuestion
-                         1 ────< AttemptSnapshot
-```
+---
 
-## 4. Lifecycle transition summary
-- `Draft -> InReview` via submit
-- `InReview -> Draft` via reject or return-for-changes
-- `InReview -> Approved` via approve
-- `Approved -> Published` via publish
-- `Published -> Archived` via archive
-- `Archived -> Published` via restore within policy window
-- `Published -> Retired` via retire
-- `Archived -> Retired` via retire
+## 3. Implementation Sequence Proposal
 
-## 5. Authorization matrix summary
-- creator cannot approve own revision
-- review, approval, and publication are distinct actions unless explicit owner override is approved
-- admin and superadmin remain emergency or governance actors
-- candidate access remains restricted to eligible published revisions
+1. **Preflight Verification:**
+   - Execute non-destructive PostgreSQL preflight checks.
+   - Confirm local service, credentials, and `prepford_gateb_verification` isolation guard.
+2. **Entity & EF Core Model Configuration:**
+   - Add `Examination` entity and update `Exam` revision entity.
+   - Configure constraints: `UNIQUE (Code)`, `UNIQUE (ExaminationId, RevisionNumber)`.
+   - Configure `MetadataSnapshot` as JSONB on `ExamAttempt`.
+3. **Migration Creation & Non-Destructive Local Testing:**
+   - Generate EF Core migration.
+   - Test against isolated local database `prepford_gateb_verification`.
+   - Verify compatibility bridge for `IsPublished`.
+4. **Service Layer Implementation:**
+   - Implement `ExaminationCodeService` using PostgreSQL sequences.
+   - Implement `ExamLifecycleService` enforcing state transitions, separation of duties, and audit logs.
+   - Implement optimistic concurrency checking on revision updates.
+   - Implement atomic attempt snapshot creation and legacy fallback reader.
+5. **Controller & Authorization Integration:**
+   - Update admin/exam-manager endpoints.
+   - Enforce instructor read filter (`LifecycleState == Published`).
+6. **Automated Testing & Gate C Revalidation:**
+   - Run unit tests for lifecycle, separation of duties, and concurrency.
+   - Run integration tests against `prepford_gateb_verification`.
+   - Revalidate Gate C tests to confirm candidate attempt integrity and scoring remains 100% intact.
 
-## 6. Snapshot contract summary
-- snapshot stored at attempt start
-- immutable after creation
-- generated by server from authoritative data
-- preserves only the metadata needed for historical interpretation
+---
 
-## 7. Concurrency strategy summary
-- application-managed optimistic token on revision row
-- stale-update rejection on mismatch
-- standard conflict response and audit trail
+## 4. Status Summary
 
-## 8. Code generation strategy summary
-- sequential codes within pathway
-- database uniqueness enforce
-- no read-max-plus-one allocation
-- exact format still pending owner approval
-
-## 9. `IsPublished` compatibility plan
-- lifecycle is canonical source of truth
-- `IsPublished` remains only as compatibility glue until migration is complete
-- writes to `IsPublished` must be controlled by a bridging transition mechanism
-- do not silently classify ambiguous records
-
-## 10. Proposed schema change themes
-The final implementation will likely require additive schema work only, including:
-- stable identity table
-- revision relationship fields on `Exam`
-- lifecycle state column(s)
-- revision number and concurrency token
-- attempt metadata snapshot table
-- constraint and index updates for unique code generation and revision numbering
-
-This is still a design stage; no migration is created in this documentation task.
-
-## 11. Migration sequence proposal
-1. Revalidate repository and confirm no owner conflicts.
-2. Add stable identity and revision linkage.
-3. Add lifecycle state and compatibility bridge for `IsPublished`.
-4. Add metadata snapshot and exact attempt membership guardrails.
-5. Add authorization checks and staffing logic.
-6. Add concurrency token and stale-update handling.
-7. Add code-generation infrastructure with DB constraints.
-8. Run PostgreSQL verification in dedicated local DB.
-9. Run targeted regression tests for Gate B/Gate C and new lifecycle rules.
-
-## 12. Existing-data mapping policy
-- preserve current `Exam` candidate references wherever possible
-- backfill only where evidence exists
-- do not fabricate approval or publication timestamps or reviewer identities
-- leave ambiguous records conservative and require explicit product direction
-
-## 13. API and candidate compatibility
-- `ExamAttempt.ExamId` remains bound to the exact revision used by the candidate
-- published revisions remain immutable after publication
-- new revision creation does not rewrite prior candidate attempts
-- candidate access remains restricted to valid published revisions
-
-## 14. Security requirements
-- no exposure of answer keys or scoring internals
-- no client-supplied metadata snapshot acceptance
-- no bypass of role checks with UI-only restrictions
-- preserve Gate C answer-key and attempt-integrity guarantees
-
-## 15. Testing strategy
-- backend unit tests for lifecycle transitions, validation, and access checks
-- backend integration tests for revision creation, stale update, and snapshot creation
-- PostgreSQL integration tests in the dedicated local database only
-- Gate C regression tests remain active and must pass without weakening old contracts
-
-## 16. Remaining owner decisions
-These remain open and require explicit owner approval before the implementation gate is ready:
-1. exact examination code format
-2. approval versus publication authority combination
-3. admin/superadmin emergency override scope
-4. instructor visibility for unpublished examinations
-5. restore-window duration and whether retired revisions can be reopened
-6. exact policy for active attempts during archival
-7. exact snapshot storage form (relational or JSON) if product implementation chooses a different pattern
-
-## 17. Acceptance criteria for final implementation
-The implementation is ready only when all of the following are true:
-- examination identity and revision model are explicit and enforced
-- published revision immutability is enforced
-- lifecycle is the canonical source of truth
-- metadata snapshot contract is implemented and server-generated
-- authorization checks enforce separation of duties
-- concurrency conflict behavior is explicit and tested
-- PostgreSQL verification succeeds in the dedicated local DB
-- Gate C protections remain intact
-- documentation matches the implemented schema and behavior
-
-## Final status
-The repository is not yet ready for implementation because a small number of product-policy details remain unresolved and PostgreSQL verification is not yet configured in this environment.
-
-## Status summary
-- Documentation readiness: READY
-- Implementation readiness: PARTIALLY READY — OWNER DECISIONS REQUIRED
-- Database verification readiness: BLOCKED until dedicated local DB is configured
-- Final gate: OWNER REVIEW REQUIRED
+- **Specifications Readiness:** 100% COMPLETE (`docs/exam-management-p3-1-consolidated-implementation-specification.md` created)
+- **Policy Status:** 100% OWNER APPROVED (All 15 decisions approved)
+- **Database Verification Readiness:** PROCEEDING TO PREFLIGHT CHECK
+- **Next Gate:** Owner Implementation Authorization following PostgreSQL preflight report

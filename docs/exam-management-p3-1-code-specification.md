@@ -1,104 +1,64 @@
 # PrepFord Examination Management — P3.1 Examination Code Specification
 
 ## Status
-- Decision ID: D6
+- Decision ID: D6 & D9
 - Status: OWNER APPROVED
 - Approved direction: sequential, pathway-scoped examination codes
-- Current unresolved item: exact code format and exact sequence-reset policy
-- Implementation status: OWNER APPROVAL REQUIRED if the exact format differs from the recommended default
+- Approved code format: Option A — `RN-EX-000001` / `PN-EX-000001`
+- Scope: Stable examination identity code allocation and immutability
 
 ## Repository evidence
-The current `Exam` entity in `apps/api/Models/Assessments.cs` includes `Pathway` but no code field and no uniqueness constraint. The repository documents (`docs/exam-management-p3-owner-decisions.md`) propose `ExamCode` as unique per pathway and a format like `{PATHWAY}-{TYPE}-{SEQUENTIAL}`. The current repository does not include either an actual code field or any database-level uniqueness enforcement for examination codes.
+The current `Exam` entity in `apps/api/Models/Assessments.cs` includes `Pathway` but no code field and no uniqueness constraint. The repository documents (`docs/exam-management-p3-owner-decisions.md`) propose `ExamCode` as unique per pathway. The owner has approved the exact code format and allocation rules.
 
-## Approved product direction
-The owner approved the following:
-- codes are sequential
-- codes are unique within the approved pathway scope
-- a new revision retains the stable examination’s code
-- code generation must be concurrency-safe and protected by a database uniqueness constraint
+## Approved product policy
+1. **Format:** Pathway-prefixed, zero-padded 6-digit sequential codes:
+   - Registered Nursing (RN): `RN-EX-000001`
+   - Practical Nursing (PN): `PN-EX-000001`
+2. **Independent sequences:** RN and PN maintain separate, independent numerical counters starting at 1.
+3. **Allocation level:** Codes are assigned when a stable `Examination` identity is created, not when an individual revision is created.
+4. **Lineage retention:** All revisions under one stable `Examination` family retain the exact same examination code.
+5. **Permanence:** Codes are permanent and never reused or reassigned, even after archival or retirement.
+6. **Transaction safety:** Code allocation must be atomic and concurrency-safe under concurrent requests.
+7. **No partial creation:** A failed transaction must roll back cleanly and not leave an orphaned code or partially created examination.
+8. **No historical fabrication:** Existing legacy examination records must not receive fabricated historical codes; existing records without codes will be addressed via explicit migration rules.
 
-## Product guardrails
-- Do not introduce a second `TargetProgram` field if `Pathway` already represents the same business domain concept.
-- Do not implement a code-generation strategy that depends on read-max-plus-one logic without a database-enforced uniqueness constraint.
-- Do not store codes in more than one location unless a later implementation proves there is a real need.
+## Database schema & allocation architecture
 
-## Recommended implementation model
-Recommended minimal product model:
-- stable `Examination` identity carries the code
-- `Exam` revision row uses the code as inherited or copied value, depending on the final table design
-- code allocation occurs at the stable identity level, not on every revision record
-- the database enforces uniqueness within `(Pathway, Code)`
+### Storage location
+- The `Code` field is stored on the stable `Examination` entity (`Examination.Code`, `varchar(16)` or `text`, not null).
+- An explicit unique constraint and index is placed on `(Pathway, Code)` (or globally on `Code` as codes are globally unique given the pathway prefix).
 
-## Recommended code format options
+### PostgreSQL allocation pattern
+To achieve concurrency safety without fragile max-plus-one logic, the implementation will utilize dedicated PostgreSQL sequences per pathway or an atomic pathway counter table:
 
-### Option A — compact pathway-scoped code
-Recommended default if product requires a compact administration code:
-- `RN-0001`
-- `PN-0001`
+```sql
+-- PostgreSQL sequences per pathway
+CREATE SEQUENCE IF NOT EXISTS exam_code_rn_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS exam_code_pn_seq START WITH 1 INCREMENT BY 1;
+```
 
-### Option B — pathway + type + sequential code
-Recommended if product needs more descriptive codes:
-- `RN-PRACT-0001`
-- `PN-PRACT-0001`
+In the allocation service:
+1. Determine pathway (`RN` vs `PN`).
+2. Fetch next sequence value within the active transaction:
+   - For RN: `SELECT nextval('exam_code_rn_seq')` -> formatted as `$"RN-EX-{val:D6}"`
+   - For PN: `SELECT nextval('exam_code_pn_seq')` -> formatted as `$"PN-EX-{val:D6}"`
+3. If pathway is not RN or PN, reject transaction with validation error.
+4. Insert `Examination` record with allocated `Code`.
+5. Unique constraint on `Code` guarantees absolute collision immunity.
 
-### Option C — stable identity code with revision suffix
-Not recommended for the foundation phase because it introduces unnecessary complexity and historical ambiguity:
-- `RN-0001-R1`
+### Collision handling
+If a duplicate code allocation occurs (e.g., in a failover or edge case):
+- The database unique constraint aborts the transaction immediately.
+- The service catches the constraint violation and returns a standard API 409 Conflict error.
+- The collision event is logged with actor, timestamp, and attempted pathway.
+- No partial record remains in the database.
 
-## Recommended default
-Use `RN-0001` / `PN-0001` style compact codes unless the product owner explicitly prefers a more descriptive format.
-
-## Sequence scope and reset behavior
-Recommended rule:
-- sequence is unique within a pathway
-- `RN` and `PN` sequences are independent
-- the sequence does not reset by revision number
-- a code is not reused once assigned and stable across the examination’s lifetime
-
-This keeps the path-specific identity clear and avoids conflicts between pathways.
-
-## Concurrency-safe allocation
-The code generator must not do:
-1. read max code
-2. add one
-3. save
-
-This is unsafe under concurrent requests.
-
-Recommended safe implementation pattern for the final code:
-- allocate a database-backed counter or sequence at the pathway scope
-- persist the code in a transaction with an enforced unique constraint
-- fail the request cleanly when the database rejects a duplicate allocation
-- audit the failed allocation with the actor and requested pathway
-
-## Unique constraint requirements
-At minimum, the database must enforce uniqueness for:
-- `(Pathway, Code)` if a code is assigned to the stable identity
-- or the equivalent stable-identity-level unique scope used by the final design
-
-## Collision handling
-If a duplicate code allocation is attempted:
-- reject the transaction
-- do not silently modify the existing code
-- return the normal conflict response
-- audit the failed allocation event for troubleshooting
-
-## Historical code preservation
-- a historical revision should retain the code assigned to the parent examination identity
-- a new revision does not invent a new code unless the product explicitly decides that revisions may be assigned their own code namespace
-- default recommendation: keep one stable code for the examination family and allow revision changes without code changes
-
-## Remaining owner decisions
-The following must be explicitly approved before implementation:
-- exact code format (`RN-0001` vs `RN-PRACT-0001` or another pattern)
-- whether sequence numbering resets by calendar year, pathway, or remains continuous
-- whether an archived or retired examination can ever reuse a code
-
-## Final recommendation
-Implement a stable examination family code that is unique per pathway and generated through a database-enforced mechanism. Do not implement naive max-plus-one allocation. Keep the exact code string format as the last remaining product decision until the owner confirms the preferred UX and administrative readability tradeoff.
+## Historical records policy
+- Legacy `Exam` records in the repository without codes will not be populated with fabricated codes.
+- During migration, existing records may be assigned an explicit legacy indicator or migrated under a documented non-overlapping sequence after owner validation.
 
 ## Status summary
-- Product policy: OWNER APPROVED
-- Exact code format: OWNER APPROVAL REQUIRED
-- Sequence safety: IMPLEMENTATION DETAIL REQUIRED
-- Next gate: OWNER REVIEW REQUIRED
+- Product policy: OWNER APPROVED (Option A)
+- Allocation pattern: FULLY SPECIFIED (PostgreSQL sequence-backed)
+- Database constraints: UNIQUE INDEX on `Code`
+- Next gate: Implementation upon owner authorization
