@@ -32,10 +32,10 @@ public class ExaminationsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetExaminations([FromQuery] string? pathway, CancellationToken ct)
+    public async Task<IActionResult> GetExaminations([FromQuery] ExaminationQueryParameters parameters, CancellationToken ct)
     {
-        var examinations = await _lifecycleService.GetExaminationsAsync(pathway, User, ct);
-        return Ok(new { success = true, examinations });
+        var result = await _lifecycleService.QueryExaminationsAsync(parameters, User, ct);
+        return Ok(result);
     }
 
     [HttpGet("eligible-questions")]
@@ -191,6 +191,16 @@ public class ExaminationsController : ControllerBase
         {
             var questions = await _lifecycleService.ReorderQuestionsAsync(revisionId, request, User, ct);
             return Ok(new { success = true, questions });
+        });
+    }
+
+    [HttpGet("{id}/revisions")]
+    public async Task<IActionResult> GetFamilyRevisions(string id, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var result = await _lifecycleService.GetFamilyRevisionsAsync(id, User, ct);
+            return Ok(result);
         });
     }
 
