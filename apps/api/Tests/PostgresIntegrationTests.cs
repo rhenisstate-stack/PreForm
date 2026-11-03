@@ -595,4 +595,70 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         using var doc = JsonDocument.Parse(persisted.MetadataSnapshot);
         Assert.Equal(1, doc.RootElement.GetProperty("schemaVersion").GetInt32());
     }
+
+    [Fact]
+    public async Task Postgres_QuestionMembershipAndMetadataUpdate_WorksAtomically()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var examFam = new Examination
+        {
+            Id = "exam_fam_pg_m_" + Guid.NewGuid().ToString("N"),
+            Pathway = "rn",
+            Code = "RN-EX-" + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant(),
+            Title = "Postgres Authoring Licensure Exam",
+            CreatedBy = "admin_pg"
+        };
+        context.Examinations.Add(examFam);
+
+        var draftRevision = new Exam
+        {
+            Id = "rev_pg_auth_" + Guid.NewGuid().ToString("N"),
+            ExaminationId = examFam.Id,
+            RevisionNumber = 1,
+            LifecycleState = ExamLifecycleState.Draft,
+            ConcurrencyToken = 1,
+            Title = "Draft Rev 1",
+            Pathway = "rn",
+            CreatedBy = "admin_pg"
+        };
+        context.Exams.Add(draftRevision);
+
+        var question = new Question
+        {
+            Id = "q_pg_m_" + Guid.NewGuid().ToString("N"),
+            Stem = "Postgres Membership Clinical Question",
+            Pathway = "rn",
+            Status = QuestionStatus.Approved,
+            QuestionTypeKey = "single-choice"
+        };
+        context.Questions.Add(question);
+        await context.SaveChangesAsync();
+
+        // 1. Author question association
+        var examQuestion = new ExamQuestion
+        {
+            Id = "eq_pg_" + Guid.NewGuid().ToString("N"),
+            ExamId = draftRevision.Id,
+            QuestionId = question.Id,
+            DisplayOrder = 1
+        };
+        context.ExamQuestions.Add(examQuestion);
+        draftRevision.ConcurrencyToken++;
+        await context.SaveChangesAsync();
+
+        // 2. Verify duplicate question index in PostgreSQL throws DbUpdateException
+        var dupQuestion = new ExamQuestion
+        {
+            Id = "eq_pg_dup_" + Guid.NewGuid().ToString("N"),
+            ExamId = draftRevision.Id,
+            QuestionId = question.Id,
+            DisplayOrder = 2
+        };
+        context.ExamQuestions.Add(dupQuestion);
+        var ex = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+        Assert.Contains("IX_ExamQuestions_ExamId_QuestionId", ex.InnerException?.Message ?? ex.Message);
+    }
 }
