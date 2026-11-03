@@ -813,6 +813,542 @@ public class ExamLifecycleService : IExamLifecycleService
         return MapToRevisionDto(revision, revision.Examination?.Code, revision.ExamQuestions.Count);
     }
 
+    // ── P3.2 Examination Authoring & Membership Implementation ─────────────────
+
+    public async Task<ExamRevisionDto> UpdateRevisionMetadataAsync(string revisionId, UpdateRevisionMetadataRequest request, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (actorId, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin }, "UpdateRevisionMetadata");
+
+        if (string.IsNullOrWhiteSpace(request.Title))
+            throw new ArgumentException("Title cannot be empty.", nameof(request.Title));
+
+        if (request.TimeLimitMinutes < 0 || request.TimeLimitMinutes > 720)
+            throw new ArgumentException("Time limit must be between 0 (untimed) and 720 minutes.", nameof(request.TimeLimitMinutes));
+
+        if (request.PassingScorePercent < 0.0m || request.PassingScorePercent > 100.0m)
+            throw new ArgumentException("Passing score percent must be between 0.0 and 100.0.", nameof(request.PassingScorePercent));
+
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.ExamQuestions)
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        await EnforceConcurrencyAsync(revision, request.ConcurrencyToken, "ExamRevisionMetadataUpdated", actorId, ct);
+
+        if (revision.LifecycleState != ExamLifecycleState.Draft)
+        {
+            throw new InvalidOperationException($"Cannot edit metadata for revision in '{revision.LifecycleState}' state. Only Draft revisions can be edited.");
+        }
+
+        var now = DateTime.UtcNow;
+        var oldValues = new
+        {
+            title = revision.Title,
+            description = revision.Description,
+            examType = revision.ExamType.ToString(),
+            timeLimitMinutes = revision.TimeLimitMinutes,
+            passingScorePercent = revision.PassingScorePercent
+        };
+
+        revision.Title = request.Title.Trim();
+        revision.Description = request.Description?.Trim() ?? string.Empty;
+        revision.ExamType = request.ExamType;
+        revision.TimeLimitMinutes = request.TimeLimitMinutes;
+        revision.PassingScorePercent = request.PassingScorePercent;
+        revision.ConcurrencyToken++;
+        revision.UpdatedAt = now;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorId,
+            Action = "ExamRevisionMetadataUpdated",
+            EntityType = "Exam",
+            EntityId = revision.Id,
+            Description = JsonSerializer.Serialize(new
+            {
+                examinationId = revision.ExaminationId,
+                examinationCode = revision.Examination?.Code,
+                revisionNumber = revision.RevisionNumber,
+                oldValues,
+                newValues = new
+                {
+                    title = revision.Title,
+                    description = revision.Description,
+                    examType = revision.ExamType.ToString(),
+                    timeLimitMinutes = revision.TimeLimitMinutes,
+                    passingScorePercent = revision.PassingScorePercent
+                }
+            }),
+            Outcome = "Success",
+            Timestamp = now
+        });
+
+        await _context.SaveChangesAsync(ct);
+        return MapToRevisionDto(revision, revision.Examination?.Code, revision.ExamQuestions.Count);
+    }
+
+    public async Task<RevisionValidationResultDto> ValidateRevisionAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.ExamQuestions)
+                .ThenInclude(eq => eq.Question)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        var issues = new List<string>();
+
+        if (string.IsNullOrWhiteSpace(revision.Title))
+            issues.Add("Title cannot be empty.");
+
+        if (revision.ExamQuestions.Count == 0)
+            issues.Add("Revision must contain at least one question before submission for review.");
+
+        if (revision.TimeLimitMinutes < 0 || revision.TimeLimitMinutes > 720)
+            issues.Add("Time limit must be between 0 (untimed) and 720 minutes.");
+
+        if (revision.PassingScorePercent < 0.0m || revision.PassingScorePercent > 100.0m)
+            issues.Add("Passing score percent must be between 0.0 and 100.0.");
+
+        foreach (var eq in revision.ExamQuestions)
+        {
+            if (eq.Question == null) continue;
+
+            if (!string.Equals(eq.Question.Pathway, revision.Pathway, StringComparison.OrdinalIgnoreCase))
+            {
+                issues.Add($"Question '{eq.QuestionId}' pathway '{eq.Question.Pathway}' does not match revision pathway '{revision.Pathway}'.");
+            }
+
+            if (eq.Question.Status != QuestionStatus.Approved && eq.Question.Status != QuestionStatus.Published)
+            {
+                issues.Add($"Question '{eq.QuestionId}' is in '{eq.Question.Status}' status. Only Approved or Published questions are eligible.");
+            }
+        }
+
+        return new RevisionValidationResultDto
+        {
+            RevisionId = revision.Id,
+            IsValid = issues.Count == 0,
+            QuestionCount = revision.ExamQuestions.Count,
+            ConcurrencyToken = revision.ConcurrencyToken,
+            LifecycleState = revision.LifecycleState.ToString(),
+            Issues = issues
+        };
+    }
+
+    public async Task<List<ExamQuestionMembershipDto>> GetRevisionQuestionsAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (_, role) = ResolveActor(user);
+        var isRestricted = string.Equals(role, RoleHierarchy.RoleCandidate, StringComparison.OrdinalIgnoreCase) ||
+                           string.Equals(role, RoleHierarchy.RoleInstructor, StringComparison.OrdinalIgnoreCase);
+
+        var revision = await _context.Exams
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        if (isRestricted && revision.LifecycleState != ExamLifecycleState.Published)
+        {
+            throw new UnauthorizedAccessException("Forbidden: non-published revision questions cannot be accessed.");
+        }
+
+        var questions = await _context.ExamQuestions
+            .Where(eq => eq.ExamId == revisionId)
+            .Include(eq => eq.Question)
+                .ThenInclude(q => q.Options)
+            .OrderBy(eq => eq.DisplayOrder)
+            .AsNoTracking()
+            .ToListAsync(ct);
+
+        return questions.Select(eq => new ExamQuestionMembershipDto
+        {
+            Id = eq.Id,
+            ExamId = eq.ExamId,
+            QuestionId = eq.QuestionId,
+            DisplayOrder = eq.DisplayOrder,
+            Stem = eq.Question?.Stem ?? string.Empty,
+            QuestionTypeKey = eq.Question?.QuestionTypeKey ?? "single-choice",
+            Pathway = eq.Question?.Pathway ?? string.Empty,
+            Difficulty = eq.Question?.Difficulty.ToString() ?? "Moderate",
+            Status = eq.Question?.Status.ToString() ?? "Draft",
+            OptionCount = eq.Question?.Options.Count ?? 0
+        }).ToList();
+    }
+
+    public async Task<ExamQuestionMembershipDto> AddQuestionToRevisionAsync(string revisionId, AddExamQuestionRequest request, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (actorId, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin }, "AddQuestionToRevision");
+
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.ExamQuestions)
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        await EnforceConcurrencyAsync(revision, request.ConcurrencyToken, "ExamQuestionAdded", actorId, ct);
+
+        if (revision.LifecycleState != ExamLifecycleState.Draft)
+        {
+            throw new InvalidOperationException($"Cannot add questions to revision in '{revision.LifecycleState}' state. Only Draft revisions can be modified.");
+        }
+
+        var question = await _context.Questions
+            .Include(q => q.Options)
+            .FirstOrDefaultAsync(q => q.Id == request.QuestionId, ct);
+
+        if (question == null)
+            throw new KeyNotFoundException($"Question '{request.QuestionId}' not found.");
+
+        // Pathway compatibility
+        if (!string.Equals(question.Pathway, revision.Pathway, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException($"Pathway mismatch: Question '{question.Id}' has pathway '{question.Pathway}', but revision requires '{revision.Pathway}'.");
+        }
+
+        // Question eligibility (Approved or Published only)
+        if (question.Status != QuestionStatus.Approved && question.Status != QuestionStatus.Published)
+        {
+            throw new InvalidOperationException($"Question '{question.Id}' is in '{question.Status}' status and cannot be added. Only Approved or Published questions can be added to an examination revision.");
+        }
+
+        // Duplicate membership guard
+        if (revision.ExamQuestions.Any(eq => eq.QuestionId == request.QuestionId))
+        {
+            throw new InvalidOperationException($"Question '{request.QuestionId}' is already associated with this revision.");
+        }
+
+        var nextOrder = request.DisplayOrder.HasValue && request.DisplayOrder.Value > 0
+            ? request.DisplayOrder.Value
+            : (revision.ExamQuestions.Any() ? revision.ExamQuestions.Max(eq => eq.DisplayOrder) + 1 : 1);
+
+        var examQuestion = new ExamQuestion
+        {
+            Id = Guid.NewGuid().ToString(),
+            ExamId = revision.Id,
+            QuestionId = question.Id,
+            DisplayOrder = nextOrder
+        };
+
+        _context.ExamQuestions.Add(examQuestion);
+
+        var now = DateTime.UtcNow;
+        revision.ConcurrencyToken++;
+        revision.UpdatedAt = now;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorId,
+            Action = "ExamQuestionAdded",
+            EntityType = "Exam",
+            EntityId = revision.Id,
+            Description = JsonSerializer.Serialize(new
+            {
+                examinationId = revision.ExaminationId,
+                examinationCode = revision.Examination?.Code,
+                revisionNumber = revision.RevisionNumber,
+                questionId = question.Id,
+                displayOrder = nextOrder
+            }),
+            Outcome = "Success",
+            Timestamp = now
+        });
+
+        await _context.SaveChangesAsync(ct);
+
+        return new ExamQuestionMembershipDto
+        {
+            Id = examQuestion.Id,
+            ExamId = examQuestion.ExamId,
+            QuestionId = question.Id,
+            DisplayOrder = examQuestion.DisplayOrder,
+            Stem = question.Stem,
+            QuestionTypeKey = question.QuestionTypeKey,
+            Pathway = question.Pathway,
+            Difficulty = question.Difficulty.ToString(),
+            Status = question.Status.ToString(),
+            OptionCount = question.Options.Count
+        };
+    }
+
+    public async Task<bool> RemoveQuestionFromRevisionAsync(string revisionId, string questionId, long concurrencyToken, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (actorId, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin }, "RemoveQuestionFromRevision");
+
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.ExamQuestions)
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        await EnforceConcurrencyAsync(revision, concurrencyToken, "ExamQuestionRemoved", actorId, ct);
+
+        if (revision.LifecycleState != ExamLifecycleState.Draft)
+        {
+            throw new InvalidOperationException($"Cannot remove questions from revision in '{revision.LifecycleState}' state. Only Draft revisions can be modified.");
+        }
+
+        var membership = revision.ExamQuestions.FirstOrDefault(eq => eq.QuestionId == questionId);
+        if (membership == null)
+        {
+            throw new KeyNotFoundException($"Question '{questionId}' is not associated with revision '{revisionId}'.");
+        }
+
+        _context.ExamQuestions.Remove(membership);
+
+        // Normalize display orders for remaining items
+        var remaining = revision.ExamQuestions.Where(eq => eq.QuestionId != questionId).OrderBy(eq => eq.DisplayOrder).ToList();
+        for (var i = 0; i < remaining.Count; i++)
+        {
+            remaining[i].DisplayOrder = i + 1;
+        }
+
+        var now = DateTime.UtcNow;
+        revision.ConcurrencyToken++;
+        revision.UpdatedAt = now;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorId,
+            Action = "ExamQuestionRemoved",
+            EntityType = "Exam",
+            EntityId = revision.Id,
+            Description = JsonSerializer.Serialize(new
+            {
+                examinationId = revision.ExaminationId,
+                examinationCode = revision.Examination?.Code,
+                revisionNumber = revision.RevisionNumber,
+                questionId,
+                removedDisplayOrder = membership.DisplayOrder
+            }),
+            Outcome = "Success",
+            Timestamp = now
+        });
+
+        await _context.SaveChangesAsync(ct);
+        return true;
+    }
+
+    public async Task<List<ExamQuestionMembershipDto>> ReorderQuestionsAsync(string revisionId, ReorderExamQuestionsRequest request, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (actorId, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin }, "ReorderQuestions");
+
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.ExamQuestions)
+                .ThenInclude(eq => eq.Question)
+                    .ThenInclude(q => q.Options)
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        await EnforceConcurrencyAsync(revision, request.ConcurrencyToken, "ExamQuestionsReordered", actorId, ct);
+
+        if (revision.LifecycleState != ExamLifecycleState.Draft)
+        {
+            throw new InvalidOperationException($"Cannot reorder questions for revision in '{revision.LifecycleState}' state. Only Draft revisions can be modified.");
+        }
+
+        // Validate complete, non-duplicate representation
+        if (request.Items.Count != revision.ExamQuestions.Count)
+        {
+            throw new ArgumentException($"Reorder request must represent all {revision.ExamQuestions.Count} questions in the revision exactly once (received {request.Items.Count}).");
+        }
+
+        var requestedIds = request.Items.Select(i => i.QuestionId).ToHashSet();
+        if (requestedIds.Count != request.Items.Count)
+        {
+            throw new ArgumentException("Duplicate question IDs found in reorder request.");
+        }
+
+        var currentIds = revision.ExamQuestions.Select(eq => eq.QuestionId).ToHashSet();
+        if (!requestedIds.SetEquals(currentIds))
+        {
+            throw new ArgumentException("The submitted question IDs do not match the current membership of this revision.");
+        }
+
+        // Update display orders
+        var orderMap = request.Items.ToDictionary(i => i.QuestionId, i => i.DisplayOrder);
+        foreach (var eq in revision.ExamQuestions)
+        {
+            eq.DisplayOrder = orderMap[eq.QuestionId];
+        }
+
+        var now = DateTime.UtcNow;
+        revision.ConcurrencyToken++;
+        revision.UpdatedAt = now;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorId,
+            Action = "ExamQuestionsReordered",
+            EntityType = "Exam",
+            EntityId = revision.Id,
+            Description = JsonSerializer.Serialize(new
+            {
+                examinationId = revision.ExaminationId,
+                examinationCode = revision.Examination?.Code,
+                revisionNumber = revision.RevisionNumber,
+                order = request.Items.OrderBy(i => i.DisplayOrder).Select(i => new { i.QuestionId, i.DisplayOrder })
+            }),
+            Outcome = "Success",
+            Timestamp = now
+        });
+
+        await _context.SaveChangesAsync(ct);
+
+        return revision.ExamQuestions.OrderBy(eq => eq.DisplayOrder).Select(eq => new ExamQuestionMembershipDto
+        {
+            Id = eq.Id,
+            ExamId = eq.ExamId,
+            QuestionId = eq.QuestionId,
+            DisplayOrder = eq.DisplayOrder,
+            Stem = eq.Question?.Stem ?? string.Empty,
+            QuestionTypeKey = eq.Question?.QuestionTypeKey ?? "single-choice",
+            Pathway = eq.Question?.Pathway ?? string.Empty,
+            Difficulty = eq.Question?.Difficulty.ToString() ?? "Moderate",
+            Status = eq.Question?.Status.ToString() ?? "Draft",
+            OptionCount = eq.Question?.Options.Count ?? 0
+        }).ToList();
+    }
+
+    public async Task<ExaminationDto> UpdateExaminationFamilyAsync(string examinationId, UpdateExaminationFamilyRequest request, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (actorId, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin }, "UpdateExaminationFamily");
+
+        if (string.IsNullOrWhiteSpace(request.Title))
+            throw new ArgumentException("Title cannot be empty.", nameof(request.Title));
+
+        var examination = await _context.Examinations
+            .Include(e => e.Revisions)
+                .ThenInclude(r => r.ExamQuestions)
+            .FirstOrDefaultAsync(e => e.Id == examinationId, ct);
+
+        if (examination == null)
+            throw new KeyNotFoundException($"Examination family '{examinationId}' not found.");
+
+        var oldTitle = examination.Title;
+        examination.Title = request.Title.Trim();
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorId,
+            Action = "ExaminationFamilyUpdated",
+            EntityType = "Examination",
+            EntityId = examination.Id,
+            Description = JsonSerializer.Serialize(new
+            {
+                code = examination.Code,
+                pathway = examination.Pathway,
+                oldTitle,
+                newTitle = examination.Title
+            }),
+            Outcome = "Success",
+            Timestamp = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync(ct);
+        return MapToExaminationDto(examination, examination.Revisions.ToList());
+    }
+
+    public async Task<bool> DiscardDraftRevisionAsync(string revisionId, long concurrencyToken, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (actorId, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin }, "DiscardDraftRevision");
+
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.Attempts)
+            .Include(e => e.ExamQuestions)
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        await EnforceConcurrencyAsync(revision, concurrencyToken, "ExamRevisionDiscarded", actorId, ct);
+
+        if (revision.LifecycleState != ExamLifecycleState.Draft)
+        {
+            throw new InvalidOperationException($"Cannot discard revision in '{revision.LifecycleState}' state. Only Draft revisions can be discarded.");
+        }
+
+        if (revision.Attempts.Any())
+        {
+            throw new InvalidOperationException("Cannot discard revision that has associated attempts.");
+        }
+
+        if (revision.SubmittedAt != null || revision.ApprovedAt != null || revision.PublishedAt != null)
+        {
+            throw new InvalidOperationException("Cannot discard revision that has lifecycle review or publication history.");
+        }
+
+        if (revision.Examination?.CurrentRevisionId == revision.Id)
+        {
+            throw new InvalidOperationException("Cannot discard the current revision of an examination family.");
+        }
+
+        var totalRevisions = await _context.Exams.CountAsync(e => e.ExaminationId == revision.ExaminationId, ct);
+        if (totalRevisions <= 1)
+        {
+            throw new InvalidOperationException("Cannot discard Revision 1 when it is the sole revision of the examination family.");
+        }
+
+        var examinationId = revision.ExaminationId;
+        var examinationCode = revision.Examination?.Code;
+        var revisionNumber = revision.RevisionNumber;
+
+        // Cascade delete attached question relationships
+        if (revision.ExamQuestions.Any())
+        {
+            _context.ExamQuestions.RemoveRange(revision.ExamQuestions);
+        }
+
+        _context.Exams.Remove(revision);
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorId,
+            Action = "ExamRevisionDiscarded",
+            EntityType = "Exam",
+            EntityId = revisionId,
+            Description = JsonSerializer.Serialize(new
+            {
+                examinationId,
+                examinationCode,
+                revisionNumber,
+                discardedBy = actorId
+            }),
+            Outcome = "Success",
+            Timestamp = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync(ct);
+        return true;
+    }
+
     private static ExaminationDto MapToExaminationDto(Examination examination, List<Exam> revisions)
     {
         var revisionDtos = revisions.Select(r => MapToRevisionDto(r, examination.Code, r.ExamQuestions?.Count ?? 0)).ToList();

@@ -20,4 +20,14 @@ public interface IExamLifecycleService
     Task<ExaminationDto?> GetExaminationAsync(string id, ClaimsPrincipal user, CancellationToken ct = default);
     Task<List<ExaminationDto>> GetExaminationsAsync(string? pathway, ClaimsPrincipal user, CancellationToken ct = default);
     Task<ExamRevisionDto?> GetRevisionAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default);
+
+    // ── P3.2 Authoring, Membership & Discard Operations ──
+    Task<ExamRevisionDto> UpdateRevisionMetadataAsync(string revisionId, UpdateRevisionMetadataRequest request, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<RevisionValidationResultDto> ValidateRevisionAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<List<ExamQuestionMembershipDto>> GetRevisionQuestionsAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<ExamQuestionMembershipDto> AddQuestionToRevisionAsync(string revisionId, AddExamQuestionRequest request, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<bool> RemoveQuestionFromRevisionAsync(string revisionId, string questionId, long concurrencyToken, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<List<ExamQuestionMembershipDto>> ReorderQuestionsAsync(string revisionId, ReorderExamQuestionsRequest request, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<ExaminationDto> UpdateExaminationFamilyAsync(string examinationId, UpdateExaminationFamilyRequest request, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<bool> DiscardDraftRevisionAsync(string revisionId, long concurrencyToken, ClaimsPrincipal user, CancellationToken ct = default);
 }
