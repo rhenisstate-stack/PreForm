@@ -539,8 +539,29 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-        var user = await context.Users.FirstAsync();
-        var exam = await context.Exams.FirstAsync();
+        var user = await context.Users.FirstOrDefaultAsync() ?? new User
+        {
+            Id = "usr_pg_" + Guid.NewGuid().ToString("N"),
+            Email = "pg.user@prepford.com",
+            PasswordHash = "hash",
+            DisplayName = "PG User"
+        };
+        if (context.Entry(user).State == EntityState.Detached)
+        {
+            context.Users.Add(user);
+        }
+
+        var exam = new Exam
+        {
+            Id = "exam_pg_snap_" + Guid.NewGuid().ToString("N"),
+            Title = "Postgres Snapshot Practice Exam",
+            Pathway = "rn",
+            PassingScorePercent = 75.0m,
+            IsPublished = true,
+            LifecycleState = ExamLifecycleState.Published
+        };
+        context.Exams.Add(exam);
+        await context.SaveChangesAsync();
 
         var snapshotJson = JsonSerializer.Serialize(new
         {

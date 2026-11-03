@@ -116,6 +116,7 @@ public class CandidateAttemptDetailDto
     public DateTime? CompletedAt { get; set; }
     /// <summary>True when authoritative grading is incomplete (e.g. missing answer keys).</summary>
     public bool GradingIncomplete { get; set; }
+    [JsonPropertyName("metadataSnapshot")]
     public object? MetadataSnapshot { get; set; }
     public List<CandidateAttemptResponseDto> Responses { get; set; } = new();
 }

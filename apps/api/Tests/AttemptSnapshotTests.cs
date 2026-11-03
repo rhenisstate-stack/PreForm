@@ -100,8 +100,9 @@ public class AttemptSnapshotTests
         }, CancellationToken.None);
 
         var createdAtResult = Assert.IsType<CreatedAtActionResult>(result);
-        dynamic val = createdAtResult.Value!;
-        string attemptId = val.attemptId;
+        var resJson = JsonSerializer.Serialize(createdAtResult.Value);
+        using var resDoc = JsonDocument.Parse(resJson);
+        string attemptId = resDoc.RootElement.GetProperty("attemptId").GetString()!;
 
         // Verify persisted attempt
         var persistedAttempt = await context.ExamAttempts.FindAsync(attemptId);
@@ -206,7 +207,7 @@ public class AttemptSnapshotTests
         var okResult = Assert.IsType<OkObjectResult>(result);
 
         // Serialize and inspect the returned DTO
-        var json = JsonSerializer.Serialize(okResult.Value);
+        var json = JsonSerializer.Serialize(okResult.Value, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
         using var doc = JsonDocument.Parse(json);
         var attemptProp = doc.RootElement.GetProperty("attempt");
 

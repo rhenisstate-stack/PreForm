@@ -127,7 +127,6 @@ public class ExaminationCodeService : IExaminationCodeService
             };
 
             _context.Exams.Add(initialRevision);
-            examination.Revisions.Add(initialRevision);
 
             _context.AuditLogs.Add(new AuditLog
             {
