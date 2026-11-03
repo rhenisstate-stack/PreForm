@@ -281,10 +281,6 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<AttemptResponse>(entity =>
         {
             entity.HasIndex(ar => ar.ExamAttemptId);
-            // Legacy rows (persisted before Gate C) keep Graded semantics; the column
-            // default guarantees historical regimes cannot introduce state 0.
-            entity.Property(ar => ar.GradingState)
-                  .HasDefaultValue(ResponseGradingState.Graded);
             entity.HasOne(ar => ar.ExamAttempt)
                   .WithMany(ea => ea.Responses)
                   .HasForeignKey(ar => ar.ExamAttemptId)
