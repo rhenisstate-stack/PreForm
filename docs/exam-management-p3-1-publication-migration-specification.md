@@ -2,82 +2,65 @@
 
 ## Status
 - Decision ID: D7
-- Status: OWNER APPROVED
-- Approved direction: lifecycle is the source of truth; `IsPublished` is not an independently editable source of truth
-- Temporary compatibility: only allowed if explicitly synchronized and documented
+- Stage: Architecture Review Remediation
+- Status: SPECIFICATION REMEDIATED & COMPLETE
+- Approved direction: Lifecycle state is the single source of truth; `IsPublished` is derived compatibility only
 
-## Repository evidence
-The current repository treats publication mostly as a boolean on `Exam` in `apps/api/Models/Assessments.cs`. The database model in `apps/api/Data/AppDbContext.cs` indexes `IsPublished` directly. Candidate-facing flows and administrative flows assume the boolean is the publication flag. This is not compatible with the approved lifecycle model in which publication is a state and not just a field value.
+## Repository Evidence & Compatibility Rule
+In `apps/api/Models/Assessments.cs`, `Exam` currently uses a boolean `IsPublished` property. To support existing frontend and candidate read paths during migration, `IsPublished` is preserved as a derived compatibility property synchronized directly from `LifecycleState == ExamLifecycleState.Published`. Direct writes to `IsPublished` by application logic outside the lifecycle transition pipeline are strictly prohibited.
 
-## Required migration rule
-The lifecycle state must become the authoritative publication representation. The boolean may exist only as a compatibility bridge until the repository fully migrates the application to the lifecycle model.
+## Non-Destructive Database Inventory Protocol
 
-## Canonical representation
-Recommended canonical field:
-- `LifecycleState` enum or string-backed state on the revision record
+Before applying migrations or data backfills in staging or production, execute the following read-only inventory query:
+```sql
+SELECT 
+    e."Id", 
+    e."Title", 
+    e."Pathway", 
+    e."ExamType", 
+    e."IsPublished", 
+    e."CreatedAt", 
+    e."UpdatedAt",
+    (SELECT COUNT(*) FROM public."ExamAttempts" a WHERE a."ExamId" = e."Id") AS "AttemptCount",
+    (SELECT COUNT(*) FROM public."ExamQuestions" q WHERE q."ExamId" = e."Id") AS "QuestionCount"
+FROM public."Exams" e
+ORDER BY e."Pathway", e."CreatedAt";
+```
 
-Recommended relationship:
-- `LifecycleState == Published` is the canonical publication state
-- `IsPublished` is derived compatibility and must not be writable by the application outside a transition shim
+### Classification Taxonomy for Existing Records
 
-## Recommended compatibility mapping
+| Class | Classification Criteria | Migration Action | Safeguard & Decision Status |
+|---|---|---|---|
+| **Class A** | **Safely Mappable:** Single published exam per pathway with active/completed attempts (e.g. `exam_rn_adaptive_cat`). | Allocate parent `Examination` family with sequential code; set `RevisionNumber = 1`; set `LifecycleState = Published`; sync `IsPublished = true`. | Preserves candidate attempt history without fabricating reviewer or approver metadata. |
+| **Class B** | **Requires Owner Decision:** Multiple published exams for the same pathway, OR unpublished exams (`IsPublished = false`) that have candidate attempts. | Flag record for owner review. Do not automatically classify as Draft or Published. | Prevents exposing unapproved content or archiving active student exam families without product direction. |
+| **Class C** | **Insufficient Evidence:** Incomplete orphaned drafts with no questions and no candidate attempts. | Map to `Draft` under a quarantined review flag or delete after owner confirmation. | Preserves auditability. |
 
-| Current repository state | Recommended lifecycle mapping | Compatibility note |
-|---|---|---|
-| `IsPublished = true` | `Published` | acceptable if there is no evidence of a different active state |
-| `IsPublished = false` | `Draft` by default | must be treated as conservative default, not proof of historic lifecycle completeness |
-| Unknown or ambiguous historical state | `Draft` or `Archived` only with explicit evidence | do not fabricate approval or publishing timestamps |
+## Staged Migration Sequence
 
-## Important constraints
-- Do not map every unpublished record to `Draft` without considering whether some records were actually archived, retired, or historically unpublished because the publication workflow had not yet been implemented.
-- Do not fabricate review or approval metadata for old records.
-- Do not claim historical publication timestamps that cannot be proven in the repository.
-- Do not widen candidate access during the migration by interpreting `IsPublished = false` as a publication state.
+1. **Step 1 — Additive Schema Migration:**
+   - Create `Examinations` table with unique constraint on `Code`.
+   - Add nullable `ExaminationId`, `RevisionNumber`, `LifecycleState`, and `ConcurrencyToken` to `Exams`.
+   - Create sequence counters `exam_code_rn_seq` and `exam_code_pn_seq`.
+2. **Step 2 — Data Backfill & Examination Creation:**
+   - For Class A records: Generate stable `Examination` row; set `RevisionNumber = 1`; populate `ExaminationId`.
+   - Set `Exam.LifecycleState = ExamLifecycleState.Published` for published records.
+   - Set `Exam.LifecycleState = ExamLifecycleState.Draft` for verified unsubmitted drafts.
+   - Do NOT populate `ApprovedBy`, `ReviewedBy`, or `PublishedBy` with fabricated names; set `CreatedBy = "system_migration"`.
+3. **Step 3 — Constraint Enforcement:**
+   - Make `Exam.ExaminationId` required (`NOT NULL`).
+   - Add composite unique index `UNIQUE (ExaminationId, RevisionNumber)`.
+   - Add partial unique indexes for single published and single active draft.
+4. **Step 4 — Code Cutover:**
+   - Services read and write `LifecycleState`.
+   - Compatibility bridge synchronizes `IsPublished = (LifecycleState == ExamLifecycleState.Published)`.
 
-## Recommended compatibility behavior
-For the transition period:
-1. `LifecycleState` is read and written by the domain logic.
-2. `IsPublished` remains readable by existing code paths during migration.
-3. `IsPublished` is set only by the compatibility shim when a lifecycle transition occurs.
-4. Any direct writes to `IsPublished` outside the compatibility shim are prohibited.
-5. Legacy UI or APIs may still read `IsPublished` until the migration window ends.
+## Rollback Considerations
+Because all schema additions are strictly additive, rollback is non-destructive:
+- Dropping the partial indexes and foreign key constraints restores previous schema behavior.
+- Existing `Exam` rows and `ExamAttempt.ExamId` references remain 100% intact throughout migration and rollback.
 
-## Reads and writes to investigate during implementation
-Read/write analysis required for final implementation:
-- reads of `IsPublished` in API and service logic
-- writes of `IsPublished` in creation or publication routines
-- candidate access checks
-- admin access checks
-- seed data and defaults
-- tests that depend on the boolean
-- frontend assumptions about `Published` status
-
-Current repository evidence shows the boolean is indexed and used to represent publish status, but no lifecycle-state transition layer exists yet. Implementation must perform a full read/write audit before deleting the compatibility field.
-
-## Ambiguous record policy
-If historical records cannot be mapped safely:
-- leave them in a conservative state
-- require explicit owner instructions before changing them
-- record their ambiguity in the migration report
-
-## Removal criteria for the legacy flag
-The legacy `IsPublished` flag should be removed only when:
-- all domain logic reads lifecycle state exclusively
-- all migrations are complete
-- candidate access enforcement is verified
-- the admin workflow is using the lifecycle model consistently
-- tests and documentation are updated to reflect the new source of truth
-
-## Rollback considerations
-- migration rollback must preserve the ability to recover the old `IsPublished` value where that evidence exists
-- historical candidate attempts and other records must not be rewritten in a way that loses their exact starting revision
-- tolerance for legacy compatibility should be temporary and documented
-
-## Final recommendation
-Use lifecycle state as authoritative immediately, and treat `IsPublished` as a derived compatibility property only during a transition window. Do not silently reclassify historical records without explicit audit evidence.
-
-## Status summary
-- Product policy: OWNER APPROVED
-- Technical implementation: IMPLEMENTATION DETAIL REQUIRED
-- Compatibility mapping: REQUIRED before code changes
-- Next gate: OWNER REVIEW REQUIRED
+## Status Summary
+- Migration Strategy: ADDITIVE & STAGED
+- Legacy Record Classification: CONSERVATIVE & AUDITED (No metadata fabrication)
+- Rollback: NON-DESTRUCTIVE
+- Next Gate: Implementation upon owner authorization

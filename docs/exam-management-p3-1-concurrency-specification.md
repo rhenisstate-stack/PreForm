@@ -2,88 +2,84 @@
 
 ## Status
 - Decision ID: D5
-- Status: OWNER APPROVED
-- Approved direction: application-managed optimistic concurrency token
-- Disallowed: SQL Server `rowversion` assumptions and new dependencies
+- Stage: Architecture Review Remediation
+- Status: SPECIFICATION REMEDIATED & COMPLETE
+- Approved direction: Application-managed optimistic concurrency token on revision rows
 
-## Repository evidence
-The current backend is using ASP.NET Core 8 + EF Core with PostgreSQL/Npgsql. The current `Exam` entity has no concurrency token and no optimistic update checks. The owner-approved direction explicitly rejects SQL Server-style `RowVersion` semantics for PostgreSQL.
+## Repository Evidence & EF Core Integration
+The PrepFord API uses ASP.NET Core 8 and EF Core 8.0.10 with Npgsql. Standard optimistic concurrency is achieved by designating a scalar property as a concurrency token using EF Core's fluent API (`.IsConcurrencyToken()`). This eliminates reliance on SQL Server-specific `rowversion` or raw SQL updates while integrating cleanly with EF Core change tracking and transaction pipelines.
 
-## Design goal
-Prevent silent lost updates when multiple administrators edit the same Draft revision concurrently. The selected mechanism must be application-managed, database-compatible, and safe under PostgreSQL/Npgsql without introducing a new package or dependency.
+## Concurrency Token Model
 
-## Recommended concurrency strategy
-Use an application-managed optimistic concurrency token on the revision record, such as:
-- `ConcurrencyToken` as a `long` integer or `Guid` value
-- updated on every successful write to the revision
-- checked in the update predicate when the revision is modified
+### 1. Entity Property Definition
+On the `Exam` entity (`apps/api/Models/Assessments.cs`):
+```csharp
+[ConcurrencyCheck]
+public long ConcurrencyToken { get; set; } = 1;
+```
 
-### Recommended shape
-- `ConcurrencyToken` (long) or `VersionStamp` (Guid) stored with the revision row
-- When an authorized update is attempted, the API verifies that the supplied token matches the current revision token
-- If the token mismatch occurs, the service returns a conflict response and no overwrite occurs
+### 2. EF Core Model Configuration (`AppDbContext.cs`)
+```csharp
+modelBuilder.Entity<Exam>(entity =>
+{
+    entity.Property(e => e.ConcurrencyToken).IsConcurrencyToken();
+});
+```
 
-### Why this is safe
-- It does not depend on SQL Server-specific `rowversion`
-- It works cleanly with PostgreSQL and EF Core
-- It is explicit in the service logic and easier to audit
-- It avoids lost updates without hiding the conflict behind a silent overwrite
+### 3. Update Behavior & Token Increment
+- When an authorized administrator updates a revision:
+  1. The client sends the `expectedConcurrencyToken` in the request payload or header.
+  2. The service loads the entity and verifies that `revision.ConcurrencyToken == request.ExpectedConcurrencyToken`.
+  3. If matched, the service applies modifications and increments the token:
+     ```csharp
+     revision.ConcurrencyToken++;
+     ```
+  4. During `SaveChangesAsync()`, EF Core generates an update statement that checks the original concurrency token value in the `WHERE` clause:
+     ```sql
+     UPDATE public."Exams"
+     SET "Title" = @p0, "ConcurrencyToken" = @p1, "UpdatedAt" = @p2
+     WHERE "Id" = @p3 AND "ConcurrencyToken" = @p4;
+     ```
+  5. If rows affected is `0` (because a concurrent update modified the row), EF Core throws `DbUpdateConcurrencyException`.
 
-## Required behavior
-When two administrators edit the same Draft revision:
-1. the first valid update succeeds
-2. the second update sees the stale token and fails with conflict
-3. the second update does not overwrite the first
-4. the API returns the project’s standard conflict response
-5. audit history records both the successful update and the blocked stale update, when appropriate
+## Operations Covered by Concurrency Enforcement
 
-## EF Core configuration recommendation
-The implementation should configure the token as a regular scalar property rather than assuming a SQL Server timestamp semantics.
+Optimistic concurrency is strictly enforced across all revision mutation and lifecycle paths:
+1. **Draft Content Updates:** Modifying `Title`, `Description`, `TimeLimitMinutes`, or `PassingScorePercent`.
+2. **Question Set Mutations:** Adding, removing, or reordering questions within `ExamQuestions`.
+3. **Lifecycle State Transitions:**
+   - `SubmitForReview` (`Draft -> InReview`)
+   - `ReturnForChanges` (`InReview -> Draft`)
+   - `Approve` (`InReview -> Approved`)
+   - `Publish` (`Approved -> Published`)
+   - `Archive` (`Published -> Archived`)
+   - `Restore` (`Archived -> Published`)
+   - `Retire` (`Archived -> Retired`)
 
-Recommended pattern (conceptually):
-- add `ConcurrencyToken` scalar to the revision model
-- initialize on create
-- increment on each successful update or set a new token value
-- include the expected token in the update predicate and in the update request
+## Conflict Response & Audit Persistence
 
-This is easier to audit than relying on database-generated rowversion semantics.
+### HTTP 409 Conflict Response Envelope
+When `DbUpdateConcurrencyException` occurs:
+```json
+{
+  "error": "ConcurrencyConflict",
+  "message": "The examination revision was modified by another administrator. Please refresh your view and retry.",
+  "revisionId": "exam_rev_001",
+  "currentConcurrencyToken": 3
+}
+```
 
-## API conflict response
-When token mismatch occurs:
-- return the appropriate conflict or stale-update response used by the project
-- do not silently accept the stale payload
-- ensure the client sees a clear stale revision error and the current revision values as needed
+### Audit Trail Logging
+Upon encountering a concurrency conflict:
+- An entry is recorded in `AuditLogs`:
+  - `Action`: `"ExamRevisionUpdateConflict"`
+  - `EntityType`: `"Exam"`
+  - `EntityId`: `revision.Id`
+  - `Outcome`: `"Conflict"`
+  - `Description`: Serialized metadata detailing the attempted update, expected token, and actor ID.
 
-## Transaction interaction
-- the token check must occur in the same transaction as the revision update
-- the database should not allow a stale update to commit after the token check passes
-- audit event creation should be part of the same unit-of-work if supported by the current transaction model
-
-## Audit consistency
-For a stale update rejection:
-- record the blocked action, actor, revision ID, expected token, and current status in the audit log if the current infrastructure supports it
-- do not create a misleading success audit entry for a rejected update
-
-## Test cases required at implementation time
-- two concurrent updates to same Draft revision
-- stale write after an intervening valid update
-- sequential update after a successful refresh
-- no silent overwrite when a different actor modifies the same revision
-- no audit-history corruption when an update conflicts
-
-## Implementation constraints
-- no new dependency installation
-- no reliance on SQL Server `rowversion`
-- no weakening of validation or silent retry loops that hide the conflict
-
-## Remaining owner decisions
-None on the product policy; the owner explicitly approved this strategy. The remaining technical detail is implementation structure, not product choice.
-
-## Final recommendation
-Implement a revision-level application-managed optimistic concurrency token and continue to enforce it at the service level. This is compatible with EF Core and PostgreSQL and preserves data integrity without requiring a new package or a SQL Server-specific mechanism.
-
-## Status summary
-- Owner policy: OWNER APPROVED
-- Technical design: IMPLEMENTATION DETAIL REQUIRED
-- Dependency status: no new dependency
-- Next gate: OWNER REVIEW REQUIRED
+## Status Summary
+- Concurrency Mechanism: EF CORE `.IsConcurrencyToken()` (Standard, provider-agnostic)
+- Coverage: ALL MUTATION & LIFECYCLE PATHS
+- HTTP Status: 409 CONFLICT
+- Next Gate: Implementation upon owner authorization

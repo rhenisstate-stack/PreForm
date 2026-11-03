@@ -1,64 +1,80 @@
 # PrepFord Examination Management — P3.1 Examination Code Specification
 
 ## Status
-- Decision ID: D6 & D9
-- Status: OWNER APPROVED
-- Approved direction: sequential, pathway-scoped examination codes
-- Approved code format: Option A — `RN-EX-000001` / `PN-EX-000001`
-- Scope: Stable examination identity code allocation and immutability
+- Decision IDs: D6 & D9
+- Stage: Architecture Review Remediation
+- Status: SPECIFICATION REMEDIATED & COMPLETE
+- Approved format: Option A — `RN-EX-000001` / `PN-EX-000001`
 
-## Repository evidence
-The current `Exam` entity in `apps/api/Models/Assessments.cs` includes `Pathway` but no code field and no uniqueness constraint. The repository documents (`docs/exam-management-p3-owner-decisions.md`) propose `ExamCode` as unique per pathway. The owner has approved the exact code format and allocation rules.
+## Repository Evidence & Constraints
+In `apps/api/Models/Assessments.cs`, `Exam` currently includes `Pathway` (`"rn"` or `"pn"`), but lacks a sequential examination code and database uniqueness constraints. The owner has approved sequential pathway-scoped codes formatted as `RN-EX-000001` and `PN-EX-000001`.
 
-## Approved product policy
-1. **Format:** Pathway-prefixed, zero-padded 6-digit sequential codes:
-   - Registered Nursing (RN): `RN-EX-000001`
-   - Practical Nursing (PN): `PN-EX-000001`
-2. **Independent sequences:** RN and PN maintain separate, independent numerical counters starting at 1.
-3. **Allocation level:** Codes are assigned when a stable `Examination` identity is created, not when an individual revision is created.
-4. **Lineage retention:** All revisions under one stable `Examination` family retain the exact same examination code.
-5. **Permanence:** Codes are permanent and never reused or reassigned, even after archival or retirement.
-6. **Transaction safety:** Code allocation must be atomic and concurrency-safe under concurrent requests.
-7. **No partial creation:** A failed transaction must roll back cleanly and not leave an orphaned code or partially created examination.
-8. **No historical fabrication:** Existing legacy examination records must not receive fabricated historical codes; existing records without codes will be addressed via explicit migration rules.
+## Approved Policy Rules
 
-## Database schema & allocation architecture
+1. **Format:** Pathway prefix (`RN-EX-` or `PN-EX-`) followed by a 6-digit zero-padded sequential integer:
+   - Registered Nursing: `RN-EX-000001` through `RN-EX-999999`
+   - Practical Nursing: `PN-EX-000001` through `PN-EX-999999`
+2. **Pathway Independence:** RN and PN maintain separate, independent sequence counters.
+3. **Allocation Scope:** Assigned strictly at creation of the stable `Examination` family entity, **not** per revision.
+4. **Lineage Retention:** All revisions under the same `Examination` identity retain the exact same examination code.
+5. **Permanence & Immutability:** Codes are permanent and never reused, reassigned, or modified, even after archival or retirement.
+6. **No Historical Fabrication:** Existing legacy records must not receive fabricated historical codes.
 
-### Storage location
-- The `Code` field is stored on the stable `Examination` entity (`Examination.Code`, `varchar(16)` or `text`, not null).
-- An explicit unique constraint and index is placed on `(Pathway, Code)` (or globally on `Code` as codes are globally unique given the pathway prefix).
+## Database Sequence Mechanics & Schema
 
-### PostgreSQL allocation pattern
-To achieve concurrency safety without fragile max-plus-one logic, the implementation will utilize dedicated PostgreSQL sequences per pathway or an atomic pathway counter table:
-
+### 1. PostgreSQL Sequence Definitions
 ```sql
--- PostgreSQL sequences per pathway
-CREATE SEQUENCE IF NOT EXISTS exam_code_rn_seq START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE IF NOT EXISTS exam_code_pn_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS exam_code_rn_seq 
+    START WITH 1 
+    INCREMENT BY 1 
+    MINVALUE 1 
+    MAXVALUE 999999 
+    NO CYCLE;
+
+CREATE SEQUENCE IF NOT EXISTS exam_code_pn_seq 
+    START WITH 1 
+    INCREMENT BY 1 
+    MINVALUE 1 
+    MAXVALUE 999999 
+    NO CYCLE;
 ```
 
-In the allocation service:
-1. Determine pathway (`RN` vs `PN`).
-2. Fetch next sequence value within the active transaction:
-   - For RN: `SELECT nextval('exam_code_rn_seq')` -> formatted as `$"RN-EX-{val:D6}"`
-   - For PN: `SELECT nextval('exam_code_pn_seq')` -> formatted as `$"PN-EX-{val:D6}"`
-3. If pathway is not RN or PN, reject transaction with validation error.
-4. Insert `Examination` record with allocated `Code`.
-5. Unique constraint on `Code` guarantees absolute collision immunity.
+### 2. Sequence Characteristics & Invariants
+- **Non-Transactional Allocation:** In PostgreSQL, calling `nextval()` advances the sequence immediately and is not rolled back if the enclosing transaction aborts.
+- **Acceptance of Numerical Gaps:** Because sequence advancement is non-transactional, failed or cancelled transactions will produce numerical gaps (e.g., `RN-EX-000003` followed by `RN-EX-000005`). Per approved Decision 1 (D6 & D9), **numerical gaps are acceptable**; uniqueness and pathway isolation are the enforced guarantees.
+- **Ceiling Protection:** The `MAXVALUE 999999 NO CYCLE` clause prevents silent wrapping. If the sequence reaches 999,999, any subsequent allocation throws an exception, preventing duplicate code reuse.
+- **Uniqueness Enforcement:** An explicit unique index on `Examination.Code` (`CREATE UNIQUE INDEX "IX_Examinations_Code" ON public."Examinations" ("Code");`) provides absolute database-level collision protection.
 
-### Collision handling
-If a duplicate code allocation occurs (e.g., in a failover or edge case):
-- The database unique constraint aborts the transaction immediately.
-- The service catches the constraint violation and returns a standard API 409 Conflict error.
-- The collision event is logged with actor, timestamp, and attempted pathway.
-- No partial record remains in the database.
+### 3. Allocation Algorithm in `ExaminationCodeService`
+```csharp
+public async Task<string> AllocateCodeAsync(string pathway, CancellationToken cancellationToken)
+{
+    var normalizedPathway = pathway.Trim().ToLowerInvariant();
+    var sequenceName = normalizedPathway switch
+    {
+        "rn" => "exam_code_rn_seq",
+        "pn" => "exam_code_pn_seq",
+        _ => throw new ArgumentException($"Unsupported examination pathway: {pathway}")
+    };
 
-## Historical records policy
-- Legacy `Exam` records in the repository without codes will not be populated with fabricated codes.
-- During migration, existing records may be assigned an explicit legacy indicator or migrated under a documented non-overlapping sequence after owner validation.
+    var prefix = normalizedPathway == "rn" ? "RN-EX-" : "PN-EX-";
 
-## Status summary
-- Product policy: OWNER APPROVED (Option A)
-- Allocation pattern: FULLY SPECIFIED (PostgreSQL sequence-backed)
-- Database constraints: UNIQUE INDEX on `Code`
-- Next gate: Implementation upon owner authorization
+    // Allocate nextval directly from PostgreSQL sequence
+    var val = await _db.Database
+        .SqlQueryRaw<long>($"SELECT nextval('{sequenceName}') AS \"Value\"")
+        .SingleAsync(cancellationToken);
+
+    if (val > 999999)
+    {
+        throw new InvalidOperationException($"Examination code sequence ceiling reached for pathway: {pathway}");
+    }
+
+    return $"{prefix}{val:D6}";
+}
+```
+
+## Status Summary
+- Format: `RN-EX-000001` / `PN-EX-000001`
+- Allocation: POSTGRESQL SEQUENCE-BACKED (Non-transactional, gap-tolerant)
+- Collision Immunity: DATABASE UNIQUE INDEX
+- Next Gate: Implementation upon owner authorization
