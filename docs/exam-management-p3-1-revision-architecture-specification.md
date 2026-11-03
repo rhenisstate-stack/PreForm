@@ -2,97 +2,80 @@
 
 ## Status
 - Decision ID: D1
-- Status: OWNER APPROVED
+- Stage: Architecture Review Remediation
+- Status: SPECIFICATION REMEDIATED & COMPLETE
 - Approved model: Option B — stable Examination identity + version-specific revision model
-- Execution mode: Documentation-only; no schema or code changes
+- Execution mode: Documentation-only; no schema or code changes executed
 
-## Repository evidence
-The current repository still uses a single `Exam` entity as the examination configuration record in `apps/api/Models/Assessments.cs`. The entity includes `Id`, `Title`, `Description`, `Pathway`, `ExamType`, `TimeLimitMinutes`, `PassingScorePercent`, `IsPublished`, and candidate relationship data. Current EF configuration in `apps/api/Data/AppDbContext.cs` indexes `IsPublished` and candidate attempt references, but there is no stable identity, revision number, or lifecycle metadata.
+## Repository Evidence & Compatibility
+The existing PrepFord repository in `apps/api/Models/Assessments.cs` and `apps/api/Data/AppDbContext.cs` defines:
+- `Exam` with primary key `public string Id { get; set; } = Guid.NewGuid().ToString();`.
+- `ExamAttempt` with primary key `string Id`, foreign key `string ExamId`, and user link `string UserId`.
+- `ExamAttemptQuestion` with foreign key `string ExamAttemptId`, `string QuestionId`, and `int DisplayOrder`.
 
-The key compatibility constraint is that `ExamAttempt.ExamId` currently points to the revision record that the candidate used. This behavior must be preserved exactly when the new revision design is implemented.
+**Key Architectural Invariant:**
+`ExamAttempt.ExamId` permanently references the exact `Exam` revision record that the candidate started. This relationship is preserved 100% intact. The new stable identity layer (`Examination`) is introduced additively above `Exam`.
 
-## Approved product direction
-The owner approved a separate stable Examination identity and version-specific examination revision model (Option B).
+## Additive Domain Model
 
-The technical interpretation is:
-- `Examination` = stable identity across the lifetime of the examination family.
-- `Exam` (existing entity) = revision record that stores the actual configuration for one version.
-- `ExamAttempt.ExamId` continues to point to the exact revision used by the candidate.
+### 1. `Examination` (Stable Identity Entity)
+Represents the examination family over its operational lifetime:
+- `Id`: `string` (`text` PK, default `Guid.NewGuid().ToString()`)
+- `Pathway`: `string` (max 10, e.g. `"rn"` or `"pn"`)
+- `Code`: `string` (max 16, unique index, e.g. `"RN-EX-000001"`)
+- `Title`: `string` (max 128)
+- `CreatedAt`: `DateTime` (`DateTime.UtcNow`)
+- `CreatedBy`: `string` (max 128)
+- `CurrentRevisionId`: `string?` (nullable FK to `Exam`)
+- `SuccessorExaminationId`: `string?` (nullable FK to `Examination`)
 
-This is the least disruptive model because it preserves existing candidate references and adds the stable identity layer.
+### 2. `Exam` (Revision Entity)
+Represents a specific revision of the examination content and configuration:
+- Existing columns preserved: `Id`, `Title`, `Description`, `Pathway`, `ExamType`, `TimeLimitMinutes`, `PassingScorePercent`, `IsPublished`, `CreatedAt`, `UpdatedAt`.
+- Additive foreign key: `ExaminationId` (`string`, FK to `Examination.Id`, ON DELETE RESTRICT).
+- Additive revision number: `RevisionNumber` (`int`, unique within `ExaminationId`).
+- Additive lifecycle state: `LifecycleState` (`ExamLifecycleState`: `Draft=1`, `InReview=2`, `Approved=3`, `Published=4`, `Archived=5`, `Retired=6`).
+- Additive concurrency token: `ConcurrencyToken` (`long`, configured with `IsConcurrencyToken()`).
+- Additive staffing audit trail: `CreatedBy`, `SubmittedBy`, `SubmittedAt`, `ReviewedBy`, `ReviewedAt`, `ApprovedBy`, `ApprovedAt`, `PublishedBy`, `PublishedAt`, `ArchivedBy`, `ArchivedAt`, `RetiredBy`, `RetiredAt`.
 
-## Recommended minimal-disruption design
-
-### Option B, adapted to the existing repository
-1. Create a new stable identity entity, `Examination`, with:
-   - `Id` (Guid, primary key)
-   - `Pathway` (`string` or enum matching domain: "RN", "PN")
-   - `Code` (`string`, e.g. `RN-EX-000001`, unique per pathway/globally)
-   - `CreatedAt` (`DateTimeUtc`)
-   - `CreatedBy` (`string`)
-   - `CurrentRevisionId` (`Guid?`, points to active revision)
-   - `SuccessorExaminationId` (`Guid?`, for successor links to retired examinations)
-2. Retain the existing `Exam` entity as the revision entity, and extend it with:
-   - `ExaminationId` (Guid FK to `Examination`)
-   - `RevisionNumber` (int, positive integer, unique within `(ExaminationId, RevisionNumber)`)
-   - `LifecycleState` (`ExamLifecycleState`: Draft, InReview, Approved, Published, Archived, Retired)
-   - `ConcurrencyToken` (`long` or `Guid`, application-managed optimistic concurrency)
-   - `CreatedBy`, `SubmittedBy`, `ReviewedBy`, `ApprovedBy`, `PublishedBy`, `ArchivedBy`, `RetiredBy`
-   - `PublishedAt`, `ApprovedAt`, `ArchivedAt`, `RetiredAt`
-   - `IsPublished` (boolean, derived temporary compatibility property)
-3. Keep `ExamAttempt.ExamId` bound to the `Exam` revision row, not the `Examination` stable identity row.
-
-### Why this is the safest mapping
-- It preserves current candidate and assessment logic.
-- It avoids forcing existing `Exam` foreign keys to be repointed immediately.
-- It keeps the revision row as the source of truth for the exact configuration used in a candidate attempt.
-- It allows future formalization without breaking candidate API contracts.
-
-## Entity responsibilities
-
-### `Examination` (stable identity)
-Purpose:
-- Represents the conceptual examination across revisions.
-- Controls the stable code (`RN-EX-000001` / `PN-EX-000001`), pathway, and family identity.
-- Carries revision lineage across Draft/Published/Archived/Retired states.
-- Acts as the canonical grouping entity for exam lists and future duplication work.
-
-### `Exam` (revision)
-Purpose:
-- Represents one exact version of the examination configuration.
-- Holds the actual title, description, instructions, duration, passing score, question associations, and lifecycle state.
-- Referenced by candidate attempts (`ExamAttempt.ExamId`).
-- Immutability enforced once in `Published` state.
-
-## Relationship model
+## Relationship Cardinalities & Diagram
 
 ```text
-Examination (stable identity)
-  1 ────< Exam (revision: Draft/InReview/Approved/Published/Archived/Retired)
+Examination (Stable Identity)
+  1 ────< Exam (Revision Rows: Draft, InReview, Approved, Published, Archived, Retired)
              │
-             ├───< ExamQuestion (question membership for revision)
+             ├───< ExamQuestion (Question set configured for this revision)
              │
-             └───< ExamAttempt (attempts bound to exact revision)
+             └───< ExamAttempt (Candidate attempts bound to exact revision row)
                          │
-                         ├───< ExamAttemptQuestion (authoritative relational attempt membership)
-                         ├───< AttemptResponse (candidate answers)
-                         └───[ MetadataSnapshot (JSONB column) ]
+                         ├───< ExamAttemptQuestion (Authoritative relational attempt membership)
+                         ├───< AttemptResponse (Candidate answers)
+                         └───[ MetadataSnapshot (JSONB metadata snapshot) ]
 ```
 
-## Foreign-key and constraint requirements
-- `Exam.ExaminationId` is required for all non-legacy records.
-- `ExamAttempt.ExamId` remains required.
-- `Exam` enforces a unique constraint on `(ExaminationId, RevisionNumber)`.
-- `Examination` enforces a unique constraint on `Code`.
-- Once `Exam` is in `Published` state, content modifications are rejected; a new revision must be created in `Draft` state.
+## Revision and Publication Invariants
 
-## Resolved architectural policies
-1. **Revision creation alongside Published:** A new `Draft` revision (e.g., Revision 2) can be created and reviewed while an earlier revision (Revision 1) remains `Published` and active.
-2. **Draft discarding:** An unsubmitted `Draft` revision may be discarded/deleted by an authorized author with an audit record, provided it has no candidate attempts.
-3. **Archived / Retired branching:** An `Archived` exam can be restored to `Published` within 30 calendar days (Superadmin override). A `Retired` examination cannot be reopened; new work requires a new `Examination` identity linked via `SuccessorExaminationId`.
+1. **Belonging Invariant:** Every revision row belongs to exactly one stable `Examination` parent (`Exam.ExaminationId -> Examination.Id`).
+2. **Revision Number Uniqueness:** Revision numbers are strictly unique within each stable Examination family (`UNIQUE (ExaminationId, RevisionNumber)`).
+3. **Single Active Draft Invariant:** At most one revision per Examination family may be in the `Draft` state at any time. Enforced by PostgreSQL partial unique index:
+   ```sql
+   CREATE UNIQUE INDEX "IX_Exams_ExaminationId_ActiveDraft" 
+   ON public."Exams" ("ExaminationId") 
+   WHERE "LifecycleState" = 1;
+   ```
+4. **Single Published Revision Invariant:** At most one revision per Examination family may be in the `Published` state at any time. Enforced by PostgreSQL partial unique index:
+   ```sql
+   CREATE UNIQUE INDEX "IX_Exams_ExaminationId_SinglePublished" 
+   ON public."Exams" ("ExaminationId") 
+   WHERE "LifecycleState" = 4;
+   ```
+5. **Atomic Archiving of Superseded Revisions:** When an `Approved` revision is published, the domain transaction atomically transitions the existing `Published` revision to `Archived`, records its active in-progress attempt count, updates the target revision to `Published`, and updates `Examination.CurrentRevisionId`.
+6. **Restoration Guard Against Dual-Published Inconsistency:** Restoring an `Archived` revision within the 30-day window checks whether another revision is currently `Published`. If so, restoration is blocked (HTTP 422) until the active published revision is archived or retired.
+7. **CurrentRevisionId Boundary:** `Examination.CurrentRevisionId` must point to an `Exam` row belonging to the same `ExaminationId`.
+8. **Immutability of Published Revisions:** Content updates (`Title`, `Description`, `TimeLimitMinutes`, `PassingScorePercent`, question membership) are permitted only when `LifecycleState == ExamLifecycleState.Draft`.
+9. **Attempt Revision Binding:** Existing and historical attempts (`ExamAttempt`) permanently retain `ExamId` referencing the exact revision row used at attempt start.
 
-## Status summary
-- Product policy: OWNER APPROVED (Option B)
-- Technical design: FULLY SPECIFIED
-- Entity mapping: SAFE & COMPATIBLE
-- Next gate: Implementation upon owner authorization
+## Status Summary
+- Model Architecture: RECONCILED WITH REPOSITORY (String IDs, existing models preserved)
+- Database Invariants: FULLY SPECIFIED (Partial unique indexes, atomic transitions)
+- Next Gate: Implementation upon owner authorization

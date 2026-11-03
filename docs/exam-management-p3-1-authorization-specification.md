@@ -2,106 +2,89 @@
 
 ## Status
 - Decision IDs: D4, D10, D11, D12
-- Status: OWNER APPROVED
-- Approved direction:
-  - Separation of duties (creator cannot approve own revision)
-  - Role authorities: Reviewer recommends; Admin approves; Exam Manager publishes; Content Manager no exam approval/publish authority by default
-  - Narrow, explicitly audited administrative overrides
-  - Instructor visibility: Published only
+- Stage: Architecture Review Remediation
+- Status: SPECIFICATION REMEDIATED & COMPLETE
+- Scope: Examination management and lifecycle transitions
 
-## Repository evidence
-The repository uses ASP.NET Core authorization policies and normalizes roles via `apps/api/Services/RoleHierarchy.cs`:
+## Repository Evidence & RBAC Preservations
+The existing PrepFord authentication and role resolution systems in `apps/api/Services/RoleHierarchy.cs` and `apps/api/Program.cs` define the canonical normalized roles:
 - `superadmin`
-- `admin` / `administrator`
+- `admin` (and normalized synonym `administrator`)
 - `exam_manager`
 - `content_manager`
 - `reviewer`
 - `instructor`
 - `candidate`
 
-Existing global RBAC and authentication infrastructure remain preserved and are not refactored.
+Existing global authentication schemes, bearer token validation, and role resolution logic are preserved without refactoring.
 
-## Core authorization principles
-1. **Separation of duties:** The creator of an examination revision cannot approve that revision.
-2. **Distinct authorities:** Review, approval, and publication are distinct responsibilities assigned to separate roles.
-3. **Least privilege:** Roles hold only the permissions strictly necessary for their domain workflow.
-4. **Server-authoritative:** All rules are enforced by backend service and domain logic, never relying on UI hiding.
-5. **Auditability:** Every lifecycle change and override records actor, timestamp, prior state, new state, and mandatory reason where required.
+## Core Authorization Principles
+1. **Separation of Duties:** The creator of an examination revision cannot approve that revision.
+2. **Distinct Authorities:** Review, approval, and publication are separate responsibilities assigned to distinct roles.
+3. **No Ordinary Superadmin Intrusion:** Superadmin performs exceptional audited overrides only; Superadmin does not participate in ordinary review, approval, or publication.
+4. **Instructor Boundary:** Instructors are strictly confined to `Published` examinations.
+5. **Server-Authoritative Enforcement:** All policy checks are executed in backend domain services, never relying on UI hiding.
 
-## Canonical role-action authorization matrix
+## Canonical Authority Matrix
 
 | Action | Superadmin | Admin | Exam Manager | Content Manager | Reviewer | Instructor | Candidate |
 |---|---|---|---|---|---|---|---|
-| View Published exam | Allowed | Allowed | Allowed | Allowed | Allowed | Allowed | Allowed (if assigned/eligible) |
-| View Draft / InReview / Approved | Allowed | Allowed | Allowed | Allowed | Allowed (assigned) | **Denied** | **Denied** |
-| View Archived / Retired | Allowed | Allowed | Allowed | Allowed | Denied | **Denied** | **Denied** |
-| Create revision / exam | Allowed | Allowed | Allowed | Denied* | Denied | Denied | Denied |
-| Edit Draft revision | Allowed | Allowed | Allowed | Denied* | Denied | Denied | Denied |
-| Submit for review (Draft -> InReview) | Allowed | Allowed | Allowed | Denied* | Denied | Denied | Denied |
-| Review / Return for changes (InReview -> Draft) | Allowed | Allowed | Denied | Denied | **Allowed** | Denied | Denied |
-| Recommend approval | Allowed | Allowed | Denied | Denied | **Allowed** | Denied | Denied |
-| Approve revision (InReview -> Approved) | Allowed** | **Allowed**** | Denied | Denied | Denied | Denied | Denied |
-| Publish revision (Approved -> Published) | Allowed | Allowed | **Allowed** | Denied | Denied | Denied | Denied |
-| Archive revision (Published -> Archived) | Allowed | Allowed | **Allowed** | Denied | Denied | Denied | Denied |
-| Restore revision (Archived -> Published) | **Allowed** (Override) | Denied | Denied | Denied | Denied | Denied | Denied |
-| Retire revision (Archived/Published -> Retired) | Allowed | Allowed | **Allowed** | Denied | Denied | Denied | Denied |
-| Exceptional lifecycle override | **Allowed** (Audited) | Conditional (Audited) | Denied | Denied | Denied | Denied | Denied |
+| View Published examination | Allowed | Allowed | Allowed | Allowed | Allowed | **Allowed** | Allowed (if eligible) |
+| View Draft / InReview / Approved | Allowed (audit) | Allowed | Allowed | Denied* | Allowed (assigned) | **Denied** | **Denied** |
+| View Archived / Retired | Allowed (audit) | Allowed | Allowed | Denied* | Denied | **Denied** | **Denied** |
+| Create revision (`Draft`) | Denied | Denied | **Allowed** | Denied* | Denied | Denied | Denied |
+| Edit Draft revision | Denied | Denied | **Allowed** | Denied* | Denied | Denied | Denied |
+| Submit for review (`Draft -> InReview`) | Denied | Denied | **Allowed** | Denied* | Denied | Denied | Denied |
+| Review revision content | Denied | Allowed | Allowed | Denied* | **Allowed** | Denied | Denied |
+| Recommend approval (Advisory event) | Denied | Denied | Denied | Denied* | **Allowed** | Denied | Denied |
+| Return for changes (`InReview -> Draft`) | Denied | Denied | Denied | Denied* | **Allowed** | Denied | Denied |
+| Approve revision (`InReview -> Approved`) | Denied** | **Allowed**** | Denied | Denied* | Denied | Denied | Denied |
+| Publish revision (`Approved -> Published`)| Denied | Denied | **Allowed** | Denied* | Denied | Denied | Denied |
+| Archive revision (`Published -> Archived`) | Denied | Denied | **Allowed** | Denied* | Denied | Denied | Denied |
+| Restore revision (`Archived -> Published`) | **Allowed** (Override) | Denied | Denied | Denied* | Denied | Denied | Denied |
+| Retire revision (`Archived -> Retired`) | Denied | Denied | **Allowed** | Denied* | Denied | Denied | Denied |
+| Exceptional Emergency Override | **Allowed** (Audited) | Denied | Denied | Denied* | Denied | Denied | Denied |
 
-*\*Content Manager has no examination lifecycle approval, creation, or publication authority by default (Decision 2 / D10). Future content delegation requires explicit owner authorization.*  
-*\*\*Admin and Superadmin cannot approve revisions that they personally created (Separation of Duties / D4).*
+*\*Content Manager has no examination lifecycle creation, review, approval, or publication authority by default (Decision 2 / D10).*  
+*\*\*Superadmin does not participate in ordinary approvals (Remediation B).*  
+*\*\*\*Admin cannot approve revisions they personally created (Separation of Duties / D4).*
 
-## Separation-of-duties rules
+## Separation-of-Duties Enforcement Rule
+- Evaluated in `ExamLifecycleService.ApproveAsync(revisionId, user)`:
+  - Actor ID is extracted via:
+    ```csharp
+    var actorId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    ```
+  - If `string.Equals(revision.CreatedBy, actorId, StringComparison.OrdinalIgnoreCase)`, the approval request is rejected immediately with **HTTP 403 Forbidden**:
+    `"Separation of duties violation: The creator of a revision cannot approve that revision."`
+  - Applies equally to any administrative user.
 
-### Rule 1 — Creator cannot approve own revision (Enforced)
-- Evaluated at the service layer prior to executing `Approve`.
-- If `Revision.CreatedBy == currentActorId`, the request is rejected with HTTP 403 Forbidden ("Creators cannot approve their own revisions").
-- Applies equally to Admin and Superadmin actors.
+## Reviewer Workflow & Auditable Events
+- **Review Action:** The Reviewer inspects revision settings and question membership.
+- **Recommend Approval:** When clinical review is satisfied, the Reviewer executes `RecommendApproval`. This emits an auditable event `ExamRevisionReviewRecommended` in `AuditLogs`. It does **not** move the revision to `Approved`; only an Admin can perform `Approve`.
+- **Return for Changes:** If revisions are required, the Reviewer executes `ReturnForChanges` providing a mandatory non-empty reason string. This moves `InReview -> Draft` and logs `ExamRevisionReturnedForChanges`.
 
-### Rule 2 — Split approval and publication authority
-- **Reviewer:** Conducts review; recommends approval or returns revision to Draft with mandatory reason. Cannot approve or publish.
-- **Admin:** Approves revision (moves InReview -> Approved). Cannot approve own creation.
-- **Exam Manager:** Manages drafting, submits for review, and publishes approved revisions (moves Approved -> Published). Cannot self-approve.
-- **Combined execution constraint:** The same person may approve and publish only if they did not create the revision.
-
-### Rule 3 — Instructor visibility restricted to Published examinations (Enforced)
+## Instructor Visibility Guard
 - Instructors are strictly prohibited from viewing examinations in `Draft`, `InReview`, `Approved`, `Archived`, or `Retired` states.
-- All repository queries and API endpoints serving instructors filter strictly by `LifecycleState == ExamLifecycleState.Published`.
-- Prevents accidental exposure of unapproved, draft, or retired test items.
+- All repository queries and API endpoints serving instructors apply a mandatory database filter:
+  ```csharp
+  query = query.Where(e => e.LifecycleState == ExamLifecycleState.Published);
+  ```
 
-## Administrative override scope (Admin & Superadmin)
+## Administrative Override Scope (Superadmin)
+- **Authorized Override Operations:**
+  1. `EmergencyRestore`: Restores an `Archived` exam within 30 days when operational deadlocks prevent normal flow.
+  2. `EmergencyRetire`: Forces terminal retirement of an archived or compromised published examination.
+  3. `DeadlockOverride`: Resolves lifecycle inconsistencies with explicit mandatory audit evidence.
+- **Prohibitions:** Superadmin may never:
+  - Silently rewrite historical candidate attempts.
+  - Alter or replace immutable attempt metadata snapshots.
+  - Rewrite published examination revisions.
+  - Bypass audit logging.
+  - Approve their own revision.
 
-### Admin permissions
-- Approve eligible revisions (subject to creator separation of duties).
-- Perform standard administrative lifecycle actions permitted by policy.
-- Correct documented administrative errors through controlled, auditable operations.
-
-### Superadmin permissions
-- Perform exceptional administrative overrides when normal workflows cannot resolve legitimate operational deadlocks.
-- Restore an archived examination within the 30-calendar-day restoration window.
-- Resolve exceptional lifecycle inconsistencies through dedicated reason-required operations.
-
-### Strict prohibitions for both Admin and Superadmin
-Neither Admin nor Superadmin may:
-1. Silently rewrite historical candidate attempts.
-2. Alter or replace immutable attempt metadata snapshots.
-3. Rewrite historical examination revisions after publication.
-4. Bypass audit logging or suppress security events.
-5. Alter server-authoritative grading or attempt-question membership.
-6. Approve their own created revision.
-
-### Mandatory override audit log fields
-Every administrative override must record:
-- `ActorId` and `EffectiveRole`
-- `TargetExaminationId` and `TargetRevisionId`
-- `PreviousState` and `ResultingState`
-- `MandatoryReason` (minimum length enforced, non-empty)
-- `TimestampUtc`
-- `OverrideOperationType`
-- `AuditCorrelationId` and client IP/user agent
-
-## Status summary
-- Role matrix: OWNER APPROVED (Option A)
-- Separation of duties: ENFORCED
-- Overrides: NARROW & EXPLICITLY AUDITED
-- Instructor access: PUBLISHED ONLY
-- Next gate: Implementation upon owner authorization
+## Status Summary
+- Role Matrix: RECONCILED WITH OWNER DECISIONS (Ordinary vs override authorities separated)
+- Separation of Duties: STRICTLY ENFORCED
+- Instructor Filter: PUBLISHED ONLY
+- Next Gate: Implementation upon owner authorization

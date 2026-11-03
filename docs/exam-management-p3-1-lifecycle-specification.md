@@ -1,72 +1,76 @@
 # PrepFord Examination Management — P3.1 Lifecycle Specification
 
 ## Status
-- Decision IDs: D2, D13, D14
-- Status: OWNER APPROVED
+- Decision IDs: D2, D10, D13, D14
+- Stage: Architecture Review Remediation
+- Status: SPECIFICATION REMEDIATED & COMPLETE
 - Approved states: Draft, InReview, Approved, Published, Archived, Retired
-- Approved policies:
-  - 30-day restoration window from Archived; retirement is terminal (Option A)
-  - Archiving preserves existing in-progress attempts; blocks new attempts; records active attempts count (Option A)
-  - Rejection returns to Draft with mandatory reason and audit event; no persistent Rejected state
 
-## Canonical lifecycle rule
-`LifecycleState` is the single authoritative source of truth. `IsPublished` must not remain an independently editable source of truth. It is maintained only as a derived compatibility flag synchronized from lifecycle state.
+## Canonical Lifecycle Rule
+`LifecycleState` is the single authoritative source of truth. `IsPublished` must not remain an independently editable source of truth. It is maintained only as a derived compatibility property synchronized from lifecycle state (`IsPublished = (LifecycleState == ExamLifecycleState.Published)`).
 
-## Approved lifecycle state definitions
+## State Definitions
 
-1. **`Draft`**: Revision is editable by author/Exam Manager. Not visible to candidates or instructors. Initial state of any new revision.
-2. **`InReview`**: Revision is submitted for review and locked against casual editing. Reviewer inspects content and recommends approval or returns to Draft with reason.
-3. **`Approved`**: Revision is verified and approved by Admin (distinct from creator). Locked against edits. Not yet candidate-facing or instructor-facing.
-4. **`Published`**: Revision is live and candidate-facing. Instructors can view. Configuration is completely immutable. Any future changes require creating a new revision.
-5. **`Archived`**: Examination is retired from active circulation. New attempts blocked immediately. Existing in-progress attempts continue unaffected. Restorable to Published within 30 calendar days.
-6. **`Retired`**: Permanent, terminal lifecycle state. Cannot be reactivated. Preserved indefinitely for historical attempt audits.
+1. **`Draft` (1):** Initial state of any new revision. Author/Exam Manager can edit content, settings, and question membership. Completely invisible to candidates and instructors. At most one active Draft per Examination family.
+2. **`InReview` (2):** Submitted for review. Content is locked against author editing. Reviewer inspects content, records recommendations, or returns to Draft with reason.
+3. **`Approved` (3):** Verified and approved by Admin (distinct from creator). Content remains locked. Not candidate-facing.
+4. **`Published` (4):** Live and active. Instructors can view. Candidates can start attempts. Completely immutable. At most one revision per Examination family may be Published at any time.
+5. **`Archived` (5):** Removed from active circulation. New attempts blocked immediately. Existing in-progress attempts continue undisturbed under original revision and snapshot. Restorable to Published within 30 calendar days (Superadmin override) provided no other revision is published.
+6. **`Retired` (6):** Permanent, terminal state. Cannot be reactivated. Preserved indefinitely for historical attempt audits.
 
-## State transition table
+## State Transition Validation Matrix
 
-| Source State | Action | Target State | Authorized Role | Mandatory Validation & Guards | Audit Event |
+| Action | From State | To State | Authorized Role | Mandatory Validation & Invariants | Audit Event (`AuditLog.Action`) |
 |---|---|---|---|---|---|
-| *None* | `CreateRevision` | `Draft` | Exam Manager, Admin | Valid parent `Examination`; RevisionNumber sequential | `RevisionCreated` |
-| `Draft` | `SubmitForReview` | `InReview` | Exam Manager, Admin | Must contain >= 1 question; valid title, pathway, duration | `RevisionSubmitted` |
-| `InReview` | `ReturnForChanges` | `Draft` | Reviewer, Admin | Mandatory non-empty reason required | `RevisionReturnedForChanges` |
-| `InReview` | `Approve` | `Approved` | Admin, Superadmin | Separation of duties: `CreatedBy != CurrentActorId` | `RevisionApproved` |
-| `Approved` | `Publish` | `Published` | Exam Manager, Admin | Previous published revision under family archived if required | `RevisionPublished` |
-| `Published` | `Archive` | `Archived` | Exam Manager, Admin | Captures active in-progress attempts count in audit record | `RevisionArchived` |
-| `Archived` | `Restore` | `Published` | Superadmin (Override) | Allowed ONLY within 30 calendar days of `ArchivedAt` | `RevisionRestored` |
-| `Archived` | `Retire` | `Retired` | Exam Manager, Admin | Terminal transition; permanently locks revision | `RevisionRetired` |
-| `Published` | `Retire` | `Retired` | Superadmin (Override) | Exceptional terminal retirement; requires mandatory reason | `RevisionRetired` |
+| `CreateRevision` | None / Published | `Draft` | Exam Manager | Parent `Examination` exists; at most one active `Draft` per Examination; `RevisionNumber = Max + 1` | `ExamRevisionCreated` |
+| `SubmitForReview` | `Draft` | `InReview` | Exam Manager | Contains >= 1 question; valid title, pathway, duration; locks editing | `ExamRevisionSubmitted` |
+| `RecommendApproval` | `InReview` | `InReview` | Reviewer | Clinical review completed; advisory audit event; does NOT change state | `ExamRevisionReviewRecommended` |
+| `ReturnForChanges` | `InReview` | `Draft` | Reviewer | Mandatory non-empty reason; unlocks for author edits | `ExamRevisionReturnedForChanges` |
+| `Approve` | `InReview` | `Approved` | Admin | **Separation of duties: `CreatedBy != ActorId`**; content locked | `ExamRevisionApproved` |
+| `Publish` | `Approved` | `Published` | Exam Manager | **Atomically archives previous Published revision**; syncs `IsPublished = true` | `ExamRevisionPublished` |
+| `Archive` | `Published` | `Archived` | Exam Manager | **Existing attempts continue undisturbed**; new attempts blocked; records active attempt count | `ExamRevisionArchived` |
+| `Restore` | `Archived` | `Published` | Superadmin (Override) | **`Now <= ArchivedAt + 30 Days`**; mandatory reason; **no other revision is currently Published** | `ExamRevisionRestored` |
+| `Retire` | `Archived` | `Retired` | Exam Manager | **Terminal state**; permanently locks revision | `ExamRevisionRetired` |
+| `EmergencyRetire` | `Published` | `Retired` | Superadmin (Override) | Terminal state; mandatory reason; archives active revision | `ExamLifecycleOverride` |
 
-## Detailed policy rules
+## Lifecycle Invariants & Safeguards
 
-### 1. Rejection returns to `Draft`
-- Rejection is not a standalone terminal or holding state.
-- When a Reviewer returns a revision for changes, the state transitions from `InReview` directly to `Draft`.
-- A mandatory reason must be provided by the reviewer.
-- An audit event (`RevisionReturnedForChanges`) records reviewer, timestamp, previous state (`InReview`), target state (`Draft`), and the reason string.
+### 1. Separation of Duties
+- An actor cannot approve a revision if `string.Equals(revision.CreatedBy, actorId, StringComparison.OrdinalIgnoreCase)`.
+- Rejection returns HTTP 403 Forbidden.
+- Evaluated against `ClaimTypes.NameIdentifier` (`User.FindFirst(ClaimTypes.NameIdentifier)?.Value` or `X-Authenticated-User-Id`).
 
-### 2. Archiving with active candidate attempts (Decision 6 / D14)
-- Archiving immediately prevents any new candidate attempts from being created.
-- Existing in-progress candidate attempts are completely unaffected:
-  - Candidates continue their attempts without disruption or early cutoff.
-  - The attempt remains bound to its exact starting revision and immutable attempt metadata snapshot.
-  - Candidates can submit and complete their attempts according to normal attempt duration rules.
-  - No change occurs to attempt status, responses, question membership, or grading state.
-- The archival action must record the count of active attempts at the moment of archival in the audit event.
+### 2. Single Published Revision & Atomic Supersession
+- Enforced at the database level by PostgreSQL partial unique index:
+  ```sql
+  CREATE UNIQUE INDEX "IX_Exams_ExaminationId_SinglePublished" 
+  ON public."Exams" ("ExaminationId") 
+  WHERE "LifecycleState" = 4;
+  ```
+- When an `Approved` revision is published:
+  - If a revision is already `Published` under that `ExaminationId`:
+    1. Query count of active in-progress attempts (`AttemptStatus.InProgress`).
+    2. Set superseded revision: `LifecycleState = Archived`, `IsPublished = false`, `ArchivedAt = DateTime.UtcNow`, `ArchivedBy = actorId`.
+    3. Record `ExamRevisionArchived` in `AuditLogs` with active attempts count.
+  - Set target revision: `LifecycleState = Published`, `IsPublished = true`, `PublishedAt = DateTime.UtcNow`, `PublishedBy = actorId`.
+  - Update `Examination.CurrentRevisionId = targetRevision.Id`.
+  - All updates commit in a single atomic database transaction.
 
-### 3. Restoration window & retirement (Decision 5 / D13)
-- An `Archived` revision may be restored to `Published` within **30 calendar days** of archival.
-- Restoration is restricted to authorized administrative override (Superadmin) and requires a documented reason.
-- After 30 calendar days have elapsed, the examination becomes eligible for permanent retirement.
-- `Retired` is strictly terminal:
-  - A `Retired` examination revision cannot be restored or reactivated.
-  - Historical records, attempts, and attempt snapshots remain immutable and accessible for reporting.
-  - If a retired examination must be reintroduced, a brand new `Examination` identity must be created, linked to the retired predecessor via an explicit `SuccessorExaminationId` relationship.
+### 3. Archival vs Attempt Initialization Concurrency Guard
+- When an examination is archived:
+  - New candidate attempts are blocked immediately.
+  - In `ExamAttemptsController.StartAttempt`, the transaction queries `Exam` where `Id == request.ExamId && LifecycleState == ExamLifecycleState.Published`.
+  - If archival commits prior to the attempt transaction insert, the attempt query fails and returns HTTP 422 Unprocessable Entity ("Examination is no longer published for new attempts").
+  - If an attempt was started prior to archival, it continues under its exact `ExamId` and immutable attempt snapshot without interruption or truncation.
 
-## Transition invariants
-1. Immutability of Published revisions: Once published, an `Exam` row's content fields cannot be updated. Any update requires creating a new revision (e.g., Revision 2 in `Draft` state).
-2. Separation of duties: An actor cannot execute `Approve` on a revision if `CreatedBy == ActorId`.
-3. Safe Concurrency: Every lifecycle transition validates the `ConcurrencyToken`.
+### 4. 30-Day Restoration Window & Terminal Retirement
+- Restoration is permitted only if `DateTime.UtcNow <= revision.ArchivedAt.Value.AddDays(30)`.
+- Restoration requires that no other revision for that `ExaminationId` is currently `Published`. If one exists, restore is rejected with HTTP 422.
+- `Retired` is terminal: no transition out of `Retired` is allowed.
+- To revive a retired examination family, create a new `Examination` with `SuccessorExaminationId` set to the retired examination's `Id`.
 
-## Status summary
-- Product policy: OWNER APPROVED (Option A for all lifecycle choices)
-- State machine: FULLY SPECIFIED (6 states, 9 transitions)
-- Next gate: Implementation upon owner authorization
+## Status Summary
+- State Machine: RECONCILED & COMPLETE
+- Authorization Invariants: STRICTLY ENFORCED
+- Database Invariants: PARTIAL UNIQUE INDEXES SPECIFIED
+- Next Gate: Implementation upon owner authorization

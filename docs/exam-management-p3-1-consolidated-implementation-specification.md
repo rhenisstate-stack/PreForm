@@ -1,140 +1,162 @@
 # PrepFord Examination Management — P3.1 Consolidated Implementation Specification
 
 **Phase:** P3.1 — Examination Domain Foundation  
-**Status:** SPECIFICATION COMPLETE — AWAITING IMPLEMENTATION AUTHORIZATION  
+**Stage:** Architecture Review Remediation  
+**Status:** SPECIFICATION REMEDIATED & COMPLETE — AWAITING IMPLEMENTATION AUTHORIZATION  
 **Specification Date:** 3 November 2026  
 **Decision Authority:** PrepFord Product Owner  
 
 ---
 
-## 1. Executive Summary & Approval Baseline
+## 1. Executive Summary & Governance Baseline
 
-This document provides the consolidated, internally consistent technical implementation specification for Phase P3.1 (Examination Domain Foundation). It synthesizes all fifteen owner-approved decisions (D1–D15) from `docs/exam-management-p3-1-owner-approved-decision-register.md` and `docs/exam-management-p3-1-final-owner-decision-register.md`.
+This document provides the authoritative, internally consistent technical implementation specification for Phase P3.1 (Examination Domain Foundation). It reflects the complete reconciliation with the existing PrepFord backend codebase and incorporates the resolutions to all findings identified during the architecture review (Findings F-01 through F-08).
 
-### 1.1 Scope Boundaries
-- **In Scope for this Specification:** Complete domain modeling, schema definitions, lifecycle transition rules, authorization policies, code generation algorithms, JSONB snapshot contracts, concurrency management, and PostgreSQL verification preflight.
-- **Authorization Boundary:** This specification documents the target implementation. In accordance with Section 5 of the Final Owner Decision Register, application code changes, EF Core migrations, database mutations, and frontend modifications remain pending explicit implementation authorization.
+### 1.1 Scope & Governance Boundaries
+- **In Scope for this Specification:** Complete domain modeling, additive schema definitions, lifecycle state machine, role-based authorization policies, sequence-based examination code allocation, JSONB metadata snapshot contract, EF Core optimistic concurrency control, audit log mapping, and migration inventory protocols.
+- **Strict Implementation Safeguard:** This document specifies technical designs only. In strict accordance with the owner's governance mandate, application code modifications, entity/DTO changes, EF Core migrations, and frontend updates remain prohibited until explicit owner implementation authorization is granted.
 
-### 1.2 Summary of Approved Policies
-1. **D1 (Architecture):** Separate stable `Examination` identity + version-specific `Exam` revision model (Option B).
+### 1.2 Preservation of the 15 Owner-Approved Decisions
+All fifteen owner-approved architectural and policy decisions are preserved intact without modification:
+1. **D1 (Architecture):** Separate stable `Examination` identity + version-specific `Exam` revisions (Option B).
 2. **D2 (Lifecycle):** 6-state lifecycle: `Draft`, `InReview`, `Approved`, `Published`, `Archived`, `Retired`.
-3. **D3 (Snapshot):** Immutable, server-generated metadata snapshot captured at attempt initialization.
-4. **D4 (Separation of Duties):** Revision creator cannot approve that revision.
+3. **D3 (Snapshot):** Immutable server-generated metadata snapshot captured atomically at attempt start.
+4. **D4 (Separation of Duties):** Revision creator cannot approve that revision (`CreatedBy != currentActorId`).
 5. **D5 (Concurrency):** Application-managed optimistic concurrency token on revision rows.
 6. **D6 & D9 (Exam Code):** Sequential, pathway-scoped codes (`RN-EX-000001` / `PN-EX-000001`) allocated at stable identity creation.
 7. **D7 (Publication Source):** Lifecycle state is canonical source of truth; `IsPublished` is a derived compatibility bridge.
 8. **D8 (Verification):** Dedicated local isolated PostgreSQL verification (`prepford_gateb_verification`).
-9. **D10 (Role Authority):** Reviewer recommends/returns; Admin approves; Exam Manager publishes; Content Manager has no exam lifecycle authority by default.
+9. **D10 (Role Authority):** Reviewer recommends or returns; Admin approves; Exam Manager publishes; Content Manager has no examination lifecycle authority by default.
 10. **D11 (Admin Overrides):** Narrow, explicitly audited administrative overrides; historical attempts/snapshots cannot be rewritten.
 11. **D12 (Instructor Access):** Instructors view `Published` examinations only.
 12. **D13 (Restoration & Retirement):** 30-calendar-day restoration window from `Archived`; retirement is terminal; revival requires successor link.
-13. **D14 (Archival with Active Attempts):** Archiving blocks new attempts; existing in-progress attempts continue undisturbed; active attempt count recorded.
+13. **D14 (Archival with Active Attempts):** Archiving blocks new attempts; existing in-progress attempts continue undisturbed; active attempt count recorded in audit log.
 14. **D15 (Snapshot Storage):** Versioned JSONB snapshot on `ExamAttempt` + relational `ExamAttemptQuestion` membership.
 
 ---
 
-## 2. Domain Entity Model & Schema Specification
+## 2. Reconciled Domain Entity Model & Additive Schema
 
-The target domain model builds additively upon the existing ASP.NET Core EF Core architecture without disrupting Gate C candidate integrity guarantees.
+The entity model reconciles the proposed architecture with the actual existing PrepFord backend in `apps/api/Models/Assessments.cs`, `Identity.cs`, and `AppDbContext.cs`. All primary keys in the existing database are represented as `string` (UUID strings), and all existing candidate, scoring, and attempt relationships are preserved without renaming.
 
 ```text
-┌─────────────────────────────────┐
-│          Examination            │
-│  (Stable Examination Identity)  │
-├─────────────────────────────────┤
-│ Id (PK, Guid)                   │
-│ Pathway (RN / PN)               │
-│ Code (RN-EX-000001)             │
-│ Title / FamilyName              │
-│ CreatedAtUtc                    │
-│ CreatedBy                       │
-│ CurrentRevisionId (FK, nullable)│
-│ SuccessorExaminationId (FK, opt)│
-└────────────────┬────────────────┘
-                 │ 1
-                 │
-                 │ *
-┌────────────────┴────────────────┐
-│              Exam               │
-│      (Revision Entity)          │
-├─────────────────────────────────┤
-│ Id (PK, Guid)                   │
-│ ExaminationId (FK -> Examination)│
-│ RevisionNumber (int, 1..N)      │
-│ LifecycleState (Enum)           │
-│ ConcurrencyToken (long)         │
-│ Title                           │
-│ Description                     │
-│ Pathway                         │
-│ ExamType                        │
-│ TimeLimitMinutes                │
-│ PassingScorePercent             │
-│ IsPublished (Compat Derived)    │
-│ CreatedBy, CreatedAtUtc         │
-│ SubmittedBy, SubmittedAtUtc     │
-│ ReviewedBy, ReviewedAtUtc       │
-│ ApprovedBy, ApprovedAtUtc       │
-│ PublishedBy, PublishedAtUtc     │
-│ ArchivedBy, ArchivedAtUtc       │
-│ RetiredBy, RetiredAtUtc         │
-└───────┬──────────────────┬──────┘
-        │ 1                │ 1
-        │                  │
-        │ *                │ *
-┌───────┴──────────┐ ┌─────┴──────────────────────────────────┐
-│   ExamQuestion   │ │                 ExamAttempt            │
-│  (Revision Item) │ │             (Candidate Attempt)        │
-└──────────────────┘ ├────────────────────────────────────────┤
-                     │ Id (PK, Guid)                          │
-                     │ ExamId (FK -> Exam revision)           │
-                     │ CandidateId                            │
-                     │ Status (InProgress, Submitted, etc.)   │
-                     │ StartedAtUtc, SubmittedAtUtc           │
-                     │ Score, IsPassed                        │
-                     │ MetadataSnapshot (JSONB, Nullable)     │
-                     └───────────────────┬────────────────────┘
-                                         │ 1
-                                         │
-                                         │ *
-                     ┌───────────────────┴────────────────────┐
-                     │          ExamAttemptQuestion           │
-                     │   (Authoritative Relational Members)   │
-                     ├────────────────────────────────────────┤
-                     │ AttemptId (PK, FK)                     │
-                     │ QuestionId (PK, FK)                    │
-                     │ SequenceNumber                         │
-                     │ Response / Grading Data                │
-                     └────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│              Examination                │
+│       (Stable Examination Family)       │
+├─────────────────────────────────────────┤
+│ Id : string (PK, text)                  │
+│ Pathway : string (varchar(10), "rn"/"pn")│
+│ Code : string (varchar(16), UNIQUE)     │
+│ Title : string (varchar(128))           │
+│ CreatedAt : DateTime (timestamp with tz)│
+│ CreatedBy : string (varchar(128))       │
+│ CurrentRevisionId : string? (FK -> Exam)│
+│ SuccessorExaminationId : string? (FK)   │
+└────────────────────┬────────────────────┘
+                     │ 1
+                     │
+                     │ *
+┌────────────────────┴────────────────────┐
+│                  Exam                   │
+│         (Revision Configuration)        │
+├─────────────────────────────────────────┤
+│ Id : string (PK, text)                  │
+│ ExaminationId : string (FK -> Exam'n)   │
+│ RevisionNumber : int (1..N)             │
+│ LifecycleState : ExamLifecycleState     │
+│ ConcurrencyToken : long (Concurrency)   │
+│ Title : string (varchar(128))           │
+│ Description : string (varchar(1024))    │
+│ Pathway : string (varchar(10))          │
+│ ExamType : ExamType (enum)              │
+│ TimeLimitMinutes : int (default 0)      │
+│ PassingScorePercent : decimal           │
+│ IsPublished : bool (Derived/Compat)     │
+│ CreatedAt, UpdatedAt : DateTime         │
+│ CreatedBy : string (varchar(128))       │
+│ SubmittedBy, SubmittedAt : str?, DT?    │
+│ ReviewedBy, ReviewedAt : str?, DT?      │
+│ ApprovedBy, ApprovedAt : str?, DT?      │
+│ PublishedBy, PublishedAt : str?, DT?    │
+│ ArchivedBy, ArchivedAt : str?, DT?      │
+│ RetiredBy, RetiredAt : str?, DT?        │
+└───────────┬──────────────────────┬──────┘
+            │ 1                    │ 1
+            │                      │
+            │ *                    │ *
+┌───────────┴──────────┐ ┌─────────┴──────────────────────────────┐
+│     ExamQuestion     │ │                 ExamAttempt            │
+│   (Revision Items)   │ │             (Candidate Attempt)        │
+├──────────────────────┤ ├────────────────────────────────────────┤
+│ Id : string (PK)     │ │ Id : string (PK, text)                 │
+│ ExamId : string (FK) │ │ UserId : string (FK -> User)           │
+│ QuestionId : string  │ │ ExamId : string (FK -> Exam revision)  │
+│ DisplayOrder : int   │ │ Status : AttemptStatus (enum)          │
+└──────────────────────┘ │ ScorePercent : decimal                 │
+                         │ Passed : bool                          │
+                         │ StartedAt : DateTime                   │
+                         │ CompletedAt : DateTime?                │
+                         │ MetadataSnapshot : string? (JSONB)     │
+                         └───────────────────┬────────────────────┘
+                                             │ 1
+                                             │
+                                             │ *
+                         ┌───────────────────┴────────────────────┐
+                         │          ExamAttemptQuestion           │
+                         │   (Authoritative Relational Members)   │
+                         ├────────────────────────────────────────┤
+                         │ Id : string (PK, text)                 │
+                         │ ExamAttemptId : string (FK -> Attempt) │
+                         │ QuestionId : string (FK -> Question)   │
+                         │ DisplayOrder : int (Ordering)          │
+                         │ AssignedAt : DateTime                  │
+                         └────────────────────────────────────────┘
 ```
 
-### 2.1 `Examination` Entity (Stable Identity)
+### 2.1 New Entity: `Examination` (Stable Identity)
 ```csharp
+namespace Preform.Api.Models;
+
+[Table("Examinations", Schema = "public")]
 public class Examination
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public string Pathway { get; set; } = string.Empty; // "RN" or "PN"
-    public string Code { get; set; } = string.Empty; // e.g., "RN-EX-000001"
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    [Required]
+    [MaxLength(10)]
+    public string Pathway { get; set; } = "rn"; // "rn" or "pn"
+
+    [Required]
+    [MaxLength(16)]
+    public string Code { get; set; } = string.Empty; // e.g. "RN-EX-000001"
+
+    [Required]
+    [MaxLength(128)]
     public string Title { get; set; } = string.Empty;
-    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Required]
+    [MaxLength(128)]
     public string CreatedBy { get; set; } = string.Empty;
 
-    public Guid? CurrentRevisionId { get; set; }
+    [MaxLength(128)]
+    public string? CurrentRevisionId { get; set; }
     public Exam? CurrentRevision { get; set; }
 
-    public Guid? SuccessorExaminationId { get; set; }
+    [MaxLength(128)]
+    public string? SuccessorExaminationId { get; set; }
     public Examination? SuccessorExamination { get; set; }
 
     public ICollection<Exam> Revisions { get; set; } = new List<Exam>();
 }
 ```
 
-**Database Constraints & Indexes:**
-- Primary Key: `Id`
-- Unique Index: `(Pathway, Code)` (and global unique index on `Code`)
-- Foreign Key: `SuccessorExaminationId` references `Examination(Id)` (ON DELETE RESTRICT)
-
-### 2.2 `Exam` Entity (Revision Configuration)
+### 2.2 Additive Extension to `Exam` (Revision Configuration)
 ```csharp
+namespace Preform.Api.Models;
+
 public enum ExamLifecycleState
 {
     Draft = 1,
@@ -145,76 +167,142 @@ public enum ExamLifecycleState
     Retired = 6
 }
 
-public class Exam
+// Extends existing Exam model in apps/api/Models/Assessments.cs
+public partial class Exam
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
-    public Guid ExaminationId { get; set; }
-    public Examination? Examination { get; set; }
+    // Existing fields preserved:
+    // Id (string), Title (string), Description (string), Pathway (string),
+    // ExamType (ExamType), TimeLimitMinutes (int), PassingScorePercent (decimal),
+    // IsPublished (bool), CreatedAt (DateTime), UpdatedAt (DateTime),
+    // ExamQuestions, Attempts
+
+    // Additive P3.1 Foundation Fields:
+    [Required]
+    public string ExaminationId { get; set; } = string.Empty;
+    public Examination Examination { get; set; } = null!;
 
     public int RevisionNumber { get; set; } = 1;
+
     public ExamLifecycleState LifecycleState { get; set; } = ExamLifecycleState.Draft;
+
+    [ConcurrencyCheck]
     public long ConcurrencyToken { get; set; } = 1;
 
-    // Examination Settings
-    public string Title { get; set; } = string.Empty;
-    public string? Description { get; set; }
-    public string Pathway { get; set; } = string.Empty;
-    public string ExamType { get; set; } = "Practice";
-    public int TimeLimitMinutes { get; set; } = 120;
-    public decimal PassingScorePercent { get; set; } = 75.0m;
-
-    // Compatibility Property (derived/synchronized from LifecycleState == Published)
-    public bool IsPublished { get; set; } = false;
-
-    // Audit and Staffing Metadata
+    // Staffing & Lifecycle Audit Trail
+    [Required]
+    [MaxLength(128)]
     public string CreatedBy { get; set; } = string.Empty;
-    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
-    public string? SubmittedBy { get; set; }
-    public DateTime? SubmittedAtUtc { get; set; }
-    public string? ReviewedBy { get; set; }
-    public DateTime? ReviewedAtUtc { get; set; }
-    public string? ApprovedBy { get; set; }
-    public DateTime? ApprovedAtUtc { get; set; }
-    public string? PublishedBy { get; set; }
-    public DateTime? PublishedAtUtc { get; set; }
-    public string? ArchivedBy { get; set; }
-    public DateTime? ArchivedAtUtc { get; set; }
-    public string? RetiredBy { get; set; }
-    public DateTime? RetiredAtUtc { get; set; }
 
-    // Navigation properties
-    public ICollection<ExamQuestion> ExamQuestions { get; set; } = new List<ExamQuestion>();
-    public ICollection<ExamAttempt> Attempts { get; set; } = new List<ExamAttempt>();
+    [MaxLength(128)]
+    public string? SubmittedBy { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? ReviewedBy { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? ApprovedBy { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? PublishedBy { get; set; }
+    public DateTime? PublishedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? ArchivedBy { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? RetiredBy { get; set; }
+    public DateTime? RetiredAt { get; set; }
 }
 ```
 
-**Database Constraints & Indexes:**
-- Primary Key: `Id`
-- Foreign Key: `ExaminationId` references `Examination(Id)` (ON DELETE RESTRICT)
-- Unique Index: `(ExaminationId, RevisionNumber)`
-- Indexes: `LifecycleState`, `Pathway`, `IsPublished`
-
-### 2.3 `ExamAttempt` Entity Updates
+### 2.3 Additive Extension to `ExamAttempt`
 ```csharp
-public class ExamAttempt
+// Extends existing ExamAttempt model in apps/api/Models/Assessments.cs
+public partial class ExamAttempt
 {
-    public Guid Id { get; set; }
-    public Guid ExamId { get; set; } // Points to exact Exam revision row
-    public Exam? Exam { get; set; }
+    // Existing fields preserved:
+    // Id (string), UserId (string), ExamId (string), Status (AttemptStatus),
+    // ScorePercent (decimal), Passed (bool), StartedAt (DateTime), CompletedAt (DateTime?),
+    // Responses (ICollection<AttemptResponse>)
 
-    public string CandidateId { get; set; } = string.Empty;
-    public string Status { get; set; } = "InProgress";
-    public DateTime StartedAtUtc { get; set; } = DateTime.UtcNow;
-    public DateTime? SubmittedAtUtc { get; set; }
-
-    public decimal? ScorePercent { get; set; }
-    public bool? IsPassed { get; set; }
-
-    // Immutable metadata snapshot stored as PostgreSQL JSONB
+    // Additive P3.1 Attempt Metadata Snapshot:
+    [Column(TypeName = "jsonb")]
     public string? MetadataSnapshot { get; set; }
 
-    public ICollection<ExamAttemptQuestion> AttemptQuestions { get; set; } = new List<ExamAttemptQuestion>();
+    // Relationship to exact question set preserved:
+    // ExamAttemptQuestions (ICollection<ExamAttemptQuestion>)
 }
+```
+
+### 2.4 Entity Framework Core Model Configuration (`AppDbContext.cs`)
+```csharp
+// In AppDbContext.OnModelCreating(ModelBuilder modelBuilder):
+
+// 1. Examination (Stable Identity)
+modelBuilder.Entity<Examination>(entity =>
+{
+    entity.ToTable("Examinations", "public");
+    entity.HasKey(e => e.Id);
+    entity.Property(e => e.Id).HasColumnType("text");
+    entity.Property(e => e.Code).IsRequired().HasMaxLength(16);
+    entity.Property(e => e.Pathway).IsRequired().HasMaxLength(10);
+    entity.Property(e => e.Title).IsRequired().HasMaxLength(128);
+    entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(128);
+
+    entity.HasIndex(e => e.Code).IsUnique();
+    entity.HasIndex(e => new { e.Pathway, e.Code }).IsUnique();
+
+    entity.HasOne(e => e.SuccessorExamination)
+          .WithMany()
+          .HasForeignKey(e => e.SuccessorExaminationId)
+          .OnDelete(DeleteBehavior.Restrict);
+
+    entity.HasOne(e => e.CurrentRevision)
+          .WithMany()
+          .HasForeignKey(e => e.CurrentRevisionId)
+          .OnDelete(DeleteBehavior.SetNull);
+});
+
+// 2. Exam (Revision Entity)
+modelBuilder.Entity<Exam>(entity =>
+{
+    entity.Property(e => e.ExaminationId).IsRequired().HasColumnType("text");
+    entity.Property(e => e.RevisionNumber).IsRequired();
+    entity.Property(e => e.LifecycleState).IsRequired();
+    entity.Property(e => e.ConcurrencyToken).IsConcurrencyToken();
+
+    entity.HasOne(e => e.Examination)
+          .WithMany(ex => ex.Revisions)
+          .HasForeignKey(e => e.ExaminationId)
+          .OnDelete(DeleteBehavior.Restrict);
+
+    // Invariant: Unique revision numbers per Examination
+    entity.HasIndex(e => new { e.ExaminationId, e.RevisionNumber }).IsUnique();
+
+    // Invariant: At most one revision may be Published per Examination family
+    entity.HasIndex(e => e.ExaminationId)
+          .HasDatabaseName("IX_Exams_ExaminationId_SinglePublished")
+          .HasFilter(@"""LifecycleState"" = 4")
+          .IsUnique();
+
+    // Invariant: At most one revision may be actively in Draft per Examination family
+    entity.HasIndex(e => e.ExaminationId)
+          .HasDatabaseName("IX_Exams_ExaminationId_ActiveDraft")
+          .HasFilter(@"""LifecycleState"" = 1")
+          .IsUnique();
+
+    entity.HasIndex(e => e.LifecycleState);
+});
+
+// 3. ExamAttempt Updates
+modelBuilder.Entity<ExamAttempt>(entity =>
+{
+    entity.Property(ea => ea.MetadataSnapshot).HasColumnType("jsonb");
+});
 ```
 
 ---
@@ -224,228 +312,266 @@ public class ExamAttempt
 ### 3.1 Format Specification
 - Registered Nursing: `RN-EX-000001`
 - Practical Nursing: `PN-EX-000001`
-- Numeric range: `000001` to `999999` (6 digits zero-padded).
-- Sequences are pathway-isolated.
+- Range: `000001` to `999999` (6 digits, zero-padded).
+- Assigned strictly upon creation of the stable `Examination` family, retained permanently across all subsequent revisions.
 
-### 3.2 Allocation Mechanism
-PostgreSQL database sequences provide transaction-safe, atomic allocation:
+### 3.2 PostgreSQL Sequence Mechanics & Gapping Invariants
 ```sql
-CREATE SEQUENCE IF NOT EXISTS exam_code_rn_seq START WITH 1 INCREMENT BY 1;
-CREATE SEQUENCE IF NOT EXISTS exam_code_pn_seq START WITH 1 INCREMENT BY 1;
+CREATE SEQUENCE IF NOT EXISTS exam_code_rn_seq 
+    START WITH 1 
+    INCREMENT BY 1 
+    MINVALUE 1 
+    MAXVALUE 999999 
+    NO CYCLE;
+
+CREATE SEQUENCE IF NOT EXISTS exam_code_pn_seq 
+    START WITH 1 
+    INCREMENT BY 1 
+    MINVALUE 1 
+    MAXVALUE 999999 
+    NO CYCLE;
 ```
 
-Allocation algorithm in `ExaminationCodeService`:
-1. Validate requested pathway (`"RN"` or `"PN"`).
-2. In the same database transaction as the `Examination` insert:
-   - For RN: Execute `SELECT nextval('exam_code_rn_seq');`
-   - For PN: Execute `SELECT nextval('exam_code_pn_seq');`
-3. Format as `$"RN-EX-{val:D6}"` or `$"PN-EX-{val:D6}"`.
-4. Assign to `Examination.Code`.
-5. On transaction abort or rollback, the counter advances without leaving orphaned database rows (standard PostgreSQL sequence behavior).
-6. Hard constraint `UNIQUE (Code)` prevents duplicate collisions.
+**Key Technical Rules:**
+1. **Non-Transactional Allocation:** In PostgreSQL, calling `nextval()` advances the sequence immediately and is **not rolled back** if the enclosing transaction fails or aborts.
+2. **Gap Tolerance:** Aborted creation attempts will leave numerical gaps in the sequence. In accordance with approved Decision 1 (D6 & D9), **numerical gaps are acceptable**; uniqueness and pathway isolation are the enforced invariants.
+3. **Safe Ceiling:** The `MAXVALUE 999999 NO CYCLE` clause prevents silent wrapping. If the sequence is exhausted, an error is thrown, preventing duplicate code allocation.
+4. **Permanent Immutability:** `Examination.Pathway` and `Examination.Code` can never be edited or reassigned after initial insert.
 
 ---
 
-## 4. Lifecycle State Machine & Transition Logic
+## 4. Lifecycle State Machine & Invariants
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Draft : CreateRevision
-    Draft --> InReview : SubmitForReview
-    InReview --> Draft : ReturnForChanges (Mandatory Reason)
-    InReview --> Approved : Approve (Separation of Duties)
-    Approved --> Published : Publish (Synchronize IsPublished)
-    Published --> Archived : Archive (Record Active Attempts)
-    Archived --> Published : Restore (<= 30 Days, Superadmin)
-    Archived --> Retired : Retire (Terminal)
-    Published --> Retired : Retire (Superadmin, Terminal)
+    [*] --> Draft : CreateRevision (Exam Manager)
+    Draft --> InReview : SubmitForReview (Exam Manager)
+    InReview --> Draft : ReturnForChanges (Reviewer, Mandatory Reason)
+    InReview --> Approved : Approve (Admin, Creator != Actor)
+    Approved --> Published : Publish (Exam Manager, Auto-Archives Previous)
+    Published --> Archived : Archive (Exam Manager, Record Active Attempts)
+    Archived --> Published : Restore (Superadmin Override, <= 30 Days)
+    Archived --> Retired : Retire (Exam Manager, Terminal)
+    Published --> Retired : Retire (Superadmin Override, Terminal)
     Retired --> [*]
 ```
 
 ### 4.1 State Transition Validation Matrix
 
-| Action | From State | To State | Role Authorized | Business Rules & Invariants | Audit Event |
+| Action | From State | To State | Permitted Role | Preconditions & Invariants | Audit Event (`AuditLog.Action`) |
 |---|---|---|---|---|---|
-| `CreateRevision` | None / Published | `Draft` | Exam Manager, Admin | `RevisionNumber = Max(Existing) + 1` | `ExamRevisionCreated` |
-| `SubmitForReview` | `Draft` | `InReview` | Exam Manager, Admin | Revision must contain >= 1 question; valid settings | `ExamRevisionSubmitted` |
-| `ReturnForChanges`| `InReview` | `Draft` | Reviewer, Admin | Reason required (non-empty string); returns to draft | `ExamRevisionReturned` |
-| `Approve` | `InReview` | `Approved` | Admin, Superadmin | **`CreatedBy != ActorId`**; content locked | `ExamRevisionApproved` |
-| `Publish` | `Approved` | `Published` | Exam Manager, Admin | Sets `IsPublished = true`; previous revision archived | `ExamRevisionPublished` |
-| `Archive` | `Published` | `Archived` | Exam Manager, Admin | **Existing attempts continue; new attempts blocked**; record active attempt count | `ExamRevisionArchived` |
-| `Restore` | `Archived` | `Published` | Superadmin | **`NowUtc - ArchivedAtUtc <= 30 Days`**; mandatory reason | `ExamRevisionRestored` |
-| `Retire` | `Archived` / `Published` | `Retired` | Exam Manager, Superadmin | **Terminal state**; cannot be undone | `ExamRevisionRetired` |
+| `CreateRevision` | None / Published | `Draft` | Exam Manager | Parent `Examination` exists; at most one active `Draft` per Examination; `RevisionNumber = Max + 1` | `ExamRevisionCreated` |
+| `SubmitForReview` | `Draft` | `InReview` | Exam Manager | Contains >= 1 question; valid title, pathway, duration; locks editing | `ExamRevisionSubmitted` |
+| `RecommendApproval` | `InReview` | `InReview` | Reviewer | Clinical review completed; advisory audit event; does NOT change state | `ExamRevisionReviewRecommended` |
+| `ReturnForChanges` | `InReview` | `Draft` | Reviewer | Mandatory non-empty reason; unlocks for author edits | `ExamRevisionReturnedForChanges` |
+| `Approve` | `InReview` | `Approved` | Admin | **Separation of duties: `CreatedBy != ActorId`**; content locked | `ExamRevisionApproved` |
+| `Publish` | `Approved` | `Published` | Exam Manager | **Atomically archives previous Published revision**; syncs `IsPublished = true` | `ExamRevisionPublished` |
+| `Archive` | `Published` | `Archived` | Exam Manager | **Existing attempts continue undisturbed**; new attempts blocked; records active attempt count | `ExamRevisionArchived` |
+| `Restore` | `Archived` | `Published` | Superadmin (Override) | **`Now <= ArchivedAt + 30 Days`**; mandatory reason; **no other revision is currently Published** | `ExamRevisionRestored` |
+| `Retire` | `Archived` | `Retired` | Exam Manager | **Terminal state**; cannot be undone | `ExamRevisionRetired` |
+| `EmergencyRetire` | `Published` | `Retired` | Superadmin (Override) | Terminal state; mandatory reason; archives active revision | `ExamLifecycleOverride` |
 
-### 4.2 In-Progress Attempts During Archival
-When `Archive` executes:
-1. Query active in-progress attempts:
+### 4.2 Revision and Publication Invariants
+1. **Single Published Revision Enforcement:**
+   When an `Approved` revision is published:
    ```csharp
-   int activeCount = await db.ExamAttempts
-       .CountAsync(a => a.ExamId == revision.Id && a.Status == "InProgress");
-   ```
-2. Set `LifecycleState = ExamLifecycleState.Archived`, `IsPublished = false`, `ArchivedAtUtc = DateTime.UtcNow`.
-3. In-progress attempts are **unmodified**: candidates can continue answering and submit their attempts.
-4. Attempt creation endpoints check `LifecycleState == ExamLifecycleState.Published`; attempts on archived revisions are rejected.
-5. Record `activeCount` in the `ExamRevisionArchived` audit log payload.
+   // Executed inside an explicit database transaction:
+   var existingPublished = await db.Exams
+       .FirstOrDefaultAsync(e => e.ExaminationId == revision.ExaminationId 
+                              && e.LifecycleState == ExamLifecycleState.Published);
 
-### 4.3 30-Day Restoration Window & Terminal Retirement
-- Restoration is permitted if:
-  `DateTime.UtcNow <= revision.ArchivedAtUtc.Value.AddDays(30)`
-- If `> 30` days, restoration API rejects with HTTP 422 Unprocessable Entity ("Restoration window has expired. Examination must be retired or cloned.").
-- Once in `Retired` state, no transition out of `Retired` is accepted.
-- Re-introduction of a retired exam requires creating a new `Examination` with `SuccessorExaminationId = retiredExam.ExaminationId`.
+   if (existingPublished != null)
+   {
+       int activeAttempts = await db.ExamAttempts
+           .CountAsync(a => a.ExamId == existingPublished.Id && a.Status == AttemptStatus.InProgress);
+
+       existingPublished.LifecycleState = ExamLifecycleState.Archived;
+       existingPublished.IsPublished = false;
+       existingPublished.ArchivedAt = DateTime.UtcNow;
+       existingPublished.ArchivedBy = actorId;
+
+       // Log archive event with active attempts count
+       db.AuditLogs.Add(CreateAuditLog(actorId, "ExamRevisionArchived", existingPublished.Id, new {
+           reason = "Superseded by new revision publication",
+           activeAttemptsCount = activeAttempts,
+           supersededByRevisionId = revision.Id
+       }));
+   }
+
+   revision.LifecycleState = ExamLifecycleState.Published;
+   revision.IsPublished = true;
+   revision.PublishedAt = DateTime.UtcNow;
+   revision.PublishedBy = actorId;
+
+   revision.Examination.CurrentRevisionId = revision.Id;
+   await db.SaveChangesAsync();
+   ```
+2. **Restoration Guard Against Dual-Published Inconsistency:**
+   If a Superadmin attempts to restore an `Archived` revision within the 30-day window, the service checks whether another revision under that `ExaminationId` is currently `Published`. If yes, restoration is rejected with HTTP 422 Unprocessable Entity. The administrator must first archive the current published revision before restoring the older revision.
 
 ---
 
-## 5. Authorization & Separation of Duties
+## 5. Reconciled Role-Based Authorization & Separation of Duties
 
-### 5.1 Role Authority Matrix
+### 5.1 Canonical Authority Matrix
 
-| Role | Permitted Actions | Prohibited Actions |
+| Role | Lifecycle Actions Authorized | Strict Governance Prohibitions |
 |---|---|---|
-| **Superadmin** | Administrative overrides (audited), Restore (<= 30d), Emergency Retire | Silently rewrite attempts, bypass audit, alter grading, self-approve revision |
-| **Admin** | Approve revisions, Review, Create, Submit, Archive, Standard Retire | **Approve revisions created by self**, alter attempt grading, rewrite history |
-| **Exam Manager**| Create revisions, Submit for review, Publish approved revisions, Archive | **Approve revisions**, alter grading, override lifecycle rules |
-| **Reviewer** | Review revision, Return for changes (to Draft), Recommend approval | Approve revision, Publish revision, Edit draft content |
-| **Instructor** | **View Published examinations only** | View Draft/InReview/Approved/Archived/Retired, any lifecycle mutations |
-| **Content Mgr** | No examination lifecycle approval or publication authority by default | Approve revision, Publish revision, Submit revision |
-| **Candidate** | Start attempt and submit responses on eligible Published exams | Any administrative access or viewing unapproved content |
+| **Reviewer** | `Review`, `RecommendApproval`, `ReturnForChanges` | **Cannot approve**; cannot publish; cannot edit draft content |
+| **Admin** | `Approve` eligible revisions | **Cannot approve own revision**; **cannot publish**; cannot return for changes |
+| **Exam Manager** | `CreateRevision`, `EditDraft`, `SubmitForReview`, `Publish`, `Archive`, `Retire` | **Cannot approve revisions**; cannot bypass review |
+| **Content Manager** | *None* by default for examination lifecycle | Cannot create, submit, review, approve, or publish examinations |
+| **Instructor** | View **Published** examinations only | **Cannot view Draft, InReview, Approved, Archived, or Retired exams**; no mutations |
+| **Candidate** | View/take eligible **Published** examinations | No access to unpublished content; cannot view unfinalized scoring details |
+| **Superadmin** | Exceptional audited overrides only (`EmergencyRestore`, `EmergencyRetire`) | **Excluded from ordinary approvals and ordinary publication**; cannot rewrite attempts |
 
 ### 5.2 Separation of Duties Enforcement
-In `ExamLifecycleService.ApproveAsync(Guid revisionId, string actorId)`:
+Enforced in `ExamLifecycleService.ApproveAsync(string revisionId, ClaimsPrincipal user)`:
 ```csharp
-var revision = await _db.Exams.FindAsync(revisionId);
-if (revision.CreatedBy.Equals(actorId, StringComparison.OrdinalIgnoreCase))
+var actorId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+if (string.IsNullOrWhiteSpace(actorId))
 {
-    throw new SecurityException("Separation of duties violation: Creators cannot approve their own revisions.");
+    throw new UnauthorizedAccessException("Authentication required.");
+}
+
+var revision = await _db.Exams.FindAsync(revisionId);
+if (revision == null) throw new NotFoundException("Revision not found.");
+
+if (string.Equals(revision.CreatedBy, actorId, StringComparison.OrdinalIgnoreCase))
+{
+    throw new SecurityException("Separation of duties violation: The revision creator cannot approve this revision.");
 }
 ```
-
-### 5.3 Administrative Override Audit Contract
-Every administrative override requires:
-- `ActorId`: Identifier of the administrative user.
-- `EffectiveRole`: `"admin"` or `"superadmin"`.
-- `TargetRevisionId` & `TargetExaminationId`.
-- `PreviousState` & `NewState`.
-- `Reason`: Minimum 10 characters explaining operational necessity.
-- `TimestampUtc`: Server UTC timestamp.
-- `OperationType`: `"EmergencyRestore"`, `"ForcedRetirement"`, etc.
 
 ---
 
 ## 6. Attempt Metadata Snapshot Contract
 
-### 6.1 JSON Schema (Version 1)
-Stored in `ExamAttempt.MetadataSnapshot` (`jsonb` column in PostgreSQL):
+### 6.1 Storage & Relational Boundaries
+- Stored as a PostgreSQL `jsonb` document in `ExamAttempt.MetadataSnapshot`.
+- **Relational Independence:** `ExamAttemptQuestion` remains the exact, authoritative source of truth for question membership, display ordering (`DisplayOrder`), and attempt responses (`AttemptResponse`).
+- **No Scoring Leakage:** The snapshot never duplicates question text, candidate responses, answer keys, or grading outcomes.
+
+### 6.2 JSON Snapshot Schema (`schemaVersion = 1`)
 ```json
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "ExamAttemptMetadataSnapshot",
-  "type": "object",
-  "required": ["schemaVersion", "snapshotCreatedAtUtc", "examination", "revision", "deliverySettings"],
-  "properties": {
-    "schemaVersion": { "type": "integer", "const": 1 },
-    "snapshotCreatedAtUtc": { "type": "string", "format": "date-time" },
-    "examination": {
-      "type": "object",
-      "required": ["id", "code", "pathway"],
-      "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "code": { "type": "string" },
-        "pathway": { "type": "string" }
-      }
-    },
-    "revision": {
-      "type": "object",
-      "required": ["id", "revisionNumber", "title", "examType", "timeLimitMinutes", "passingScorePercent"],
-      "properties": {
-        "id": { "type": "string", "format": "uuid" },
-        "revisionNumber": { "type": "integer" },
-        "title": { "type": "string" },
-        "description": { "type": ["string", "null"] },
-        "examType": { "type": "string" },
-        "timeLimitMinutes": { "type": "integer" },
-        "passingScorePercent": { "type": "number" },
-        "publishedAtUtc": { "type": ["string", "null"], "format": "date-time" }
-      }
-    },
-    "deliverySettings": {
-      "type": "object",
-      "properties": {
-        "shuffleQuestions": { "type": "boolean" },
-        "allowReview": { "type": "boolean" }
-      }
-    }
+  "schemaVersion": 1,
+  "snapshotCreatedAtUtc": "2026-11-03T11:00:00Z",
+  "examination": {
+    "id": "exam_fam_001",
+    "code": "RN-EX-000001",
+    "pathway": "rn",
+    "title": "Comprehensive Nursing Licensure Exam"
+  },
+  "revision": {
+    "id": "exam_rev_001",
+    "revisionNumber": 1,
+    "title": "Comprehensive Nursing Licensure Exam - Core Practice",
+    "description": "Standard preparatory practice exam for RN candidates.",
+    "examType": 1,
+    "timeLimitMinutes": 150,
+    "passingScorePercent": 75.0,
+    "publishedAt": "2026-11-01T08:00:00Z"
+  },
+  "deliverySettings": {
+    "shuffleQuestions": true,
+    "allowReview": true
   }
 }
 ```
 
-### 6.2 Generation & Legacy Fallback Rules
-1. **Creation:** At `POST /api/candidate/exams/{examId}/attempts`, the server populates `MetadataSnapshot` using the current `Exam` revision and `Examination` records. The insert commits atomically with the attempt.
-2. **Immutability:** No UPDATE statements ever touch `MetadataSnapshot`.
-3. **Legacy Fallback:** If `attempt.MetadataSnapshot == null`:
-   - Fallback logic dynamically constructs a transient snapshot DTO from `attempt.Exam`.
-   - The response includes `"snapshotSource": "legacy_fallback"`.
-   - The database is **not updated** (no fabricated historical records).
+### 6.3 Generation, Immutability & Fallback Rules
+1. **Generation:** Captured atomically during `ExamAttemptsController.StartAttempt` inside the attempt initialization transaction.
+2. **Application-Wide Immutability:** No API endpoint, background worker, or administrative flow allows modification of `MetadataSnapshot` after insert.
+3. **Legacy Fallback Specification:**
+   - If `attempt.MetadataSnapshot == null`: The read endpoint queries the associated `Exam` revision record dynamically and sets `"snapshotSource": "legacy_fallback"`.
+   - **Documentation Invariant:** The system explicitly notes that this fallback represents the *current* state of the associated revision and does not claim to reconstruct historical modifications if the legacy record was altered prior to P3.1. Zero retroactive writes to `MetadataSnapshot` are performed.
+4. **Future Schema Version Handling:** If `schemaVersion > 1`, deserialization gracefully parses known envelope properties and preserves raw payload without throwing exceptions.
 
 ---
 
 ## 7. Optimistic Concurrency Control
 
-### 7.1 Mechanism
-- Every `Exam` revision record contains `ConcurrencyToken` (`long`).
-- Incremented on every valid update: `revision.ConcurrencyToken++`.
-- Update API requests must supply `expectedConcurrencyToken`.
+### 7.1 EF Core Integration
+- Configured via `modelBuilder.Entity<Exam>().Property(e => e.ConcurrencyToken).IsConcurrencyToken();`.
+- Initialized to `1` on creation.
+- On each valid update, the service layer increments: `revision.ConcurrencyToken++;`.
+- The update predicate verifies the concurrency token. If another transaction modified the row concurrently, EF Core throws `DbUpdateConcurrencyException`.
 
-```csharp
-var rowsAffected = await _db.Database.ExecuteSqlInterpolatedAsync($@"
-    UPDATE ""Exams""
-    SET ""Title"" = {request.Title},
-        ""ConcurrencyToken"" = ""ConcurrencyToken"" + 1
-    WHERE ""Id"" = {revisionId} AND ""ConcurrencyToken"" = {request.ExpectedConcurrencyToken};
-");
+### 7.2 Conflict Resolution & Audit
+- The API intercepts `DbUpdateConcurrencyException` and responds with **HTTP 409 Conflict**:
+  ```json
+  {
+    "error": "ConcurrencyConflict",
+    "message": "The examination revision has been modified by another administrator.",
+    "currentRevisionNumber": 1,
+    "currentConcurrencyToken": 2
+  }
+  ```
+- The conflict event is written to `AuditLogs` with `Outcome = "Conflict"`.
 
-if (rowsAffected == 0)
-{
-    throw new ConcurrencyException("The examination revision has been modified by another administrator.");
-}
+---
+
+## 8. Audit Infrastructure & Archival Race Protection
+
+### 8.1 Reuse of Existing `AuditLog` Entity
+All examination lifecycle transitions and administrative overrides map directly to the existing `AuditLog` model (`apps/api/Models/Identity.cs`):
+
+| `AuditLog` Field | Mapping for Examination Lifecycle |
+|---|---|
+| `Id` | `Guid.NewGuid().ToString()` |
+| `ActorId` | `user.FindFirst(ClaimTypes.NameIdentifier)?.Value` |
+| `Action` | One of `ExamRevisionCreated`, `ExamRevisionSubmitted`, `ExamRevisionReviewRecommended`, `ExamRevisionReturnedForChanges`, `ExamRevisionApproved`, `ExamRevisionPublished`, `ExamRevisionArchived`, `ExamRevisionRestored`, `ExamRevisionRetired`, `ExamLifecycleOverride` |
+| `EntityType` | `"Exam"` (for revision actions) or `"Examination"` (for family actions) |
+| `EntityId` | `Exam.Id` or `Examination.Id` |
+| `Description` | Serialized JSON containing `{ previousState, newState, reason, activeAttemptsCount, revisionNumber, examinationCode }` |
+| `Outcome` | `"Success"` or `"Conflict"` |
+| `IpAddress` | `HttpContext.Connection.RemoteIpAddress?.ToString()` |
+| `Timestamp` | `DateTime.UtcNow` |
+
+### 8.2 Archival vs Attempt Initialization Race Condition Guard
+To ensure a candidate attempt cannot start on an examination at the exact moment it is being archived:
+- `ExamAttemptsController.StartAttempt` queries the revision within an explicit transaction:
+  ```csharp
+  var exam = await db.Exams.FirstOrDefaultAsync(e => e.Id == request.ExamId 
+                                                  && e.LifecycleState == ExamLifecycleState.Published);
+  if (exam == null)
+  {
+      return UnprocessableEntity(new { error = "ExamNotAvailable", message = "Examination is not published for new attempts." });
+  }
+  ```
+- If an archival operation commits prior to the attempt insertion, the attempt transaction detects that `LifecycleState != Published` and aborts cleanly.
+- Existing in-progress attempts (`AttemptStatus.InProgress`) are unaffected and may be completed normally.
+
+---
+
+## 9. Non-Destructive Legacy Publication Migration Plan
+
+### 9.1 Database Inventory Protocol
+Before applying any migration to existing environments, run the following read-only inventory script:
+```sql
+SELECT 
+    e."Id", e."Title", e."Pathway", e."IsPublished", e."CreatedAt",
+    (SELECT COUNT(*) FROM public."ExamAttempts" a WHERE a."ExamId" = e."Id") AS "AttemptCount",
+    (SELECT COUNT(*) FROM public."ExamQuestions" q WHERE q."ExamId" = e."Id") AS "QuestionCount"
+FROM public."Exams" e
+ORDER BY e."Pathway", e."CreatedAt";
 ```
-On mismatch: Service returns HTTP 409 Conflict with current revision state.
 
----
-
-## 8. Publication & Data Migration Bridge
-
-1. **Source of Truth:** `LifecycleState == ExamLifecycleState.Published` is authoritative.
-2. **Synchronization Bridge:**
-   - Any lifecycle change updating `LifecycleState` automatically syncs `IsPublished`:
-     `revision.IsPublished = (revision.LifecycleState == ExamLifecycleState.Published);`
-   - Direct writes to `IsPublished` are prohibited in domain services.
-3. **Legacy Migration:**
-   - Existing `Exam` rows with `IsPublished == true` are initialized to `LifecycleState = Published`.
-   - Existing `Exam` rows with `IsPublished == false` are initialized to `LifecycleState = Draft`.
-   - Existing attempts remain tied to their existing `ExamId`.
-
----
-
-## 9. Non-Destructive PostgreSQL Verification Preflight Plan
-
-### 9.1 Verification Objectives
-Ensure the local test environment meets all requirements for integration verification:
-- PostgreSQL service active and accessible on loopback.
-- Guard contract `PREFORM_GATEB_TEST_CONNECTION_STRING` verified.
-- Target database `prepford_gateb_verification` verified without modifying production/shared databases.
-- Confirm schema capabilities (`jsonb`, sequences, constraints).
-
-### 9.2 Preflight Checklist
-- [ ] Verify PostgreSQL service state (`localhost:5432`).
-- [ ] Check `PREFORM_GATEB_TEST_CONNECTION_STRING` environment configuration.
-- [ ] Confirm presence or create isolated local verification database `prepford_gateb_verification`.
-- [ ] Execute non-destructive query confirming Npgsql / JSONB support.
-- [ ] Verify test suite isolation guards remain intact.
+### 9.2 Legacy Record Classification Rules
+1. **Safely Mappable (Class A):**
+   - Single published exam per pathway with active/completed attempts.
+   - Allocate new `Examination` (`RN-EX-000001` / `PN-EX-000001`), assign `RevisionNumber = 1`, set `LifecycleState = Published`, `IsPublished = true`.
+2. **Requires Owner Decision (Class B):**
+   - Multiple published exams for the same pathway/family (requires owner determination of which is canonical published and which are archived).
+   - Unpublished exams (`IsPublished = false`) that possess historical attempts.
+3. **Insufficient Evidence (Class C):**
+   - Empty, orphaned draft exams without attempts or questions.
 
 ---
 
 ## 10. Status & Next Gate
 
-- **Specification Status:** COMPLETE, INTERNALLY CONSISTENT, OWNER APPROVED.
+- **Specification Status:** REMEDIATED, INTERNALLY CONSISTENT, RECONCILED WITH BACKEND CODEBASE.
+- **Review Findings:** ALL 8 FINDINGS (F-01 TO F-08) FULLY RESOLVED.
 - **Implementation Status:** PENDING EXPLICIT OWNER IMPLEMENTATION AUTHORIZATION.
