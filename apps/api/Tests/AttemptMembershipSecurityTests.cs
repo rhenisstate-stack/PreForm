@@ -315,7 +315,7 @@ public class AttemptMembershipSecurityTests
         }, CancellationToken.None);
 
         // Atomic batch rejection — no attempt, no responses, no membership rows.
-        var objectResult = Assert.IsType<ObjectResult>(result);
+        var objectResult = Assert.IsType<BadRequestObjectResult>(result);
         Assert.Equal(StatusCodes.Status400BadRequest, objectResult.StatusCode);
         Assert.Null(await context.ExamAttempts.FindAsync("att_mem_sync_reject"));
         Assert.Empty(await context.AttemptResponses.Where(r => r.ExamAttemptId == "att_mem_sync_reject").ToListAsync());
