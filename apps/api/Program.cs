@@ -32,6 +32,7 @@ builder.Services.AddScoped<IAdminBootstrapService, AdminBootstrapService>();
 // Examination grading foundation (P2)
 builder.Services.AddSingleton<IQuestionGraderResolver, QuestionGraderResolver>();
 builder.Services.AddScoped<IResponseValidationService, ResponseValidationService>();
+builder.Services.AddScoped<IAttemptQuestionService, AttemptQuestionService>();
 // AI Study Studio (Phase 1): server-authoritative spaced repetition scheduling
 builder.Services.AddScoped<ISpacedRepetitionService, SpacedRepetitionService>();
 builder.Services.AddScoped<IFlashcardService, FlashcardService>();

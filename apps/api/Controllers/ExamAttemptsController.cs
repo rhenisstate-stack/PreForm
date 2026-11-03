@@ -6,7 +6,6 @@ using Microsoft.EntityFrameworkCore;
 using Preform.Api.Data;
 using Preform.Api.Models;
 using Preform.Api.Services;
-using Preform.Api.Services.Grading;
 
 namespace Preform.Api.Controllers;
 
@@ -61,6 +60,10 @@ public class SyncAssessmentAttemptRequest
     public List<SyncAttemptQuestionItem>? Questions { get; set; }
 }
 
+/// <summary>
+/// Candidate-facing attempt summary for the attempts list. Never exposes
+/// per-response grading data or answer keys.
+/// </summary>
 public class AttemptSummaryDto
 {
     public string Id { get; set; } = string.Empty;
@@ -80,6 +83,49 @@ public class AttemptSummaryDto
     public int ResponseCount { get; set; }
 }
 
+/// <summary>
+/// Candidate-facing attempt detail. Correctness and awarded scores are disclosed
+/// per response only after authoritative finalization (attempt completed); an
+/// in-progress attempt discloses the candidate's own selected answers and timing
+/// but never grading state, and no answer keys, correct option identifiers or
+/// rationales are exposed on any stage.
+/// </summary>
+public class CandidateAttemptDetailDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string UserId { get; set; } = string.Empty;
+    public string ExamId { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string Type { get; set; } = "tutored_cat";
+    public string Status { get; set; } = "InProgress";
+    /// <summary>Authoritative score, disclosed only after finalization.</summary>
+    public decimal? ScorePercent { get; set; }
+    /// <summary>Pass/fail outcome, disclosed only after finalization.</summary>
+    public bool? Passed { get; set; }
+    /// <summary>Performance tier, disclosed only after finalization.</summary>
+    public string? PerformanceTier { get; set; }
+    public int? CorrectCount { get; set; }
+    public int TotalResponses { get; set; }
+    public int DurationMinutes { get; set; }
+    public DateTime StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    /// <summary>True when authoritative grading is incomplete (e.g. missing answer keys).</summary>
+    public bool GradingIncomplete { get; set; }
+    public List<CandidateAttemptResponseDto> Responses { get; set; } = new();
+}
+
+public class CandidateAttemptResponseDto
+{
+    public string QuestionId { get; set; } = string.Empty;
+    public string SelectedOptionsJson { get; set; } = "[]";
+    public int TimeSpentSeconds { get; set; }
+    public DateTime AnsweredAt { get; set; }
+    /// <summary>Disclosed only after finalization; null while in progress.</summary>
+    public bool? IsCorrect { get; set; }
+    /// <summary>Disclosed only after finalization; null while in progress.</summary>
+    public decimal? ScoreAwarded { get; set; }
+}
+
 [ApiController]
 [Authorize]
 [Route("api/v1/attempts")]
@@ -88,6 +134,7 @@ public class ExamAttemptsController : ControllerBase
     private readonly AppDbContext _context;
     private readonly ILogger<ExamAttemptsController> _logger;
     private readonly IResponseValidationService _responseValidationService;
+    private readonly IAttemptQuestionService _attemptQuestionService;
 
     private static readonly HashSet<string> AdminRoles = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -97,11 +144,13 @@ public class ExamAttemptsController : ControllerBase
     public ExamAttemptsController(
         AppDbContext context,
         ILogger<ExamAttemptsController> logger,
-        IResponseValidationService responseValidationService)
+        IResponseValidationService responseValidationService,
+        IAttemptQuestionService attemptQuestionService)
     {
         _context = context;
         _logger = logger;
         _responseValidationService = responseValidationService;
+        _attemptQuestionService = attemptQuestionService;
     }
 
     private (string? userId, string? role) ResolveCaller()
@@ -109,35 +158,6 @@ public class ExamAttemptsController : ControllerBase
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var role = RoleHierarchy.GetEffectiveRole(User);
         return (userId, role.Trim().ToLowerInvariant());
-    }
-
-    private static string NormalizeQuestionTypeKey(string? rawKey)
-    {
-        if (string.IsNullOrWhiteSpace(rawKey))
-        {
-            return "single-choice";
-        }
-
-        var normalized = rawKey.Trim();
-        normalized = normalized.Replace("_", "-");
-        normalized = normalized.Replace(" ", "-");
-        normalized = normalized.ToLowerInvariant();
-
-        return normalized switch
-        {
-            "single-choice" or "single-choice" => "single-choice",
-            "multiple-choice" or "multi-choice" or "multi-select" => "multiple-choice",
-            "sata" or "select-all-that-apply" => "sata",
-            "checkbox" or "checkbox-response" => "checkbox",
-            "true-false" or "truefalse" => "true-false",
-            "image-based" or "imagebased" => "image-based",
-            _ => normalized
-        };
-    }
-
-    private ResponseValidationService CreateSyncValidationService()
-    {
-        return new ResponseValidationService(_context, new QuestionGraderResolver(QuestionTypeRegistry.Instance));
     }
 
     private async Task<Exam> GetOrCreateDefaultExamAsync(string pathway, CancellationToken cancellationToken)
@@ -165,6 +185,28 @@ public class ExamAttemptsController : ControllerBase
         }
 
         return exam;
+    }
+
+    private static List<int> ResolveSyncSelectedIndices(SyncAttemptQuestionItem q)
+    {
+        if (q.UserAnswerIndices != null && q.UserAnswerIndices.Count > 0)
+        {
+            return q.UserAnswerIndices;
+        }
+
+        if (q.UserAnswerIndex.HasValue)
+        {
+            return new List<int> { q.UserAnswerIndex.Value };
+        }
+
+        return new List<int>();
+    }
+
+    private static string GetPerformanceTier(decimal scorePercent)
+    {
+        return scorePercent >= 75m ? "Very High" :
+               scorePercent >= 65m ? "High" :
+               scorePercent >= 55m ? "Borderline" : "Low";
     }
 
     [HttpGet]
@@ -200,10 +242,6 @@ public class ExamAttemptsController : ControllerBase
                 ? (int)Math.Max(1, (a.CompletedAt.Value - a.StartedAt).TotalMinutes)
                 : 0;
 
-            var tier = a.ScorePercent >= 75m ? "Very High" :
-                       a.ScorePercent >= 65m ? "High" :
-                       a.ScorePercent >= 55m ? "Borderline" : "Low";
-
             return new AttemptSummaryDto
             {
                 Id = a.Id,
@@ -213,7 +251,7 @@ public class ExamAttemptsController : ControllerBase
                 Type = a.Exam?.ExamType == ExamType.CAT ? "tutored_cat" : "rat",
                 Status = a.Status.ToString(),
                 ScorePercent = a.ScorePercent,
-                PerformanceTier = tier,
+                PerformanceTier = GetPerformanceTier(a.ScorePercent),
                 Passed = a.Passed,
                 TotalQuestions = totalCount,
                 CorrectCount = correctCount,
@@ -252,7 +290,47 @@ public class ExamAttemptsController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot view another candidate's assessment attempt." });
         }
 
-        return Ok(new { success = true, attempt });
+        // Candidate-facing DTO contract: full EF entities are never serialized.
+        // Correctness/scores are disclosed only after authoritative finalization.
+        var isCompleted = attempt.Status == AttemptStatus.Completed;
+        var totalResponses = attempt.Responses.Count;
+        var ungradedCount = attempt.Responses.Count(r => r.GradingState == ResponseGradingState.Ungraded);
+        var duration = attempt.CompletedAt.HasValue
+            ? (int)Math.Max(1, (attempt.CompletedAt.Value - attempt.StartedAt).TotalMinutes)
+            : (int)Math.Max(1, (DateTime.UtcNow - attempt.StartedAt).TotalMinutes);
+
+        var detail = new CandidateAttemptDetailDto
+        {
+            Id = attempt.Id,
+            UserId = attempt.UserId,
+            ExamId = attempt.ExamId,
+            Name = attempt.Exam?.Title ?? "Adaptive Practice CAT",
+            Type = attempt.Exam?.ExamType == ExamType.CAT ? "tutored_cat" : "rat",
+            Status = attempt.Status.ToString(),
+            ScorePercent = isCompleted ? attempt.ScorePercent : null,
+            Passed = isCompleted ? attempt.Passed : null,
+            PerformanceTier = isCompleted ? GetPerformanceTier(attempt.ScorePercent) : null,
+            CorrectCount = isCompleted ? attempt.Responses.Count(r => r.IsCorrect) : null,
+            TotalResponses = totalResponses,
+            DurationMinutes = duration,
+            StartedAt = attempt.StartedAt,
+            CompletedAt = attempt.CompletedAt,
+            GradingIncomplete = ungradedCount > 0,
+            Responses = attempt.Responses
+                .OrderBy(r => r.AnsweredAt)
+                .Select(r => new CandidateAttemptResponseDto
+                {
+                    QuestionId = r.QuestionId,
+                    SelectedOptionsJson = r.SelectedOptionsJson,
+                    TimeSpentSeconds = r.TimeSpentSeconds,
+                    AnsweredAt = r.AnsweredAt,
+                    IsCorrect = isCompleted ? r.IsCorrect : null,
+                    ScoreAwarded = isCompleted ? r.ScoreAwarded : null,
+                })
+                .ToList(),
+        };
+
+        return Ok(new { success = true, attempt = detail });
     }
 
     [HttpPost]
@@ -265,7 +343,9 @@ public class ExamAttemptsController : ControllerBase
         }
 
         var exam = !string.IsNullOrWhiteSpace(request.ExamId)
-            ? await _context.Exams.FindAsync(new object[] { request.ExamId }, cancellationToken)
+            ? await _context.Exams
+                .Include(e => e.ExamQuestions)
+                .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken)
             : await GetOrCreateDefaultExamAsync(request.Pathway ?? "rn", cancellationToken);
 
         if (exam == null)
@@ -288,6 +368,18 @@ public class ExamAttemptsController : ControllerBase
 
         _context.ExamAttempts.Add(attempt);
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Persist the exact attempt question set at start time. The attempt's
+        // authorized question set is the exam's question list in display order;
+        // adaptive (CAT) sub-selection is not implemented and remains out of scope.
+        await _attemptQuestionService.RecordQuestionMembershipAsync(
+            attempt.Id,
+            exam.ExamQuestions
+                .OrderBy(eq => eq.DisplayOrder)
+                .Select(eq => eq.QuestionId)
+                .ToList(),
+            now,
+            cancellationToken);
 
         return CreatedAtAction(nameof(GetAttemptById), new { id = attempt.Id }, new
         {
@@ -327,6 +419,22 @@ public class ExamAttemptsController : ControllerBase
             return BadRequest(new { success = false, error = "Cannot add responses to a completed or abandoned attempt." });
         }
 
+        if (request == null || string.IsNullOrWhiteSpace(request.QuestionId))
+        {
+            return BadRequest(new { success = false, error = "Question ID is required." });
+        }
+
+        // Exact attempt-question membership: a question that is not part of the
+        // attempt's exam, or was never assigned to this attempt, is rejected.
+        var membership = await _attemptQuestionService.ValidateMembershipAsync(attempt, request.QuestionId, cancellationToken);
+        if (!membership.IsMember)
+        {
+            var status = membership.Failure == AttemptQuestionMembershipFailure.QuestionNotFound
+                ? StatusCodes.Status404NotFound
+                : StatusCodes.Status400BadRequest;
+            return StatusCode(status, new { success = false, error = membership.Error ?? "The submitted question is not part of this attempt." });
+        }
+
         // Parse selected option indices from the request
         var selectedOptionIndices = request.SelectedOptionIndices ?? new List<int>();
 
@@ -340,6 +448,18 @@ public class ExamAttemptsController : ControllerBase
 
         if (!validation.Valid)
         {
+            if (validation.Ungraded)
+            {
+                // Missing/invalid answer key: the response is rejected without a
+                // graded result. It must never be silently recorded as incorrect.
+                return StatusCode(StatusCodes.Status409Conflict, new
+                {
+                    success = false,
+                    error = validation.Error ?? "The authoritative answer key for this question is unavailable; the response cannot be graded.",
+                    ungradable = true,
+                });
+            }
+
             var error = validation.Error ?? "Validation failed.";
             var status = error switch
             {
@@ -353,14 +473,16 @@ public class ExamAttemptsController : ControllerBase
 
         var selectedOptionsJson = JsonSerializer.Serialize(selectedOptionIndices);
 
+        var now = DateTime.UtcNow;
         var existingResponse = attempt.Responses.FirstOrDefault(r => r.QuestionId == request.QuestionId);
         if (existingResponse != null)
         {
             existingResponse.SelectedOptionsJson = selectedOptionsJson;
             existingResponse.IsCorrect = grading.IsCorrect;
             existingResponse.ScoreAwarded = grading.ScoreAwarded;
+            existingResponse.GradingState = ResponseGradingState.Graded;
             existingResponse.TimeSpentSeconds = request.TimeSpentSeconds;
-            existingResponse.AnsweredAt = DateTime.UtcNow;
+            existingResponse.AnsweredAt = now;
         }
         else
         {
@@ -372,13 +494,20 @@ public class ExamAttemptsController : ControllerBase
                 SelectedOptionsJson = selectedOptionsJson,
                 IsCorrect = grading.IsCorrect,
                 ScoreAwarded = grading.ScoreAwarded,
+                GradingState = ResponseGradingState.Graded,
                 TimeSpentSeconds = request.TimeSpentSeconds,
-                AnsweredAt = DateTime.UtcNow
+                AnsweredAt = now
             };
             _context.AttemptResponses.Add(newResponse);
         }
 
+        // On validated submission the question becomes part of the persisted
+        // attempt question set (covers legacy pre-snapshot in-flight attempts;
+        // snapshot-backed attempts already contain the question).
+        await _attemptQuestionService.RecordQuestionMembershipAsync(
+            attempt.Id, new[] { request.QuestionId }, now, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
+
         return Ok(new
         {
             success = true,
@@ -417,8 +546,23 @@ public class ExamAttemptsController : ControllerBase
             return BadRequest(new { success = false, error = "Attempt has already been completed." });
         }
 
-        var totalResponses = attempt.Responses.Count;
-        var correctResponses = attempt.Responses.Count(r => r.IsCorrect);
+        // Authoritative finalization is blocked while any response cannot be
+        // graded (e.g. missing answer key). This neither rewards nor penalizes
+        // the candidate for missing server-owned grading data.
+        var ungradedResponses = attempt.Responses.Count(r => r.GradingState == ResponseGradingState.Ungraded);
+        if (ungradedResponses > 0)
+        {
+            return StatusCode(StatusCodes.Status409Conflict, new
+            {
+                success = false,
+                error = "This attempt contains responses that cannot be graded because authoritative grading data is missing or invalid. Finalization is blocked until the grading data is repaired.",
+                gradingIncomplete = true,
+                ungradedResponseCount = ungradedResponses,
+            });
+        }
+
+        var totalResponses = attempt.Responses.Count(r => r.GradingState == ResponseGradingState.Graded);
+        var correctResponses = attempt.Responses.Count(r => r.GradingState == ResponseGradingState.Graded && r.IsCorrect);
         var passingThreshold = attempt.Exam?.PassingScorePercent ?? 75.0m;
 
         attempt.ScorePercent = totalResponses > 0
@@ -461,113 +605,13 @@ public class ExamAttemptsController : ControllerBase
         });
     }
 
-    private async Task SaveSyncedAttemptAsync(
-        ExamAttempt attempt,
-        SyncAssessmentAttemptRequest request,
-        DateTime now,
-        string candidateUserId,
-        CancellationToken cancellationToken)
-    {
-        _context.ExamAttempts.Add(attempt);
-        await _context.SaveChangesAsync(cancellationToken);
-
-        if (request.Questions != null && request.Questions.Count > 0)
-        {
-            foreach (var q in request.Questions)
-            {
-                var questionId = !string.IsNullOrWhiteSpace(q.Id) ? q.Id : "q_" + Guid.NewGuid().ToString("N");
-                var normalizedQuestionType = NormalizeQuestionTypeKey(q.QuestionType);
-
-                var persistedQuestion = await _context.Questions
-                    .Include(question => question.Options)
-                    .FirstOrDefaultAsync(existingQ => existingQ.Id == questionId, cancellationToken);
-
-                if (persistedQuestion == null)
-                {
-                    persistedQuestion = new Question
-                    {
-                        Id = questionId,
-                        Stem = q.Stem ?? "Clinical scenario assessment question",
-                        Pathway = request.Pathway ?? "rn",
-                        QuestionTypeKey = normalizedQuestionType,
-                        Status = QuestionStatus.Published,
-                        CreatedAt = now,
-                        UpdatedAt = now
-                    };
-                    _context.Questions.Add(persistedQuestion);
-                }
-
-                var selectedIndices = q.UserAnswerIndices != null && q.UserAnswerIndices.Count > 0
-                    ? q.UserAnswerIndices
-                    : q.UserAnswerIndex.HasValue
-                        ? new List<int> { q.UserAnswerIndex.Value }
-                        : new List<int>();
-
-                var selectedJson = JsonSerializer.Serialize(selectedIndices);
-
-                // The sync route is a compatibility import path; however, when the canonical
-                // question answer key exists in the authoritative datastore, the server must
-                // not trust client-supplied IsCorrect/ScoreAwarded values.
-                var isCorrect = false;
-                var scoreAwarded = 0m;
-
-                if (persistedQuestion.Options.Count > 0)
-                {
-                    var syncValidationService = CreateSyncValidationService();
-                    var validation = await syncValidationService.ValidateAndGradeAsync(
-                        attempt.Id,
-                        persistedQuestion.Id,
-                        selectedIndices,
-                        60,
-                        cancellationToken);
-
-                    if (validation.Valid && validation.Grading is not null)
-                    {
-                        isCorrect = validation.Grading.IsCorrect;
-                        scoreAwarded = validation.Grading.ScoreAwarded;
-                    }
-                    else
-                    {
-                        _logger.LogWarning(
-                            "Sync assessment answer was rejected by the server authority for question {QuestionId}: {Reason}",
-                            persistedQuestion.Id,
-                            validation.Error ?? "Unknown validation failure");
-                    }
-                }
-                else
-                {
-                    _logger.LogWarning(
-                        "Sync assessment import for question {QuestionId} did not have an authoritative answer key; the client-submitted correctness score was ignored.",
-                        persistedQuestion.Id);
-                }
-
-                var resp = new AttemptResponse
-                {
-                    Id = "resp_" + Guid.NewGuid().ToString("N"),
-                    ExamAttemptId = attempt.Id,
-                    QuestionId = questionId,
-                    SelectedOptionsJson = selectedJson,
-                    IsCorrect = isCorrect,
-                    ScoreAwarded = scoreAwarded,
-                    TimeSpentSeconds = 60,
-                    AnsweredAt = now
-                };
-                _context.AttemptResponses.Add(resp);
-            }
-        }
-
-        _context.AuditLogs.Add(new AuditLog
-        {
-            ActorId = candidateUserId,
-            Action = "AssessmentAttemptPersisted",
-            EntityType = "ExamAttempt",
-            EntityId = attempt.Id,
-            Description = $"Persisted candidate assessment attempt '{request.Name}' with score {request.ScorePercent}%",
-            Outcome = "Success",
-            Timestamp = now
-        });
-    }
-
+    /// <summary>
+    /// Subscription synchronization export (offline recovery importer).
+    /// Persisting a synced legacy attempt: the whole question set is
+    /// server-verified, graded through the trusted grading service, and totals are
+    /// recalculated from persisted responses. Client-supplied correctness, scores,
+    /// totals and pass/fail flags are accepted for compatibility and ignored.
+    /// </summary>
     [HttpPost("sync")]
     public async Task<IActionResult> SyncAssessmentAttempt([FromBody] SyncAssessmentAttemptRequest request, CancellationToken cancellationToken)
     {
@@ -577,28 +621,104 @@ public class ExamAttemptsController : ControllerBase
             return Unauthorized(new { success = false, error = "Authentication required to sync assessment attempts." });
         }
 
+        if (request == null)
+        {
+            return BadRequest(new { success = false, error = "A synchronization payload is required." });
+        }
+
         var candidateUserId = caller.userId;
+        var now = DateTime.UtcNow;
         var attemptId = !string.IsNullOrWhiteSpace(request.Id) ? request.Id : "att_" + Guid.NewGuid().ToString("N");
 
-        // Verify if attempt already exists
         var existingAttempt = await _context.ExamAttempts
             .Include(ea => ea.Responses)
+            .Include(ea => ea.Exam)
             .FirstOrDefaultAsync(ea => ea.Id == attemptId, cancellationToken);
 
         if (existingAttempt != null)
         {
+            // Ownership enforcement for existing attempts.
             if (!string.Equals(existingAttempt.UserId, candidateUserId, StringComparison.Ordinal))
             {
                 return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot update another candidate's attempt." });
             }
 
-            return Ok(new { success = true, attemptId = existingAttempt.Id, message = "Attempt already persisted." });
+            // Completed/abandoned attempts are never modified by synchronization.
+            if (existingAttempt.Status != AttemptStatus.InProgress)
+            {
+                return Ok(new { success = true, attemptId = existingAttempt.Id, message = "Attempt already persisted." });
+            }
+
+            // In-progress attempts accept server-verified recovery data.
+            return await SyncIntoInProgressAttemptAsync(existingAttempt, request, now, cancellationToken);
         }
 
-        var exam = await GetOrCreateDefaultExamAsync(request.Pathway ?? "rn", cancellationToken);
-        var now = DateTime.UtcNow;
-        var startedAt = now.AddMinutes(-Math.Max(1, request.DurationMinutes));
+        return await CreateSyncedAttemptAsync(attemptId, request, candidateUserId, now, cancellationToken);
+    }
 
+    private async Task<IActionResult> CreateSyncedAttemptAsync(
+        string attemptId,
+        SyncAssessmentAttemptRequest request,
+        string candidateUserId,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var exam = await GetOrCreateDefaultExamAsync(request.Pathway ?? "rn", cancellationToken);
+
+        // Build a server-verified question plan. Candidate synchronization input
+        // may NOT create question records or stubs: every submitted question must
+        // exist in the authoritative datastore AND belong to the target exam.
+        var rejectedQuestions = new List<string>();
+        var verifiedQuestions = new List<Question>();
+        var selections = new Dictionary<string, List<int>>(StringComparer.Ordinal);
+
+        foreach (var item in request.Questions ?? new List<SyncAttemptQuestionItem>())
+        {
+            var questionId = item?.Id;
+            if (string.IsNullOrWhiteSpace(questionId))
+            {
+                rejectedQuestions.Add("(missing question id)");
+                continue;
+            }
+
+            var question = await _context.Questions
+                .Include(q => q.Options)
+                .FirstOrDefaultAsync(q => q.Id == questionId, cancellationToken);
+
+            if (question == null)
+            {
+                // Untrusted input must never create question stubs or unverified references.
+                rejectedQuestions.Add(questionId);
+                continue;
+            }
+
+            var examMember = await _context.ExamQuestions
+                .AnyAsync(eq => eq.ExamId == exam.Id && eq.QuestionId == questionId, cancellationToken);
+
+            if (!examMember)
+            {
+                rejectedQuestions.Add(questionId);
+                continue;
+            }
+
+            verifiedQuestions.Add(question);
+            selections[questionId] = ResolveSyncSelectedIndices(item);
+        }
+
+        if (rejectedQuestions.Count > 0)
+        {
+            // The batch is rejected atomically: no attempt, no responses and no
+            // membership records are persisted when any question cannot be verified.
+            return BadRequest(new
+            {
+                success = false,
+                error = "Synchronization rejected: one or more submitted questions are not verified parts of this examination._candidate attempts cannot create questions or assign unverified questions to an attempt.",
+                unverifiableQuestionCount = rejectedQuestions.Count,
+                rejectedQuestions = rejectedQuestions.Distinct().ToList(),
+            });
+        }
+
+        var startedAt = now.AddMinutes(-Math.Max(1, request.DurationMinutes));
         var attempt = new ExamAttempt
         {
             Id = attemptId,
@@ -612,52 +732,133 @@ public class ExamAttemptsController : ControllerBase
             Exam = exam
         };
 
-        if (_context.Database.IsRelational())
+        _context.ExamAttempts.Add(attempt);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Persist the attempt question set from the server-verified plan.
+        await _attemptQuestionService.RecordQuestionMembershipAsync(
+            attemptId,
+            verifiedQuestions.Select(q => q.Id).ToList(),
+            now,
+            cancellationToken);
+
+        var ungradedCount = 0;
+        var gradedCount = 0;
+        foreach (var question in verifiedQuestions)
         {
-            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
-            try
-            {
-                await SaveSyncedAttemptAsync(attempt, request, now, candidateUserId, cancellationToken);
-                var syncedResponses = await _context.AttemptResponses
-                    .Where(response => response.ExamAttemptId == attempt.Id)
-                    .ToListAsync(cancellationToken);
+            var selected = selections[question.Id];
+            var validation = await _responseValidationService.ValidateAndGradeAsync(
+                attempt.Id,
+                question.Id,
+                selected,
+                0,
+                cancellationToken);
 
-                var totalResponses = syncedResponses.Count;
-                var correctResponses = syncedResponses.Count(response => response.IsCorrect);
-                attempt.ScorePercent = totalResponses > 0
-                    ? Math.Round((decimal)correctResponses / totalResponses * 100m, 2)
-                    : 0.0m;
-                attempt.Passed = attempt.ScorePercent >= (attempt.Exam?.PassingScorePercent ?? 75.0m);
-                attempt.Status = AttemptStatus.Completed;
-                attempt.CompletedAt = now;
-
-                await _context.SaveChangesAsync(cancellationToken);
-                await transaction.CommitAsync(cancellationToken);
-            }
-            catch (Exception ex)
+            AttemptResponse response;
+            if (validation.Valid && validation.Grading is not null)
             {
-                await transaction.RollbackAsync(cancellationToken);
-                _logger.LogError(ex, "Failed to persist assessment attempt {AttemptId}", attemptId);
-                return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, error = "Failed to persist assessment attempt to PostgreSQL database." });
+                response = new AttemptResponse
+                {
+                    Id = "resp_" + Guid.NewGuid().ToString("N"),
+                    ExamAttemptId = attempt.Id,
+                    QuestionId = question.Id,
+                    SelectedOptionsJson = JsonSerializer.Serialize(selected),
+                    IsCorrect = validation.Grading.IsCorrect,
+                    ScoreAwarded = validation.Grading.ScoreAwarded,
+                    GradingState = ResponseGradingState.Graded,
+                    TimeSpentSeconds = 0,
+                    AnsweredAt = now
+                };
+                gradedCount++;
             }
+            else if (validation.Ungraded)
+            {
+                // Preserve the candidate's submitted answer as an explicit ungraded
+                // response; no authoritative score meaning is attached.
+                ungradedCount++;
+                response = new AttemptResponse
+                {
+                    Id = "resp_" + Guid.NewGuid().ToString("N"),
+                    ExamAttemptId = attempt.Id,
+                    QuestionId = question.Id,
+                    SelectedOptionsJson = JsonSerializer.Serialize(selected),
+                    IsCorrect = false,
+                    ScoreAwarded = 0m,
+                    GradingState = ResponseGradingState.Ungraded,
+                    TimeSpentSeconds = 0,
+                    AnsweredAt = now
+                };
+                _logger.LogWarning(
+                    "Sync import for attempt {AttemptId} question {QuestionId} could not be graded (authoritative grading data unavailable); response persisted as Ungraded.",
+                    attempt.Id, question.Id);
+            }
+            else
+            {
+                _logger.LogWarning(
+                    "Sync validation rejected answer data for question {QuestionId}: {Reason}",
+                    question.Id,
+                    validation.Error ?? "Unknown validation failure.");
+                rejectedQuestions.Add(question.Id);
+                continue;
+            }
+
+            _context.AttemptResponses.Add(response);
         }
-        else
-        {
-            await SaveSyncedAttemptAsync(attempt, request, now, candidateUserId, cancellationToken);
-            var syncedResponses = await _context.AttemptResponses
-                .Where(response => response.ExamAttemptId == attempt.Id)
-                .ToListAsync(cancellationToken);
 
-            var totalResponses = syncedResponses.Count;
-            var correctResponses = syncedResponses.Count(response => response.IsCorrect);
-            attempt.ScorePercent = totalResponses > 0
-                ? Math.Round((decimal)correctResponses / totalResponses * 100m, 2)
+        await _context.SaveChangesAsync(cancellationToken);
+
+        if (ungradedCount == 0)
+        {
+            // Recalculate from trusted persisted state only.
+            var gradedResponses = await _context.AttemptResponses
+                .Where(r => r.ExamAttemptId == attempt.Id && r.GradingState == ResponseGradingState.Graded)
+                .ToListAsync(cancellationToken);
+            var correctCount = gradedResponses.Count(r => r.IsCorrect);
+            attempt.ScorePercent = gradedResponses.Count > 0
+                ? Math.Round((decimal)correctCount / gradedResponses.Count * 100m, 2)
                 : 0.0m;
             attempt.Passed = attempt.ScorePercent >= (attempt.Exam?.PassingScorePercent ?? 75.0m);
             attempt.Status = AttemptStatus.Completed;
             attempt.CompletedAt = now;
+        }
+        else
+        {
+            // Authoritative finalization is blocked until missing grading data is
+            // repaired; the attempt stays InProgress and no percentage is produced.
+            attempt.Status = AttemptStatus.InProgress;
+            attempt.CompletedAt = null;
+        }
 
-            await _context.SaveChangesAsync(cancellationToken);
+        await _context.SaveChangesAsync(cancellationToken);
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            ActorId = candidateUserId,
+            Action = "AssessmentAttemptSynced",
+            EntityType = "ExamAttempt",
+            EntityId = attempt.Id,
+            Description = ungradedCount == 0
+                ? $"Imported attempt '{attemptId}' from synchronization; server-computed score {attempt.ScorePercent:0.##}% over {verifiedQuestions.Count} verified question(s)."
+                : $"Imported attempt '{attemptId}' from synchronization with {ungradedCount} ungradable question(s); finalization deferred until grading data is available.",
+            Outcome = "Success",
+            Timestamp = now
+        });
+        await _context.SaveChangesAsync(cancellationToken);
+
+        if (ungradedCount > 0)
+        {
+            return Ok(new
+            {
+                success = true,
+                attemptId = attempt.Id,
+                scorePercent = (decimal?)null,
+                passed = false,
+                gradingIncomplete = true,
+                ungradedResponseCount = ungradedCount,
+                persistedResponseCount = gradedCount,
+                persistedAt = now,
+                message = "Attempt synchronized but cannot be finalized because authoritative grading data is missing for some questions. The attempt remains in progress until grading data is repaired.",
+            });
         }
 
         return Ok(new
@@ -666,6 +867,155 @@ public class ExamAttemptsController : ControllerBase
             attemptId = attempt.Id,
             scorePercent = attempt.ScorePercent,
             passed = attempt.Passed,
+            gradingIncomplete = false,
+            persistedResponseCount = gradedCount,
+            persistedAt = attempt.CompletedAt ?? now
+        });
+    }
+
+    private async Task<IActionResult> SyncIntoInProgressAttemptAsync(
+        ExamAttempt attempt,
+        SyncAssessmentAttemptRequest request,
+        DateTime now,
+        CancellationToken cancellationToken)
+    {
+        var rejectedQuestions = new List<string>();
+        var processed = 0;
+
+        foreach (var item in request.Questions ?? new List<SyncAttemptQuestionItem>())
+        {
+            var questionId = item?.Id;
+            if (string.IsNullOrWhiteSpace(questionId))
+            {
+                rejectedQuestions.Add("(missing question id)");
+                continue;
+            }
+
+            var membership = await _attemptQuestionService.ValidateMembershipAsync(attempt, questionId, cancellationToken);
+            if (!membership.IsMember)
+            {
+                rejectedQuestions.Add(questionId);
+                continue;
+            }
+
+            var selected = ResolveSyncSelectedIndices(item);
+            var validation = await _responseValidationService.ValidateAndGradeAsync(
+                attempt.Id,
+                questionId,
+                selected,
+                0,
+                cancellationToken);
+
+            var existingResponse = await _context.AttemptResponses
+                .FirstOrDefaultAsync(r => r.ExamAttemptId == attempt.Id && r.QuestionId == questionId, cancellationToken);
+
+            if (validation.Valid && validation.Grading is not null)
+            {
+                if (existingResponse != null)
+                {
+                    existingResponse.IsCorrect = validation.Grading.IsCorrect;
+                    existingResponse.ScoreAwarded = validation.Grading.ScoreAwarded;
+                    existingResponse.SelectedOptionsJson = JsonSerializer.Serialize(selected);
+                    existingResponse.GradingState = ResponseGradingState.Graded;
+                    existingResponse.AnsweredAt = now;
+                }
+                else
+                {
+                    _context.AttemptResponses.Add(new AttemptResponse
+                    {
+                        Id = "resp_" + Guid.NewGuid().ToString("N"),
+                        ExamAttemptId = attempt.Id,
+                        QuestionId = questionId,
+                        SelectedOptionsJson = JsonSerializer.Serialize(selected),
+                        IsCorrect = validation.Grading.IsCorrect,
+                        ScoreAwarded = validation.Grading.ScoreAwarded,
+                        GradingState = ResponseGradingState.Graded,
+                        TimeSpentSeconds = 0,
+                        AnsweredAt = now
+                    });
+                }
+                processed++;
+            }
+            else if (validation.Ungraded)
+            {
+                if (existingResponse == null)
+                {
+                    _context.AttemptResponses.Add(new AttemptResponse
+                    {
+                        Id = "resp_" + Guid.NewGuid().ToString("N"),
+                        ExamAttemptId = attempt.Id,
+                        QuestionId = questionId,
+                        SelectedOptionsJson = JsonSerializer.Serialize(selected),
+                        IsCorrect = false,
+                        ScoreAwarded = 0m,
+                        GradingState = ResponseGradingState.Ungraded,
+                        TimeSpentSeconds = 0,
+                        AnsweredAt = now
+                    });
+                }
+                processed++;
+            }
+            else
+            {
+                rejectedQuestions.Add(questionId);
+            }
+        }
+
+        // Lock-in membership for questions verified through the legacy fallback.
+        await _attemptQuestionService.RecordQuestionMembershipAsync(
+            attempt.Id,
+            (request.Questions ?? new List<SyncAttemptQuestionItem>())
+                .Where(item => !string.IsNullOrWhiteSpace(item?.Id) && !rejectedQuestions.Contains(item.Id!))
+                .Select(item => item.Id!)
+                .ToList(),
+            now,
+            cancellationToken);
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        // Recalculate authoritative totals from persisted responses.
+        var allResponses = await _context.AttemptResponses
+            .Where(r => r.ExamAttemptId == attempt.Id)
+            .ToListAsync(cancellationToken);
+        var ungradedCount = allResponses.Count(r => r.GradingState == ResponseGradingState.Ungraded);
+        var gradedResponses = allResponses.Where(r => r.GradingState == ResponseGradingState.Graded).ToList();
+        var stillInProgress = ungradedCount > 0;
+
+        if (!stillInProgress)
+        {
+            attempt.ScorePercent = gradedResponses.Count > 0
+                ? Math.Round((decimal)gradedResponses.Count(r => r.IsCorrect) / gradedResponses.Count * 100m, 2)
+                : 0.0m;
+            attempt.Passed = attempt.ScorePercent >= (attempt.Exam?.PassingScorePercent ?? 75.0m);
+            attempt.Status = AttemptStatus.Completed;
+            attempt.CompletedAt = now;
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            ActorId = attempt.UserId,
+            Action = "AssessmentAttemptSynced",
+            EntityType = "ExamAttempt",
+            EntityId = attempt.Id,
+            Description = stillInProgress
+                ? $"Synchronized recovery data for in-progress attempt '{attempt.Id}' with {ungradedCount} ungradable question(s); finalization deferred."
+                : $"Completed attempt '{attempt.Id}' through synchronization recovery; server-computed score {attempt.ScorePercent:0.##}%.",
+            Outcome = "Success",
+            Timestamp = now
+        });
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Ok(new
+        {
+            success = true,
+            attemptId = attempt.Id,
+            scorePercent = stillInProgress ? (decimal?)null : attempt.ScorePercent,
+            passed = stillInProgress ? false : attempt.Passed,
+            gradingIncomplete = stillInProgress,
+            ungradedResponseCount = ungradedCount,
+            processedResponseCount = processed,
+            rejectedQuestions = rejectedQuestions.Distinct().ToList(),
             persistedAt = now
         });
     }

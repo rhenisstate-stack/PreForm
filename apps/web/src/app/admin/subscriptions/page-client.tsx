@@ -47,21 +47,29 @@ export function AdminSubscriptionsClient() {
     isLoading: isLoadingPlans,
     error: plansError,
     refetch: refetchPlans,
-  } = useQuery({
+    } = useQuery<Product[]>({
     queryKey: ["admin-subscriptions"],
-    queryFn: async () => {
+    queryFn: async (): Promise<Product[]> => {
       const res = await fetch("/api/admin/subscriptions");
+
       if (!res.ok) {
         throw new Error("Failed to load subscription plans");
       }
-      const data = await res.json();
+
+      const data: {
+        success?: boolean;
+        error?: string;
+        plans?: Product[] | null;
+      } = await res.json();
+
       if (!data.success) {
         throw new Error(data.error || "Unknown error loading plans");
       }
-      return data.plans || [];
+
+      return data.plans ?? [];
     },
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    gcTime: 1000 * 60 * 10, // 10 minutes
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
   });
 
   // Mutation for creating plans

@@ -8,7 +8,7 @@ namespace Preform.Api.Services.Grading;
 /// </summary>
 public class GradingResult
 {
-    /// <summary>Whether the response is correct.</summary>
+    /// <summary>Whether the response is correct. Only meaningful for graded results.</summary>
     public bool IsCorrect { get; init; }
 
     /// <summary>Marks awarded for this response.</summary>
@@ -22,6 +22,13 @@ public class GradingResult
 
     /// <summary>Whether automatic grading was possible for this type.</summary>
     public bool AutomaticGradingPossible { get; init; }
+
+    /// <summary>
+    /// True when the response could not be graded because authoritative grading
+    /// data is missing or invalid (e.g. no configured answer key). A missing answer
+    /// key does not establish incorrectness; it is an explicit ungraded state.
+    /// </summary>
+    public bool Ungraded { get; init; }
 
     /// <summary>Error message if grading could not be performed.</summary>
     public string? Error { get; init; }
@@ -59,6 +66,24 @@ public class GradingResult
             MaxScore = 0,
             AutomaticGradingPossible = false,
             Error = error,
+        };
+    }
+
+    /// <summary>
+    /// Explicit ungraded result: authoritative grading data is missing or invalid.
+    /// Must never be interpreted as incorrect; no score meaning is attached.
+    /// </summary>
+    public static GradingResult UngradedResult(string reason)
+    {
+        return new GradingResult
+        {
+            IsCorrect = false,
+            ScoreAwarded = 0,
+            MaxScore = 0,
+            Explanation = null,
+            AutomaticGradingPossible = true,
+            Ungraded = true,
+            Error = reason,
         };
     }
 }
@@ -145,7 +170,8 @@ public class OptionBasedQuestionGrader : IQuestionGrader
     {
         if (context.Options == null || context.Options.Count == 0)
         {
-            return Task.FromResult(GradingResult.Unsupported("No question options available for grading."));
+            // No authoritative options: this is missing grading data, not a wrong answer.
+            return Task.FromResult(GradingResult.UngradedResult("No authoritative options are available for grading."));
         }
 
         var selectedIndices = context.SelectedOptionIndices ?? new List<int>();
@@ -159,7 +185,16 @@ public class OptionBasedQuestionGrader : IQuestionGrader
 
         if (correctIndices.Count == 0)
         {
-            return Task.FromResult(GradingResult.Unsupported("No correct answer key defined for this question."));
+            // A missing answer key does not establish that the candidate answered incorrectly.
+            return Task.FromResult(GradingResult.UngradedResult("No authoritative answer key is defined for this question."));
+        }
+
+        // Payload validity: an option index that references a nonexistent option is an
+        // invalid response, not an incorrect answer.
+        if (selectedIndices.Any(i => i < 0 || i >= context.Options.Count))
+        {
+            return Task.FromResult(GradingResult.Unsupported(
+                "Response payload is invalid: a selected option index is out of range."));
         }
 
         bool isCorrect;

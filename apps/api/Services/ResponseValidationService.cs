@@ -8,6 +8,12 @@ namespace Preform.Api.Services;
 /// <summary>
 /// Validates candidate responses and performs server-authoritative grading.
 /// Never trusts client-supplied correctness or scores.
+///
+/// Grading safety contract (Gate C):
+/// - A response is only graded when authoritative answer data exists.
+/// - Missing or invalid answer-key data yields an EXPLICIT ungraded outcome
+///   (Ungraded = true). It must never silently become an incorrect answer.
+/// - Invalid payloads (e.g. out-of-range option indices) are rejected.
 /// </summary>
 public interface IResponseValidationService
 {
@@ -28,11 +34,26 @@ public interface IResponseValidationService
 /// </summary>
 public class ResponseValidationResult
 {
+    /// <summary>
+    /// True only when an authoritative graded outcome exists (Grading is a
+    /// real graded result, not an ungraded placeholder).
+    /// </summary>
     public bool Valid { get; init; }
+
     public string? Error { get; init; }
     public GradingResult? Grading { get; init; }
     public string? QuestionTypeKey { get; init; }
+
+    /// <summary>Whether automatic grading is supported by the question type.</summary>
     public bool AutomaticGradingPossible { get; init; }
+
+    /// <summary>
+    /// True when the question type is automatically gradable but the authoritative
+    /// grading data (answer key / options) is missing or invalid. Callers that must
+    /// preserve the candidate's submitted answer may persist this as an explicit
+    /// Ungraded response; it must never be persisted as an incorrect answer.
+    /// </summary>
+    public bool Ungraded { get; init; }
 }
 
 public class ResponseValidationService : IResponseValidationService
@@ -116,17 +137,57 @@ public class ResponseValidationService : IResponseValidationService
             })
             .ToList();
 
+        // Payload validity: reject option indices that do not reference real options.
+        var selectedOptionIndicesToGrade = selectedOptionIndices ?? new List<int>();
+        if (selectedOptionIndicesToGrade.Any(i => i < 0 || i >= options.Count))
+        {
+            return new ResponseValidationResult
+            {
+                Valid = false,
+                Error = "Response payload is invalid: a selected option index is out of range.",
+                QuestionTypeKey = question.QuestionTypeKey,
+                AutomaticGradingPossible = grader.SupportsAutomaticGrading,
+            };
+        }
+
         var gradingContext = new QuestionGradingContext
         {
             QuestionTypeKey = question.QuestionTypeKey,
             QuestionStem = question.Stem,
             Options = optionInfos,
-            SelectedOptionIndices = selectedOptionIndices,
+            SelectedOptionIndices = selectedOptionIndicesToGrade,
             TimeSpentSeconds = timeSpentSeconds,
             MaxScore = 1.0m,
         };
 
         var grading = await grader.GradeAsync(gradingContext, cancellationToken);
+
+        if (grading.Ungraded)
+        {
+            // The answer key (or options) is missing/invalid. This is an explicit
+            // ungraded outcome — correctness could not be determined and must not
+            // be silently recorded as an incorrect answer.
+            return new ResponseValidationResult
+            {
+                Valid = false,
+                Error = grading.Error ?? "The authoritative answer key for this question is unavailable.",
+                QuestionTypeKey = question.QuestionTypeKey,
+                AutomaticGradingPossible = true,
+                Ungraded = true,
+            };
+        }
+
+        if (grading.Error is not null)
+        {
+            // Grader rejected the payload or grading could not proceed.
+            return new ResponseValidationResult
+            {
+                Valid = false,
+                Error = grading.Error,
+                QuestionTypeKey = question.QuestionTypeKey,
+                AutomaticGradingPossible = true,
+            };
+        }
 
         return new ResponseValidationResult
         {
