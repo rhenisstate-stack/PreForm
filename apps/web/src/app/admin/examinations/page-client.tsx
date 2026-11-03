@@ -223,8 +223,23 @@ export function AdminExaminationsClient() {
     );
   }
 
-  const items = libraryData?.items || [];
-  const pagination = libraryData?.pagination || { page: 1, pageSize: 20, totalItems: 0, totalPages: 0 };
+  const items: BackendExaminationLibraryItemDto[] = (libraryData?.items && libraryData.items.length > 0
+    ? libraryData.items
+    : ((libraryData as any)?.examinations as any[]) || []).map((exam: any) => ({
+      id: exam.id,
+      code: exam.code,
+      title: exam.title,
+      pathway: exam.pathway,
+      createdAt: exam.createdAt,
+      createdBy: exam.createdBy,
+      currentRevisionId: exam.currentRevisionId,
+      successorExaminationId: exam.successorExaminationId,
+      revisionCount: exam.revisionCount ?? (exam.revisions?.length || 0),
+      publishedRevision: exam.publishedRevision ?? (exam.currentRevision?.lifecycleState?.toLowerCase() === "published" ? exam.currentRevision : null),
+      latestRevision: exam.latestRevision ?? exam.currentRevision ?? exam.revisions?.[0],
+      currentRevision: exam.currentRevision,
+    }));
+  const pagination = libraryData?.pagination || { page: 1, pageSize: 20, totalItems: items.length, totalPages: items.length > 0 ? 1 : 0 };
 
   return (
     <div className="space-y-6 p-6 max-w-7xl mx-auto">
@@ -233,14 +248,14 @@ export function AdminExaminationsClient() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-serif font-bold text-[#142B4A] dark:text-white">
-              Examination Library
+              Examinations
             </h1>
             <Badge variant="outline" className="text-xs uppercase tracking-wider bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30">
-              P3.3 Discovery
+              P3.3 Library
             </Badge>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Authoritative discovery catalogue, lifecycle state querying, version lineage, and administrative governance.
+            Authoritative examination library, lifecycle state querying, version lineage, and administrative governance.
           </p>
         </div>
 
