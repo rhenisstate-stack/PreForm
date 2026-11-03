@@ -481,6 +481,74 @@ export interface BackendExaminationDto {
   revisions: BackendExamRevisionDto[];
 }
 
+export interface BackendExamRevisionSummaryDto {
+  id: string;
+  examinationId: string;
+  examinationCode?: string | null;
+  revisionNumber: number;
+  lifecycleState: string;
+  title: string;
+  description: string;
+  pathway: string;
+  examType: number;
+  timeLimitMinutes: number;
+  passingScorePercent: number;
+  isPublished: boolean;
+  questionCount: number;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string | null;
+}
+
+export interface BackendExaminationLibraryItemDto {
+  id: string;
+  code: string;
+  title: string;
+  pathway: string;
+  createdAt: string;
+  createdBy: string;
+  currentRevisionId?: string | null;
+  successorExaminationId?: string | null;
+  revisionCount: number;
+  publishedRevision?: BackendExamRevisionSummaryDto | null;
+  latestRevision?: BackendExamRevisionSummaryDto | null;
+  currentRevision?: BackendExamRevisionSummaryDto | null;
+}
+
+export interface BackendPaginationMetadata {
+  page: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+}
+
+export interface BackendExaminationLibraryResponseDto {
+  success: boolean;
+  items: BackendExaminationLibraryItemDto[];
+  pagination: BackendPaginationMetadata;
+  examinations: BackendExaminationDto[];
+}
+
+export interface BackendFamilyRevisionsResponseDto {
+  success: boolean;
+  examinationId: string;
+  examinationCode: string;
+  examinationTitle: string;
+  pathway: string;
+  revisions: BackendExamRevisionDto[];
+}
+
+export interface ExaminationQueryParams {
+  search?: string;
+  pathway?: string;
+  status?: string;
+  revisionStatus?: string;
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
+  page?: number;
+  pageSize?: number;
+}
+
 export interface BackendExamQuestionMembershipDto {
   id: string;
   examId: string;
@@ -552,6 +620,37 @@ export interface TransitionRevisionInput {
 }
 
 export const examinationsService = {
+  queryExaminations: async (
+    params?: ExaminationQueryParams,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<BackendExaminationLibraryResponseDto>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.set("search", params.search);
+    if (params?.pathway && params.pathway !== "all") searchParams.set("pathway", params.pathway);
+    if (params?.status) searchParams.set("status", params.status);
+    if (params?.revisionStatus && params.revisionStatus !== "all") searchParams.set("revisionStatus", params.revisionStatus);
+    if (params?.sortBy) searchParams.set("sortBy", params.sortBy);
+    if (params?.sortDirection) searchParams.set("sortDirection", params.sortDirection);
+    if (params?.page) searchParams.set("page", params.page.toString());
+    if (params?.pageSize) searchParams.set("pageSize", params.pageSize.toString());
+
+    const qs = searchParams.toString() ? `?${searchParams.toString()}` : "";
+    return apiClient.get<BackendExaminationLibraryResponseDto>(
+      `/api/v1/examinations${qs}`,
+      { session }
+    );
+  },
+
+  getFamilyRevisions: async (
+    familyId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<BackendFamilyRevisionsResponseDto>> => {
+    return apiClient.get<BackendFamilyRevisionsResponseDto>(
+      `/api/v1/examinations/${encodeURIComponent(familyId)}/revisions`,
+      { session }
+    );
+  },
+
   getExaminations: async (
     pathway?: string,
     session?: VerifiedSession | null

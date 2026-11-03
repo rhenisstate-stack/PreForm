@@ -11,8 +11,18 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const pathway = searchParams.get("pathway") || undefined;
+    const search = searchParams.get("search") || undefined;
+    const status = searchParams.get("status") || undefined;
+    const revisionStatus = searchParams.get("revisionStatus") || undefined;
+    const sortBy = searchParams.get("sortBy") || undefined;
+    const sortDirection = (searchParams.get("sortDirection") as "asc" | "desc") || undefined;
+    const page = searchParams.get("page") ? Number(searchParams.get("page")) : undefined;
+    const pageSize = searchParams.get("pageSize") ? Number(searchParams.get("pageSize")) : undefined;
 
-    const res = await examinationsService.getExaminations(pathway, auth.session);
+    const res = await examinationsService.queryExaminations(
+      { pathway, search, status, revisionStatus, sortBy, sortDirection, page, pageSize },
+      auth.session
+    );
     if (!res.success) {
       return NextResponse.json({ success: false, error: res.error || "Failed to load examinations" }, { status: res.status });
     }
