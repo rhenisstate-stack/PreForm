@@ -187,8 +187,13 @@ public class ExamAttemptsController : ControllerBase
         return exam;
     }
 
-    private static List<int> ResolveSyncSelectedIndices(SyncAttemptQuestionItem q)
+    private static List<int> ResolveSyncSelectedIndices(SyncAttemptQuestionItem? q)
     {
+        if (q == null)
+        {
+            return new List<int>();
+        }
+
         if (q.UserAnswerIndices != null && q.UserAnswerIndices.Count > 0)
         {
             return q.UserAnswerIndices;

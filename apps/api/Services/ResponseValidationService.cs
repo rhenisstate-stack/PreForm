@@ -137,8 +137,23 @@ public class ResponseValidationService : IResponseValidationService
             })
             .ToList();
 
-        // Payload validity: reject option indices that do not reference real options.
         var selectedOptionIndicesToGrade = selectedOptionIndices ?? new List<int>();
+
+        if (options.Count == 0)
+        {
+            // Missing grading data entirely (no options). This is an explicit
+            // ungraded outcome — correctness could not be determined.
+            return new ResponseValidationResult
+            {
+                Valid = false,
+                Error = "No authoritative options are available for grading.",
+                QuestionTypeKey = question.QuestionTypeKey,
+                AutomaticGradingPossible = true,
+                Ungraded = true,
+            };
+        }
+
+        // Payload validity: reject option indices that do not reference real options.
         if (selectedOptionIndicesToGrade.Any(i => i < 0 || i >= options.Count))
         {
             return new ResponseValidationResult

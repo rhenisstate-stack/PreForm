@@ -912,6 +912,8 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
             Id = "client_att_777",
             Name = "Tutored CAT 1",
             Type = "tutored_cat",
+            // Client-supplied totals are legacy compatibility fields: the server
+            // recalculates them from trusted grading and must ignore this value.
             ScorePercent = 80.0m,
             PerformanceTier = "Very High",
             TotalQuestions = 2,
@@ -951,6 +953,20 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
             .UseInMemoryDatabase("TestingExamAttemptsSyncDb")
             .Options);
 
+        // Authoritative exam whose question set contains both submitted questions.
+        context.Exams.Add(new Exam
+        {
+            Id = "exam_sync_rn",
+            Title = "Sync Verification Exam",
+            Pathway = "rn",
+            ExamType = ExamType.CAT,
+            PassingScorePercent = 75m,
+            IsPublished = true
+        });
+        context.ExamQuestions.AddRange(
+            new ExamQuestion { Id = "eq_sync_rn_1", ExamId = "exam_sync_rn", QuestionId = "q_sync_101", DisplayOrder = 0 },
+            new ExamQuestion { Id = "eq_sync_rn_2", ExamId = "exam_sync_rn", QuestionId = "q_sync_102", DisplayOrder = 1 });
+
         context.Questions.AddRange(
             new Question
             {
@@ -988,14 +1004,15 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
         var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
         var service = new ResponseValidationService(context, resolver);
 
+        // Preflight: prove the trusted grading service grades key-matching answers.
         var preflightAttempt = new ExamAttempt
         {
             Id = "client_att_777_preflight",
             UserId = candidateId,
-            ExamId = "exam_sync_preflight",
+            ExamId = "exam_sync_rn",
             Status = AttemptStatus.InProgress,
             StartedAt = DateTime.UtcNow,
-            Exam = new Exam { Id = "exam_sync_preflight", Title = "Sync Preflight", Pathway = "rn", PassingScorePercent = 75m }
+            Exam = new Exam { Id = "exam_sync_rn", Title = "Sync Verification Exam", Pathway = "rn", PassingScorePercent = 75m }
         };
         context.ExamAttempts.Add(preflightAttempt);
         await context.SaveChangesAsync();
@@ -1004,7 +1021,7 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
         Assert.True(preflight.Valid, preflight.Error ?? "Preflight validation failed");
         Assert.True(preflight.Grading!.IsCorrect);
 
-        var controller = new ExamAttemptsController(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<ExamAttemptsController>.Instance, service)
+        var controller = new ExamAttemptsController(context, Microsoft.Extensions.Logging.Abstractions.NullLogger<ExamAttemptsController>.Instance, service, new AttemptQuestionService(context))
         {
             ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
             {
@@ -1027,10 +1044,25 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
         var attempt = await context.ExamAttempts.Include(ea => ea.Responses).FirstOrDefaultAsync(ea => ea.Id == "client_att_777");
         Assert.NotNull(attempt);
         Assert.Equal(candidateId, attempt.UserId);
-        Assert.Equal(80.0m, attempt.ScorePercent);
+
+        // Server-authoritative semantics: both submitted answers match the
+        // authoritative answer keys, so the server computes 100.0, NOT the
+        // client-supplied 80.0.
+        Assert.Equal(100.0m, attempt.ScorePercent);
         Assert.True(attempt.Passed);
         Assert.Equal(AttemptStatus.Completed, attempt.Status);
         Assert.Equal(2, attempt.Responses.Count);
+        Assert.All(attempt.Responses, r => Assert.Equal(ResponseGradingState.Graded, r.GradingState));
+        Assert.All(attempt.Responses, r => Assert.True(r.IsCorrect));
+
+        // Exact attempt question set persisted at synchronization time.
+        var membershipRows = await context.ExamAttemptQuestions
+            .Where(eaq => eaq.ExamAttemptId == "client_att_777")
+            .Select(eaq => eaq.QuestionId)
+            .ToListAsync();
+        Assert.Equal(2, membershipRows.Count);
+        Assert.Contains("q_sync_101", membershipRows);
+        Assert.Contains("q_sync_102", membershipRows);
     }
 
     [Fact]
