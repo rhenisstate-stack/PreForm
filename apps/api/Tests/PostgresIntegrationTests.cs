@@ -661,4 +661,119 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         var ex = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
         Assert.Contains("IX_ExamQuestions_ExamId_QuestionId", ex.InnerException?.Message ?? ex.Message);
     }
+
+    [Fact]
+    public async Task Postgres_ExaminationLibraryQuery_FiltersSortsAndPaginatesAgainstPostgreSql()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var lifecycleService = scope.ServiceProvider.GetRequiredService<IExamLifecycleService>();
+
+        var adminClaims = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "admin_pg_disc"),
+            new Claim(ClaimTypes.Role, "Admin"),
+            new Claim("role", "Admin")
+        }, "TestAuth"));
+
+        var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+
+        // 1. Seed RN family with Rev 1 (Published) and Rev 2 (Draft)
+        var rnFam = new Examination
+        {
+            Id = "fam_rn_pg_" + suffix,
+            Pathway = "rn",
+            Code = "RN-EX-" + suffix,
+            Title = $"NCLEX-RN Postgres Discovery Exam {suffix}",
+            CreatedBy = "admin_pg_disc",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Examinations.Add(rnFam);
+
+        var rnRev1 = new Exam
+        {
+            Id = "rev_rn_1_" + suffix,
+            ExaminationId = rnFam.Id,
+            RevisionNumber = 1,
+            LifecycleState = ExamLifecycleState.Published,
+            IsPublished = true,
+            Title = $"RN Discovery Rev 1 Published {suffix}",
+            Pathway = "rn",
+            CreatedBy = "admin_pg_disc"
+        };
+        var rnRev2 = new Exam
+        {
+            Id = "rev_rn_2_" + suffix,
+            ExaminationId = rnFam.Id,
+            RevisionNumber = 2,
+            LifecycleState = ExamLifecycleState.Draft,
+            IsPublished = false,
+            Title = $"RN Discovery Rev 2 Draft {suffix}",
+            Pathway = "rn",
+            CreatedBy = "admin_pg_disc"
+        };
+        context.Exams.AddRange(rnRev1, rnRev2);
+
+        // 2. Seed PN family with Rev 1 (Published)
+        var pnFam = new Examination
+        {
+            Id = "fam_pn_pg_" + suffix,
+            Pathway = "pn",
+            Code = "PN-EX-" + suffix,
+            Title = $"NCLEX-PN Postgres Discovery Exam {suffix}",
+            CreatedBy = "admin_pg_disc",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Examinations.Add(pnFam);
+
+        var pnRev1 = new Exam
+        {
+            Id = "rev_pn_1_" + suffix,
+            ExaminationId = pnFam.Id,
+            RevisionNumber = 1,
+            LifecycleState = ExamLifecycleState.Published,
+            IsPublished = true,
+            Title = $"PN Discovery Rev 1 Published {suffix}",
+            Pathway = "pn",
+            CreatedBy = "admin_pg_disc"
+        };
+        context.Exams.Add(pnRev1);
+
+        await context.SaveChangesAsync();
+
+        // 3. Query RN pathway
+        var rnQueryResult = await lifecycleService.QueryExaminationsAsync(new ExaminationQueryParameters
+        {
+            Pathway = "rn",
+            Search = suffix
+        }, adminClaims);
+
+        Assert.True(rnQueryResult.Success);
+        var rnItem = Assert.Single(rnQueryResult.Items);
+        Assert.Equal(rnFam.Code, rnItem.Code);
+        Assert.Equal(2, rnItem.RevisionCount);
+        Assert.NotNull(rnItem.PublishedRevision);
+        Assert.Equal(1, rnItem.PublishedRevision!.RevisionNumber);
+        Assert.NotNull(rnItem.LatestRevision);
+        Assert.Equal(2, rnItem.LatestRevision!.RevisionNumber);
+
+        // 4. Query by RevisionStatus = "Draft"
+        var draftQueryResult = await lifecycleService.QueryExaminationsAsync(new ExaminationQueryParameters
+        {
+            RevisionStatus = "Draft",
+            Search = suffix
+        }, adminClaims);
+
+        Assert.Single(draftQueryResult.Items);
+        Assert.Equal(rnFam.Id, draftQueryResult.Items[0].Id);
+
+        // 5. Query Family Revisions in PostgreSQL
+        var familyRevsResult = await lifecycleService.GetFamilyRevisionsAsync(rnFam.Id, adminClaims);
+        Assert.True(familyRevsResult.Success);
+        Assert.Equal(2, familyRevsResult.Revisions.Count);
+        // Descending order verification
+        Assert.Equal(2, familyRevsResult.Revisions[0].RevisionNumber);
+        Assert.Equal(1, familyRevsResult.Revisions[1].RevisionNumber);
+    }
 }
