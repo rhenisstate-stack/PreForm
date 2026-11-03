@@ -434,3 +434,279 @@ export const attemptsService = {
     });
   },
 };
+
+// ── Examination DTOs & Service ──────────────────────────────────────────
+
+export interface BackendExamRevisionDto {
+  id: string;
+  examinationId: string;
+  examinationCode?: string;
+  revisionNumber: number;
+  lifecycleState: string;
+  concurrencyToken: number;
+  title: string;
+  description: string;
+  pathway: string;
+  examType: number;
+  timeLimitMinutes: number;
+  passingScorePercent: number;
+  isPublished: boolean;
+  questionCount: number;
+  createdAt: string;
+  createdBy: string;
+  submittedBy?: string | null;
+  submittedAt?: string | null;
+  reviewedBy?: string | null;
+  reviewedAt?: string | null;
+  approvedBy?: string | null;
+  approvedAt?: string | null;
+  publishedBy?: string | null;
+  publishedAt?: string | null;
+  archivedBy?: string | null;
+  archivedAt?: string | null;
+  retiredBy?: string | null;
+  retiredAt?: string | null;
+}
+
+export interface BackendExaminationDto {
+  id: string;
+  pathway: string;
+  code: string;
+  title: string;
+  createdAt: string;
+  createdBy: string;
+  currentRevisionId?: string | null;
+  successorExaminationId?: string | null;
+  currentRevision?: BackendExamRevisionDto | null;
+  revisions: BackendExamRevisionDto[];
+}
+
+export interface BackendExamQuestionMembershipDto {
+  id: string;
+  examId: string;
+  questionId: string;
+  displayOrder: number;
+  stem: string;
+  questionTypeKey: string;
+  pathway: string;
+  difficulty: string;
+  status: string;
+  optionCount: number;
+}
+
+export interface BackendRevisionValidationDto {
+  revisionId: string;
+  isValid: boolean;
+  questionCount: number;
+  concurrencyToken: number;
+  lifecycleState: string;
+  issues: string[];
+}
+
+export interface CreateExaminationInput {
+  pathway: "rn" | "pn";
+  title: string;
+  initialRevisionTitle?: string;
+  description?: string;
+  examType?: number;
+  timeLimitMinutes?: number;
+  passingScorePercent?: number;
+}
+
+export interface UpdateExaminationFamilyInput {
+  title: string;
+}
+
+export interface CreateRevisionInput {
+  title: string;
+  description?: string;
+  examType?: number;
+  timeLimitMinutes?: number;
+  passingScorePercent?: number;
+}
+
+export interface UpdateRevisionMetadataInput {
+  title: string;
+  description?: string;
+  examType?: number;
+  timeLimitMinutes?: number;
+  passingScorePercent?: number;
+  concurrencyToken: number;
+}
+
+export interface AddQuestionInput {
+  questionId: string;
+  displayOrder?: number;
+  concurrencyToken: number;
+}
+
+export interface ReorderQuestionsInput {
+  items: Array<{ questionId: string; displayOrder: number }>;
+  concurrencyToken: number;
+}
+
+export interface TransitionRevisionInput {
+  concurrencyToken: number;
+  reason?: string;
+  notes?: string;
+}
+
+export const examinationsService = {
+  getExaminations: async (
+    pathway?: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; examinations: BackendExaminationDto[] }>> => {
+    const q = pathway ? `?pathway=${encodeURIComponent(pathway)}` : "";
+    return apiClient.get<{ success: boolean; examinations: BackendExaminationDto[] }>(
+      `/api/v1/examinations${q}`,
+      { session }
+    );
+  },
+
+  getExaminationById: async (
+    id: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; examination: BackendExaminationDto }>> => {
+    return apiClient.get<{ success: boolean; examination: BackendExaminationDto }>(
+      `/api/v1/examinations/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  updateExaminationFamily: async (
+    id: string,
+    input: UpdateExaminationFamilyInput,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; examination: BackendExaminationDto }>> => {
+    return apiClient.patch<{ success: boolean; examination: BackendExaminationDto }>(
+      `/api/v1/examinations/${encodeURIComponent(id)}`,
+      input,
+      { session }
+    );
+  },
+
+  createExamination: async (
+    input: CreateExaminationInput,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; examination: { id: string; pathway: string; code: string; title: string; createdAt: string; createdBy: string } }>> => {
+    return apiClient.post<{ success: boolean; examination: { id: string; pathway: string; code: string; title: string; createdAt: string; createdBy: string } }>(
+      "/api/v1/examinations",
+      input,
+      { session }
+    );
+  },
+
+  getRevisionById: async (
+    revisionId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; revision: BackendExamRevisionDto }>> => {
+    return apiClient.get<{ success: boolean; revision: BackendExamRevisionDto }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}`,
+      { session }
+    );
+  },
+
+  createRevision: async (
+    examinationId: string,
+    input: CreateRevisionInput,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; revision: BackendExamRevisionDto }>> => {
+    return apiClient.post<{ success: boolean; revision: BackendExamRevisionDto }>(
+      `/api/v1/examinations/${encodeURIComponent(examinationId)}/revisions`,
+      input,
+      { session }
+    );
+  },
+
+  updateRevisionMetadata: async (
+    revisionId: string,
+    input: UpdateRevisionMetadataInput,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; revision: BackendExamRevisionDto }>> => {
+    return apiClient.put<{ success: boolean; revision: BackendExamRevisionDto }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}`,
+      input,
+      { session }
+    );
+  },
+
+  validateRevision: async (
+    revisionId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; validation: BackendRevisionValidationDto }>> => {
+    return apiClient.get<{ success: boolean; validation: BackendRevisionValidationDto }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/validate`,
+      { session }
+    );
+  },
+
+  discardDraftRevision: async (
+    revisionId: string,
+    concurrencyToken: number,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; discarded: boolean }>> => {
+    return apiClient.delete<{ success: boolean; discarded: boolean }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}?concurrencyToken=${concurrencyToken}`,
+      { session }
+    );
+  },
+
+  getRevisionQuestions: async (
+    revisionId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; questions: BackendExamQuestionMembershipDto[] }>> => {
+    return apiClient.get<{ success: boolean; questions: BackendExamQuestionMembershipDto[] }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/questions`,
+      { session }
+    );
+  },
+
+  addQuestionToRevision: async (
+    revisionId: string,
+    input: AddQuestionInput,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; question: BackendExamQuestionMembershipDto }>> => {
+    return apiClient.post<{ success: boolean; question: BackendExamQuestionMembershipDto }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/questions`,
+      input,
+      { session }
+    );
+  },
+
+  removeQuestionFromRevision: async (
+    revisionId: string,
+    questionId: string,
+    concurrencyToken: number,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; removed: boolean }>> => {
+    return apiClient.delete<{ success: boolean; removed: boolean }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/questions/${encodeURIComponent(questionId)}?concurrencyToken=${concurrencyToken}`,
+      { session }
+    );
+  },
+
+  reorderQuestions: async (
+    revisionId: string,
+    input: ReorderQuestionsInput,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; questions: BackendExamQuestionMembershipDto[] }>> => {
+    return apiClient.put<{ success: boolean; questions: BackendExamQuestionMembershipDto[] }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/questions/order`,
+      input,
+      { session }
+    );
+  },
+
+  transitionRevision: async (
+    revisionId: string,
+    action: "submit" | "recommend" | "return" | "approve" | "publish" | "archive" | "restore" | "retire" | "emergency-retire",
+    input: TransitionRevisionInput,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; revision: BackendExamRevisionDto }>> => {
+    return apiClient.post<{ success: boolean; revision: BackendExamRevisionDto }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/${action}`,
+      input,
+      { session }
+    );
+  },
+};
