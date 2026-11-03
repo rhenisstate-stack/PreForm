@@ -116,6 +116,7 @@ public class CandidateAttemptDetailDto
     public DateTime? CompletedAt { get; set; }
     /// <summary>True when authoritative grading is incomplete (e.g. missing answer keys).</summary>
     public bool GradingIncomplete { get; set; }
+    public object? MetadataSnapshot { get; set; }
     public List<CandidateAttemptResponseDto> Responses { get; set; } = new();
 }
 
@@ -184,6 +185,8 @@ public class ExamAttemptsController : ControllerBase
                 TimeLimitMinutes = 300,
                 PassingScorePercent = 75.0m,
                 IsPublished = true,
+                LifecycleState = ExamLifecycleState.Published,
+                ConcurrencyToken = 1,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -288,6 +291,7 @@ public class ExamAttemptsController : ControllerBase
 
         var attempt = await _context.ExamAttempts
             .Include(ea => ea.Exam)
+                .ThenInclude(e => e!.Examination)
             .Include(ea => ea.Responses)
             .FirstOrDefaultAsync(ea => ea.Id == id, cancellationToken);
 
@@ -311,6 +315,53 @@ public class ExamAttemptsController : ControllerBase
             ? (int)Math.Max(1, (attempt.CompletedAt.Value - attempt.StartedAt).TotalMinutes)
             : (int)Math.Max(1, (DateTime.UtcNow - attempt.StartedAt).TotalMinutes);
 
+        object? metadataSnapshotObj = null;
+        if (!string.IsNullOrWhiteSpace(attempt.MetadataSnapshot))
+        {
+            try
+            {
+                metadataSnapshotObj = JsonSerializer.Deserialize<JsonElement>(attempt.MetadataSnapshot);
+            }
+            catch
+            {
+                metadataSnapshotObj = null;
+            }
+        }
+
+        if (metadataSnapshotObj == null)
+        {
+            // Legacy fallback specification (Decision 3 & 15)
+            metadataSnapshotObj = new
+            {
+                schemaVersion = 1,
+                snapshotSource = "legacy_fallback",
+                snapshotCreatedAtUtc = attempt.StartedAt,
+                examination = new
+                {
+                    id = attempt.Exam?.Examination?.Id ?? attempt.Exam?.ExaminationId ?? attempt.ExamId,
+                    code = attempt.Exam?.Examination?.Code ?? (attempt.Exam?.Pathway == "pn" ? "PN-EX-000000" : "RN-EX-000000"),
+                    pathway = attempt.Exam?.Pathway ?? "rn",
+                    title = attempt.Exam?.Examination?.Title ?? attempt.Exam?.Title ?? "Legacy Examination"
+                },
+                revision = new
+                {
+                    id = attempt.ExamId,
+                    revisionNumber = attempt.Exam?.RevisionNumber ?? 1,
+                    title = attempt.Exam?.Title ?? "Legacy Exam",
+                    description = attempt.Exam?.Description ?? string.Empty,
+                    examType = (int)(attempt.Exam?.ExamType ?? ExamType.CAT),
+                    timeLimitMinutes = attempt.Exam?.TimeLimitMinutes ?? 0,
+                    passingScorePercent = attempt.Exam?.PassingScorePercent ?? 75.0m,
+                    publishedAt = attempt.Exam?.PublishedAt ?? attempt.Exam?.CreatedAt
+                },
+                deliverySettings = new
+                {
+                    shuffleQuestions = true,
+                    allowReview = true
+                }
+            };
+        }
+
         var detail = new CandidateAttemptDetailDto
         {
             Id = attempt.Id,
@@ -328,6 +379,7 @@ public class ExamAttemptsController : ControllerBase
             StartedAt = attempt.StartedAt,
             CompletedAt = attempt.CompletedAt,
             GradingIncomplete = ungradedCount > 0,
+            MetadataSnapshot = metadataSnapshotObj,
             Responses = attempt.Responses
                 .OrderBy(r => r.AnsweredAt)
                 .Select(r => new CandidateAttemptResponseDto
@@ -356,6 +408,7 @@ public class ExamAttemptsController : ControllerBase
 
         var exam = !string.IsNullOrWhiteSpace(request.ExamId)
             ? await _context.Exams
+                .Include(e => e.Examination)
                 .Include(e => e.ExamQuestions)
                 .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken)
             : await GetOrCreateDefaultExamAsync(request.Pathway ?? "rn", cancellationToken);
@@ -365,7 +418,48 @@ public class ExamAttemptsController : ControllerBase
             exam = await GetOrCreateDefaultExamAsync("rn", cancellationToken);
         }
 
+        // Publication guard: only published exams can accept new attempts
+        if (exam.LifecycleState != ExamLifecycleState.Published && !exam.IsPublished)
+        {
+            return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+            {
+                success = false,
+                error = "ExamNotAvailable",
+                message = "Examination is not published for new attempts."
+            });
+        }
+
         var now = DateTime.UtcNow;
+
+        var snapshotObj = new
+        {
+            schemaVersion = 1,
+            snapshotCreatedAtUtc = now,
+            examination = new
+            {
+                id = exam.Examination?.Id ?? exam.ExaminationId ?? exam.Id,
+                code = exam.Examination?.Code ?? (exam.Pathway == "pn" ? "PN-EX-000000" : "RN-EX-000000"),
+                pathway = exam.Pathway,
+                title = exam.Examination?.Title ?? exam.Title
+            },
+            revision = new
+            {
+                id = exam.Id,
+                revisionNumber = exam.RevisionNumber,
+                title = exam.Title,
+                description = exam.Description,
+                examType = (int)exam.ExamType,
+                timeLimitMinutes = exam.TimeLimitMinutes,
+                passingScorePercent = exam.PassingScorePercent,
+                publishedAt = exam.PublishedAt ?? exam.CreatedAt
+            },
+            deliverySettings = new
+            {
+                shuffleQuestions = true,
+                allowReview = true
+            }
+        };
+
         var attempt = new ExamAttempt
         {
             Id = "att_" + Guid.NewGuid().ToString("N"),
@@ -375,7 +469,8 @@ public class ExamAttemptsController : ControllerBase
             ScorePercent = 0.0m,
             Passed = false,
             StartedAt = now,
-            CompletedAt = null
+            CompletedAt = null,
+            MetadataSnapshot = JsonSerializer.Serialize(snapshotObj)
         };
 
         _context.ExamAttempts.Add(attempt);
@@ -731,6 +826,35 @@ public class ExamAttemptsController : ControllerBase
         }
 
         var startedAt = now.AddMinutes(-Math.Max(1, request.DurationMinutes));
+        var syncSnapshotObj = new
+        {
+            schemaVersion = 1,
+            snapshotCreatedAtUtc = now,
+            examination = new
+            {
+                id = exam.Examination?.Id ?? exam.ExaminationId ?? exam.Id,
+                code = exam.Examination?.Code ?? (exam.Pathway == "pn" ? "PN-EX-000000" : "RN-EX-000000"),
+                pathway = exam.Pathway,
+                title = exam.Examination?.Title ?? exam.Title
+            },
+            revision = new
+            {
+                id = exam.Id,
+                revisionNumber = exam.RevisionNumber,
+                title = exam.Title,
+                description = exam.Description,
+                examType = (int)exam.ExamType,
+                timeLimitMinutes = exam.TimeLimitMinutes,
+                passingScorePercent = exam.PassingScorePercent,
+                publishedAt = exam.PublishedAt ?? exam.CreatedAt
+            },
+            deliverySettings = new
+            {
+                shuffleQuestions = true,
+                allowReview = true
+            }
+        };
+
         var attempt = new ExamAttempt
         {
             Id = attemptId,
@@ -741,7 +865,8 @@ public class ExamAttemptsController : ControllerBase
             Passed = false,
             StartedAt = startedAt,
             CompletedAt = null,
-            Exam = exam
+            Exam = exam,
+            MetadataSnapshot = JsonSerializer.Serialize(syncSnapshotObj)
         };
 
         _context.ExamAttempts.Add(attempt);

@@ -200,8 +200,31 @@ namespace Preform.Api.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ArchivedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<long>("ConcurrencyToken")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -211,8 +234,15 @@ namespace Preform.Api.Migrations
                     b.Property<int>("ExamType")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ExaminationId")
+                        .HasMaxLength(128)
+                        .HasColumnType("text");
+
                     b.Property<bool>("IsPublished")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("LifecycleState")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("PassingScorePercent")
                         .HasColumnType("numeric");
@@ -221,6 +251,37 @@ namespace Preform.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("PublishedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("RetiredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("RetiredBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<int>("RevisionNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("SubmittedBy")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<int>("TimeLimitMinutes")
                         .HasColumnType("integer");
@@ -237,9 +298,22 @@ namespace Preform.Api.Migrations
 
                     b.HasIndex("IsPublished");
 
+                    b.HasIndex("LifecycleState");
+
                     b.HasIndex("Pathway");
 
+                    b.HasIndex("ExaminationId", "RevisionNumber")
+                        .IsUnique();
+
                     b.HasIndex("IsPublished", "Pathway", "UpdatedAt");
+
+                    b.HasIndex(new[] { "ExaminationId" }, "IX_Exams_ExaminationId_ActiveDraft")
+                        .IsUnique()
+                        .HasFilter("\"LifecycleState\" = 1");
+
+                    b.HasIndex(new[] { "ExaminationId" }, "IX_Exams_ExaminationId_SinglePublished")
+                        .IsUnique()
+                        .HasFilter("\"LifecycleState\" = 4");
 
                     b.ToTable("Exams", "public");
                 });
@@ -255,6 +329,9 @@ namespace Preform.Api.Migrations
                     b.Property<string>("ExamId")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("MetadataSnapshot")
+                        .HasColumnType("jsonb");
 
                     b.Property<bool>("Passed")
                         .HasColumnType("boolean");
@@ -336,6 +413,57 @@ namespace Preform.Api.Migrations
                         .IsUnique();
 
                     b.ToTable("ExamQuestions", "public");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.Examination", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("CurrentRevisionId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Pathway")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("SuccessorExaminationId")
+                        .HasMaxLength(128)
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("CurrentRevisionId");
+
+                    b.HasIndex("SuccessorExaminationId");
+
+                    b.HasIndex("Pathway", "Code")
+                        .IsUnique();
+
+                    b.ToTable("Examinations", "public");
                 });
 
             modelBuilder.Entity("Preform.Api.Models.Flashcard", b =>
@@ -1507,6 +1635,16 @@ namespace Preform.Api.Migrations
                     b.Navigation("Programme");
                 });
 
+            modelBuilder.Entity("Preform.Api.Models.Exam", b =>
+                {
+                    b.HasOne("Preform.Api.Models.Examination", "Examination")
+                        .WithMany("Revisions")
+                        .HasForeignKey("ExaminationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Examination");
+                });
+
             modelBuilder.Entity("Preform.Api.Models.ExamAttempt", b =>
                 {
                     b.HasOne("Preform.Api.Models.Exam", "Exam")
@@ -1562,6 +1700,23 @@ namespace Preform.Api.Migrations
                     b.Navigation("Exam");
 
                     b.Navigation("Question");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.Examination", b =>
+                {
+                    b.HasOne("Preform.Api.Models.Exam", "CurrentRevision")
+                        .WithMany()
+                        .HasForeignKey("CurrentRevisionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Preform.Api.Models.Examination", "SuccessorExamination")
+                        .WithMany()
+                        .HasForeignKey("SuccessorExaminationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("CurrentRevision");
+
+                    b.Navigation("SuccessorExamination");
                 });
 
             modelBuilder.Entity("Preform.Api.Models.Flashcard", b =>
@@ -1811,6 +1966,11 @@ namespace Preform.Api.Migrations
             modelBuilder.Entity("Preform.Api.Models.ExamAttempt", b =>
                 {
                     b.Navigation("Responses");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.Examination", b =>
+                {
+                    b.Navigation("Revisions");
                 });
 
             modelBuilder.Entity("Preform.Api.Models.Flashcard", b =>

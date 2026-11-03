@@ -36,6 +36,9 @@ builder.Services.AddScoped<IAttemptQuestionService, AttemptQuestionService>();
 // AI Study Studio (Phase 1): server-authoritative spaced repetition scheduling
 builder.Services.AddScoped<ISpacedRepetitionService, SpacedRepetitionService>();
 builder.Services.AddScoped<IFlashcardService, FlashcardService>();
+// Examination Domain Foundation (P3.1)
+builder.Services.AddScoped<IExaminationCodeService, ExaminationCodeService>();
+builder.Services.AddScoped<IExamLifecycleService, ExamLifecycleService>();
 
 // Authentication with PrepfordAuth scheme (Bearer Session Token & Gateway HMAC)
 builder.Services.AddAuthentication(options =>

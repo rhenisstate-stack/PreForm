@@ -34,6 +34,7 @@ public class AppDbContext : DbContext
     public DbSet<QuestionVersion> QuestionVersions => Set<QuestionVersion>();
 
     // Assessments
+    public DbSet<Examination> Examinations => Set<Examination>();
     public DbSet<Exam> Exams => Set<Exam>();
     public DbSet<ExamQuestion> ExamQuestions => Set<ExamQuestion>();
     public DbSet<ExamAttempt> ExamAttempts => Set<ExamAttempt>();
@@ -243,12 +244,55 @@ public class AppDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // Examination (Stable Identity)
+        modelBuilder.Entity<Examination>(entity =>
+        {
+            entity.ToTable("Examinations", "public");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Id).HasColumnType("text");
+            entity.Property(e => e.Code).IsRequired().HasMaxLength(16);
+            entity.Property(e => e.Pathway).IsRequired().HasMaxLength(10);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(128);
+            entity.Property(e => e.CreatedBy).IsRequired().HasMaxLength(128);
+
+            entity.HasIndex(e => e.Code).IsUnique();
+            entity.HasIndex(e => new { e.Pathway, e.Code }).IsUnique();
+
+            entity.HasOne(e => e.SuccessorExamination)
+                  .WithMany()
+                  .HasForeignKey(e => e.SuccessorExaminationId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CurrentRevision)
+                  .WithMany()
+                  .HasForeignKey(e => e.CurrentRevisionId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
         // Exam Indexes & Relationships
         modelBuilder.Entity<Exam>(entity =>
         {
+            entity.Property(e => e.ConcurrencyToken).IsConcurrencyToken();
+
             entity.HasIndex(e => e.Pathway);
             entity.HasIndex(e => e.IsPublished);
+            entity.HasIndex(e => e.LifecycleState);
             entity.HasIndex(e => new { e.IsPublished, e.Pathway, e.UpdatedAt });
+
+            entity.HasOne(e => e.Examination)
+                  .WithMany(ex => ex.Revisions)
+                  .HasForeignKey(e => e.ExaminationId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(e => new { e.ExaminationId, e.RevisionNumber }).IsUnique();
+
+            entity.HasIndex(new[] { nameof(Exam.ExaminationId) }, "IX_Exams_ExaminationId_SinglePublished")
+                  .HasFilter(@"""LifecycleState"" = 4")
+                  .IsUnique();
+
+            entity.HasIndex(new[] { nameof(Exam.ExaminationId) }, "IX_Exams_ExaminationId_ActiveDraft")
+                  .HasFilter(@"""LifecycleState"" = 1")
+                  .IsUnique();
         });
 
         modelBuilder.Entity<ExamQuestion>(entity =>
@@ -266,6 +310,7 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<ExamAttempt>(entity =>
         {
+            entity.Property(ea => ea.MetadataSnapshot).HasColumnType("jsonb");
             entity.HasIndex(ea => ea.UserId);
             entity.HasIndex(ea => ea.ExamId);
             entity.HasOne(ea => ea.User)

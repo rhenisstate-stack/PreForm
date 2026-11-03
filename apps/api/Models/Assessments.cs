@@ -18,6 +18,55 @@ public enum AttemptStatus
     Abandoned = 3
 }
 
+public enum ExamLifecycleState
+{
+    Draft = 1,
+    InReview = 2,
+    Approved = 3,
+    Published = 4,
+    Archived = 5,
+    Retired = 6
+}
+
+/// <summary>
+/// Stable examination family identity across revisions (P3.1 Option B).
+/// Holds permanent sequential code and pathway identity.
+/// </summary>
+[Table("Examinations", Schema = "public")]
+public class Examination
+{
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    [Required]
+    [MaxLength(10)]
+    public string Pathway { get; set; } = "rn"; // "rn" or "pn"
+
+    [Required]
+    [MaxLength(16)]
+    public string Code { get; set; } = string.Empty; // e.g. "RN-EX-000001"
+
+    [Required]
+    [MaxLength(128)]
+    public string Title { get; set; } = string.Empty;
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    [Required]
+    [MaxLength(128)]
+    public string CreatedBy { get; set; } = string.Empty;
+
+    [MaxLength(128)]
+    public string? CurrentRevisionId { get; set; }
+    public Exam? CurrentRevision { get; set; }
+
+    [MaxLength(128)]
+    public string? SuccessorExaminationId { get; set; }
+    public Examination? SuccessorExamination { get; set; }
+
+    public ICollection<Exam> Revisions { get; set; } = new List<Exam>();
+}
+
 /// <summary>
 /// Explicit grading state of an attempt response.
 /// A missing or invalid authoritative answer key must never be represented as
@@ -57,6 +106,45 @@ public class Exam
     public decimal PassingScorePercent { get; set; } = 75.0m;
 
     public bool IsPublished { get; set; } = false;
+
+    // ── P3.1 Additive Revision, Concurrency & Lifecycle Metadata ──
+    [MaxLength(128)]
+    public string? ExaminationId { get; set; }
+    public Examination? Examination { get; set; }
+
+    public int RevisionNumber { get; set; } = 1;
+
+    public ExamLifecycleState LifecycleState { get; set; } = ExamLifecycleState.Draft;
+
+    public long ConcurrencyToken { get; set; } = 1;
+
+    [Required]
+    [MaxLength(128)]
+    public string CreatedBy { get; set; } = "system";
+
+    [MaxLength(128)]
+    public string? SubmittedBy { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? ReviewedBy { get; set; }
+    public DateTime? ReviewedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? ApprovedBy { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? PublishedBy { get; set; }
+    public DateTime? PublishedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? ArchivedBy { get; set; }
+    public DateTime? ArchivedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? RetiredBy { get; set; }
+    public DateTime? RetiredAt { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -104,6 +192,14 @@ public class ExamAttempt
 
     public DateTime StartedAt { get; set; } = DateTime.UtcNow;
     public DateTime? CompletedAt { get; set; }
+
+    /// <summary>
+    /// Immutable server-generated metadata snapshot captured at attempt initialization (P3.1 Option A).
+    /// Preserves frozen examination title, code, settings and schema version.
+    /// Relational question membership remains authoritatively in ExamAttemptQuestions.
+    /// </summary>
+    [Column(TypeName = "jsonb")]
+    public string? MetadataSnapshot { get; set; }
 
     public ICollection<AttemptResponse> Responses { get; set; } = new List<AttemptResponse>();
 }
