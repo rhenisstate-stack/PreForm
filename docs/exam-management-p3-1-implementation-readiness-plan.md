@@ -2,14 +2,15 @@
 
 ## Status
 - Scope: Implementation readiness assessment and consolidated planning
-- Execution mode: Backend-first, documentation-only
-- Final recommendation: SPECIFICATIONS COMPLETE & OWNER APPROVED — READY FOR POSTGRESQL PREFLIGHT & IMPLEMENTATION AUTHORIZATION
+- Stage: Architecture Review Remediation Complete
+- Final Recommendation: **READY FOR FINAL OWNER IMPLEMENTATION AUTHORIZATION**
+- Execution Mode: Backend-first, documentation-only (Implementation NOT authorized)
 
 ---
 
-## 1. Approved Owner Decisions Summary
+## 1. Governance & Approval Summary
 
-All 15 architectural and policy decisions are formally OWNER APPROVED:
+All fifteen architectural and policy decisions are formally OWNER APPROVED:
 
 | Decision | Area | Approved Policy | Status |
 |---|---|---|---|
@@ -31,63 +32,62 @@ All 15 architectural and policy decisions are formally OWNER APPROVED:
 
 ---
 
-## 2. Technical Architecture & Domain Mapping
+## 2. Architecture Review Remediation Summary
 
-### 2.1 Stable Identity Model
-- `Examination` entity represents the examination family.
-- Assigned unique pathway-scoped code (`RN-EX-000001` or `PN-EX-000001`).
-- Contains pointers to `CurrentRevisionId` and `SuccessorExaminationId`.
-
-### 2.2 Revision Model
-- Existing `Exam` entity functions as the revision row.
-- Tracks `RevisionNumber`, `LifecycleState`, `ConcurrencyToken`, and audit metadata.
-- Referenced directly by `ExamAttempt.ExamId` to preserve all historical attempt relationships.
-
-### 2.3 Attempt Metadata Snapshot
-- Captured atomically at attempt initialization as a PostgreSQL `JSONB` document on `ExamAttempt.MetadataSnapshot`.
-- Validated against schema version 1.
-- Exact question membership remains in `ExamAttemptQuestion` (preserving Gate C protections).
-- Legacy attempts handled via dynamic fallback reader without data fabrication.
-
-### 2.4 State Machine & Authorization
-- 6 states, 9 transitions.
-- Rejection returns to `Draft` with mandatory reason.
-- Creator cannot self-approve (`CreatedBy != ActorId`).
-- Instructors view `Published` examinations only.
+All eight review findings (F-01 through F-08) documented in `docs/exam-management-p3-1-specification-review-findings.md` have been fully resolved:
+- **F-01 (Model Reconciled):** All entities use `string` primary keys, `UserId`, `Passed`, `DisplayOrder`, `StartedAt`, `CompletedAt`, exactly matching `apps/api/Models/Assessments.cs`.
+- **F-02 (Authorization Reconciled):** Ordinary roles strictly decoupled from overrides; Superadmin removed from ordinary approval/publication; Admin cannot publish; Reviewer conducts review/returns.
+- **F-03 (Publication Invariants):** Partial unique indexes specified for single published and single active draft per family; atomic supersession specified.
+- **F-04 (Legacy Migration Plan):** Inventory query and 3-tier classification taxonomy (Class A/B/C) established without metadata fabrication.
+- **F-05 (Sequence Mechanics):** Non-transactional PostgreSQL sequence characteristics, gap tolerance, and `MAXVALUE 999999 NO CYCLE` documented.
+- **F-06 (Snapshot Fallback):** Fallback accurately documented as current revision state without overstating historical reconstruction; no retroactive fabrication.
+- **F-07 (EF Core Concurrency):** Scalar `ConcurrencyToken` mapped with EF Core `.IsConcurrencyToken()`; `DbUpdateConcurrencyException` mapped to HTTP 409 Conflict.
+- **F-08 (Audit Infrastructure):** All lifecycle events mapped to existing `AuditLog` entity; archival vs attempt race condition guard specified.
 
 ---
 
-## 3. Implementation Sequence Proposal
+## 3. PostgreSQL Verification Baseline
 
-1. **Preflight Verification:**
-   - Execute non-destructive PostgreSQL preflight checks.
-   - Confirm local service, credentials, and `prepford_gateb_verification` isolation guard.
-2. **Entity & EF Core Model Configuration:**
-   - Add `Examination` entity and update `Exam` revision entity.
-   - Configure constraints: `UNIQUE (Code)`, `UNIQUE (ExaminationId, RevisionNumber)`.
-   - Configure `MetadataSnapshot` as JSONB on `ExamAttempt`.
-3. **Migration Creation & Non-Destructive Local Testing:**
-   - Generate EF Core migration.
-   - Test against isolated local database `prepford_gateb_verification`.
-   - Verify compatibility bridge for `IsPublished`.
-4. **Service Layer Implementation:**
-   - Implement `ExaminationCodeService` using PostgreSQL sequences.
-   - Implement `ExamLifecycleService` enforcing state transitions, separation of duties, and audit logs.
-   - Implement optimistic concurrency checking on revision updates.
-   - Implement atomic attempt snapshot creation and legacy fallback reader.
-5. **Controller & Authorization Integration:**
-   - Update admin/exam-manager endpoints.
-   - Enforce instructor read filter (`LifecycleState == Published`).
-6. **Automated Testing & Gate C Revalidation:**
-   - Run unit tests for lifecycle, separation of duties, and concurrency.
-   - Run integration tests against `prepford_gateb_verification`.
-   - Revalidate Gate C tests to confirm candidate attempt integrity and scoring remains 100% intact.
+Verified and documented in `docs/exam-management-p3-1-postgresql-verification-report.md`:
+- **PostgreSQL Integration Suite:** 15 / 15 tests passed cleanly against isolated loopback database `prepford_gateb_verification`.
+- **Core Domain Regression Suite:** 193 / 193 theory-expanded tests passed cleanly (56 test methods), verifying Gate C server-authoritative scoring, attempt-question membership tamper protection, and candidate data isolation.
+- **Safety Invariants:** Zero databases dropped or reset; zero application code modified.
 
 ---
 
-## 4. Status Summary
+## 4. Staged Implementation Sequence (Post-Authorization)
 
-- **Specifications Readiness:** 100% COMPLETE (`docs/exam-management-p3-1-consolidated-implementation-specification.md` created)
-- **Policy Status:** 100% OWNER APPROVED (All 15 decisions approved)
-- **Database Verification Readiness:** PROCEEDING TO PREFLIGHT CHECK
-- **Next Gate:** Owner Implementation Authorization following PostgreSQL preflight report
+Upon explicit owner authorization, implementation will proceed through the following controlled stages:
+
+1. **Stage 1 — Domain Entities & DbContext Configuration:**
+   - Define `Examination` entity (`apps/api/Models/Assessments.cs`).
+   - Add additive fields to `Exam` (`ExaminationId`, `RevisionNumber`, `LifecycleState`, `ConcurrencyToken`, staffing metadata).
+   - Add `MetadataSnapshot` (`jsonb`) to `ExamAttempt`.
+   - Configure EF Core fluent mappings, partial unique indexes, and concurrency tokens in `AppDbContext.cs`.
+2. **Stage 2 — EF Core Migration & Local Database Verification:**
+   - Generate additive migration.
+   - Test against `prepford_gateb_verification`.
+   - Verify non-destructive rollback.
+3. **Stage 3 — Domain Services & Validation Pipelines:**
+   - Implement `ExaminationCodeService` with PostgreSQL sequences.
+   - Implement `ExamLifecycleService` enforcing 6-state transitions, separation of duties, single published invariant, and atomic audit logging.
+   - Integrate atomic metadata snapshot creation into `ExamAttemptsController.StartAttempt`.
+4. **Stage 4 — Controller Integration & Authorization Policies:**
+   - Add examination management endpoints with role authorization.
+   - Enforce instructor query filter (`LifecycleState == ExamLifecycleState.Published`).
+   - Enforce HTTP 409 Conflict responses on concurrency conflicts.
+5. **Stage 5 — Automated Test Suite & Gate C Revalidation:**
+   - Unit tests for lifecycle transitions, separation of duties, and concurrency conflicts.
+   - Integration tests against `prepford_gateb_verification`.
+   - 100% pass rate revalidation on Gate C test suites.
+
+---
+
+## 5. Final Readiness Classification
+
+**Readiness Classification:** **READY FOR FINAL OWNER IMPLEMENTATION AUTHORIZATION**
+
+- **Documentation Status:** 100% COMPLETE & REMEDIATED
+- **Repository Compatibility:** 100% RECONCILED
+- **Gate C Protections:** 100% PRESERVED
+- **Next Step:** Awaiting explicit product owner implementation authorization
