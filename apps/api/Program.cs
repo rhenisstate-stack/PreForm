@@ -91,14 +91,17 @@ builder.Services.AddSwaggerGen(c =>
 builder.Services.AddDbContext<AppDbContext>((sp, options) =>
 {
     var config = sp.GetRequiredService<IConfiguration>();
+    var gateBConn = config["PREFORM_GATEB_TEST_CONNECTION_STRING"];
     var dbUrl = config["DATABASE_URL"];
     var defaultConn = config.GetConnectionString("DefaultConnection");
 
-    var rawConn = !string.IsNullOrWhiteSpace(dbUrl)
-        ? dbUrl
-        : (!string.IsNullOrWhiteSpace(defaultConn)
-            ? defaultConn
-            : "Host=localhost;Port=5432;Database=prepford;Username=postgres;Password=local-dev-only-change-me");
+    var rawConn = !string.IsNullOrWhiteSpace(gateBConn)
+        ? gateBConn
+        : (!string.IsNullOrWhiteSpace(dbUrl)
+            ? dbUrl
+            : (!string.IsNullOrWhiteSpace(defaultConn)
+                ? defaultConn
+                : "Host=localhost;Port=5432;Database=prepford;Username=postgres;Password=local-dev-only-change-me"));
 
     var connectionString = ConnectionStringHelper.ToNpgsqlConnectionString(rawConn);
 
