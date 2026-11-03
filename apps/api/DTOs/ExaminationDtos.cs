@@ -206,3 +206,96 @@ public sealed class DiscardDraftRevisionRequest
     [Required]
     public long ConcurrencyToken { get; set; }
 }
+
+// ── P3.3 Examination Library Query & Discovery DTOs ────────────────────────
+
+public sealed class ExaminationQueryParameters
+{
+    [MaxLength(100)]
+    public string? Search { get; set; }
+
+    [MaxLength(10)]
+    public string? Pathway { get; set; } // "rn", "pn", or null for all
+
+    [MaxLength(32)]
+    public string? Status { get; set; } // Family status filter if applicable
+
+    [MaxLength(32)]
+    public string? RevisionStatus { get; set; } // "Draft", "InReview", "Approved", "Published", "Archived", "Retired"
+
+    [MaxLength(32)]
+    public string? SortBy { get; set; } = "code"; // "title", "code", "pathway", "createdAt", "updatedAt", "revisions", "latestRevisionNumber"
+
+    [MaxLength(4)]
+    public string? SortDirection { get; set; } = "asc"; // "asc" or "desc"
+
+    public int Page { get; set; } = 1;
+
+    public int PageSize { get; set; } = 20;
+}
+
+public sealed class ExamRevisionSummaryDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string ExaminationId { get; set; } = string.Empty;
+    public string? ExaminationCode { get; set; }
+    public int RevisionNumber { get; set; }
+    public string LifecycleState { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public string Pathway { get; set; } = string.Empty;
+    public ExamType ExamType { get; set; }
+    public int TimeLimitMinutes { get; set; }
+    public decimal PassingScorePercent { get; set; }
+    public bool IsPublished { get; set; }
+    public int QuestionCount { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
+    public DateTime? PublishedAt { get; set; }
+}
+
+public sealed class ExaminationLibraryItemDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+    public string Title { get; set; } = string.Empty;
+    public string Pathway { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string? CurrentRevisionId { get; set; }
+    public string? SuccessorExaminationId { get; set; }
+    public int RevisionCount { get; set; }
+
+    // Distinct representations for active published revision vs latest revision number
+    public ExamRevisionSummaryDto? PublishedRevision { get; set; }
+    public ExamRevisionSummaryDto? LatestRevision { get; set; }
+    public ExamRevisionSummaryDto? CurrentRevision { get; set; }
+}
+
+public sealed class PaginationMetadata
+{
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalItems { get; set; }
+    public int TotalPages { get; set; }
+}
+
+public sealed class ExaminationLibraryResponseDto
+{
+    public bool Success { get; set; } = true;
+    public List<ExaminationLibraryItemDto> Items { get; set; } = new();
+    public PaginationMetadata Pagination { get; set; } = new();
+
+    // Backward compatibility: existing consumers expecting examinations array
+    public List<ExaminationDto> Examinations { get; set; } = new();
+}
+
+public sealed class FamilyRevisionsResponseDto
+{
+    public bool Success { get; set; } = true;
+    public string ExaminationId { get; set; } = string.Empty;
+    public string ExaminationCode { get; set; } = string.Empty;
+    public string ExaminationTitle { get; set; } = string.Empty;
+    public string Pathway { get; set; } = string.Empty;
+    public List<ExamRevisionDto> Revisions { get; set; } = new();
+}
