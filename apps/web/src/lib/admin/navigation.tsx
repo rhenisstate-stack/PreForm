@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   CreditCard,
+  FileText,
   Layers,
   LayoutDashboard,
 } from "lucide-react";
@@ -55,6 +56,14 @@ const EXAMINATION_GROUP: NavGroup = {
   id: "examination",
   label: "Examination",
   items: [
+    {
+      id: "examinations",
+      title: "Examinations",
+      href: "/admin/examinations",
+      icon: FileText,
+      capability: "canViewExaminations",
+      description: "Manage examination families, revisions, and question membership",
+    },
     {
       id: "question-types",
       title: "Question-Type Registry",

@@ -79,7 +79,34 @@ export interface AdminCapabilities {
   canManageSubscriptions: boolean;
   /** Static 18-type question format registry (documentation page, no backend mutation). */
   canViewQuestionTypes: boolean;
+  /** View examination families and revisions in administrative studio. */
+  canViewExaminations: boolean;
+  /** Author examinations: create family, create/edit draft revisions, manage question membership. */
+  canManageExaminations: boolean;
+  /** Review examinations: recommend approval or return for changes. */
+  canReviewExaminations: boolean;
+  /** Approve examinations: subject to creator separation of duties. */
+  canApproveExaminations: boolean;
+  /** Publish, archive, and restore examinations. */
+  canPublishExaminations: boolean;
 }
+
+const EXAM_AUTHOR_ROLES = new Set<AdminRole>([
+  "superadmin",
+  "admin",
+  "exam_manager",
+]);
+
+const EXAM_REVIEWER_ROLES = new Set<AdminRole>([
+  "superadmin",
+  "admin",
+  "reviewer",
+]);
+
+const EXAM_APPROVER_ROLES = new Set<AdminRole>([
+  "superadmin",
+  "admin",
+]);
 
 export function getAdminCapabilities(rawRole?: string | null): AdminCapabilities {
   const role = normalizeRole(rawRole);
@@ -88,5 +115,10 @@ export function getAdminCapabilities(rawRole?: string | null): AdminCapabilities
     canViewOverview: shell,
     canManageSubscriptions: SUBSCRIPTION_ADMIN_ROLES.has(role),
     canViewQuestionTypes: shell,
+    canViewExaminations: shell && role !== "instructor",
+    canManageExaminations: EXAM_AUTHOR_ROLES.has(role),
+    canReviewExaminations: EXAM_REVIEWER_ROLES.has(role),
+    canApproveExaminations: EXAM_APPROVER_ROLES.has(role),
+    canPublishExaminations: EXAM_AUTHOR_ROLES.has(role),
   };
 }
