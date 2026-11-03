@@ -429,4 +429,149 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         Assert.DoesNotContain("Npgsql.NpgsqlException", body);
         Assert.DoesNotContain("PostgresException", body);
     }
+
+    [Fact]
+    public async Task Postgres_SequenceAllocation_GeneratesSequentialCodesFromDatabaseSequences()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var service = scope.ServiceProvider.GetRequiredService<IExaminationCodeService>();
+
+        var rnCode1 = await service.AllocateCodeAsync("rn");
+        var rnCode2 = await service.AllocateCodeAsync("rn");
+        var pnCode1 = await service.AllocateCodeAsync("pn");
+
+        Assert.Matches(@"^RN-EX-\d{6}$", rnCode1);
+        Assert.Matches(@"^RN-EX-\d{6}$", rnCode2);
+        Assert.Matches(@"^PN-EX-\d{6}$", pnCode1);
+        Assert.NotEqual(rnCode1, rnCode2);
+    }
+
+    [Fact]
+    public async Task Postgres_PartialUniqueIndexes_EnforcesSinglePublishedAndSingleDraftPerFamily()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var examFam = new Examination
+        {
+            Id = "fam_pg_" + Guid.NewGuid().ToString("N"),
+            Code = "RN-EX-" + Random.Shared.Next(100000, 999999).ToString("D6"),
+            Pathway = "rn",
+            Title = "Postgres Verification Exam",
+            CreatedBy = "admin_pg"
+        };
+        context.Examinations.Add(examFam);
+
+        var rev1 = new Exam
+        {
+            Id = "rev_pg_pub1_" + Guid.NewGuid().ToString("N"),
+            ExaminationId = examFam.Id,
+            RevisionNumber = 1,
+            LifecycleState = ExamLifecycleState.Published,
+            IsPublished = true,
+            Title = "Rev 1 Published",
+            Pathway = "rn",
+            CreatedBy = "admin_pg"
+        };
+        context.Exams.Add(rev1);
+        await context.SaveChangesAsync();
+
+        // Attempting to insert a SECOND Published revision under the same ExaminationId
+        // must trigger a PostgreSQL unique constraint violation (IX_Exams_ExaminationId_SinglePublished)
+        var rev2DuplicatePublished = new Exam
+        {
+            Id = "rev_pg_pub2_" + Guid.NewGuid().ToString("N"),
+            ExaminationId = examFam.Id,
+            RevisionNumber = 2,
+            LifecycleState = ExamLifecycleState.Published,
+            IsPublished = true,
+            Title = "Rev 2 Duplicate Published",
+            Pathway = "rn",
+            CreatedBy = "admin_pg"
+        };
+        context.Exams.Add(rev2DuplicatePublished);
+
+        var exPub = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+        Assert.Contains("IX_Exams_ExaminationId_SinglePublished", exPub.InnerException?.Message ?? exPub.Message);
+
+        // Detach the failed entity to clean context tracker
+        context.Entry(rev2DuplicatePublished).State = EntityState.Detached;
+
+        // Now test ActiveDraft partial unique index
+        var draft1 = new Exam
+        {
+            Id = "rev_pg_draft1_" + Guid.NewGuid().ToString("N"),
+            ExaminationId = examFam.Id,
+            RevisionNumber = 3,
+            LifecycleState = ExamLifecycleState.Draft,
+            IsPublished = false,
+            Title = "Rev 3 Draft",
+            Pathway = "rn",
+            CreatedBy = "admin_pg"
+        };
+        context.Exams.Add(draft1);
+        await context.SaveChangesAsync();
+
+        var draft2Duplicate = new Exam
+        {
+            Id = "rev_pg_draft2_" + Guid.NewGuid().ToString("N"),
+            ExaminationId = examFam.Id,
+            RevisionNumber = 4,
+            LifecycleState = ExamLifecycleState.Draft,
+            IsPublished = false,
+            Title = "Rev 4 Duplicate Draft",
+            Pathway = "rn",
+            CreatedBy = "admin_pg"
+        };
+        context.Exams.Add(draft2Duplicate);
+
+        var exDraft = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+        Assert.Contains("IX_Exams_ExaminationId_ActiveDraft", exDraft.InnerException?.Message ?? exDraft.Message);
+    }
+
+    [Fact]
+    public async Task Postgres_AttemptMetadataSnapshot_PersistsAndQueriesJsonb()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var user = await context.Users.FirstAsync();
+        var exam = await context.Exams.FirstAsync();
+
+        var snapshotJson = JsonSerializer.Serialize(new
+        {
+            schemaVersion = 1,
+            snapshotCreatedAtUtc = DateTime.UtcNow,
+            examination = new { id = exam.ExaminationId ?? exam.Id, code = "RN-EX-000001", pathway = "rn", title = exam.Title },
+            revision = new { id = exam.Id, revisionNumber = 1, title = exam.Title, timeLimitMinutes = exam.TimeLimitMinutes, passingScorePercent = exam.PassingScorePercent }
+        });
+
+        var attempt = new ExamAttempt
+        {
+            Id = "att_jsonb_" + Guid.NewGuid().ToString("N"),
+            UserId = user.Id,
+            ExamId = exam.Id,
+            Status = AttemptStatus.InProgress,
+            ScorePercent = 0.0m,
+            Passed = false,
+            StartedAt = DateTime.UtcNow,
+            MetadataSnapshot = snapshotJson
+        };
+        context.ExamAttempts.Add(attempt);
+        await context.SaveChangesAsync();
+
+        // Read back from database
+        using var readScope = _factory.Services.CreateScope();
+        var readContext = readScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var persisted = await readContext.ExamAttempts.FindAsync(attempt.Id);
+
+        Assert.NotNull(persisted);
+        Assert.NotNull(persisted.MetadataSnapshot);
+        using var doc = JsonDocument.Parse(persisted.MetadataSnapshot);
+        Assert.Equal(1, doc.RootElement.GetProperty("schemaVersion").GetInt32());
+    }
 }
