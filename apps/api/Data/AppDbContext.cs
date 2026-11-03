@@ -37,6 +37,7 @@ public class AppDbContext : DbContext
     public DbSet<Exam> Exams => Set<Exam>();
     public DbSet<ExamQuestion> ExamQuestions => Set<ExamQuestion>();
     public DbSet<ExamAttempt> ExamAttempts => Set<ExamAttempt>();
+    public DbSet<ExamAttemptQuestion> ExamAttemptQuestions => Set<ExamAttemptQuestion>();
     public DbSet<AttemptResponse> AttemptResponses => Set<AttemptResponse>();
 
     // Subscriptions, Orders & Payments
@@ -280,6 +281,10 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<AttemptResponse>(entity =>
         {
             entity.HasIndex(ar => ar.ExamAttemptId);
+            // Legacy rows (persisted before Gate C) keep Graded semantics; the column
+            // default guarantees historical regimes cannot introduce state 0.
+            entity.Property(ar => ar.GradingState)
+                  .HasDefaultValue(ResponseGradingState.Graded);
             entity.HasOne(ar => ar.ExamAttempt)
                   .WithMany(ea => ea.Responses)
                   .HasForeignKey(ar => ar.ExamAttemptId)
@@ -287,6 +292,23 @@ public class AppDbContext : DbContext
             entity.HasOne(ar => ar.Question)
                   .WithMany()
                   .HasForeignKey(ar => ar.QuestionId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Exact attempt question set: the authority for which questions a candidate
+        // is permitted to answer within an attempt. One record per attempt/question.
+        modelBuilder.Entity<ExamAttemptQuestion>(entity =>
+        {
+            entity.HasKey(eaq => eaq.Id);
+            entity.HasIndex(eaq => eaq.ExamAttemptId);
+            entity.HasIndex(eaq => new { eaq.ExamAttemptId, eaq.QuestionId }).IsUnique();
+            entity.HasOne(eaq => eaq.ExamAttempt)
+                  .WithMany()
+                  .HasForeignKey(eaq => eaq.ExamAttemptId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(eaq => eaq.Question)
+                  .WithMany()
+                  .HasForeignKey(eaq => eaq.QuestionId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
 

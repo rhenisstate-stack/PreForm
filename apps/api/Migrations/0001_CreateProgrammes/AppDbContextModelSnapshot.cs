@@ -35,6 +35,9 @@ namespace Preform.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("GradingState")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsCorrect")
                         .HasColumnType("boolean");
 
@@ -276,6 +279,37 @@ namespace Preform.Api.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("ExamAttempts", "public");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.ExamAttemptQuestion", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ExamAttemptId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("QuestionId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExamAttemptId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.HasIndex("ExamAttemptId", "QuestionId")
+                        .IsUnique();
+
+                    b.ToTable("ExamAttemptQuestions", "public");
                 });
 
             modelBuilder.Entity("Preform.Api.Models.ExamQuestion", b =>
@@ -1490,6 +1524,25 @@ namespace Preform.Api.Migrations
                     b.Navigation("Exam");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.ExamAttemptQuestion", b =>
+                {
+                    b.HasOne("Preform.Api.Models.ExamAttempt", "ExamAttempt")
+                        .WithMany()
+                        .HasForeignKey("ExamAttemptId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Preform.Api.Models.Question", "Question")
+                        .WithMany()
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ExamAttempt");
+
+                    b.Navigation("Question");
                 });
 
             modelBuilder.Entity("Preform.Api.Models.ExamQuestion", b =>

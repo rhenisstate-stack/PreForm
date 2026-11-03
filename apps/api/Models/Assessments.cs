@@ -18,6 +18,21 @@ public enum AttemptStatus
     Abandoned = 3
 }
 
+/// <summary>
+/// Explicit grading state of an attempt response.
+/// A missing or invalid authoritative answer key must never be represented as
+/// an incorrect answer; it is represented as Ungraded so the response is
+/// excluded from authoritative score calculation and finalization.
+/// </summary>
+public enum ResponseGradingState
+{
+    /// <summary>Server graded the response using authoritative answer data.</summary>
+    Graded = 1,
+
+    /// <summary>Server could not grade the response because authoritative grading data is missing or invalid (e.g. no answer key). No score meaning is attached to this state.</summary>
+    Ungraded = 2,
+}
+
 [Table("Exams", Schema = "public")]
 public class Exam
 {
@@ -114,7 +129,42 @@ public class AttemptResponse
 
     public decimal ScoreAwarded { get; set; } = 0.0m;
 
+    /// <summary>
+    /// Whether the server authoritatively graded this response.
+    /// Graded: IsCorrect/ScoreAwarded are server-derived and authoritative.
+    /// Ungraded: authoritative grading data was unavailable (e.g. missing answer key);
+    /// IsCorrect/ScoreAwarded carry no meaning and the response is excluded from
+    /// score calculation and blocks authoritative finalization.
+    /// </summary>
+    public ResponseGradingState GradingState { get; set; } = ResponseGradingState.Graded;
+
     public int TimeSpentSeconds { get; set; } = 0;
 
     public DateTime AnsweredAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Captures the exact set of questions assigned to an attempt at the time the
+/// attempt was created (or, for legacy in-flight attempts, when the question
+/// first passes authoritative membership verification). This is the authority
+/// used to enforce that a candidate may only answer questions that were
+/// actually assigned to their attempt.
+/// </summary>
+[Table("ExamAttemptQuestions", Schema = "public")]
+public class ExamAttemptQuestion
+{
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    [Required]
+    public string ExamAttemptId { get; set; } = string.Empty;
+    public ExamAttempt ExamAttempt { get; set; } = null!;
+
+    [Required]
+    public string QuestionId { get; set; } = string.Empty;
+    public Question Question { get; set; } = null!;
+
+    public int DisplayOrder { get; set; } = 0;
+
+    public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
 }
