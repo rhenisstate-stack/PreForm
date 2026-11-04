@@ -450,6 +450,8 @@ public class ExamAttemptsController : ControllerBase
             .Include(ea => ea.Exam)
             .Include(ea => ea.Responses)
             .Include(ea => ea.User)
+                .ThenInclude(u => u!.UserRoles)
+                .ThenInclude(ur => ur.Role)
             .FirstOrDefaultAsync(ea => ea.Id == id, cancellationToken);
 
         if (attempt == null)
@@ -542,13 +544,15 @@ public class ExamAttemptsController : ControllerBase
         string? sessionId = null;
         string? token = null;
 
+        var primaryRole = attempt.User != null ? RoleHierarchy.GetEffectiveRole(attempt.User) : "candidate";
+
         if (_sessionSecurityService != null)
         {
             var ip = GetClientIpAddress();
             var ua = Request.Headers.UserAgent.ToString();
             var sessionResult = await _sessionSecurityService.CreateOrRotateSessionAsync(
                 attempt.User,
-                attempt.User.Role,
+                primaryRole,
                 request.ClientId,
                 ip,
                 ua,
@@ -601,7 +605,7 @@ public class ExamAttemptsController : ControllerBase
                 email = attempt.User.Email,
                 name = attempt.User.DisplayName,
                 displayName = attempt.User.DisplayName,
-                role = attempt.User.Role,
+                role = primaryRole,
                 pathway = attempt.User.Pathway
             },
             attempt = new
