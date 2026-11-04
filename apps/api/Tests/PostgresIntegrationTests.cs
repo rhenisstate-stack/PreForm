@@ -969,19 +969,20 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+        var adminId = $"adm_dup_{suffix}";
+
         var adminClaims = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, "adm_pg_dup"),
+            new Claim(ClaimTypes.NameIdentifier, adminId),
             new Claim(ClaimTypes.Role, "Admin"),
             new Claim("role", "Admin")
         }, "TestAuth"));
 
-        var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
-
         // Seed admin user for AuditLog foreign key
         var adminUser = new User
         {
-            Id = "adm_pg_dup",
+            Id = adminId,
             Email = $"adm_dup_{suffix}@prepford.test",
             DisplayName = "Admin Dup",
             PasswordHash = "hash"
@@ -1004,7 +1005,7 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
             Pathway = "rn",
             Code = sourceCode,
             Title = $"Source RN Duplication Exam {suffix}",
-            CreatedBy = "adm_pg_dup",
+            CreatedBy = adminId,
             CreatedAt = DateTime.UtcNow
         };
         context.Examinations.Add(sourceFam);
@@ -1022,7 +1023,7 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
             ExamType = ExamType.Practice,
             TimeLimitMinutes = 75,
             PassingScorePercent = 78.5m,
-            CreatedBy = "adm_pg_dup"
+            CreatedBy = adminId
         };
         context.Exams.Add(sourceRev);
 
@@ -1104,7 +1105,7 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         // Verify audit log in PostgreSQL
         var audit = await verifyContext.AuditLogs.FirstOrDefaultAsync(a => a.EntityId == clonedFam.Id && a.Action == "ExamDuplicated");
         Assert.NotNull(audit);
-        Assert.Equal("adm_pg_dup", audit.ActorId);
+        Assert.Equal(adminId, audit.ActorId);
     }
 
     [Fact]
@@ -1114,19 +1115,20 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         using var scope = _factory.Services.CreateScope();
         var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
+        var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+        var adminId = $"adm_rev_{suffix}";
+
         var adminClaims = new ClaimsPrincipal(new ClaimsIdentity(new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, "adm_pg_rev"),
+            new Claim(ClaimTypes.NameIdentifier, adminId),
             new Claim(ClaimTypes.Role, "Admin"),
             new Claim("role", "Admin")
         }, "TestAuth"));
 
-        var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
-
         // Seed admin user for AuditLog foreign key
         var adminUser = new User
         {
-            Id = "adm_pg_rev",
+            Id = adminId,
             Email = $"adm_rev_{suffix}@prepford.test",
             DisplayName = "Admin Rev",
             PasswordHash = "hash"
@@ -1146,7 +1148,7 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
             Pathway = "pn",
             Code = familyCode,
             Title = $"PN Revisions Family {suffix}",
-            CreatedBy = "adm_pg_rev",
+            CreatedBy = adminId,
             CreatedAt = DateTime.UtcNow
         };
         context.Examinations.Add(fam);
@@ -1160,7 +1162,7 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
             IsPublished = true,
             Title = $"PN Rev 1 Published {suffix}",
             Pathway = "pn",
-            CreatedBy = "adm_pg_rev"
+            CreatedBy = adminId
         };
         context.Exams.Add(rev1);
 

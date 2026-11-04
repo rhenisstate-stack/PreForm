@@ -426,6 +426,39 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {capabilities.canManageExaminations && (
+                    <>
+                      {["published", "approved", "archived"].includes(rev.lifecycleState.toLowerCase()) && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenDuplicate(rev.id)}
+                            className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 gap-1"
+                            title="Duplicate as new examination starting from this revision"
+                          >
+                            <Copy className="h-3.5 w-3.5 text-teal-600" />
+                            <span className="hidden md:inline">Duplicate</span>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={hasActiveDraft}
+                            onClick={() => handleOpenCreateRevision(rev.id)}
+                            className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 gap-1"
+                            title={
+                              hasActiveDraft
+                                ? "Cannot branch while an active draft exists"
+                                : "Create new draft revision branching from this revision"
+                            }
+                          >
+                            <GitBranch className="h-3.5 w-3.5 text-indigo-600" />
+                            <span className="hidden md:inline">Branch</span>
+                          </Button>
+                        </>
+                      )}
+                    </>
+                  )}
                   <Link href={`/admin/examinations/${examination.id}/revisions/${rev.id}`}>
                     <Button
                       variant={rev.lifecycleState.toLowerCase() === "draft" ? "default" : "outline"}
@@ -491,14 +524,63 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
           <DialogHeader>
             <DialogTitle>Create New Draft Revision</DialogTitle>
             <DialogDescription>
-              Initializes monotonically incremented Revision {(examination.revisions?.length || 0) + 1} under code {examination.code}.
+              Initializes monotonically incremented Revision {(examination.revisions?.length || 0) + 1} under permanent code {examination.code}.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
+            <div className="p-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-800 text-xs text-teal-900 dark:text-teal-200">
+              <p className="font-semibold mb-1">Family Identity Preserved</p>
+              <p>
+                This operation creates a new revision within family <span className="font-mono font-bold">{examination.code}</span>.
+                The permanent code and examination identity remain unchanged. Candidate attempts linked to previous revisions remain immutable.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="rev-source" className="text-xs font-semibold">
+                Source Revision (Template)
+              </Label>
+              <select
+                id="rev-source"
+                value={sourceRevisionId}
+                onChange={(e) => handleSourceRevisionChange(e.target.value)}
+                className="w-full mt-1 px-3 py-2 text-xs border rounded-md border-slate-300 dark:border-slate-800 bg-background text-foreground"
+              >
+                {eligibleRevisions.length > 0 ? (
+                  eligibleRevisions.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      Rev {r.revisionNumber} ({r.lifecycleState}) — {r.questionCount} Questions — {r.title}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>No eligible source revisions (Published, Approved, or Archived required)</option>
+                )}
+                <option value="">Start with blank revision (no copied questions)</option>
+              </select>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Only Published, Approved, or Archived revisions can be used as a template.
+              </p>
+            </div>
+
+            {sourceRevisionId && (
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={copyQuestions}
+                  onChange={(e) => setCopyQuestions(e.target.checked)}
+                  className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                />
+                <span>
+                  Copy question memberships and maintain display ordering (
+                  {eligibleRevisions.find((r) => r.id === sourceRevisionId)?.questionCount || 0} questions)
+                </span>
+              </label>
+            )}
+
             <div>
               <Label htmlFor="rev-title" className="text-xs font-semibold">
-                Revision Title
+                Revision Title *
               </Label>
               <Input
                 id="rev-title"
@@ -554,6 +636,12 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
                 />
               </div>
             </div>
+
+            {hasActiveDraft && (
+              <div className="p-2.5 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
+                An active draft already exists for this examination family. You must publish, approve, or discard it before creating a new revision.
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -562,10 +650,87 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
             </Button>
             <Button
               onClick={() => createRevisionMutation.mutate()}
-              disabled={!newRevTitle.trim() || createRevisionMutation.isPending}
+              disabled={!newRevTitle.trim() || createRevisionMutation.isPending || hasActiveDraft}
               className="bg-[#0D9488] hover:bg-[#0F766E] text-white"
             >
               {createRevisionMutation.isPending ? "Creating..." : "Create Draft"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate as New Examination Dialog */}
+      <Dialog open={isDuplicateOpen} onOpenChange={setIsDuplicateOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Duplicate as New Examination Family</DialogTitle>
+            <DialogDescription>
+              Creates an independent examination family with a newly allocated permanent code ({examination.pathway.toUpperCase()}-EX-XXXXXX) starting at Revision 1.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="p-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 space-y-1">
+              <p className="font-semibold">Independent Identity & Clean Lineage</p>
+              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-indigo-800 dark:text-indigo-300">
+                <li>Allocates a new permanent examination code from the sequence generator.</li>
+                <li>Initializes Revision 1 in Draft lifecycle state.</li>
+                <li>Copies question memberships and preserves ordering from source.</li>
+                <li>Candidate attempts and historical statistics are NOT copied (0 attempts).</li>
+                <li>Original examination ({examination.code}) remains completely untouched.</li>
+              </ul>
+            </div>
+
+            <div>
+              <Label htmlFor="dup-title" className="text-xs font-semibold">
+                New Examination Family Title *
+              </Label>
+              <Input
+                id="dup-title"
+                value={duplicateTitle}
+                onChange={(e) => setDuplicateTitle(e.target.value)}
+                className="mt-1"
+                placeholder="e.g. NCLEX-RN Comprehensive Readiness Exam (Copy)"
+                maxLength={128}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="dup-source" className="text-xs font-semibold">
+                Source Revision *
+              </Label>
+              <select
+                id="dup-source"
+                value={duplicateSourceRevId}
+                onChange={(e) => setDuplicateSourceRevId(e.target.value)}
+                className="w-full mt-1 px-3 py-2 text-xs border rounded-md border-slate-300 dark:border-slate-800 bg-background text-foreground"
+              >
+                {eligibleRevisions.length > 0 ? (
+                  eligibleRevisions.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      Rev {r.revisionNumber} ({r.lifecycleState}) — {r.questionCount} Questions — {r.title}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>No eligible source revisions available</option>
+                )}
+              </select>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Only Published, Approved, or Archived revisions can be duplicated into a new family.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDuplicateOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => duplicateMutation.mutate()}
+              disabled={!duplicateTitle.trim() || !duplicateSourceRevId || duplicateMutation.isPending || eligibleRevisions.length === 0}
+              className="bg-[#142B4A] hover:bg-[#1E3A8A] text-white"
+            >
+              {duplicateMutation.isPending ? "Duplicating..." : "Duplicate Examination"}
             </Button>
           </DialogFooter>
         </DialogContent>
