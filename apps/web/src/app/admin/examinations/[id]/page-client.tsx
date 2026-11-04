@@ -340,15 +340,25 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
           </div>
 
           {capabilities.canManageExaminations && (
-            <div className="flex flex-col items-end gap-1">
-              <Button
-                onClick={() => setIsCreateRevisionOpen(true)}
-                disabled={hasActiveDraft}
-                className="bg-[#0D9488] hover:bg-[#0F766E] text-white flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                New Draft Revision
-              </Button>
+            <div className="flex flex-col items-end gap-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleOpenDuplicate()}
+                  className="border-slate-300 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 flex items-center gap-2"
+                >
+                  <Copy className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                  Duplicate as New Examination
+                </Button>
+                <Button
+                  onClick={() => handleOpenCreateRevision()}
+                  disabled={hasActiveDraft}
+                  className="bg-[#0D9488] hover:bg-[#0F766E] text-white flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create New Revision
+                </Button>
+              </div>
               {hasActiveDraft && (
                 <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium">
                   An active draft already exists for this family.
