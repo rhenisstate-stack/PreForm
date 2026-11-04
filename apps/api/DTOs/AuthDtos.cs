@@ -34,14 +34,22 @@ public class LoginRequest
     public string Password { get; set; } = string.Empty;
 
     public bool RememberMe { get; set; } = false;
+
+    [MaxLength(64)]
+    public string? ClientId { get; set; }
+
+    [MaxLength(64)]
+    public string? FingerprintHash { get; set; }
 }
 
 public class AuthResponse
 {
     public bool Success { get; set; }
     public string? Token { get; set; }
+    public string? SessionId { get; set; }
     public UserSummaryDto? User { get; set; }
     public string? Error { get; set; }
+    public string? ErrorCode { get; set; }
 }
 
 public class SessionResponse
@@ -71,6 +79,8 @@ public class RevokeSessionRequest
     public string? SessionId { get; set; }
     public string? UserId { get; set; }
     public bool RevokeAll { get; set; } = false;
+    public bool RevokeOthers { get; set; } = false;
+    public string? Reason { get; set; }
 }
 
 public class ValidateSessionRequest
@@ -83,6 +93,24 @@ public class ValidateSessionResponse
 {
     public bool Valid { get; set; }
     public string? Error { get; set; }
+    public string? ErrorCode { get; set; }
     public UserSummaryDto? User { get; set; }
     public string? SessionId { get; set; }
+    public DateTime? EffectiveExpiresAt { get; set; }
+    public DateTime? IdleExpiresAt { get; set; }
+    public DateTime? AbsoluteExpiresAt { get; set; }
+}
+
+public class UserSessionDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string? ClientId { get; set; }
+    public string? DeviceLabel { get; set; }
+    public string? LastIpAddress { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime LastActiveAt { get; set; }
+    public DateTime IdleExpiresAt { get; set; }
+    public DateTime AbsoluteExpiresAt { get; set; }
+    public DateTime EffectiveExpiresAt { get; set; }
+    public bool IsCurrentSession { get; set; }
 }

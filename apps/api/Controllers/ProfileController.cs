@@ -16,17 +16,20 @@ public class ProfileController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ISessionService _sessionService;
+    private readonly ISessionSecurityService _sessionSecurityService;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly ILogger<ProfileController> _logger;
 
     public ProfileController(
         AppDbContext context,
         ISessionService sessionService,
+        ISessionSecurityService sessionSecurityService,
         IPasswordHasher<User> passwordHasher,
         ILogger<ProfileController> logger)
     {
         _context = context;
         _sessionService = sessionService;
+        _sessionSecurityService = sessionSecurityService;
         _passwordHasher = passwordHasher;
         _logger = logger;
     }
@@ -170,12 +173,22 @@ public class ProfileController : ControllerBase
         user.PasswordHash = _passwordHasher.HashPassword(user, request.NewPassword);
         user.UpdatedAt = now;
 
-        // Invalidate all existing sessions on password change
-        await _sessionService.RevokeAllUserSessionsAsync(user.Id, cancellationToken);
+        // Invalidate security version and revoke all existing sessions on password change
+        await _sessionSecurityService.InvalidateUserSecurityVersionAsync(user.Id, "PasswordChanged", cancellationToken);
 
         // Issue a fresh new session
         var role = RoleHierarchy.GetEffectiveRole(User);
-        var (newToken, _) = await _sessionService.CreateSessionAsync(user, role, rememberMe: false, cancellationToken);
+        var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+        var userAgent = Request.Headers.UserAgent.ToString();
+        var sessionResult = await _sessionSecurityService.CreateOrRotateSessionAsync(
+            user,
+            role,
+            clientId: null,
+            ipAddress: ipAddress,
+            userAgent: userAgent,
+            fingerprintHash: null,
+            rememberMe: false,
+            cancellationToken: cancellationToken);
 
         _context.AuditLogs.Add(new AuditLog
         {
@@ -194,7 +207,8 @@ public class ProfileController : ControllerBase
         {
             success = true,
             message = "Password updated successfully. All other active sessions have been revoked.",
-            token = newToken
+            token = sessionResult.Token,
+            sessionId = sessionResult.Session?.Id
         });
     }
 }

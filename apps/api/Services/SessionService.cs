@@ -1,7 +1,5 @@
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
-using Preform.Api.Data;
 using Preform.Api.Models;
 
 namespace Preform.Api.Services;
@@ -16,11 +14,11 @@ public interface ISessionService
 
 public class SessionService : ISessionService
 {
-    private readonly AppDbContext _dbContext;
+    private readonly ISessionSecurityService _sessionSecurityService;
 
-    public SessionService(AppDbContext dbContext)
+    public SessionService(ISessionSecurityService sessionSecurityService)
     {
-        _dbContext = dbContext;
+        _sessionSecurityService = sessionSecurityService;
     }
 
     public static string ComputeTokenHash(string token)
@@ -36,87 +34,50 @@ public class SessionService : ISessionService
         bool rememberMe,
         CancellationToken cancellationToken = default)
     {
-        var rawTokenBytes = RandomNumberGenerator.GetBytes(32);
-        var token = "prf_sess_" + Convert.ToHexString(rawTokenBytes).ToLowerInvariant();
-        var tokenHash = ComputeTokenHash(token);
-        var csrfToken = Convert.ToHexString(RandomNumberGenerator.GetBytes(16)).ToLowerInvariant();
+        var result = await _sessionSecurityService.CreateOrRotateSessionAsync(
+            user,
+            role,
+            clientId: null,
+            ipAddress: null,
+            userAgent: null,
+            fingerprintHash: null,
+            rememberMe: rememberMe,
+            cancellationToken: cancellationToken);
 
-        var now = DateTime.UtcNow;
-        var expiresAt = rememberMe ? now.AddDays(30) : now.AddDays(7);
-        var effectiveRole = string.IsNullOrWhiteSpace(role) ? "candidate" : role.Trim().ToLowerInvariant();
-
-        var session = new UserSession
+        if (!result.Success || result.Session == null || result.Token == null)
         {
-            Id = "sess_" + Guid.NewGuid().ToString("N"),
-            UserId = user.Id,
-            Email = user.Email.Trim().ToLowerInvariant(),
-            Role = effectiveRole,
-            DisplayName = user.DisplayName,
-            TokenHash = tokenHash,
-            CsrfToken = csrfToken,
-            CreatedAt = now,
-            ExpiresAt = expiresAt,
-            LastActiveAt = now,
-            Revoked = false
-        };
+            throw new InvalidOperationException(result.ErrorMessage ?? "Unable to create user session.");
+        }
 
-        _dbContext.UserSessions.Add(session);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-
-        return (token, session);
+        return (result.Token, result.Session);
     }
 
     public async Task<UserSession?> ValidateTokenAsync(string token, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(token))
-        {
-            return null;
-        }
+        var result = await _sessionSecurityService.ValidateSessionAsync(
+            token,
+            isToken: true,
+            isQualifyingActivity: true,
+            cancellationToken: cancellationToken);
 
-        var tokenHash = ComputeTokenHash(token);
-        var now = DateTime.UtcNow;
-
-        var session = await _dbContext.UserSessions
-            .Include(s => s.User)
-            .FirstOrDefaultAsync(s => s.TokenHash == tokenHash && !s.Revoked && s.ExpiresAt > now, cancellationToken);
-
-        if (session != null)
-        {
-            session.LastActiveAt = now;
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-
-        return session;
+        return result.IsValid ? result.Session : null;
     }
 
     public async Task<bool> RevokeSessionAsync(string sessionId, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(sessionId)) return false;
-
-        var session = await _dbContext.UserSessions.FindAsync(new object[] { sessionId }, cancellationToken);
-        if (session == null || session.Revoked) return false;
-
-        session.Revoked = true;
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return true;
+        return await _sessionSecurityService.RevokeSessionAsync(
+            sessionId,
+            reason: "UserLogout",
+            actorUserId: "system",
+            cancellationToken: cancellationToken);
     }
 
     public async Task<int> RevokeAllUserSessionsAsync(string userId, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(userId)) return 0;
-
-        var activeSessions = await _dbContext.UserSessions
-            .Where(s => s.UserId == userId && !s.Revoked)
-            .ToListAsync(cancellationToken);
-
-        if (activeSessions.Count == 0) return 0;
-
-        foreach (var session in activeSessions)
-        {
-            session.Revoked = true;
-        }
-
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return activeSessions.Count;
+        return await _sessionSecurityService.RevokeAllUserSessionsAsync(
+            userId,
+            reason: "RevokeAll",
+            actorUserId: "system",
+            cancellationToken: cancellationToken);
     }
 }

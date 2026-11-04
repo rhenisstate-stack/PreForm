@@ -16,19 +16,31 @@ public class AuthController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ISessionService _sessionService;
+    private readonly ISessionSecurityService _sessionSecurityService;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         AppDbContext context,
         ISessionService sessionService,
+        ISessionSecurityService sessionSecurityService,
         IPasswordHasher<User> passwordHasher,
         ILogger<AuthController> logger)
     {
         _context = context;
         _sessionService = sessionService;
+        _sessionSecurityService = sessionSecurityService;
         _passwordHasher = passwordHasher;
         _logger = logger;
+    }
+
+    private string? GetClientIpAddress()
+    {
+        if (Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor) && !string.IsNullOrWhiteSpace(forwardedFor))
+        {
+            return forwardedFor.ToString().Split(',')[0].Trim();
+        }
+        return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 
     /// <summary>
@@ -124,13 +136,24 @@ public class AuthController : ControllerBase
 
         await _context.SaveChangesAsync(cancellationToken);
 
-        var (token, session) = await _sessionService.CreateSessionAsync(user, "candidate", rememberMe: false, cancellationToken);
+        var ip = GetClientIpAddress();
+        var ua = Request.Headers.UserAgent.ToString();
+        var sessionResult = await _sessionSecurityService.CreateOrRotateSessionAsync(
+            user,
+            "candidate",
+            clientId: null,
+            ipAddress: ip,
+            userAgent: ua,
+            fingerprintHash: null,
+            rememberMe: false,
+            cancellationToken: cancellationToken);
 
         return Ok(new AuthResponse
         {
             Success = true,
-            Token = token,
-            User = BuildUserSummary(user, session.Role)
+            Token = sessionResult.Token,
+            SessionId = sessionResult.Session?.Id,
+            User = BuildUserSummary(user, sessionResult.Session?.Role ?? "candidate")
         });
     }
 
@@ -173,7 +196,48 @@ public class AuthController : ControllerBase
         }
 
         var primaryRole = RoleHierarchy.GetEffectiveRole(user);
-        var (token, session) = await _sessionService.CreateSessionAsync(user, primaryRole, request.RememberMe, cancellationToken);
+        var ip = GetClientIpAddress();
+        var ua = Request.Headers.UserAgent.ToString();
+
+        var sessionResult = await _sessionSecurityService.CreateOrRotateSessionAsync(
+            user,
+            primaryRole,
+            clientId: request.ClientId,
+            ipAddress: ip,
+            userAgent: ua,
+            fingerprintHash: request.FingerprintHash,
+            rememberMe: request.RememberMe,
+            cancellationToken: cancellationToken);
+
+        if (!sessionResult.Success)
+        {
+            if (sessionResult.ErrorCode == "CONCURRENT_SESSION_LIMIT_EXCEEDED")
+            {
+                return StatusCode(StatusCodes.Status409Conflict, new AuthResponse
+                {
+                    Success = false,
+                    Error = sessionResult.ErrorMessage,
+                    ErrorCode = sessionResult.ErrorCode
+                });
+            }
+
+            if (sessionResult.ErrorCode == "ACCOUNT_INACTIVE")
+            {
+                return Unauthorized(new AuthResponse
+                {
+                    Success = false,
+                    Error = sessionResult.ErrorMessage,
+                    ErrorCode = sessionResult.ErrorCode
+                });
+            }
+
+            return BadRequest(new AuthResponse
+            {
+                Success = false,
+                Error = sessionResult.ErrorMessage,
+                ErrorCode = sessionResult.ErrorCode
+            });
+        }
 
         _context.AuditLogs.Add(new AuditLog
         {
@@ -183,6 +247,7 @@ public class AuthController : ControllerBase
             EntityId = user.Id,
             Description = "User successfully authenticated",
             Outcome = "Success",
+            IpAddress = ip,
             Timestamp = DateTime.UtcNow
         });
         await _context.SaveChangesAsync(cancellationToken);
@@ -190,8 +255,9 @@ public class AuthController : ControllerBase
         return Ok(new AuthResponse
         {
             Success = true,
-            Token = token,
-            User = BuildUserSummary(user, session.Role)
+            Token = sessionResult.Token,
+            SessionId = sessionResult.Session!.Id,
+            User = BuildUserSummary(user, sessionResult.Session.Role)
         });
     }
 
@@ -200,9 +266,10 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> Logout(CancellationToken cancellationToken)
     {
         var sessionId = User.FindFirst("sessionId")?.Value;
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "system";
         if (!string.IsNullOrWhiteSpace(sessionId))
         {
-            await _sessionService.RevokeSessionAsync(sessionId, cancellationToken);
+            await _sessionSecurityService.RevokeSessionAsync(sessionId, "UserLogout", userId, cancellationToken);
         }
 
         return Ok(new { success = true, message = "Logged out successfully." });
@@ -215,6 +282,29 @@ public class AuthController : ControllerBase
         var callerUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var callerRole = RoleHierarchy.GetEffectiveRole(User);
         var isPrivilegedAdmin = RoleHierarchy.IsAdmin(callerRole);
+
+        if (request.RevokeOthers)
+        {
+            var currentSessionId = User.FindFirst("sessionId")?.Value;
+            if (string.IsNullOrWhiteSpace(currentSessionId))
+            {
+                return BadRequest(new { success = false, error = "Current session ID is required to revoke other sessions." });
+            }
+
+            var targetUserId = !string.IsNullOrWhiteSpace(request.UserId) ? request.UserId : callerUserId;
+            if (string.IsNullOrWhiteSpace(targetUserId))
+            {
+                return BadRequest(new { success = false, error = "Target user ID is required." });
+            }
+
+            if (!string.Equals(targetUserId, callerUserId, StringComparison.Ordinal) && !isPrivilegedAdmin)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot revoke another user's sessions." });
+            }
+
+            var count = await _sessionSecurityService.RevokeOtherSessionsAsync(targetUserId, currentSessionId, callerUserId ?? "system", cancellationToken);
+            return Ok(new { success = true, revokedCount = count, message = "Other active sessions revoked successfully." });
+        }
 
         if (request.RevokeAll)
         {
@@ -229,19 +319,7 @@ public class AuthController : ControllerBase
                 return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot revoke another user's sessions." });
             }
 
-            var count = await _sessionService.RevokeAllUserSessionsAsync(targetUserId, cancellationToken);
-            _context.AuditLogs.Add(new AuditLog
-            {
-                ActorId = callerUserId ?? "system",
-                Action = "RevokeAllUserSessions",
-                EntityType = "User",
-                EntityId = targetUserId,
-                Description = $"Revoked all sessions for user {targetUserId} (count: {count})",
-                Outcome = "Success",
-                Timestamp = DateTime.UtcNow
-            });
-            await _context.SaveChangesAsync(cancellationToken);
-
+            var count = await _sessionSecurityService.RevokeAllUserSessionsAsync(targetUserId, request.Reason ?? "RevokeAll", callerUserId ?? "system", cancellationToken);
             return Ok(new { success = true, revokedCount = count, message = "All user sessions revoked successfully." });
         }
 
@@ -261,7 +339,7 @@ public class AuthController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot revoke another user's session." });
         }
 
-        var revoked = await _sessionService.RevokeSessionAsync(targetSessionId, cancellationToken);
+        var revoked = await _sessionSecurityService.RevokeSessionAsync(targetSessionId, request.Reason ?? "UserRevocation", callerUserId ?? "system", cancellationToken);
         return Ok(new { success = true, revoked, message = "Session revoked successfully." });
     }
 
@@ -274,28 +352,49 @@ public class AuthController : ControllerBase
             return BadRequest(new ValidateSessionResponse { Valid = false, Error = "Token or SessionId is required." });
         }
 
-        UserSession? session = null;
+        var ip = GetClientIpAddress();
+        var ua = Request.Headers.UserAgent.ToString();
+
+        SessionValidationResult validation;
         if (!string.IsNullOrWhiteSpace(request.Token))
         {
-            session = await _sessionService.ValidateTokenAsync(request.Token, cancellationToken);
+            validation = await _sessionSecurityService.ValidateSessionAsync(
+                request.Token,
+                isToken: true,
+                ipAddress: ip,
+                userAgent: ua,
+                isQualifyingActivity: true,
+                cancellationToken: cancellationToken);
         }
-        else if (!string.IsNullOrWhiteSpace(request.SessionId))
+        else
         {
-            session = await _context.UserSessions
-                .Include(s => s.User)
-                .FirstOrDefaultAsync(s => s.Id == request.SessionId && !s.Revoked && s.ExpiresAt > DateTime.UtcNow, cancellationToken);
+            validation = await _sessionSecurityService.ValidateSessionAsync(
+                request.SessionId!,
+                isToken: false,
+                ipAddress: ip,
+                userAgent: ua,
+                isQualifyingActivity: true,
+                cancellationToken: cancellationToken);
         }
 
-        if (session == null || session.User == null || !session.User.IsActive || session.Revoked)
+        if (!validation.IsValid || validation.Session == null || validation.Session.User == null)
         {
-            return Ok(new ValidateSessionResponse { Valid = false, Error = "Session is invalid, expired, or revoked." });
+            return Ok(new ValidateSessionResponse
+            {
+                Valid = false,
+                Error = validation.FailureReason ?? "Session is invalid, expired, or revoked.",
+                ErrorCode = validation.FailureCode
+            });
         }
 
         return Ok(new ValidateSessionResponse
         {
             Valid = true,
-            SessionId = session.Id,
-            User = BuildUserSummary(session.User, session.Role)
+            SessionId = validation.Session.Id,
+            User = BuildUserSummary(validation.Session.User, validation.Session.Role),
+            EffectiveExpiresAt = validation.EffectiveExpiry,
+            IdleExpiresAt = validation.Session.IdleExpiresAt,
+            AbsoluteExpiresAt = validation.Session.AbsoluteExpiresAt
         });
     }
 

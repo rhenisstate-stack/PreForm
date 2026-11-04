@@ -63,7 +63,7 @@ The following matrix tracks all required capabilities across frontend, backend, 
 | 35 | **In-Exam Inline Reauthentication Modal** | Modal prompt enters password; avoids page reload or loss of focus | Authenticates credentials; issues new session; retries answer | `UserSessions` created | Candidate auth | `InExamReauthModal.test.tsx` | AUDITED (GAP IDENTIFIED) |
 | 36 | **Adaptive CAT Continuity** | Reauthentication does not alter question sequence or item pool | CAT state engine resumes from exact question index | `ExamAttemptQuestions` authority | Assessment engine | `CatContinuityTests.cs` | AUDITED (SOUND / VERIFIED) |
 | 37 | **Cross-User Session Isolation** | Candidate cannot see or revoke another candidate's sessions | Ownership checks enforce: `session.UserId == caller.Id` | EF Core query filter | Authorization checks | `CrossUserSessionIsolationTests.cs` | AUDITED (GAP IDENTIFIED) |
-| 38 | **Non-Destructive Database Migration** | Schema updates run via standard EF Core migration pipeline | `0009_AddSessionSecurityAndDeviceManagement` with safe defaults | Adds columns & tables to `public` schema | Database admin | `MigrationIntegrityTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 38 | **Non-Destructive Database Migration** | Schema updates run via standard EF Core migration pipeline | `0009_AddSessionSecurityAndDeviceManagement` with safe defaults | Adds columns & tables to `public` schema | Database admin | `SessionSecurityPolicyDatabaseTests.cs` | VERIFIED (PHASE 1) |
 
 ---
 

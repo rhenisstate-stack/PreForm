@@ -54,6 +54,7 @@ public class GatewayReplayProtection : IGatewayReplayProtection
 public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptions>
 {
     private readonly ISessionService _sessionService;
+    private readonly ISessionSecurityService _sessionSecurityService;
     private readonly IConfiguration _configuration;
     private readonly IGatewayReplayProtection _replayProtection;
     private readonly IHostEnvironment _hostEnvironment;
@@ -66,6 +67,7 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
         ILoggerFactory logger,
         UrlEncoder encoder,
         ISessionService sessionService,
+        ISessionSecurityService sessionSecurityService,
         IConfiguration configuration,
         IGatewayReplayProtection replayProtection,
         IHostEnvironment hostEnvironment,
@@ -73,14 +75,27 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
         : base(options, logger, encoder)
     {
         _sessionService = sessionService;
+        _sessionSecurityService = sessionSecurityService;
         _configuration = configuration;
         _replayProtection = replayProtection;
         _hostEnvironment = hostEnvironment;
         _serviceProvider = serviceProvider;
     }
 
+    private string? GetClientIpAddress()
+    {
+        if (Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor) && !string.IsNullOrWhiteSpace(forwardedFor))
+        {
+            return forwardedFor.ToString().Split(',')[0].Trim();
+        }
+        return Context.Connection.RemoteIpAddress?.ToString();
+    }
+
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
+        var ip = GetClientIpAddress();
+        var ua = Request.Headers.UserAgent.ToString();
+
         // 1. First Priority: Check Authorization header for Bearer Session Token
         var authHeader = Request.Headers.Authorization.FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(authHeader) && authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
@@ -88,9 +103,16 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
             var token = authHeader.Substring(7).Trim();
             if (!string.IsNullOrWhiteSpace(token))
             {
-                var session = await _sessionService.ValidateTokenAsync(token);
-                if (session != null && session.User != null && session.User.IsActive && !session.Revoked)
+                var validation = await _sessionSecurityService.ValidateSessionAsync(
+                    token,
+                    isToken: true,
+                    ipAddress: ip,
+                    userAgent: ua,
+                    isQualifyingActivity: true);
+
+                if (validation.IsValid && validation.Session?.User != null && validation.Session.User.IsActive)
                 {
+                    var session = validation.Session;
                     var claims = new List<Claim>
                     {
                         new Claim(ClaimTypes.NameIdentifier, session.UserId),
@@ -98,7 +120,8 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
                         new Claim(ClaimTypes.Role, session.Role),
                         new Claim(ClaimTypes.Name, session.DisplayName),
                         new Claim("sessionId", session.Id),
-                        new Claim("csrfToken", session.CsrfToken)
+                        new Claim("csrfToken", session.CsrfToken),
+                        new Claim("securityVersion", session.SecurityVersion.ToString())
                     };
 
                     var identity = new ClaimsIdentity(claims, Scheme.Name);
@@ -165,12 +188,6 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
                     return AuthenticateResult.Fail("Gateway request nonce has already been seen or is invalid.");
                 }
 
-                // Canonical HTTP method, request path, and raw query string.
-                // The BFF signer canonicalizes the dispatched endpoint exactly as sent,
-                // including its query string (e.g. /api/v1/examinations?sortBy=code&...).
-                // Verification therefore must use the same deterministic representation:
-                // Request.QueryString.Value preserves the raw, as-transmitted query
-                // (with its leading '?' when present).
                 var method = Request.Method.ToUpperInvariant();
                 var path = Request.Path.Value ?? "/";
                 if (string.IsNullOrWhiteSpace(path)) path = "/";
@@ -218,15 +235,25 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
                 }
             }
 
-            // Enforce PostgreSQL session revocation check if session ID is provided
+            // Enforce PostgreSQL session validity/revocation check if session ID is provided
             if (!string.IsNullOrWhiteSpace(sessionId))
             {
-                using var scope = _serviceProvider.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var sessionRecord = await db.UserSessions.AsNoTracking().FirstOrDefaultAsync(s => s.Id == sessionId);
-                if (sessionRecord != null && (sessionRecord.Revoked || sessionRecord.ExpiresAt <= DateTime.UtcNow))
+                var validation = await _sessionSecurityService.ValidateSessionAsync(
+                    sessionId,
+                    isToken: false,
+                    ipAddress: ip,
+                    userAgent: ua,
+                    isQualifyingActivity: true);
+
+                if (!validation.IsValid)
                 {
-                    return AuthenticateResult.Fail("Authoritative session has been revoked or expired in datastore.");
+                    // If the session exists in datastore but failed validation (revoked, expired, security version changed), reject
+                    if (validation.FailureCode != "SESSION_NOT_FOUND")
+                    {
+                        return AuthenticateResult.Fail($"Authoritative session rejected: {validation.FailureReason}");
+                    }
+                    // Until Phase 3 BFF session-id synchronization is complete,
+                    // in-memory client session IDs unknown to the datastore are permitted under valid HMAC signature.
                 }
             }
 
