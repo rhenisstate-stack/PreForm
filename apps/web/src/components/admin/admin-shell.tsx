@@ -299,15 +299,33 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  /* ── Auth gates (display-only; backend remains authoritative) ── */
+  /* ── Auth gates (display-only; backend remains authoritative).
+     {children} stays in the render tree in every gate branch: omitting the
+     children slot makes the child page segments vanish from the App Shell,
+     which Next.js reports as an unrendered segment and drops from
+     instant-navigation validation. The hidden wrapper keeps the gates'
+     semantics and visuals (children are display:none and non-interactive
+     underneath the gate panels). ── */
+  const gatedChildren = (
+    <div hidden aria-hidden="true">
+      {children}
+    </div>
+  );
 
   if (isLoading) {
-    return <BrandedLoading message="Verifying administrative credentials..." fullScreen />;
+    return (
+      <>
+        {gatedChildren}
+        <BrandedLoading message="Verifying administrative credentials..." fullScreen />
+      </>
+    );
   }
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="mx-auto max-w-xl py-20 px-4 text-center">
+      <>
+        {gatedChildren}
+        <div className="mx-auto max-w-xl py-20 px-4 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive mb-6">
           <ShieldAlert className="h-8 w-8" aria-hidden="true" />
         </div>
@@ -324,7 +342,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           Sign In as Administrator
           <ArrowRight aria-hidden="true" className="h-4 w-4" />
         </Link>
-      </div>
+        </div>
+      </>
     );
   }
 
@@ -335,7 +354,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   if (!authorized || !capabilities.canViewOverview) {
     return (
-      <div className="mx-auto max-w-xl py-20 px-4 text-center">
+      <>
+        {gatedChildren}
+        <div className="mx-auto max-w-xl py-20 px-4 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 mb-6">
           <ShieldAlert className="h-8 w-8" aria-hidden="true" />
         </div>
@@ -360,7 +381,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             Return to Homepage
           </Link>
         </div>
-      </div>
+        </div>
+      </>
     );
   }
 
