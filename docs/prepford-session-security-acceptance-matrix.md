@@ -1,0 +1,74 @@
+# PREPFORD — SESSION SECURITY, DEVICE MANAGEMENT & AUTHENTICATION HARDENING
+## Acceptance Verification Matrix
+
+**Document Reference:** `docs/prepford-session-security-acceptance-matrix.md`  
+**Application / Repository:** PrepFord Monorepo (`apps/api`, `apps/web`)  
+**Baseline Date:** November 4, 2026  
+**Status:** PHASE ZERO BASELINE AUDIT — AWAITING IMPLEMENTATION APPROVAL  
+**Branch:** `feature/dotnet-backend-migration`  
+
+---
+
+## 1. Acceptance Matrix Overview
+
+The following matrix tracks all required capabilities across frontend, backend, database, authorization, and automated testing layers. Every capability must satisfy all columns before final sign-off.
+
+### Status Definitions:
+- **AUDITED (GAP IDENTIFIED):** Audited in Phase 0; gap documented; implementation ready.
+- **AUDITED (PARTIAL):** Primitive exists in codebase but requires extension or integration.
+- **AUDITED (SOUND):** Pre-existing architecture satisfies requirements and will be reused.
+- **IN PROGRESS:** Currently undergoing active implementation.
+- **VERIFIED:** Implemented, integrated, and verified by passing automated tests.
+
+---
+
+## 2. Comprehensive Acceptance Matrix
+
+| # | Capability | Frontend | Backend | Database | Authorization | Tests | Status |
+|---|---|---|---|---|---|---|---|
+| 1 | **Max Concurrent Sessions Limit (Default 2)** | Displays user-friendly session limit error with link to session manager | Atomic transaction check enforcing active count $\le$ policy limit | Indexed `IX_UserSessions_UserId_Revoked_AbsoluteExpiresAt` | Server-authoritative; client cannot override | `ConcurrentSessionLimitTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 2 | **Max Sessions Per Client Limit (Default 1)** | Transmits registered `ClientId` via cookie / header | Detects existing session for same client; replaces/rotates without incrementing count | Indexed `IX_UserSessions_ClientId_Revoked_AbsoluteExpiresAt` | Server-authoritative | `ClientSessionRotationTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 3 | **Third Login Rejection** | Catches `CONCURRENT_SESSION_LIMIT_EXCEEDED`; renders clear explanation | Rejects 3rd login attempt with HTTP 409 / 400 and structured error payload | Inserts `AuditLog` event `ConcurrentSessionLimitExceeded` | Anonymous endpoint enforcing authenticated policy | `ThirdLoginRejectionTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 4 | **Existing Sessions Intact on Rejection** | No impact to active sessions on other browsers | Active sessions remain untouched in PostgreSQL | Session records maintain `Revoked = false` | System integrity | `ExistingSessionPreservationTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 5 | **Server-Enforced Idle Timeout (Default 300 min)** | Intercepts 401 response; displays timeout modal or redirect | Evaluates: `CurrentServerTime >= LastActiveAt + IdleTimeout`; marks expired | Column `IdleExpiresAt` on `UserSession` | Protected endpoints | `IdleTimeoutTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 6 | **Server-Enforced Absolute Timeout (Default 10080 min)** | Expiry cannot be extended by tab refresh or page reload | Evaluates: `CurrentServerTime >= CreatedAt + AbsoluteTimeout`; rejects expired | Column `AbsoluteExpiresAt` on `UserSession` | Protected endpoints | `AbsoluteTimeoutTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 7 | **Qualifying Activity Definition & Throttling** | Learner actions (nav, exams, flashcards) transmit activity | Throttles DB writes to 5-min intervals except for exam answers and flashcard reviews | Updates `LastActiveAt` and `IdleExpiresAt` | Server middleware / handler | `ActivityThrottlingTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 8 | **Background Polling Activity Exclusion** | Automatic analytics / ping requests flag non-qualifying header | Skips extending `IdleExpiresAt` on background polling requests | Read-only; no DB write | Handler filter | `BackgroundPollingTests.ts` | AUDITED (GAP IDENTIFIED) |
+| 9 | **Registered Client Identifier (`prepford_client_id`)** | Stored in secure, httpOnly, 365-day browser cookie | Validates format; binds to `UserSession.ClientId` | Column `ClientId` (max 64) in `UserSessions` | BFF & API | `ClientIdentifierTests.ts` | AUDITED (GAP IDENTIFIED) |
+| 10 | **Client Device & User-Agent Parsing** | Displays friendly device name (e.g. "Chrome 130 on macOS") | Parses User-Agent header into browser, OS, and device type | Columns `UserAgent` and `DeviceLabel` on `UserSession` | Informational | `DeviceDetectionHelperTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 11 | **Privacy-Conscious Fingerprint Check** | Computes client screen / timezone hash (`fingerprint.ts`) | Compares against `FingerprintHash`; logs audit on suspicious mismatch | Column `FingerprintHash` (max 64) on `UserSession` | Risk evaluation | `FingerprintValidationTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 12 | **IP Consistency Disabled by Default** | Seamless network transitions | Allows IP changes without terminating session (`EnforceIpConsistency = false`) | Stores `LastIpAddress` on `UserSession` | Network policy | `IpDriftPolicyTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 13 | **IP Drift Allowed by Default** | Learner transitions from Wi-Fi to cellular data without logout | Records informational audit log on IP drift (`AllowIpDrift = true`) | Updates `LastIpAddress` in `UserSession` | Informational | `IpDriftAcceptanceTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 14 | **Trusted Proxy IP Derivation** | Transmits client IP through Next.js BFF proxy | Configures ASP.NET Core `ForwardedHeadersOptions` for trusted loopback / CIDR | Records derived IP in `AuditLog.IpAddress` | Infrastructure security | `TrustedProxyHeaderTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 15 | **Credential Rotation on Login** | Updates auth cookie with fresh token and backend `sessionId` | Mints new session token; invalidates prior session for same client | Inserts new `UserSession`; revokes prior client session | Prevent session fixation | `LoginRotationTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 16 | **Credential Rotation on Password Change** | Updates auth cookie with newly issued session token | Revokes all prior sessions; creates single fresh session | Sets `Revoked = true` on old sessions; updates `PasswordHash` | Profile controller | `PasswordChangeRotationTests.cs` | AUDITED (SOUND / VERIFIED) |
+| 17 | **Credential Rotation on Password Reset** | Prompts learner to log in with fresh credentials | Revokes all existing user sessions upon password reset completion | Sets `Revoked = true` on all user sessions; logs event | Account recovery | `PasswordResetRevocationTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 18 | **Immediate Privilege Invalidation (Role Change)** | Session context refreshes permissions; rejects stale admin routes | Increments `User.SecurityVersion`; rejects requests where `Session.SecurityVersion != User.SecurityVersion` | Column `SecurityVersion` on `User` and `UserSession` | RBAC guard | `PrivilegeRevocationTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 19 | **Account Deactivation Revocation** | Redirects deactivated user to sign-in with account notice | Checks `User.IsActive`; revokes all active sessions immediately | Sets `IsActive = false` on `User`; `Revoked = true` on sessions | Account lifecycle | `AccountDeactivationTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 20 | **Learner Active Sessions View (`/dashboard/settings/security`)** | Responsive cards showing device, browser, OS, IP, active time | `GET /api/v1/security/sessions` returns active sessions for caller | Queries `UserSessions` where `UserId == caller.Id && !Revoked` | Ownership verified | `ActiveSessionsComponent.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 21 | **Current Session Identification** | Displays prominent green "Current Device / Session" badge | Flags `isCurrent: true` for the session matching caller's token/claim | Compares `UserSession.Id == callerSessionId` | Ownership verified | `CurrentSessionBadge.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 22 | **Learner Terminate Specific Session** | "Terminate" button with confirmation modal and feedback | `DELETE /api/v1/security/sessions/{sessionId}` revokes target session | Sets `Revoked = true`, `RevokedAt = now`, `Reason = "UserRevoked"` | Ownership verified | `TerminateSessionAction.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 23 | **Learner Terminate All Other Sessions** | "Log Out Other Sessions" button with confirmation dialog | `POST /api/v1/security/sessions/revoke-others` revokes all except current | Sets `Revoked = true` on all sessions where `Id != currentId` | Ownership verified | `RevokeOtherSessions.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 24 | **Learner Terminate All Sessions** | "Log Out Everywhere" button; clears local cookies; redirects | `POST /api/v1/security/sessions/revoke-all` revokes all user sessions | Sets `Revoked = true` on all sessions for user | Ownership verified | `RevokeAllSessions.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 25 | **Learner Security Event History** | Displays list of recent logins, password updates, terminations | `GET /api/v1/security/events` returns audit logs for caller | Queries `AuditLogs` where `ActorId == caller.Id` | Ownership verified | `SecurityEventsFeed.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 26 | **Super Admin Session Policy View (`/admin/security/sessions`)** | Form displaying current limits, timeouts, rotation toggles | `GET /api/v1/admin/security/session-policy` returns active policy | Queries `SessionSecurityPolicy` singleton | `RequireSuperAdmin` | `AdminPolicyView.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 27 | **Super Admin Session Policy Update** | Form submission with validation, loading states, and toasts | `PUT /api/v1/admin/security/session-policy` updates policy & version | Updates `SessionSecurityPolicy`; increments `PolicyVersion` | `RequireSuperAdmin` | `AdminPolicyUpdate.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 28 | **Admin Policy Form Validation** | Validates positive integers; ensures `IdleTimeout <= AbsoluteTimeout` | Backend validates input model; rejects invalid ranges with 400 | Constraints on policy model | Validation filters | `PolicyValidationTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 29 | **Admin Policy Reset to Defaults** | "Reset to Defaults" button restores approved platform defaults | Re-applies canonical defaults (2 sessions, 300m idle, etc.) | Updates `SessionSecurityPolicy` record | `RequireSuperAdmin` | `PolicyResetTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 30 | **Admin Active Sessions Monitoring** | Paginated table with user search, status filters, and device tags | `GET /api/v1/admin/security/sessions` returns paginated sessions | Queries `UserSessions` with joins on `Users` | `RequireAdmin` | `AdminSessionMonitor.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 31 | **Admin Administrative Revocation** | "Revoke" button with required administrative reason input | `POST /api/v1/admin/security/sessions/{id}/revoke` revokes session | Sets `Revoked = true`, `Reason = "AdminRevoked"` | `RequireAdmin` | `AdminRevocationTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 32 | **Admin Audit Logging Without Secrets** | Redacts tokens, passwords, and secrets from all logs | Inserts sanitized description and outcome into `AuditLogs` | `AuditLogs` entity | System logging | `AuditLogSanitizationTests.cs` | AUDITED (SOUND) |
+| 33 | **Examination Answer Preservation on Expiry** | Answers already persisted in DB remain intact upon auth timeout | `AttemptResponses` committed in PostgreSQL are never purged | `AttemptResponses` table | Candidate attempt ownership | `AttemptResponsePreservationTests.cs` | AUDITED (SOUND / VERIFIED) |
+| 34 | **Examination Timer Preservation on Expiry** | Timer countdown does not reset or jump forward on reauth | `ExamAttempt.StartedAt` remains unchanged; deadline enforced | `ExamAttempts.StartedAt` immutable | Timer calculation | `ExamTimerPreservationTests.cs` | AUDITED (SOUND / VERIFIED) |
+| 35 | **In-Exam Inline Reauthentication Modal** | Modal prompt enters password; avoids page reload or loss of focus | Authenticates credentials; issues new session; retries answer | `UserSessions` created | Candidate auth | `InExamReauthModal.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 36 | **Adaptive CAT Continuity** | Reauthentication does not alter question sequence or item pool | CAT state engine resumes from exact question index | `ExamAttemptQuestions` authority | Assessment engine | `CatContinuityTests.cs` | AUDITED (SOUND / VERIFIED) |
+| 37 | **Cross-User Session Isolation** | Candidate cannot see or revoke another candidate's sessions | Ownership checks enforce: `session.UserId == caller.Id` | EF Core query filter | Authorization checks | `CrossUserSessionIsolationTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 38 | **Non-Destructive Database Migration** | Schema updates run via standard EF Core migration pipeline | `0009_AddSessionSecurityAndDeviceManagement` with safe defaults | Adds columns & tables to `public` schema | Database admin | `MigrationIntegrityTests.cs` | AUDITED (GAP IDENTIFIED) |
+
+---
+
+## 3. Phase Zero Exit Sign-Off
+
+All 38 capabilities and criteria have been formally analyzed, specified, and mapped.
+
+Application code has not been altered. We await explicit approval to proceed to Phase 1.
