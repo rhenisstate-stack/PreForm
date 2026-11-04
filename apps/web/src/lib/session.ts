@@ -30,6 +30,8 @@ export interface StoredSession {
   expiresAt: string;
   lastActiveAt: string;
   revoked: boolean;
+  clientId?: string;
+  securityVersion?: number;
 }
 
 export interface VerifiedSession {
@@ -48,6 +50,8 @@ export interface VerifiedSession {
   studyReminders?: boolean;
   csrfToken: string;
   expiresAt: string;
+  clientId?: string;
+  securityVersion?: number;
 }
 
 export const SESSION_COOKIE_NAME = "prepford_session";
@@ -194,12 +198,15 @@ export function createServerSession(options: {
   role?: string;
   displayName?: string;
   rememberMe?: boolean;
+  sessionId?: string;
+  clientId?: string;
+  securityVersion?: number;
 }): {
   token: string;
   session: StoredSession;
   maxAgeSeconds: number;
 } {
-  const sessionId = `sess_${Date.now()}_${crypto.randomBytes(16).toString("hex")}`;
+  const sessionId = options.sessionId?.trim() || `sess_${Date.now()}_${crypto.randomBytes(16).toString("hex")}`;
   const csrfToken = crypto.randomBytes(16).toString("hex");
 
   const now = new Date();
@@ -222,17 +229,22 @@ export function createServerSession(options: {
     expiresAt: expiresDate.toISOString(),
     lastActiveAt: now.toISOString(),
     revoked: false,
+    clientId: options.clientId,
+    securityVersion: options.securityVersion,
   };
 
   memorySessions.set(sessionId, sessionRecord);
 
-  const payload = {
+  const payload: Record<string, unknown> = {
     sid: sessionId,
+    sessionId: sessionId,
     sub: options.userId,
     email: options.email.toLowerCase().trim(),
     role,
     displayName,
     csrfToken,
+    clientId: options.clientId,
+    securityVersion: options.securityVersion,
     iat: Math.floor(now.getTime() / 1000),
     exp: Math.floor(expiresDate.getTime() / 1000),
     expiresAt: expiresDate.toISOString(),
@@ -439,6 +451,8 @@ export async function resolveSession(request?: Request): Promise<VerifiedSession
     studyReminders: dbMeta?.studyReminders ?? true,
     csrfToken: typeof rawPayload.csrfToken === "string" ? rawPayload.csrfToken : "legacy_token",
     expiresAt: typeof rawPayload.expiresAt === "string" ? rawPayload.expiresAt : new Date(Date.now() + 86400 * 7 * 1000).toISOString(),
+    clientId: typeof rawPayload.clientId === "string" ? rawPayload.clientId : undefined,
+    securityVersion: typeof rawPayload.securityVersion === "number" ? rawPayload.securityVersion : undefined,
   };
 }
 

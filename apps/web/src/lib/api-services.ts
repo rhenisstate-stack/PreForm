@@ -20,6 +20,8 @@ export interface BackendUserSummary {
 export interface BackendAuthResponse {
   success: boolean;
   token?: string;
+  sessionId?: string;
+  errorCode?: string;
   user?: BackendUserSummary;
   error?: string;
   message?: string;
@@ -160,6 +162,7 @@ export const authService = {
     email: string;
     password?: string;
     pathway?: string;
+    clientId?: string;
   }): Promise<ApiResponse<BackendAuthResponse>> => {
     return apiClient.post<BackendAuthResponse>("/api/v1/auth/register", {
       email: input.email,
@@ -173,11 +176,15 @@ export const authService = {
     email: string;
     password?: string;
     rememberMe?: boolean;
+    clientId?: string;
+    fingerprintHash?: string;
   }): Promise<ApiResponse<BackendAuthResponse>> => {
     return apiClient.post<BackendAuthResponse>("/api/v1/auth/login", {
       email: input.email,
       password: input.password || "TempP@ssword123!",
       rememberMe: Boolean(input.rememberMe),
+      clientId: input.clientId,
+      fingerprintHash: input.fingerprintHash,
     });
   },
 
@@ -245,8 +252,8 @@ export const profileService = {
   changePassword: async (
     session: VerifiedSession,
     input: { currentPassword: string; newPassword: string }
-  ): Promise<ApiResponse<{ success: boolean; message: string }>> => {
-    return apiClient.post<{ success: boolean; message: string }>(
+  ): Promise<ApiResponse<{ success: boolean; message: string; sessionId?: string; token?: string }>> => {
+    return apiClient.post<{ success: boolean; message: string; sessionId?: string; token?: string }>(
       "/api/v1/profile/change-password",
       input,
       { session }

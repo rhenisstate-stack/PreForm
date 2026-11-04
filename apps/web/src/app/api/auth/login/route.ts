@@ -5,6 +5,7 @@ import { authService } from "@/lib/api-services";
 import { createServerSession, setSessionCookie } from "@/lib/session";
 import { resolveBrowserPictureUrl } from "@/lib/profile-picture";
 import { mapAuthHttpStatusToMessage } from "@/lib/error-mapping";
+import { ensureClientId } from "@/lib/client-id";
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,16 +24,20 @@ export async function POST(request: NextRequest) {
     }
 
     const { email, password, rememberMe } = result.data;
+    const cookieStore = await cookies();
+    const { clientId } = ensureClientId(cookieStore, request);
 
-    // Dispatch login request to authoritative ASP.NET Core API
+    // Dispatch login request to authoritative ASP.NET Core API with client ID
     const apiRes = await authService.login({
       email,
       password,
       rememberMe,
+      clientId,
     });
 
     if (!apiRes.success || !apiRes.data?.success) {
       const status = apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 401;
+      const errorCode = apiRes.data?.errorCode;
       const userFacingError = mapAuthHttpStatusToMessage(
         status,
         apiRes.data?.error || apiRes.error
@@ -42,12 +47,14 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: userFacingError,
+          errorCode,
         },
         { status }
       );
     }
 
     const backendUser = apiRes.data.user;
+    const backendSessionId = apiRes.data.sessionId;
     const rawName = email.split("@")[0].replace(/[._-]/g, " ");
     const defaultDisplayName = rawName
       .split(" ")
@@ -64,9 +71,10 @@ export async function POST(request: NextRequest) {
       role,
       displayName,
       rememberMe,
+      sessionId: backendSessionId,
+      clientId,
     });
 
-    const cookieStore = await cookies();
     setSessionCookie(cookieStore, serverSession.token, serverSession.maxAgeSeconds);
 
     // Profile picture reference is restored immediately from authoritative

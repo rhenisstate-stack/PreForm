@@ -5,6 +5,7 @@ import { authService } from "@/lib/api-services";
 import { createServerSession, setSessionCookie } from "@/lib/session";
 import { resolveBrowserPictureUrl } from "@/lib/profile-picture";
 import { mapAuthHttpStatusToMessage } from "@/lib/error-mapping";
+import { ensureClientId } from "@/lib/client-id";
 
 export async function POST(request: NextRequest) {
   try {
@@ -23,6 +24,8 @@ export async function POST(request: NextRequest) {
     }
 
     const { fullName, email, pathway, password } = result.data;
+    const cookieStore = await cookies();
+    const { clientId } = ensureClientId(cookieStore, request);
 
     // Dispatch registration to authoritative ASP.NET Core API
     const apiRes = await authService.register({
@@ -30,6 +33,7 @@ export async function POST(request: NextRequest) {
       email,
       password,
       pathway,
+      clientId,
     });
 
     if (!apiRes.success || !apiRes.data?.success) {
@@ -49,17 +53,19 @@ export async function POST(request: NextRequest) {
     }
 
     const backendUser = apiRes.data.user;
+    const backendSessionId = apiRes.data.sessionId;
     const userId = backendUser?.id || `cand_${Date.now()}`;
 
-    // Establish cryptographically signed session cookie
+    // Establish cryptographically signed session cookie with authoritative backend session ID
     const serverSession = createServerSession({
       userId,
       email,
       role: backendUser?.role || "candidate",
       displayName: backendUser?.displayName || fullName,
+      sessionId: backendSessionId,
+      clientId,
     });
 
-    const cookieStore = await cookies();
     setSessionCookie(cookieStore, serverSession.token, serverSession.maxAgeSeconds);
 
     // Newly registered learners have no profile picture yet; map anyway for

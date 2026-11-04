@@ -252,8 +252,18 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
                     {
                         return AuthenticateResult.Fail($"Authoritative session rejected: {validation.FailureReason}");
                     }
-                    // Until Phase 3 BFF session-id synchronization is complete,
-                    // in-memory client session IDs unknown to the datastore are permitted under valid HMAC signature.
+
+                    // In production, an authoritative session record MUST exist in the datastore
+                    if (!_hostEnvironment.IsDevelopment() && !_hostEnvironment.IsEnvironment("Testing"))
+                    {
+                        return AuthenticateResult.Fail("Authoritative session record not found in datastore.");
+                    }
+
+                    // In development/testing, offline test mock sessions (e.g. test_sess_*, compat_*) are permitted
+                    if (!sessionId.StartsWith("test_sess_") && !sessionId.StartsWith("compat_"))
+                    {
+                        return AuthenticateResult.Fail("Authoritative session record not found in datastore.");
+                    }
                 }
             }
 

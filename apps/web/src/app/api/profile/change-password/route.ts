@@ -59,7 +59,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // Invalidate local sessions and issue fresh session
+    // Invalidate local sessions and issue fresh session with backend session ID
     revokeAllUserSessions(session.userId);
 
     const freshSession = createServerSession({
@@ -67,6 +67,8 @@ export async function POST(request: Request) {
       email: session.email,
       role: session.role,
       displayName: session.displayName,
+      sessionId: apiRes.data?.sessionId,
+      clientId: session.clientId,
     });
 
     const cookieStore = await cookies();

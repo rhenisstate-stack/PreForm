@@ -138,6 +138,9 @@ export function createGatewayAuthHeaders(
   if (session.sessionId) {
     headers["X-Session-Id"] = session.sessionId;
   }
+  if (session.clientId) {
+    headers["X-Client-Id"] = session.clientId;
+  }
 
   const secret = getGatewaySecret();
 

@@ -1,8 +1,9 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { authService } from "@/lib/api-services";
 import type { BackendUserSummary } from "@/lib/api-services";
 import { resolveBrowserPictureUrl } from "@/lib/profile-picture";
-import { resolveSession } from "@/lib/session";
+import { resolveSession, clearSessionCookie } from "@/lib/session";
 
 /**
  * Maps a backend user summary to the browser-facing authenticated user object.
@@ -51,7 +52,13 @@ export async function GET(request?: Request) {
     }
 
     if (apiRes.status === 401) {
-      // Backend rejected session as revoked or invalid
+      // Backend rejected session as revoked, expired, or invalid
+      try {
+        const cookieStore = await cookies();
+        clearSessionCookie(cookieStore);
+      } catch {
+        // Outside server action / route handler context
+      }
       return NextResponse.json({ authenticated: false, user: null });
     }
 

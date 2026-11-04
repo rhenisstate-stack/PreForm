@@ -446,4 +446,69 @@ public class SessionSecurityEngineTests
             Assert.DoesNotContain("password", log.Description.ToLowerInvariant());
         }
     }
+
+    [Fact]
+    public async Task ValidateSession_BySessionId_AcceptsValidSession()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        var res = await service.CreateOrRotateSessionAsync(user, "candidate", "client_1", "10.0.0.1", "Browser", null, false);
+        Assert.True(res.Success);
+
+        // Validation by SessionId (Gateway HMAC pathway)
+        var val = await service.ValidateSessionAsync(res.Session!.Id, isToken: false);
+        Assert.True(val.IsValid);
+        Assert.NotNull(val.Session);
+        Assert.Equal(res.Session.Id, val.Session.Id);
+    }
+
+    [Fact]
+    public async Task ValidateSession_BySessionId_RejectsRevokedSession()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        var res = await service.CreateOrRotateSessionAsync(user, "candidate", "client_1", "10.0.0.1", "Browser", null, false);
+        await service.RevokeSessionAsync(res.Session!.Id, "UserRevocation", user.Id);
+
+        var val = await service.ValidateSessionAsync(res.Session.Id, isToken: false);
+        Assert.False(val.IsValid);
+        Assert.Equal("SESSION_REVOKED", val.FailureCode);
+    }
+
+    [Fact]
+    public async Task ValidateSession_BySessionId_RejectsNonExistentSession()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        var val = await service.ValidateSessionAsync("sess_unknown_id", isToken: false);
+        Assert.False(val.IsValid);
+        Assert.Equal("SESSION_NOT_FOUND", val.FailureCode);
+    }
+
+    [Fact]
+    public async Task ValidateSession_BySessionId_RejectsSecurityVersionMismatch()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        var res = await service.CreateOrRotateSessionAsync(user, "candidate", "client_1", "10.0.0.1", "Browser", null, false);
+
+        // Invalidate security version
+        await service.InvalidateUserSecurityVersionAsync(user.Id, "RoleChanged");
+
+        var val = await service.ValidateSessionAsync(res.Session!.Id, isToken: false);
+        Assert.False(val.IsValid);
+        Assert.Equal("SECURITY_VERSION_CHANGED", val.FailureCode);
+    }
 }
