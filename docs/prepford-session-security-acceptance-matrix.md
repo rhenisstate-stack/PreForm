@@ -4,7 +4,7 @@
 **Document Reference:** `docs/prepford-session-security-acceptance-matrix.md`  
 **Application / Repository:** PrepFord Monorepo (`apps/api`, `apps/web`)  
 **Baseline Date:** November 4, 2026  
-**Status:** PHASE 2 COMPLETE — VERIFIED BACKEND ENGINE & ATOMIC CONCURRENCY  
+**Status:** PHASE 3 COMPLETE — VERIFIED BFF INTEGRATION, SESSION ID SYNCHRONIZATION & CLIENT IDENTIFICATION  
 **Branch:** `feature/dotnet-backend-migration`  
 
 ---
@@ -19,6 +19,7 @@ The following matrix tracks all required capabilities across frontend, backend, 
 - **AUDITED (SOUND / VERIFIED):** Pre-existing architecture satisfies requirements and verified.
 - **VERIFIED (PHASE 1):** Verified during Phase 1 (Database Migration & Policy Foundation).
 - **VERIFIED (PHASE 2):** Verified during Phase 2 (Backend Engine & Atomic Concurrency).
+- **VERIFIED (PHASE 3):** Verified during Phase 3 (BFF Integration, Session ID Synchronization & Client Device Identification).
 - **IN PROGRESS:** Currently undergoing active implementation.
 - **VERIFIED:** Implemented, integrated, and verified by passing automated tests across all layers.
 
@@ -36,12 +37,12 @@ The following matrix tracks all required capabilities across frontend, backend, 
 | 6 | **Server-Enforced Absolute Timeout (Default 10080 min)** | Expiry cannot be extended by tab refresh or page reload | Evaluates: `CurrentServerTime >= CreatedAt + AbsoluteTimeout`; rejects expired | Column `AbsoluteExpiresAt` on `UserSession` | Protected endpoints | `SessionSecurityEngineTests.cs` | VERIFIED (PHASE 2) |
 | 7 | **Qualifying Activity Definition & Throttling** | Learner actions transmit activity | Throttles DB writes to 5-min intervals; extends idle timeout up to absolute limit | Updates `LastActiveAt` and `IdleExpiresAt` | Server middleware / handler | `SessionSecurityEngineTests.cs` | VERIFIED (PHASE 2) |
 | 8 | **Background Polling Activity Exclusion** | Automatic analytics / ping requests flag non-qualifying header | Skips extending `IdleExpiresAt` on background polling requests (`isQualifyingActivity: false`) | Read-only; no DB write | Handler filter | `SessionSecurityEngineTests.cs` | VERIFIED (PHASE 2) |
-| 9 | **Registered Client Identifier (`prepford_client_id`)** | Stored in secure, httpOnly, 365-day browser cookie | Validates format; binds to `UserSession.ClientId` | Column `ClientId` (max 64) in `UserSessions` | BFF & API | `ClientIdentifierTests.ts` | AUDITED (GAP IDENTIFIED) |
+| 9 | **Registered Client Identifier (`prepford_client_id`)** | Stored in secure, httpOnly, 365-day browser cookie; validated against `^cid_[0-9a-f]{32}$` | Validates format; binds to `UserSession.ClientId` | Column `ClientId` (max 64) in `UserSessions` | BFF & API | `bff-session-synchronization.test.ts` | VERIFIED (PHASE 3) |
 | 10 | **Client Device & User-Agent Parsing** | Displays friendly device name (e.g. "Chrome on Windows") | `DeviceDetectionHelper` parses User-Agent header into browser, OS, and device type | Columns `UserAgent` and `DeviceLabel` on `UserSession` | Informational | `SessionSecurityEngineTests.cs` | VERIFIED (PHASE 2) |
 | 11 | **Privacy-Conscious Fingerprint Check** | Computes client screen / timezone hash (`fingerprint.ts`) | Compares against `FingerprintHash`; logs audit on suspicious mismatch | Column `FingerprintHash` (max 64) on `UserSession` | Risk evaluation | `FingerprintValidationTests.cs` | AUDITED (GAP IDENTIFIED) |
 | 12 | **IP Consistency Disabled by Default** | Seamless network transitions | Allows IP changes without terminating session (`EnforceIpConsistency = false`) | Stores `LastIpAddress` on `UserSession` | Network policy | `IpDriftPolicyTests.cs` | AUDITED (GAP IDENTIFIED) |
 | 13 | **IP Drift Allowed by Default** | Learner transitions from Wi-Fi to cellular data without logout | Records informational audit log on IP drift (`AllowIpDrift = true`) | Updates `LastIpAddress` in `UserSession` | Informational | `IpDriftAcceptanceTests.cs` | AUDITED (GAP IDENTIFIED) |
-| 14 | **Trusted Proxy IP Derivation** | Transmits client IP through Next.js BFF proxy | Configures ASP.NET Core `ForwardedHeadersOptions` / `X-Forwarded-For` header inspection | Records derived IP in `AuditLog.IpAddress` | Infrastructure security | `TrustedProxyHeaderTests.cs` | AUDITED (GAP IDENTIFIED) |
+| 14 | **Trusted Proxy IP Derivation & Gateway Verification** | Transmits client IP & HMAC headers (`X-Session-Id`, `X-Client-Id`) through Next.js BFF proxy | Validates `X-Session-Id` against PostgreSQL database via `PrepfordAuthHandler` Pathway B | Records derived IP and verifies session state | Infrastructure security | `SessionSecurityEngineTests.cs`, `bff-session-synchronization.test.ts` | VERIFIED (PHASE 3) |
 | 15 | **Credential Rotation on Login** | Updates auth cookie with fresh token and backend `sessionId` | Mints new session token; invalidates prior session for same client | Inserts new `UserSession`; revokes prior client session | Prevent session fixation | `SessionSecurityEngineTests.cs` | VERIFIED (PHASE 2) |
 | 16 | **Credential Rotation on Password Change** | Updates auth cookie with newly issued session token | Revokes all prior sessions; creates single fresh session | Sets `Revoked = true` on old sessions; updates `PasswordHash` | Profile controller | `PasswordChangeRotationTests.cs` | AUDITED (SOUND / VERIFIED) |
 | 17 | **Credential Rotation on Password Reset** | Prompts learner to log in with fresh credentials | Revokes all existing user sessions upon password reset completion | Sets `Revoked = true` on all user sessions; logs event | Account recovery | `PasswordResetRevocationTests.cs` | AUDITED (GAP IDENTIFIED) |
@@ -72,3 +73,15 @@ The following matrix tracks all required capabilities across frontend, backend, 
 ## 3. Phase 2 Verification Sign-Off
 
 All Phase 2 core backend session security engine capabilities, atomic concurrency guarantees, timeout boundaries, activity throttling, security-version checks, and regression tests have been implemented and verified with passing automated tests.
+
+---
+
+## 4. Phase 3 Verification Sign-Off
+
+All Phase 3 BFF integration, session ID synchronization, client identification, gateway HMAC header forwarding, and end-to-end authentication route lifecycle capabilities have been implemented and verified with passing automated tests across both backend xUnit and frontend Vitest suites:
+- **Backend Session ID Synchronization:** Authoritative backend PostgreSQL `UserSession.Id` is consumed by the BFF and signed into the `prepford_session` cookie's `sid` claim.
+- **Client Identification:** Canonical `prepford_client_id` cookie (`cid_[0-9a-f]{32}`) issued with 1-year lifespan, strictly validated, and bound to backend session records.
+- **Gateway Forwarding & Validation:** Canonical HMAC gateway headers (`X-Session-Id`, `X-Client-Id`) forwarded by BFF and strictly validated against live PostgreSQL session records in `PrepfordAuthHandler` (Pathway B).
+- **Concurrency & Rotation:** Same-client rotation preserves single-session-per-client semantics; 3rd concurrent session rejections propagate structured HTTP 409 responses to learners.
+- **Revocation & Logout:** Logout revokes session records in PostgreSQL and clears cookies; 401 unauthenticated API responses immediately clear expired cookies.
+- **Preservation & Continuity:** Assessment answers and CAT exam continuity verified untouched across authentication boundaries.
