@@ -590,6 +590,29 @@ export interface CreateRevisionInput {
   examType?: number;
   timeLimitMinutes?: number;
   passingScorePercent?: number;
+  sourceRevisionId?: string;
+  copyQuestions?: boolean;
+}
+
+export interface DuplicateExaminationInput {
+  title?: string;
+  sourceRevisionId?: string;
+  description?: string;
+  timeLimitMinutes?: number;
+  passingScorePercent?: number;
+}
+
+export interface BackendDuplicateExaminationResponseDto {
+  success: boolean;
+  examinationId: string;
+  examinationCode: string;
+  examinationTitle: string;
+  pathway: string;
+  revisionId: string;
+  revisionNumber: number;
+  lifecycleState: string;
+  questionCount: number;
+  examination: BackendExaminationDto;
 }
 
 export interface UpdateRevisionMetadataInput {
@@ -714,6 +737,18 @@ export const examinationsService = {
   ): Promise<ApiResponse<{ success: boolean; revision: BackendExamRevisionDto }>> => {
     return apiClient.get<{ success: boolean; revision: BackendExamRevisionDto }>(
       `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}`,
+      { session }
+    );
+  },
+
+  duplicateExamination: async (
+    examinationId: string,
+    input: DuplicateExaminationInput,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<BackendDuplicateExaminationResponseDto>> => {
+    return apiClient.post<BackendDuplicateExaminationResponseDto>(
+      `/api/v1/examinations/${encodeURIComponent(examinationId)}/duplicate`,
+      input,
       { session }
     );
   },

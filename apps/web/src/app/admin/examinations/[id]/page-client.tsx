@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   Plus,
@@ -13,6 +14,8 @@ import {
   History,
   ArrowRight,
   ShieldAlert,
+  Copy,
+  GitBranch,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { BrandedLoading } from "@/components/layout/branded-loading";
@@ -53,6 +56,7 @@ function getStatusBadge(state?: string) {
 }
 
 export function AdminExaminationFamilyClient({ id }: { id: string }) {
+  const router = useRouter();
   const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const capabilities = getAdminCapabilities(user?.role);
@@ -60,11 +64,19 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
   const [isEditFamilyOpen, setIsEditFamilyOpen] = React.useState(false);
   const [familyTitle, setFamilyTitle] = React.useState("");
 
+  // Create New Revision states
   const [isCreateRevisionOpen, setIsCreateRevisionOpen] = React.useState(false);
   const [newRevTitle, setNewRevTitle] = React.useState("");
   const [newRevDescription, setNewRevDescription] = React.useState("");
   const [newRevTimeLimit, setNewRevTimeLimit] = React.useState(60);
   const [newRevPassingScore, setNewRevPassingScore] = React.useState(75.0);
+  const [sourceRevisionId, setSourceRevisionId] = React.useState<string>("");
+  const [copyQuestions, setCopyQuestions] = React.useState(true);
+
+  // Duplicate Examination states
+  const [isDuplicateOpen, setIsDuplicateOpen] = React.useState(false);
+  const [duplicateTitle, setDuplicateTitle] = React.useState("");
+  const [duplicateSourceRevId, setDuplicateSourceRevId] = React.useState<string>("");
 
   const {
     data: examination,
@@ -83,12 +95,61 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
     enabled: isAuthenticated && capabilities.canViewExaminations,
   });
 
+  const eligibleRevisions = React.useMemo(() => {
+    return examination?.revisions?.filter((r) => {
+      const state = r.lifecycleState.toLowerCase();
+      return state === "published" || state === "approved" || state === "archived";
+    }) || [];
+  }, [examination?.revisions]);
+
   React.useEffect(() => {
     if (examination) {
       setFamilyTitle(examination.title);
-      setNewRevTitle(`${examination.title} (Draft)`);
+      setNewRevTitle(`${examination.title} (Rev ${(examination.revisions?.length || 0) + 1})`);
+      setDuplicateTitle(`${examination.title} (Copy)`);
+
+      const defaultSource =
+        examination.revisions?.find((r) => r.lifecycleState.toLowerCase() === "published") ||
+        eligibleRevisions[0];
+      if (defaultSource) {
+        setSourceRevisionId(defaultSource.id);
+        setDuplicateSourceRevId(defaultSource.id);
+      }
     }
-  }, [examination]);
+  }, [examination, eligibleRevisions]);
+
+  const handleSourceRevisionChange = (selectedId: string) => {
+    setSourceRevisionId(selectedId);
+    if (!selectedId) return;
+
+    const source = eligibleRevisions.find((r) => r.id === selectedId);
+    if (source) {
+      setNewRevTitle(`${examination?.title || source.title} (Rev ${(examination?.revisions?.length || 0) + 1})`);
+      setNewRevDescription(source.description || "");
+      setNewRevTimeLimit(source.timeLimitMinutes || 60);
+      setNewRevPassingScore(source.passingScorePercent || 75.0);
+    }
+  };
+
+  const handleOpenCreateRevision = (presetSourceId?: string) => {
+    if (presetSourceId) {
+      handleSourceRevisionChange(presetSourceId);
+    }
+    setIsCreateRevisionOpen(true);
+  };
+
+  const handleOpenDuplicate = (presetSourceId?: string) => {
+    if (presetSourceId) {
+      setDuplicateSourceRevId(presetSourceId);
+    } else {
+      const defaultSource =
+        examination?.revisions?.find((r) => r.lifecycleState.toLowerCase() === "published") ||
+        eligibleRevisions[0];
+      if (defaultSource) setDuplicateSourceRevId(defaultSource.id);
+    }
+    setDuplicateTitle(`${examination?.title || "Examination"} (Copy)`);
+    setIsDuplicateOpen(true);
+  };
 
   const updateFamilyMutation = useMutation({
     mutationFn: async () => {
@@ -119,11 +180,13 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: newRevTitle,
-          description: newRevDescription,
+          title: newRevTitle.trim(),
+          description: newRevDescription.trim(),
           examType: 0,
           timeLimitMinutes: newRevTimeLimit,
           passingScorePercent: newRevPassingScore,
+          sourceRevisionId: sourceRevisionId || undefined,
+          copyQuestions: Boolean(sourceRevisionId && copyQuestions),
         }),
       });
       if (!res.ok) {
@@ -132,10 +195,41 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
       }
       return res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       notify.success("New draft revision created.");
       setIsCreateRevisionOpen(false);
       queryClient.invalidateQueries({ queryKey: ["admin-examination-family", id] });
+      if (data?.revision?.id) {
+        router.push(`/admin/examinations/${encodeURIComponent(id)}/revisions/${encodeURIComponent(data.revision.id)}`);
+      }
+    },
+    onError: (err: any) => {
+      notify.error(sanitizeErrorMessage(err.message));
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/admin/examinations/${encodeURIComponent(id)}/duplicate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: duplicateTitle.trim(),
+          sourceRevisionId: duplicateSourceRevId || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Failed to duplicate examination");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      notify.success(`Examination duplicated as ${data.examinationCode}.`);
+      setIsDuplicateOpen(false);
+      if (data?.examinationId) {
+        router.push(`/admin/examinations/${encodeURIComponent(data.examinationId)}`);
+      }
     },
     onError: (err: any) => {
       notify.error(sanitizeErrorMessage(err.message));

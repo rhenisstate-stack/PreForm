@@ -978,6 +978,16 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
 
         var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
 
+        // Seed admin user for AuditLog foreign key
+        var adminUser = new User
+        {
+            Id = "adm_pg_dup",
+            Email = $"adm_dup_{suffix}@prepford.test",
+            DisplayName = "Admin Dup",
+            PasswordHash = "hash"
+        };
+        context.Users.Add(adminUser);
+
         // 1. Seed Questions
         var q1 = new Question { Id = $"q_dup_{suffix}_1", Stem = "Dup Q1", Pathway = "rn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
         var q2 = new Question { Id = $"q_dup_{suffix}_2", Stem = "Dup Q2", Pathway = "rn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
@@ -1112,6 +1122,16 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         }, "TestAuth"));
 
         var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+
+        // Seed admin user for AuditLog foreign key
+        var adminUser = new User
+        {
+            Id = "adm_pg_rev",
+            Email = $"adm_rev_{suffix}@prepford.test",
+            DisplayName = "Admin Rev",
+            PasswordHash = "hash"
+        };
+        context.Users.Add(adminUser);
 
         var q1 = new Question { Id = $"q_nrev_{suffix}_1", Stem = "Rev Q1", Pathway = "pn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
         var q2 = new Question { Id = $"q_nrev_{suffix}_2", Stem = "Rev Q2", Pathway = "pn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };

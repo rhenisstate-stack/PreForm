@@ -37,7 +37,7 @@ export async function POST(
   try {
     const { id } = await props.params;
     const body = await request.json();
-    const { title, description, examType, timeLimitMinutes, passingScorePercent } = body;
+    const { title, description, examType, timeLimitMinutes, passingScorePercent, sourceRevisionId, copyQuestions } = body;
 
     if (!title || typeof title !== "string" || title.trim().length === 0) {
       return NextResponse.json({ success: false, error: "Title is required" }, { status: 400 });
@@ -51,6 +51,8 @@ export async function POST(
         examType: Number(examType) || 0,
         timeLimitMinutes: Number(timeLimitMinutes) || 0,
         passingScorePercent: Number(passingScorePercent) || 75.0,
+        sourceRevisionId: typeof sourceRevisionId === "string" && sourceRevisionId.trim().length > 0 ? sourceRevisionId.trim() : undefined,
+        copyQuestions: typeof copyQuestions === "boolean" ? copyQuestions : true,
       },
       auth.session
     );
