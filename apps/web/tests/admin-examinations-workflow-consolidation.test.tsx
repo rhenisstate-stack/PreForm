@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AdminExaminationsClient } from "@/app/admin/examinations/page-client";
@@ -23,9 +23,9 @@ vi.mock("next/navigation", () => ({
 
 let mockUser: { id: string; role: string; displayName?: string; email?: string } | null = {
   id: "mgr_123",
-  role: "exam_manager",
-  displayName: "Exam Manager",
-  email: "mgr@prepford.com",
+  role: "admin",
+  displayName: "Admin User",
+  email: "admin@prepford.com",
 };
 
 vi.mock("@/lib/auth-context", () => ({
@@ -195,7 +195,7 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
     vi.restoreAllMocks();
     mockSearchParams = new URLSearchParams();
 
-    global.fetch = vi.fn().mockImplementation((url: string, init?: any) => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
       const urlStr = url.toString();
       if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2/questions")) {
         return Promise.resolve({
@@ -234,17 +234,19 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
             Promise.resolve({
               questions: [
                 {
-                  id: "eq_elig_1",
                   questionId: "q_elig_1",
-                  questionText: "A client presents with acute chest pain...",
-                  format: "multiple_choice",
+                  questionTypeKey: "multiple_choice",
+                  stem: "A client presents with acute chest pain...",
+                  status: "Approved",
+                  difficulty: "Medium",
                   pathway: "rn",
                 },
                 {
-                  id: "eq_elig_2",
                   questionId: "q_elig_2",
-                  questionText: "Select all nursing interventions for COPD...",
-                  format: "multiple_response",
+                  questionTypeKey: "multiple_response",
+                  stem: "Select all nursing interventions for COPD...",
+                  status: "Approved",
+                  difficulty: "Hard",
                   pathway: "rn",
                 },
               ],
@@ -276,7 +278,8 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
 
     await waitFor(() => {
       expect(screen.getByText("RN-EX-000001")).toBeInTheDocument();
-      expect(screen.getByText("RN Rev 2 Active Draft")).toBeInTheDocument();
+      expect(screen.getByText("NCLEX-RN Comprehensive Practice Examination")).toBeInTheDocument();
+      expect(screen.getByText("Rev 2")).toBeInTheDocument();
     });
 
     // Check for Author Draft quick action button
@@ -315,8 +318,9 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
     });
 
     // Check Revision Switcher dropdown exists
-    const switcherSelect = screen.getByDisplayValue("Revision 2 (Draft)");
+    const switcherSelect = screen.getByLabelText("Switch examination revision");
     expect(switcherSelect).toBeInTheDocument();
+    expect(switcherSelect).toHaveValue("rev_rn_2");
 
     // Verify Title input is populated with "RN Rev 2 Active Draft"
     const titleInput = screen.getByLabelText(/Revision Title/i);
@@ -353,8 +357,8 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
     );
 
     // Verify title and search input
-    expect(screen.getByText("Add Questions to Revision")).toBeInTheDocument();
-    const searchInput = screen.getByPlaceholderText(/Search questions by text/i);
+    expect(screen.getByText("Question Bank Selector")).toBeInTheDocument();
+    const searchInput = screen.getByPlaceholderText(/Search by question stem, topic or format/i);
     expect(searchInput).toBeInTheDocument();
 
     // Wait for eligible questions to load
@@ -364,7 +368,7 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
     });
 
     // Format chips are rendered
-    const multiChoiceChip = screen.getByRole("button", { name: "multiple choice" });
+    const multiChoiceChip = screen.getByRole("button", { name: "multiple_choice" });
     expect(multiChoiceChip).toBeInTheDocument();
 
     // Filter by multiple choice format
@@ -375,6 +379,6 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
     expect(screen.queryByText(/Select all nursing interventions for COPD/i)).not.toBeInTheDocument();
 
     // Match counter check
-    expect(screen.getByText(/Showing 1 item\(s\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Showing 1 item/i)).toBeInTheDocument();
   });
 });
