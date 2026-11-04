@@ -443,18 +443,52 @@ export function AdminRevisionStudioClient({
   return (
     <div className="space-y-6 p-6 max-w-7xl mx-auto">
       {/* Top Breadcrumb & Family Link */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Link
-          href={`/admin/examinations/${familyId}`}
+          href={`/admin/examinations/${encodeURIComponent(familyId)}`}
           className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Lineage Studio ({revision.examinationCode || familyId.slice(0, 8)})
         </Link>
-        <span className="font-mono text-xs text-slate-400">
-          Token: #{revision.concurrencyToken}
-        </span>
+        <div className="flex items-center gap-3">
+          {siblingRevisions.length > 1 && (
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-slate-500 font-medium hidden sm:inline">Switch Revision:</span>
+              <select
+                aria-label="Switch examination revision"
+                value={revisionId}
+                onChange={(e) => {
+                  if (e.target.value && e.target.value !== revisionId) {
+                    router.push(
+                      `/admin/examinations/${encodeURIComponent(familyId)}/revisions/${encodeURIComponent(e.target.value)}`
+                    );
+                  }
+                }}
+                className="bg-background border border-border text-foreground text-xs rounded-md px-2 py-1 font-mono"
+              >
+                {siblingRevisions.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    Rev {r.revisionNumber} ({r.lifecycleState})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <span className="font-mono text-xs text-slate-400">
+            Token: #{revision.concurrencyToken}
+          </span>
+        </div>
       </div>
+
+      {!capabilities.canManageExaminations && capabilities.canViewExaminations && (
+        <div className="p-3 bg-blue-50/70 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-lg text-xs text-blue-800 dark:text-blue-300 flex items-center gap-2">
+          <ShieldAlert className="h-4 w-4 text-blue-500 shrink-0" />
+          <span>
+            Viewing in Clinical Review & Audit Mode. Authoring controls are restricted to examination managers and administrators.
+          </span>
+        </div>
+      )}
 
       {/* Sticky Studio Header with Lifecycle Action Bar */}
       <div className="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
@@ -704,6 +738,19 @@ export function AdminRevisionStudioClient({
             </p>
           </div>
 
+          {!isDraft && (
+            <div className="p-3.5 rounded-lg bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 flex items-start gap-2.5">
+              <ShieldAlert className="h-4 w-4 text-slate-500 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold block">Read-Only Revision ({revision.lifecycleState})</span>
+                <span>
+                  This revision has progressed beyond Draft and its settings and questions are permanently frozen.
+                  To author changes, create a new revision from the examination family lineage hub.
+                </span>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-4 max-w-2xl">
             <div>
               <Label htmlFor="m-title" className="text-xs font-semibold">
@@ -770,14 +817,24 @@ export function AdminRevisionStudioClient({
             </div>
 
             {isDraft && (
-              <Button
-                onClick={() => updateMetaMutation.mutate()}
-                disabled={updateMetaMutation.isPending || !metaTitle.trim()}
-                className="bg-[#0D9488] hover:bg-[#0F766E] text-white flex items-center gap-2 mt-4"
-              >
-                <Save className="h-4 w-4" />
-                {updateMetaMutation.isPending ? "Saving..." : "Save Settings"}
-              </Button>
+              <div className="flex items-center gap-3 mt-4">
+                <Button
+                  onClick={() => updateMetaMutation.mutate()}
+                  disabled={updateMetaMutation.isPending || !metaTitle.trim() || !isDirty}
+                  className="bg-[#0D9488] hover:bg-[#0F766E] text-white flex items-center gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  {updateMetaMutation.isPending ? "Saving..." : "Save Settings"}
+                </Button>
+                {isDirty && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30 font-medium"
+                  >
+                    Unsaved changes
+                  </Badge>
+                )}
+              </div>
             )}
           </div>
         </div>
