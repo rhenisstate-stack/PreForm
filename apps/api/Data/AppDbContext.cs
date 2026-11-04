@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     // Identity & RBAC
     public DbSet<User> Users => Set<User>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<SessionSecurityPolicy> SessionSecurityPolicies => Set<SessionSecurityPolicy>();
     public DbSet<UserProfileImage> UserProfileImages => Set<UserProfileImage>();
     public DbSet<Role> Roles => Set<Role>();
     public DbSet<Permission> Permissions => Set<Permission>();
@@ -107,6 +108,7 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(u => u.Email).IsUnique();
             entity.HasIndex(u => u.IsActive);
+            entity.Property(u => u.SecurityVersion).HasDefaultValue(1);
         });
 
         // UserSession Indexes & Relationships
@@ -117,10 +119,47 @@ public class AppDbContext : DbContext
             entity.HasIndex(s => s.TokenHash).IsUnique();
             entity.HasIndex(s => new { s.UserId, s.Revoked });
             entity.HasIndex(s => new { s.Email, s.Revoked });
+            entity.HasIndex(s => new { s.UserId, s.Revoked, s.AbsoluteExpiresAt });
+            entity.HasIndex(s => new { s.ClientId, s.Revoked, s.AbsoluteExpiresAt });
+            entity.HasIndex(s => s.IdleExpiresAt);
+            entity.HasIndex(s => s.AbsoluteExpiresAt);
+            entity.Property(s => s.ClientId).HasMaxLength(64).HasDefaultValue("");
+            entity.Property(s => s.IdleExpiresAt).HasColumnType("timestamp with time zone");
+            entity.Property(s => s.AbsoluteExpiresAt).HasColumnType("timestamp with time zone");
+            entity.Property(s => s.RevokedAt).HasColumnType("timestamp with time zone");
+            entity.Property(s => s.RevocationReason).HasMaxLength(64);
+            entity.Property(s => s.LastIpAddress).HasMaxLength(64);
+            entity.Property(s => s.UserAgent).HasMaxLength(512);
+            entity.Property(s => s.DeviceLabel).HasMaxLength(128);
+            entity.Property(s => s.FingerprintHash).HasMaxLength(64);
+            entity.Property(s => s.SecurityVersion).HasDefaultValue(1);
             entity.HasOne(s => s.User)
                   .WithMany(u => u.UserSessions)
                   .HasForeignKey(s => s.UserId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // SessionSecurityPolicy
+        modelBuilder.Entity<SessionSecurityPolicy>(entity =>
+        {
+            entity.ToTable("SessionSecurityPolicies", "public");
+            entity.HasKey(p => p.Id);
+            entity.Property(p => p.Id).HasMaxLength(64);
+            entity.Property(p => p.MaxConcurrentSessions).IsRequired();
+            entity.Property(p => p.MaxSessionsPerClient).IsRequired();
+            entity.Property(p => p.IdleTimeoutMinutes).IsRequired();
+            entity.Property(p => p.AbsoluteTimeoutMinutes).IsRequired();
+            entity.Property(p => p.EnforceFingerprint).IsRequired();
+            entity.Property(p => p.EnforceIpConsistency).IsRequired();
+            entity.Property(p => p.AllowIpDrift).IsRequired();
+            entity.Property(p => p.RotateOnLogin).IsRequired();
+            entity.Property(p => p.RotateOnPrivilegeChange).IsRequired();
+            entity.Property(p => p.RotateOnPasswordChange).IsRequired();
+            entity.Property(p => p.PolicyVersion).IsRequired();
+            entity.Property(p => p.UpdatedAt).IsRequired().HasColumnType("timestamp with time zone");
+            entity.Property(p => p.UpdatedBy).HasMaxLength(128);
+            entity.Property(p => p.IsActive).IsRequired();
+            entity.HasIndex(p => p.IsActive);
         });
 
         // UserProfileImage

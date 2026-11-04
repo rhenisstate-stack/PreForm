@@ -36,6 +36,8 @@ public class User
 
     public bool IsActive { get; set; } = true;
 
+    public int SecurityVersion { get; set; } = 1;
+
     public bool HasProfileImage { get; set; } = false;
     public DateTime? ProfileImageUpdatedAt { get; set; }
 
@@ -82,6 +84,32 @@ public class UserSession
     public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddDays(7);
     public DateTime LastActiveAt { get; set; } = DateTime.UtcNow;
     public bool Revoked { get; set; } = false;
+
+    [MaxLength(64)]
+    public string ClientId { get; set; } = string.Empty;
+
+    public DateTime IdleExpiresAt { get; set; } = DateTime.UtcNow.AddMinutes(300);
+
+    public DateTime AbsoluteExpiresAt { get; set; } = DateTime.UtcNow.AddDays(7);
+
+    public DateTime? RevokedAt { get; set; }
+
+    [MaxLength(64)]
+    public string? RevocationReason { get; set; }
+
+    [MaxLength(64)]
+    public string? LastIpAddress { get; set; }
+
+    [MaxLength(512)]
+    public string? UserAgent { get; set; }
+
+    [MaxLength(128)]
+    public string? DeviceLabel { get; set; }
+
+    [MaxLength(64)]
+    public string? FingerprintHash { get; set; }
+
+    public int SecurityVersion { get; set; } = 1;
 }
 
 [Table("UserProfileImages", Schema = "public")]
@@ -210,4 +238,41 @@ public class AuditLog
     public string? IpAddress { get; set; }
 
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+}
+
+[Table("SessionSecurityPolicies", Schema = "public")]
+public class SessionSecurityPolicy
+{
+    [Key]
+    [MaxLength(64)]
+    public string Id { get; set; } = "global_policy";
+
+    public int MaxConcurrentSessions { get; set; } = 2;
+
+    public int MaxSessionsPerClient { get; set; } = 1;
+
+    public int IdleTimeoutMinutes { get; set; } = 300;
+
+    public int AbsoluteTimeoutMinutes { get; set; } = 10080;
+
+    public bool EnforceFingerprint { get; set; } = true;
+
+    public bool EnforceIpConsistency { get; set; } = false;
+
+    public bool AllowIpDrift { get; set; } = true;
+
+    public bool RotateOnLogin { get; set; } = true;
+
+    public bool RotateOnPrivilegeChange { get; set; } = true;
+
+    public bool RotateOnPasswordChange { get; set; } = true;
+
+    public int PolicyVersion { get; set; } = 1;
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    [MaxLength(128)]
+    public string? UpdatedBy { get; set; } = "system";
+
+    public bool IsActive { get; set; } = true;
 }

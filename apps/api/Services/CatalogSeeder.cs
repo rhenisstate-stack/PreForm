@@ -444,6 +444,31 @@ public static class CatalogSeeder
             context.SubscriptionPlans.AddRange(canonicalPlans);
             await context.SaveChangesAsync(cancellationToken);
         }
+
+        // 5. Seed Default Global Session Security Policy
+        if (!await context.SessionSecurityPolicies.AnyAsync(cancellationToken))
+        {
+            logger.LogInformation("Seeding default global session security policy...");
+            context.SessionSecurityPolicies.Add(new SessionSecurityPolicy
+            {
+                Id = "global_policy",
+                MaxConcurrentSessions = 2,
+                MaxSessionsPerClient = 1,
+                IdleTimeoutMinutes = 300,
+                AbsoluteTimeoutMinutes = 10080,
+                EnforceFingerprint = true,
+                EnforceIpConsistency = false,
+                AllowIpDrift = true,
+                RotateOnLogin = true,
+                RotateOnPrivilegeChange = true,
+                RotateOnPasswordChange = true,
+                PolicyVersion = 1,
+                UpdatedAt = DateTime.UtcNow,
+                UpdatedBy = "system",
+                IsActive = true
+            });
+            await context.SaveChangesAsync(cancellationToken);
+        }
     }
 
 
