@@ -4,7 +4,7 @@
 **Document Reference:** `docs/prepford-session-security-acceptance-matrix.md`  
 **Application / Repository:** PrepFord Monorepo (`apps/api`, `apps/web`)  
 **Baseline Date:** November 4, 2026  
-**Status:** PHASE 3 COMPLETE — VERIFIED BFF INTEGRATION, SESSION ID SYNCHRONIZATION & CLIENT IDENTIFICATION  
+**Status:** PHASE 4 COMPLETE — VERIFIED LEARNER ACTIVE SESSIONS UI, SELF-SERVICE REVOCATION & SECURITY EVENT FEED  
 **Branch:** `feature/dotnet-backend-migration`  
 
 ---
@@ -20,6 +20,7 @@ The following matrix tracks all required capabilities across frontend, backend, 
 - **VERIFIED (PHASE 1):** Verified during Phase 1 (Database Migration & Policy Foundation).
 - **VERIFIED (PHASE 2):** Verified during Phase 2 (Backend Engine & Atomic Concurrency).
 - **VERIFIED (PHASE 3):** Verified during Phase 3 (BFF Integration, Session ID Synchronization & Client Device Identification).
+- **VERIFIED (PHASE 4):** Verified during Phase 4 (Learner Active Sessions UI, Self-Service Revocation & Security Event Feed).
 - **IN PROGRESS:** Currently undergoing active implementation.
 - **VERIFIED:** Implemented, integrated, and verified by passing automated tests across all layers.
 
@@ -48,12 +49,12 @@ The following matrix tracks all required capabilities across frontend, backend, 
 | 17 | **Credential Rotation on Password Reset** | Prompts learner to log in with fresh credentials | Revokes all existing user sessions upon password reset completion | Sets `Revoked = true` on all user sessions; logs event | Account recovery | `PasswordResetRevocationTests.cs` | AUDITED (GAP IDENTIFIED) |
 | 18 | **Immediate Privilege Invalidation (Role Change)** | Session context refreshes permissions; rejects stale admin routes | Increments `User.SecurityVersion`; rejects requests where `Session.SecurityVersion != User.SecurityVersion` | Column `SecurityVersion` on `User` and `UserSession` | RBAC guard | `SessionSecurityEngineTests.cs` | VERIFIED (PHASE 2) |
 | 19 | **Account Deactivation Revocation** | Redirects deactivated user to sign-in with account notice | Checks `User.IsActive`; revokes all active sessions immediately | Sets `IsActive = false` on `User`; `Revoked = true` on sessions | Account lifecycle | `SessionSecurityEngineTests.cs` | VERIFIED (PHASE 2) |
-| 20 | **Learner Active Sessions View (`/dashboard/settings/security`)** | Responsive cards showing device, browser, OS, IP, active time | `GET /api/v1/security/sessions` returns active sessions for caller | Queries `UserSessions` where `UserId == caller.Id && !Revoked` | Ownership verified | `ActiveSessionsComponent.test.tsx` | AUDITED (GAP IDENTIFIED) |
-| 21 | **Current Session Identification** | Displays prominent green "Current Device / Session" badge | Flags `isCurrent: true` for the session matching caller's token/claim | Compares `UserSession.Id == callerSessionId` | Ownership verified | `CurrentSessionBadge.test.tsx` | AUDITED (GAP IDENTIFIED) |
-| 22 | **Learner Terminate Specific Session** | "Terminate" button with confirmation modal and feedback | `DELETE /api/v1/security/sessions/{sessionId}` revokes target session | Sets `Revoked = true`, `RevokedAt = now`, `Reason = "UserRevoked"` | Ownership verified | `TerminateSessionAction.test.tsx` | AUDITED (GAP IDENTIFIED) |
-| 23 | **Learner Terminate All Other Sessions** | "Log Out Other Sessions" button with confirmation dialog | `POST /api/v1/security/sessions/revoke-others` revokes all except current | Sets `Revoked = true` on all sessions where `Id != currentId` | Ownership verified | `RevokeOtherSessions.test.tsx` | AUDITED (GAP IDENTIFIED) |
-| 24 | **Learner Terminate All Sessions** | "Log Out Everywhere" button; clears local cookies; redirects | `POST /api/v1/security/sessions/revoke-all` revokes all user sessions | Sets `Revoked = true` on all sessions for user | Ownership verified | `RevokeAllSessions.test.tsx` | AUDITED (GAP IDENTIFIED) |
-| 25 | **Learner Security Event History** | Displays list of recent logins, password updates, terminations | `GET /api/v1/security/events` returns audit logs for caller | Queries `AuditLogs` where `ActorId == caller.Id` | Ownership verified | `SecurityEventsFeed.test.tsx` | AUDITED (GAP IDENTIFIED) |
+| 20 | **Learner Active Sessions View (`/dashboard/settings/security`)** | Responsive cards showing device, browser, OS, IP, active time | `GET /api/v1/security/sessions` returns active sessions for caller | Queries `UserSessions` where `UserId == caller.Id && !Revoked` | Ownership verified | `learner-security-settings.test.tsx`, `LearnerSecurityControllerTests.cs` | VERIFIED (PHASE 4) |
+| 21 | **Current Session Identification** | Displays prominent green "Current Device / Session" badge | Flags `isCurrent: true` for the session matching caller's token/claim | Compares `UserSession.Id == callerSessionId` | Ownership verified | `learner-security-settings.test.tsx`, `LearnerSecurityControllerTests.cs` | VERIFIED (PHASE 4) |
+| 22 | **Learner Terminate Specific Session** | "Terminate" button with confirmation modal and feedback | `DELETE /api/v1/security/sessions/{sessionId}` revokes target session | Sets `Revoked = true`, `RevokedAt = now`, `Reason = "UserRevoked"` | Ownership verified | `learner-security-settings.test.tsx`, `bff-security-routes.test.ts`, `LearnerSecurityControllerTests.cs` | VERIFIED (PHASE 4) |
+| 23 | **Learner Terminate All Other Sessions** | "Log Out Other Sessions" button with confirmation dialog | `POST /api/v1/security/sessions/revoke-others` revokes all except current | Sets `Revoked = true` on all sessions where `Id != currentId` | Ownership verified | `learner-security-settings.test.tsx`, `bff-security-routes.test.ts`, `LearnerSecurityControllerTests.cs` | VERIFIED (PHASE 4) |
+| 24 | **Learner Terminate All Sessions** | "Sign Out This Device" / "Log Out Everywhere"; clears local cookies; redirects | `POST /api/v1/security/sessions/revoke-all` revokes all user sessions | Sets `Revoked = true` on all sessions for user | Ownership verified | `bff-security-routes.test.ts`, `LearnerSecurityControllerTests.cs` | VERIFIED (PHASE 4) |
+| 25 | **Learner Security Event History** | Displays list of recent logins, password updates, terminations | `GET /api/v1/security/events` returns audit logs for caller | Queries `AuditLogs` where `ActorId == caller.Id` | Ownership verified | `learner-security-settings.test.tsx`, `bff-security-routes.test.ts`, `LearnerSecurityControllerTests.cs` | VERIFIED (PHASE 4) |
 | 26 | **Super Admin Session Policy View (`/admin/security/sessions`)** | Form displaying current limits, timeouts, rotation toggles | `GET /api/v1/admin/security/session-policy` returns active policy | Queries `SessionSecurityPolicy` singleton | `RequireSuperAdmin` | `AdminPolicyView.test.tsx` | AUDITED (GAP IDENTIFIED) |
 | 27 | **Super Admin Session Policy Update** | Form submission with validation, loading states, and toasts | `PUT /api/v1/admin/security/session-policy` updates policy & version | Updates `SessionSecurityPolicy`; increments `PolicyVersion` | `RequireSuperAdmin` | `AdminPolicyUpdate.test.tsx` | AUDITED (GAP IDENTIFIED) |
 | 28 | **Admin Policy Form Validation** | Validates positive integers; ensures `IdleTimeout <= AbsoluteTimeout` | Backend validates input model; rejects invalid ranges with 400 | Constraints on policy model | Validation filters | `PolicyValidationTests.cs` | AUDITED (GAP IDENTIFIED) |
@@ -65,7 +66,7 @@ The following matrix tracks all required capabilities across frontend, backend, 
 | 34 | **Examination Timer Preservation on Expiry** | Timer countdown does not reset or jump forward on reauth | `ExamAttempt.StartedAt` remains unchanged; deadline enforced | `ExamAttempts.StartedAt` immutable | Timer calculation | `ExamTimerPreservationTests.cs` | AUDITED (SOUND / VERIFIED) |
 | 35 | **In-Exam Inline Reauthentication Modal** | Modal prompt enters password; avoids page reload or loss of focus | Authenticates credentials; issues new session; retries answer | `UserSessions` created | Candidate auth | `InExamReauthModal.test.tsx` | AUDITED (GAP IDENTIFIED) |
 | 36 | **Adaptive CAT Continuity** | Reauthentication does not alter question sequence or item pool | CAT state engine resumes from exact question index | `ExamAttemptQuestions` authority | Assessment engine | `CatContinuityTests.cs` | AUDITED (SOUND / VERIFIED) |
-| 37 | **Cross-User Session Isolation** | Candidate cannot see or revoke another candidate's sessions | Ownership checks enforce: `session.UserId == caller.Id` | EF Core query filter | Authorization checks | `SessionSecurityEngineTests.cs` | VERIFIED (PHASE 2) |
+| 37 | **Cross-User Session Isolation** | Candidate cannot see or revoke another candidate's sessions | Ownership checks enforce: `session.UserId == caller.Id` (403 on cross-user revocation) | EF Core query filter | Authorization checks | `LearnerSecurityControllerTests.cs`, `SessionSecurityEngineTests.cs` | VERIFIED (PHASE 4) |
 | 38 | **Non-Destructive Database Migration** | Schema updates run via standard EF Core migration pipeline | `0009_AddSessionSecurityAndDeviceManagement` with safe defaults | Adds columns & tables to `public` schema | Database admin | `SessionSecurityPolicyDatabaseTests.cs` | VERIFIED (PHASE 1) |
 
 ---
@@ -85,3 +86,15 @@ All Phase 3 BFF integration, session ID synchronization, client identification, 
 - **Concurrency & Rotation:** Same-client rotation preserves single-session-per-client semantics; 3rd concurrent session rejections propagate structured HTTP 409 responses to learners.
 - **Revocation & Logout:** Logout revokes session records in PostgreSQL and clears cookies; 401 unauthenticated API responses immediately clear expired cookies.
 - **Preservation & Continuity:** Assessment answers and CAT exam continuity verified untouched across authentication boundaries.
+
+---
+
+## 5. Phase 4 Verification Sign-Off
+
+All Phase 4 Learner Active Sessions UI, self-service revocation affordances, and user-scoped security event feed capabilities have been implemented and verified with passing automated tests across ASP.NET Core backend and Next.js frontend/BFF suites:
+- **Learner Active Sessions UI (`/dashboard/settings/security`):** Fully responsive, WCAG-accessible interface displaying signed-in devices, operating system, browser, relative activity, sign-in timestamp, and safe IP information.
+- **Current Session Identification:** Prominent distinctive badge ("Current Device / Session") identifying caller's active session without relying on client-supplied identifiers.
+- **Self-Service Revocation with Confirmation:** Interactive confirmation modals for terminating individual remote sessions and "Log Out Other Sessions" while strictly preserving the current session.
+- **Security Event History Feed:** User-scoped, sanitized audit history displaying recent sign-ins, device terminations, and password changes with outcomes and timestamps.
+- **Server-Authoritative Isolation:** Backend `SecurityController` strictly prevents querying or revoking any session belonging to another learner (returns HTTP 403 and logs unauthorized attempt).
+- **All Automated Tests Passing:** 8 new backend xUnit tests (`LearnerSecurityControllerTests.cs`), 12 new BFF Vitest tests (`bff-security-routes.test.ts`), and 7 new UI Vitest tests (`learner-security-settings.test.tsx`), with zero regressions across the 311-test backend and 439-test frontend regression suites.

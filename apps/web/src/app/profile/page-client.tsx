@@ -19,6 +19,7 @@ import {
   Upload,
   Trash2,
   X,
+  Monitor,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -985,6 +986,23 @@ export function ProfilePageClient() {
                   <p className="text-muted-foreground leading-relaxed">
                     Role permissions (<span className="font-mono text-secondary font-medium">{user.role}</span>) are authoritative and enforced strictly by PostgreSQL and ASP.NET Core policies.
                   </p>
+                </div>
+
+                <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4">
+                  <div>
+                    <span className="font-semibold text-foreground flex items-center gap-1.5 text-sm">
+                      <Monitor className="h-4 w-4 text-primary" />
+                      Active Sessions & Device Management
+                    </span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Review all signed-in devices, terminate remote sessions, and inspect recent security events.
+                    </p>
+                  </div>
+                  <Link href="/dashboard/settings/security">
+                    <Button variant="outline" size="sm" className="shrink-0">
+                      Manage Sessions
+                    </Button>
+                  </Link>
                 </div>
               </div>
             </div>

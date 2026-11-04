@@ -68,6 +68,10 @@ export function isSubscriptionAdmin(rawRole?: string | null): boolean {
   return SUBSCRIPTION_ADMIN_ROLES.has(normalizeRole(rawRole));
 }
 
+export function isSuperAdmin(rawRole?: string | null): boolean {
+  return normalizeRole(rawRole) === "superadmin";
+}
+
 /**
  * Area-level capabilities, each mapping to a backend-enforced authorization
  * policy. A capability key must always cite the policy that guards it.
@@ -89,6 +93,8 @@ export interface AdminCapabilities {
   canApproveExaminations: boolean;
   /** Publish, archive, and restore examinations. */
   canPublishExaminations: boolean;
+  /** Super Admin global session security policy and active session monitoring. */
+  canManageSessionSecurity: boolean;
 }
 
 const EXAM_AUTHOR_ROLES = new Set<AdminRole>([
@@ -120,5 +126,6 @@ export function getAdminCapabilities(rawRole?: string | null): AdminCapabilities
     canReviewExaminations: EXAM_REVIEWER_ROLES.has(role),
     canApproveExaminations: EXAM_APPROVER_ROLES.has(role),
     canPublishExaminations: EXAM_AUTHOR_ROLES.has(role),
+    canManageSessionSecurity: role === "superadmin",
   };
 }

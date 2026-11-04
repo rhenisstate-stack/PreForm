@@ -864,3 +864,91 @@ export const examinationsService = {
     );
   },
 };
+
+// ── Security & Device Management DTOs & Service ──────────────────────────────
+
+export interface BackendLearnerSession {
+  id: string;
+  deviceLabel: string;
+  browser: string;
+  operatingSystem: string;
+  deviceType: string;
+  createdAt: string;
+  lastActiveAt: string;
+  idleExpiresAt: string;
+  absoluteExpiresAt: string;
+  isCurrent: boolean;
+  lastIpAddress?: string;
+}
+
+export interface BackendSecurityEvent {
+  id: string;
+  action: string;
+  description: string;
+  outcome: string;
+  timestamp: string;
+  ipAddress?: string;
+}
+
+export interface BackendLearnerSessionsResponse {
+  success: boolean;
+  sessions: BackendLearnerSession[];
+  totalActiveCount: number;
+}
+
+export interface BackendSecurityEventsResponse {
+  success: boolean;
+  events: BackendSecurityEvent[];
+  totalCount: number;
+}
+
+export interface BackendRevokeSessionResult {
+  success: boolean;
+  message: string;
+  revokedCount?: number;
+}
+
+export const securityService = {
+  getSessions: async (
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<BackendLearnerSessionsResponse>> => {
+    return apiClient.get<BackendLearnerSessionsResponse>("/api/v1/security/sessions", { session });
+  },
+
+  revokeSession: async (
+    sessionId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<BackendRevokeSessionResult>> => {
+    return apiClient.delete<BackendRevokeSessionResult>(
+      `/api/v1/security/sessions/${encodeURIComponent(sessionId)}`,
+      { session }
+    );
+  },
+
+  revokeOtherSessions: async (
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<BackendRevokeSessionResult>> => {
+    return apiClient.post<BackendRevokeSessionResult>(
+      "/api/v1/security/sessions/revoke-others",
+      {},
+      { session }
+    );
+  },
+
+  revokeAllSessions: async (
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<BackendRevokeSessionResult>> => {
+    return apiClient.post<BackendRevokeSessionResult>(
+      "/api/v1/security/sessions/revoke-all",
+      {},
+      { session }
+    );
+  },
+
+  getEvents: async (
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<BackendSecurityEventsResponse>> => {
+    return apiClient.get<BackendSecurityEventsResponse>("/api/v1/security/events", { session });
+  },
+};
+
