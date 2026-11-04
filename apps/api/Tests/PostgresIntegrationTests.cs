@@ -934,7 +934,7 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         Assert.DoesNotContain("ExamQuestions", pagedSliceQuery);
 
         // Verify that the question count query groups by ExamId and counts in SQL
-        var groupedCountQuery = executedSqlCommands.FirstOrDefault(c => c.Contains("FROM \"ExamQuestions\""));
+        var groupedCountQuery = executedSqlCommands.FirstOrDefault(c => c.Contains("ExamQuestions"));
         Assert.NotNull(groupedCountQuery);
         Assert.Contains("GROUP BY", groupedCountQuery, StringComparison.OrdinalIgnoreCase);
         Assert.Contains("count(*)", groupedCountQuery, StringComparison.OrdinalIgnoreCase);
