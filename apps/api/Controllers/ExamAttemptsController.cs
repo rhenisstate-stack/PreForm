@@ -556,8 +556,9 @@ public class ExamAttemptsController : ControllerBase
                 request.ClientId,
                 ip,
                 ua,
-                existingSessionId: null,
-                isQualifyingActivity: true);
+                fingerprintHash: null,
+                rememberMe: false,
+                cancellationToken: cancellationToken);
 
             if (!sessionResult.Success || sessionResult.Session == null)
             {
