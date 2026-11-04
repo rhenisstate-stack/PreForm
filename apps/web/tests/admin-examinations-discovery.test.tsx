@@ -154,7 +154,7 @@ describe("P3.3 Examination Library Query & Discovery", () => {
 
     // Header and Discovery Badge
     expect(screen.getByRole("heading", { name: "Examinations", level: 1 })).toBeInTheDocument();
-    expect(screen.getByText("P3.3 Library")).toBeInTheDocument();
+    expect(screen.getByText("Examination Library")).toBeInTheDocument();
 
     // Wait for items to populate
     await waitFor(() => {

@@ -535,6 +535,11 @@ export function AdminRevisionStudioClient({
                   size="sm"
                   disabled={!validationResult?.isValid}
                   className="bg-[#0D9488] hover:bg-[#0F766E] text-white text-xs gap-1.5"
+                  title={
+                    !validationResult?.isValid
+                      ? "Pre-flight validation requirements must be resolved in Tab 3 before submitting for review."
+                      : "Submit this draft revision for clinical review"
+                  }
                 >
                   <Send className="h-3.5 w-3.5" /> Submit for Review
                 </Button>
@@ -926,6 +931,7 @@ export function AdminRevisionStudioClient({
                         disabled={idx === 0 || reorderMutation.isPending}
                         className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 disabled:opacity-30"
                         title="Move Up"
+                        aria-label={`Move question ${idx + 1} up`}
                       >
                         <ArrowUp className="h-3.5 w-3.5" />
                       </button>
@@ -934,6 +940,7 @@ export function AdminRevisionStudioClient({
                         disabled={idx === questions.length - 1 || reorderMutation.isPending}
                         className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 disabled:opacity-30"
                         title="Move Down"
+                        aria-label={`Move question ${idx + 1} down`}
                       >
                         <ArrowDown className="h-3.5 w-3.5" />
                       </button>
@@ -942,6 +949,7 @@ export function AdminRevisionStudioClient({
                         disabled={removeQuestionMutation.isPending}
                         className="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-500 ml-1"
                         title="Remove question"
+                        aria-label={`Remove question ${idx + 1} from revision`}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>

@@ -379,104 +379,116 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
         </div>
 
         <div className="space-y-3">
-          {examination.revisions?.map((rev) => (
-            <div
-              key={rev.id}
-              className={`p-5 rounded-xl border transition-all ${
-                rev.id === examination.currentRevisionId
-                  ? "bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-500/40 shadow-sm"
-                  : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300"
-              }`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2.5">
-                    <span className="font-mono font-bold text-sm text-[#142B4A] dark:text-white">
-                      Revision {rev.revisionNumber}
-                    </span>
-                    {getStatusBadge(rev.lifecycleState)}
-                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                      • {rev.questionCount} Questions
-                    </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      • {rev.timeLimitMinutes === 0 ? "Untimed" : `${rev.timeLimitMinutes} mins`}
-                    </span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">
-                      • Pass: {rev.passingScorePercent}%
-                    </span>
+          {(!examination.revisions || examination.revisions.length === 0) ? (
+            <div className="p-8 text-center bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-800">
+              <History className="h-8 w-8 text-slate-400 mx-auto mb-2" />
+              <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+                No revisions found for this family
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Use "Create New Revision" to initialize the foundational revision.
+              </p>
+            </div>
+          ) : (
+            examination.revisions.map((rev) => (
+              <div
+                key={rev.id}
+                className={`p-5 rounded-xl border transition-all ${
+                  rev.id === examination.currentRevisionId
+                    ? "bg-emerald-50/30 dark:bg-emerald-950/10 border-emerald-500/40 shadow-sm"
+                    : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300"
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="font-mono font-bold text-sm text-[#142B4A] dark:text-white">
+                        Revision {rev.revisionNumber}
+                      </span>
+                      {getStatusBadge(rev.lifecycleState)}
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                        • {rev.questionCount} Questions
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        • {rev.timeLimitMinutes === 0 ? "Untimed" : `${rev.timeLimitMinutes} mins`}
+                      </span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">
+                        • Pass: {rev.passingScorePercent}%
+                      </span>
+                    </div>
+
+                    <h3 className="text-base font-semibold text-slate-900 dark:text-white">
+                      {rev.title}
+                    </h3>
+
+                    {rev.description && (
+                      <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1 max-w-2xl">
+                        {rev.description}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1">
+                      <span>Created: {new Date(rev.createdAt).toLocaleDateString()}</span>
+                      {rev.approvedAt && <span>Approved: {new Date(rev.approvedAt).toLocaleDateString()}</span>}
+                      {rev.publishedAt && <span>Published: {new Date(rev.publishedAt).toLocaleDateString()}</span>}
+                      {rev.archivedAt && <span>Archived: {new Date(rev.archivedAt).toLocaleDateString()}</span>}
+                      {rev.retiredAt && <span>Retired: {new Date(rev.retiredAt).toLocaleDateString()}</span>}
+                    </div>
                   </div>
 
-                  <h3 className="text-base font-semibold text-slate-900 dark:text-white">
-                    {rev.title}
-                  </h3>
-
-                  {rev.description && (
-                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-1 max-w-2xl">
-                      {rev.description}
-                    </p>
-                  )}
-
-                  <div className="flex items-center gap-4 text-[11px] text-slate-500 pt-1">
-                    <span>Created: {new Date(rev.createdAt).toLocaleDateString()}</span>
-                    {rev.approvedAt && <span>Approved: {new Date(rev.approvedAt).toLocaleDateString()}</span>}
-                    {rev.publishedAt && <span>Published: {new Date(rev.publishedAt).toLocaleDateString()}</span>}
-                    {rev.archivedAt && <span>Archived: {new Date(rev.archivedAt).toLocaleDateString()}</span>}
-                    {rev.retiredAt && <span>Retired: {new Date(rev.retiredAt).toLocaleDateString()}</span>}
+                  <div className="flex items-center gap-2">
+                    {capabilities.canManageExaminations && (
+                      <>
+                        {["published", "approved", "archived"].includes(rev.lifecycleState.toLowerCase()) && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleOpenDuplicate(rev.id)}
+                              className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 gap-1"
+                              title="Duplicate as new examination starting from this revision"
+                            >
+                              <Copy className="h-3.5 w-3.5 text-teal-600" />
+                              <span className="hidden md:inline">Duplicate</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={hasActiveDraft}
+                              onClick={() => handleOpenCreateRevision(rev.id)}
+                              className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 gap-1"
+                              title={
+                                hasActiveDraft
+                                  ? "Cannot branch while an active draft exists"
+                                  : "Create new draft revision branching from this revision"
+                              }
+                            >
+                              <GitBranch className="h-3.5 w-3.5 text-indigo-600" />
+                              <span className="hidden md:inline">Branch</span>
+                            </Button>
+                          </>
+                        )}
+                      </>
+                    )}
+                    <Link href={`/admin/examinations/${examination.id}/revisions/${rev.id}`}>
+                      <Button
+                        variant={rev.lifecycleState.toLowerCase() === "draft" ? "default" : "outline"}
+                        size="sm"
+                        className={`gap-1.5 text-xs ${
+                          rev.lifecycleState.toLowerCase() === "draft"
+                            ? "bg-[#0D9488] hover:bg-[#0F766E] text-white"
+                            : ""
+                        }`}
+                      >
+                        {rev.lifecycleState.toLowerCase() === "draft" ? "Author Revision" : "View Studio"}
+                        <ArrowRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </Link>
                   </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  {capabilities.canManageExaminations && (
-                    <>
-                      {["published", "approved", "archived"].includes(rev.lifecycleState.toLowerCase()) && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleOpenDuplicate(rev.id)}
-                            className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 gap-1"
-                            title="Duplicate as new examination starting from this revision"
-                          >
-                            <Copy className="h-3.5 w-3.5 text-teal-600" />
-                            <span className="hidden md:inline">Duplicate</span>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            disabled={hasActiveDraft}
-                            onClick={() => handleOpenCreateRevision(rev.id)}
-                            className="text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 gap-1"
-                            title={
-                              hasActiveDraft
-                                ? "Cannot branch while an active draft exists"
-                                : "Create new draft revision branching from this revision"
-                            }
-                          >
-                            <GitBranch className="h-3.5 w-3.5 text-indigo-600" />
-                            <span className="hidden md:inline">Branch</span>
-                          </Button>
-                        </>
-                      )}
-                    </>
-                  )}
-                  <Link href={`/admin/examinations/${examination.id}/revisions/${rev.id}`}>
-                    <Button
-                      variant={rev.lifecycleState.toLowerCase() === "draft" ? "default" : "outline"}
-                      size="sm"
-                      className={`gap-1.5 text-xs ${
-                        rev.lifecycleState.toLowerCase() === "draft"
-                          ? "bg-[#0D9488] hover:bg-[#0F766E] text-white"
-                          : ""
-                      }`}
-                    >
-                      {rev.lifecycleState.toLowerCase() === "draft" ? "Author Revision" : "View Studio"}
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Button>
-                  </Link>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
@@ -491,9 +503,14 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
           </DialogHeader>
 
           <div className="py-2">
-            <Label htmlFor="fam-title" className="text-xs font-semibold">
-              Family Title
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="fam-title" className="text-xs font-semibold">
+                Family Title
+              </Label>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {familyTitle.length}/128
+              </span>
+            </div>
             <Input
               id="fam-title"
               value={familyTitle}
