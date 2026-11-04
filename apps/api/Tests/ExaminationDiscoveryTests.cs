@@ -343,4 +343,133 @@ public class ExaminationDiscoveryTests
         await Assert.ThrowsAsync<KeyNotFoundException>(() =>
             service.GetFamilyRevisionsAsync("non_existent_family_id", admin));
     }
+
+    [Fact]
+    public async Task QueryExaminations_QuestionCounts_AccuratelyPopulatesZeroAndNonZeroCountsAcrossFamiliesAndRevisions()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateInMemoryContext(dbName);
+        var service = new ExamLifecycleService(context);
+        var admin = CreateUserPrincipal("adm_1", RoleHierarchy.RoleAdmin);
+
+        // Family 1: Rev 1 (Published) has 5 questions; Rev 2 (Draft) has 0 questions
+        var fam1 = await SeedFamilyAsync(context, "RN-EX-000001", "Family 1 Multi-Rev", "rn");
+        var fam1Rev1 = await SeedRevisionAsync(context, fam1.Id, 1, "Fam 1 Rev 1", ExamLifecycleState.Published, "rn", 5);
+        var fam1Rev2 = await SeedRevisionAsync(context, fam1.Id, 2, "Fam 1 Rev 2", ExamLifecycleState.Draft, "rn", 0);
+
+        // Family 2: Rev 1 (Published) has 0 questions; Rev 2 (Approved) has 12 questions
+        var fam2 = await SeedFamilyAsync(context, "RN-EX-000002", "Family 2 Multi-Rev", "rn");
+        var fam2Rev1 = await SeedRevisionAsync(context, fam2.Id, 1, "Fam 2 Rev 1", ExamLifecycleState.Published, "rn", 0);
+        var fam2Rev2 = await SeedRevisionAsync(context, fam2.Id, 2, "Fam 2 Rev 2", ExamLifecycleState.Approved, "rn", 12);
+
+        // Family 3: Rev 1 (Published) has 3 questions
+        var fam3 = await SeedFamilyAsync(context, "RN-EX-000003", "Family 3 Single-Rev", "rn");
+        var fam3Rev1 = await SeedRevisionAsync(context, fam3.Id, 1, "Fam 3 Rev 1", ExamLifecycleState.Published, "rn", 3);
+
+        // Query Page 1 with PageSize = 2 (Retrieves Family 1 and Family 2)
+        var page1Result = await service.QueryExaminationsAsync(new ExaminationQueryParameters
+        {
+            Page = 1,
+            PageSize = 2,
+            SortBy = "code",
+            SortDirection = "asc"
+        }, admin);
+
+        Assert.Equal(2, page1Result.Items.Count);
+        Assert.Equal(3, page1Result.Pagination.TotalItems);
+        Assert.Equal(2, page1Result.Pagination.TotalPages);
+
+        // Family 1 Verification on Page 1
+        var item1 = page1Result.Items.First(i => i.Id == fam1.Id);
+        Assert.Equal(2, item1.RevisionCount);
+        Assert.NotNull(item1.PublishedRevision);
+        Assert.Equal(1, item1.PublishedRevision!.RevisionNumber);
+        Assert.Equal(5, item1.PublishedRevision.QuestionCount); // Non-zero count
+        Assert.NotNull(item1.LatestRevision);
+        Assert.Equal(2, item1.LatestRevision!.RevisionNumber);
+        Assert.Equal(0, item1.LatestRevision.QuestionCount); // Zero question count
+
+        // Legacy examination list check for Family 1
+        var legacyFam1 = page1Result.Examinations.First(e => e.Id == fam1.Id);
+        var legacyFam1Rev1 = legacyFam1.Revisions.First(r => r.Id == fam1Rev1.Id);
+        var legacyFam1Rev2 = legacyFam1.Revisions.First(r => r.Id == fam1Rev2.Id);
+        Assert.Equal(5, legacyFam1Rev1.QuestionCount);
+        Assert.Equal(0, legacyFam1Rev2.QuestionCount);
+
+        // Family 2 Verification on Page 1
+        var item2 = page1Result.Items.First(i => i.Id == fam2.Id);
+        Assert.Equal(2, item2.RevisionCount);
+        Assert.NotNull(item2.PublishedRevision);
+        Assert.Equal(1, item2.PublishedRevision!.RevisionNumber);
+        Assert.Equal(0, item2.PublishedRevision.QuestionCount); // Zero count for published
+        Assert.NotNull(item2.LatestRevision);
+        Assert.Equal(2, item2.LatestRevision!.RevisionNumber);
+        Assert.Equal(12, item2.LatestRevision.QuestionCount); // 12 questions for latest
+
+        // Legacy examination list check for Family 2
+        var legacyFam2 = page1Result.Examinations.First(e => e.Id == fam2.Id);
+        var legacyFam2Rev1 = legacyFam2.Revisions.First(r => r.Id == fam2Rev1.Id);
+        var legacyFam2Rev2 = legacyFam2.Revisions.First(r => r.Id == fam2Rev2.Id);
+        Assert.Equal(0, legacyFam2Rev1.QuestionCount);
+        Assert.Equal(12, legacyFam2Rev2.QuestionCount);
+
+        // Query Page 2 with PageSize = 2 (Retrieves Family 3)
+        var page2Result = await service.QueryExaminationsAsync(new ExaminationQueryParameters
+        {
+            Page = 2,
+            PageSize = 2,
+            SortBy = "code",
+            SortDirection = "asc"
+        }, admin);
+
+        Assert.Single(page2Result.Items);
+        var item3 = page2Result.Items[0];
+        Assert.Equal(fam3.Id, item3.Id);
+        Assert.Equal(1, item3.RevisionCount);
+        Assert.NotNull(item3.PublishedRevision);
+        Assert.Equal(3, item3.PublishedRevision!.QuestionCount);
+        Assert.NotNull(item3.LatestRevision);
+        Assert.Equal(3, item3.LatestRevision!.QuestionCount);
+    }
+
+    [Fact]
+    public async Task QueryExaminations_EmptyResultPage_HandledSafelyWithoutError()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateInMemoryContext(dbName);
+        var service = new ExamLifecycleService(context);
+        var admin = CreateUserPrincipal("adm_1", RoleHierarchy.RoleAdmin);
+
+        // Seed single family
+        var fam = await SeedFamilyAsync(context, "RN-EX-000001", "Existing Exam", "rn");
+        await SeedRevisionAsync(context, fam.Id, 1, "Rev 1", ExamLifecycleState.Published, "rn", 4);
+
+        // Query beyond available pages (Page 99)
+        var emptyPageResult = await service.QueryExaminationsAsync(new ExaminationQueryParameters
+        {
+            Page = 99,
+            PageSize = 20
+        }, admin);
+
+        Assert.NotNull(emptyPageResult);
+        Assert.True(emptyPageResult.Success);
+        Assert.Empty(emptyPageResult.Items);
+        Assert.Empty(emptyPageResult.Examinations);
+        Assert.Equal(1, emptyPageResult.Pagination.TotalItems);
+        Assert.Equal(1, emptyPageResult.Pagination.TotalPages);
+        Assert.Equal(99, emptyPageResult.Pagination.Page);
+
+        // Query non-existent search term
+        var noMatchResult = await service.QueryExaminationsAsync(new ExaminationQueryParameters
+        {
+            Search = "non_existent_search_query_xyz"
+        }, admin);
+
+        Assert.NotNull(noMatchResult);
+        Assert.True(noMatchResult.Success);
+        Assert.Empty(noMatchResult.Items);
+        Assert.Empty(noMatchResult.Examinations);
+        Assert.Equal(0, noMatchResult.Pagination.TotalItems);
+        Assert.Equal(0, noMatchResult.Pagination.TotalPages);
+    }
 }

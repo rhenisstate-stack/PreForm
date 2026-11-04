@@ -16,6 +16,7 @@ using Preform.Api.DTOs;
 using Preform.Api.Models;
 using Preform.Api.Services;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Preform.Api.Tests;
 
@@ -101,10 +102,12 @@ public class PostgresTestFixture : WebApplicationFactory<Program>
 public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
 {
     private readonly PostgresTestFixture _factory;
+    private readonly ITestOutputHelper? _output;
 
-    public PostgresIntegrationTests(PostgresTestFixture factory)
+    public PostgresIntegrationTests(PostgresTestFixture factory, ITestOutputHelper? output = null)
     {
         _factory = factory;
+        _output = output;
     }
 
     [Fact]
@@ -775,5 +778,192 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         // Descending order verification
         Assert.Equal(2, familyRevsResult.Revisions[0].RevisionNumber);
         Assert.Equal(1, familyRevsResult.Revisions[1].RevisionNumber);
+    }
+
+    [Fact]
+    public async Task Postgres_ExaminationLibraryQuery_GroupedQuestionCounts_TranslatesToSqlAndCalculatesAccurately()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var adminClaims = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "admin_pg_counts"),
+            new Claim(ClaimTypes.Role, "Admin"),
+            new Claim("role", "Admin")
+        }, "TestAuth"));
+
+        var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+
+        // 1. Seed Questions for memberships
+        var q1 = new Question { Id = $"q_{suffix}_1", Stem = "Clinical Q1", Pathway = "rn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        var q2 = new Question { Id = $"q_{suffix}_2", Stem = "Clinical Q2", Pathway = "rn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        var q3 = new Question { Id = $"q_{suffix}_3", Stem = "Clinical Q3", Pathway = "rn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        var q4 = new Question { Id = $"q_{suffix}_4", Stem = "Clinical Q4", Pathway = "pn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        var q5 = new Question { Id = $"q_{suffix}_5", Stem = "Clinical Q5", Pathway = "pn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        var q6 = new Question { Id = $"q_{suffix}_6", Stem = "Clinical Q6", Pathway = "pn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        var q7 = new Question { Id = $"q_{suffix}_7", Stem = "Clinical Q7", Pathway = "pn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        context.Questions.AddRange(q1, q2, q3, q4, q5, q6, q7);
+
+        // 2. Seed Family 1 (RN) with Rev 1 (3 questions) and Rev 2 (0 questions)
+        var rnFam = new Examination
+        {
+            Id = "fam_rn_cnt_" + suffix,
+            Pathway = "rn",
+            Code = "RN-CNT-" + suffix,
+            Title = $"NCLEX-RN Count Exam {suffix}",
+            CreatedBy = "admin_pg_counts",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Examinations.Add(rnFam);
+
+        var rnRev1 = new Exam
+        {
+            Id = "rev_rn_c1_" + suffix,
+            ExaminationId = rnFam.Id,
+            RevisionNumber = 1,
+            LifecycleState = ExamLifecycleState.Published,
+            IsPublished = true,
+            Title = $"RN Count Rev 1 Published {suffix}",
+            Pathway = "rn",
+            CreatedBy = "admin_pg_counts"
+        };
+        var rnRev2 = new Exam
+        {
+            Id = "rev_rn_c2_" + suffix,
+            ExaminationId = rnFam.Id,
+            RevisionNumber = 2,
+            LifecycleState = ExamLifecycleState.Draft,
+            IsPublished = false,
+            Title = $"RN Count Rev 2 Draft {suffix}",
+            Pathway = "rn",
+            CreatedBy = "admin_pg_counts"
+        };
+        context.Exams.AddRange(rnRev1, rnRev2);
+
+        context.ExamQuestions.AddRange(
+            new ExamQuestion { Id = $"eq_{suffix}_1", ExamId = rnRev1.Id, QuestionId = q1.Id, DisplayOrder = 1 },
+            new ExamQuestion { Id = $"eq_{suffix}_2", ExamId = rnRev1.Id, QuestionId = q2.Id, DisplayOrder = 2 },
+            new ExamQuestion { Id = $"eq_{suffix}_3", ExamId = rnRev1.Id, QuestionId = q3.Id, DisplayOrder = 3 }
+        );
+
+        // 3. Seed Family 2 (PN) with Rev 1 (4 questions)
+        var pnFam = new Examination
+        {
+            Id = "fam_pn_cnt_" + suffix,
+            Pathway = "pn",
+            Code = "PN-CNT-" + suffix,
+            Title = $"NCLEX-PN Count Exam {suffix}",
+            CreatedBy = "admin_pg_counts",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Examinations.Add(pnFam);
+
+        var pnRev1 = new Exam
+        {
+            Id = "rev_pn_c1_" + suffix,
+            ExaminationId = pnFam.Id,
+            RevisionNumber = 1,
+            LifecycleState = ExamLifecycleState.Published,
+            IsPublished = true,
+            Title = $"PN Count Rev 1 Published {suffix}",
+            Pathway = "pn",
+            CreatedBy = "admin_pg_counts"
+        };
+        context.Exams.Add(pnRev1);
+
+        context.ExamQuestions.AddRange(
+            new ExamQuestion { Id = $"eq_{suffix}_4", ExamId = pnRev1.Id, QuestionId = q4.Id, DisplayOrder = 1 },
+            new ExamQuestion { Id = $"eq_{suffix}_5", ExamId = pnRev1.Id, QuestionId = q5.Id, DisplayOrder = 2 },
+            new ExamQuestion { Id = $"eq_{suffix}_6", ExamId = pnRev1.Id, QuestionId = q6.Id, DisplayOrder = 3 },
+            new ExamQuestion { Id = $"eq_{suffix}_7", ExamId = pnRev1.Id, QuestionId = q7.Id, DisplayOrder = 4 }
+        );
+
+        await context.SaveChangesAsync();
+
+        // 4. Set up an isolated DbContext with SQL command logging to capture queries
+        var executedSqlCommands = new List<string>();
+        var loggingOptions = new DbContextOptionsBuilder<AppDbContext>()
+            .UseNpgsql(PostgresTestFixture.ConnectionString)
+            .LogTo(msg =>
+            {
+                if (msg.Contains("Executing DbCommand"))
+                {
+                    executedSqlCommands.Add(msg);
+                }
+            }, LogLevel.Information)
+            .Options;
+
+        using var testContext = new AppDbContext(loggingOptions);
+        var service = new ExamLifecycleService(testContext);
+
+        // 5. Execute Query for RN pathway
+        executedSqlCommands.Clear();
+        var rnResult = await service.QueryExaminationsAsync(new ExaminationQueryParameters
+        {
+            Pathway = "rn",
+            Search = suffix
+        }, adminClaims);
+
+        Assert.True(rnResult.Success);
+        var rnItem = Assert.Single(rnResult.Items);
+        Assert.Equal(rnFam.Code, rnItem.Code);
+        Assert.Equal(2, rnItem.RevisionCount);
+
+        // Verify Question counts
+        Assert.NotNull(rnItem.PublishedRevision);
+        Assert.Equal(1, rnItem.PublishedRevision!.RevisionNumber);
+        Assert.Equal(3, rnItem.PublishedRevision.QuestionCount); // 3 questions
+
+        Assert.NotNull(rnItem.LatestRevision);
+        Assert.Equal(2, rnItem.LatestRevision!.RevisionNumber);
+        Assert.Equal(0, rnItem.LatestRevision.QuestionCount); // 0 questions
+
+        // Verify legacy list populated correctly
+        var legacyFam = Assert.Single(rnResult.Examinations);
+        Assert.Equal(3, legacyFam.Revisions.First(r => r.Id == rnRev1.Id).QuestionCount);
+        Assert.Equal(0, legacyFam.Revisions.First(r => r.Id == rnRev2.Id).QuestionCount);
+
+        // 6. Inspect captured SQL
+        // Query 1: COUNT(*) for pagination
+        // Query 2: Paged slice of examinations + child revisions (NO join to ExamQuestions)
+        // Query 3: Grouped COUNT(*) on ExamQuestions
+        foreach (var cmd in executedSqlCommands)
+        {
+            _output?.WriteLine("CAPTURED SQL: " + cmd);
+        }
+
+        // Verify that the paged slice query does NOT include ExamQuestions
+        var pagedSliceQuery = executedSqlCommands.FirstOrDefault(c => c.Contains("FROM \"Examinations\"") || c.Contains("FROM ("));
+        Assert.NotNull(pagedSliceQuery);
+        Assert.DoesNotContain("ExamQuestions", pagedSliceQuery);
+
+        // Verify that the question count query groups by ExamId and counts in SQL
+        var groupedCountQuery = executedSqlCommands.FirstOrDefault(c => c.Contains("FROM \"ExamQuestions\""));
+        Assert.NotNull(groupedCountQuery);
+        Assert.Contains("GROUP BY", groupedCountQuery, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("count(*)", groupedCountQuery, StringComparison.OrdinalIgnoreCase);
+
+        // 7. Verify Candidate restricted viewer
+        var candidateClaims = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "cand_pg_cnt"),
+            new Claim(ClaimTypes.Role, "Candidate"),
+            new Claim("role", "Candidate")
+        }, "TestAuth"));
+
+        var candResult = await service.QueryExaminationsAsync(new ExaminationQueryParameters
+        {
+            Search = suffix
+        }, candidateClaims);
+
+        Assert.True(candResult.Success);
+        Assert.Equal(2, candResult.Items.Count); // rnFam and pnFam
+        var candRn = candResult.Items.First(i => i.Id == rnFam.Id);
+        Assert.Equal(1, candRn.RevisionCount); // only published revision
+        Assert.NotNull(candRn.PublishedRevision);
+        Assert.Equal(3, candRn.PublishedRevision!.QuestionCount);
+        Assert.Null(candRn.LatestRevision); // draft revision not exposed as latest
     }
 }
