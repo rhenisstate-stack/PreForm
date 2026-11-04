@@ -952,3 +952,202 @@ export const securityService = {
   },
 };
 
+// ── Super Admin Session Security DTOs & Service ──────────────────────────────
+
+export interface AdminSecurityMetrics {
+  totalActiveSessions: number;
+  activeUsersCount: number;
+  expiringSoonCount: number;
+  revokedLast24HoursCount: number;
+  limitRejectionsLast24HoursCount: number;
+  securityVersionInvalidationsLast24HoursCount: number;
+}
+
+export interface AdminSessionPolicy {
+  id: string;
+  maxConcurrentSessions: number;
+  maxSessionsPerClient: number;
+  idleTimeoutMinutes: number;
+  absoluteTimeoutMinutes: number;
+  enforceFingerprint: boolean;
+  enforceIpConsistency: boolean;
+  allowIpDrift: boolean;
+  rotateOnLogin: boolean;
+  rotateOnPrivilegeChange: boolean;
+  rotateOnPasswordChange: boolean;
+  policyVersion: number;
+  updatedAt: string;
+  updatedBy?: string;
+  isActive: boolean;
+  defaults?: {
+    maxConcurrentSessions: number;
+    maxSessionsPerClient: number;
+    idleTimeoutMinutes: number;
+    absoluteTimeoutMinutes: number;
+    enforceFingerprint: boolean;
+    enforceIpConsistency: boolean;
+    allowIpDrift: boolean;
+    rotateOnLogin: boolean;
+    rotateOnPrivilegeChange: boolean;
+    rotateOnPasswordChange: boolean;
+  };
+}
+
+export interface UpdateAdminSessionPolicyInput {
+  maxConcurrentSessions: number;
+  maxSessionsPerClient: number;
+  idleTimeoutMinutes: number;
+  absoluteTimeoutMinutes: number;
+  enforceFingerprint: boolean;
+  enforceIpConsistency: boolean;
+  allowIpDrift: boolean;
+  rotateOnLogin: boolean;
+  rotateOnPrivilegeChange: boolean;
+  rotateOnPasswordChange: boolean;
+  policyVersion: number;
+}
+
+export interface AdminSessionItem {
+  id: string;
+  userId: string;
+  userEmail: string;
+  userDisplayName: string;
+  role: string;
+  clientId: string;
+  deviceLabel: string;
+  browser: string;
+  operatingSystem: string;
+  deviceType: string;
+  createdAt: string;
+  lastActiveAt: string;
+  idleExpiresAt: string;
+  absoluteExpiresAt: string;
+  effectiveExpiresAt: string;
+  revoked: boolean;
+  revokedAt?: string;
+  revocationReason?: string;
+  lastIpAddress?: string;
+  status: string;
+}
+
+export interface AdminPaginatedSessionsResponse {
+  success: boolean;
+  items: AdminSessionItem[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface AdminSecurityEvent {
+  id: string;
+  actorId?: string;
+  actorEmail?: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  description: string;
+  outcome: string;
+  ipAddress?: string;
+  timestamp: string;
+}
+
+export interface AdminPaginatedEventsResponse {
+  success: boolean;
+  items: AdminSecurityEvent[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export const adminSecurityService = {
+  getMetrics: async (
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<AdminSecurityMetrics & { success: boolean }>> => {
+    return apiClient.get<AdminSecurityMetrics & { success: boolean }>("/api/v1/admin/security/metrics", { session });
+  },
+
+  getPolicy: async (
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<AdminSessionPolicy & { success: boolean }>> => {
+    return apiClient.get<AdminSessionPolicy & { success: boolean }>("/api/v1/admin/security/session-policy", { session });
+  },
+
+  updatePolicy: async (
+    input: UpdateAdminSessionPolicyInput,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; message: string; policy: AdminSessionPolicy }>> => {
+    return apiClient.put<{ success: boolean; message: string; policy: AdminSessionPolicy }>(
+      "/api/v1/admin/security/session-policy",
+      input,
+      { session }
+    );
+  },
+
+  resetPolicy: async (
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; message: string; policy: AdminSessionPolicy }>> => {
+    return apiClient.post<{ success: boolean; message: string; policy: AdminSessionPolicy }>(
+      "/api/v1/admin/security/session-policy/reset",
+      {},
+      { session }
+    );
+  },
+
+  getSessions: async (
+    query: { page?: number; pageSize?: number; status?: string; search?: string; sortBy?: string; sortOrder?: string },
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<AdminPaginatedSessionsResponse>> => {
+    const params = new URLSearchParams();
+    if (query.page) params.set("page", String(query.page));
+    if (query.pageSize) params.set("pageSize", String(query.pageSize));
+    if (query.status) params.set("status", query.status);
+    if (query.search) params.set("search", query.search);
+    if (query.sortBy) params.set("sortBy", query.sortBy);
+    if (query.sortOrder) params.set("sortOrder", query.sortOrder);
+
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get<AdminPaginatedSessionsResponse>(`/api/v1/admin/security/sessions${queryString}`, { session });
+  },
+
+  revokeSession: async (
+    sessionId: string,
+    reason: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; message: string }>> => {
+    return apiClient.post<{ success: boolean; message: string }>(
+      `/api/v1/admin/security/sessions/${encodeURIComponent(sessionId)}/revoke`,
+      { reason },
+      { session }
+    );
+  },
+
+  revokeAllUserSessions: async (
+    userId: string,
+    reason: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; revokedCount: number; message: string }>> => {
+    return apiClient.post<{ success: boolean; revokedCount: number; message: string }>(
+      `/api/v1/admin/security/users/${encodeURIComponent(userId)}/revoke-sessions`,
+      { reason },
+      { session }
+    );
+  },
+
+  getEvents: async (
+    query: { page?: number; pageSize?: number; action?: string; search?: string },
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<AdminPaginatedEventsResponse>> => {
+    const params = new URLSearchParams();
+    if (query.page) params.set("page", String(query.page));
+    if (query.pageSize) params.set("pageSize", String(query.pageSize));
+    if (query.action) params.set("action", query.action);
+    if (query.search) params.set("search", query.search);
+
+    const queryString = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get<AdminPaginatedEventsResponse>(`/api/v1/admin/security/events${queryString}`, { session });
+  },
+};
+
+

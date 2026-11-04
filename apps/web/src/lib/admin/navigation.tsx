@@ -4,6 +4,7 @@ import {
   FileText,
   Layers,
   LayoutDashboard,
+  ShieldCheck,
 } from "lucide-react";
 import type { AdminCapabilities } from "@/lib/admin/authz";
 
@@ -91,11 +92,27 @@ const MONETIZATION_GROUP: NavGroup = {
   ],
 };
 
+const SECURITY_GROUP: NavGroup = {
+  id: "security",
+  label: "Security & Policy",
+  items: [
+    {
+      id: "session-security",
+      title: "Session Security & Devices",
+      href: "/admin/security/sessions",
+      icon: ShieldCheck,
+      capability: "canManageSessionSecurity",
+      description: "Global session policies, live session monitoring, and administrative revocation",
+    },
+  ],
+};
+
 /** Future phase groups are appended here as their backends land. */
 const ALL_GROUPS: NavGroup[] = [
   OVERVIEW_GROUP,
   EXAMINATION_GROUP,
   MONETIZATION_GROUP,
+  SECURITY_GROUP,
 ];
 
 /** Filters navigation items by the caller's verified capabilities. */
