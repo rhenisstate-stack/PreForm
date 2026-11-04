@@ -961,4 +961,226 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         Assert.Equal(1, candRn.LatestRevision?.RevisionNumber); // draft revision (rev 2) not exposed as latest
         Assert.Equal("Published", candRn.LatestRevision?.LifecycleState);
     }
+
+    [Fact]
+    public async Task Postgres_ExaminationDuplication_CreatesNewFamilyWithAllocatedSequenceCodeAndCopiedMemberships()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var adminClaims = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "adm_pg_dup"),
+            new Claim(ClaimTypes.Role, "Admin"),
+            new Claim("role", "Admin")
+        }, "TestAuth"));
+
+        var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+
+        // 1. Seed Questions
+        var q1 = new Question { Id = $"q_dup_{suffix}_1", Stem = "Dup Q1", Pathway = "rn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        var q2 = new Question { Id = $"q_dup_{suffix}_2", Stem = "Dup Q2", Pathway = "rn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        var q3 = new Question { Id = $"q_dup_{suffix}_3", Stem = "Dup Q3", Pathway = "rn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        context.Questions.AddRange(q1, q2, q3);
+
+        // 2. Allocate genuine code from sequence
+        var codeService = new ExaminationCodeService(context);
+        var sourceCode = await codeService.AllocateCodeAsync("rn");
+
+        var sourceFam = new Examination
+        {
+            Id = "fam_dup_src_" + suffix,
+            Pathway = "rn",
+            Code = sourceCode,
+            Title = $"Source RN Duplication Exam {suffix}",
+            CreatedBy = "adm_pg_dup",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Examinations.Add(sourceFam);
+
+        var sourceRev = new Exam
+        {
+            Id = "rev_dup_src_" + suffix,
+            ExaminationId = sourceFam.Id,
+            RevisionNumber = 1,
+            LifecycleState = ExamLifecycleState.Published,
+            IsPublished = true,
+            Title = $"Source Rev 1 Published {suffix}",
+            Description = "Source revision description",
+            Pathway = "rn",
+            ExamType = ExamType.Practice,
+            TimeLimitMinutes = 75,
+            PassingScorePercent = 78.5m,
+            CreatedBy = "adm_pg_dup"
+        };
+        context.Exams.Add(sourceRev);
+
+        context.ExamQuestions.AddRange(
+            new ExamQuestion { Id = $"eq_dup_{suffix}_1", ExamId = sourceRev.Id, QuestionId = q1.Id, DisplayOrder = 1 },
+            new ExamQuestion { Id = $"eq_dup_{suffix}_2", ExamId = sourceRev.Id, QuestionId = q2.Id, DisplayOrder = 2 },
+            new ExamQuestion { Id = $"eq_dup_{suffix}_3", ExamId = sourceRev.Id, QuestionId = q3.Id, DisplayOrder = 3 }
+        );
+
+        // Add user and attempt on source revision
+        var user = new User { Id = $"usr_dup_{suffix}", Email = $"dup_{suffix}@prepford.test", DisplayName = "Dup Cand", PasswordHash = "hash" };
+        context.Users.Add(user);
+        var sourceAttempt = new ExamAttempt
+        {
+            Id = $"att_dup_{suffix}",
+            ExamId = sourceRev.Id,
+            UserId = user.Id,
+            ScorePercent = 82.0m,
+            Status = AttemptStatus.Completed
+        };
+        context.ExamAttempts.Add(sourceAttempt);
+
+        await context.SaveChangesAsync();
+
+        // 3. Execute DuplicateExaminationAsync
+        var lifecycleService = new ExamLifecycleService(context, codeService);
+        var response = await lifecycleService.DuplicateExaminationAsync(
+            sourceFam.Id,
+            new DuplicateExaminationRequest
+            {
+                Title = $"Cloned RN Exam {suffix}",
+                SourceRevisionId = sourceRev.Id
+            },
+            adminClaims);
+
+        Assert.True(response.Success);
+        Assert.NotEqual(sourceFam.Id, response.ExaminationId);
+        Assert.NotEqual(sourceFam.Code, response.ExaminationCode);
+        Assert.StartsWith("RN-EX-", response.ExaminationCode);
+        Assert.Equal(1, response.RevisionNumber);
+        Assert.Equal("Draft", response.LifecycleState);
+        Assert.Equal(3, response.QuestionCount);
+
+        // 4. Verify in isolated PostgreSQL database context
+        using var verifyScope = _factory.Services.CreateScope();
+        var verifyContext = verifyScope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var clonedFam = await verifyContext.Examinations
+            .Include(e => e.Revisions)
+                .ThenInclude(r => r.ExamQuestions)
+            .FirstOrDefaultAsync(e => e.Id == response.ExaminationId);
+
+        Assert.NotNull(clonedFam);
+        Assert.Equal(response.ExaminationCode, clonedFam.Code);
+        Assert.Single(clonedFam.Revisions);
+        var clonedRev = clonedFam.Revisions.First();
+        Assert.Equal(1, clonedRev.RevisionNumber);
+        Assert.Equal(ExamLifecycleState.Draft, clonedRev.LifecycleState);
+        Assert.False(clonedRev.IsPublished);
+        Assert.Equal(3, clonedRev.ExamQuestions.Count);
+
+        // Verify questions preserved DisplayOrder
+        var clonedQuestions = clonedRev.ExamQuestions.OrderBy(eq => eq.DisplayOrder).ToList();
+        Assert.Equal(q1.Id, clonedQuestions[0].QuestionId);
+        Assert.Equal(1, clonedQuestions[0].DisplayOrder);
+        Assert.Equal(q2.Id, clonedQuestions[1].QuestionId);
+        Assert.Equal(2, clonedQuestions[1].DisplayOrder);
+        Assert.Equal(q3.Id, clonedQuestions[2].QuestionId);
+        Assert.Equal(3, clonedQuestions[2].DisplayOrder);
+
+        // Verify zero attempts on cloned revision
+        var clonedAttempts = await verifyContext.ExamAttempts.Where(ea => ea.ExamId == clonedRev.Id).ToListAsync();
+        Assert.Empty(clonedAttempts);
+
+        // Verify source attempt still intact
+        var srcAttempts = await verifyContext.ExamAttempts.Where(ea => ea.ExamId == sourceRev.Id).ToListAsync();
+        Assert.Single(srcAttempts);
+
+        // Verify audit log in PostgreSQL
+        var audit = await verifyContext.AuditLogs.FirstOrDefaultAsync(a => a.EntityId == clonedFam.Id && a.Action == "ExamDuplicated");
+        Assert.NotNull(audit);
+        Assert.Equal("adm_pg_dup", audit.ActorId);
+    }
+
+    [Fact]
+    public async Task Postgres_ExaminationNewRevision_SerializesConcurrencyAndPreservesFamilyCode()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        using var scope = _factory.Services.CreateScope();
+        var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+        var adminClaims = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "adm_pg_rev"),
+            new Claim(ClaimTypes.Role, "Admin"),
+            new Claim("role", "Admin")
+        }, "TestAuth"));
+
+        var suffix = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
+
+        var q1 = new Question { Id = $"q_nrev_{suffix}_1", Stem = "Rev Q1", Pathway = "pn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        var q2 = new Question { Id = $"q_nrev_{suffix}_2", Stem = "Rev Q2", Pathway = "pn", Status = QuestionStatus.Published, QuestionTypeKey = "single-choice" };
+        context.Questions.AddRange(q1, q2);
+
+        var codeService = new ExaminationCodeService(context);
+        var familyCode = await codeService.AllocateCodeAsync("pn");
+
+        var fam = new Examination
+        {
+            Id = "fam_nrev_" + suffix,
+            Pathway = "pn",
+            Code = familyCode,
+            Title = $"PN Revisions Family {suffix}",
+            CreatedBy = "adm_pg_rev",
+            CreatedAt = DateTime.UtcNow
+        };
+        context.Examinations.Add(fam);
+
+        var rev1 = new Exam
+        {
+            Id = "rev_nrev_1_" + suffix,
+            ExaminationId = fam.Id,
+            RevisionNumber = 1,
+            LifecycleState = ExamLifecycleState.Published,
+            IsPublished = true,
+            Title = $"PN Rev 1 Published {suffix}",
+            Pathway = "pn",
+            CreatedBy = "adm_pg_rev"
+        };
+        context.Exams.Add(rev1);
+
+        context.ExamQuestions.AddRange(
+            new ExamQuestion { Id = $"eq_nrev_{suffix}_1", ExamId = rev1.Id, QuestionId = q1.Id, DisplayOrder = 1 },
+            new ExamQuestion { Id = $"eq_nrev_{suffix}_2", ExamId = rev1.Id, QuestionId = q2.Id, DisplayOrder = 2 }
+        );
+
+        await context.SaveChangesAsync();
+
+        // 1. Create Revision 2 from Revision 1
+        var lifecycleService = new ExamLifecycleService(context, codeService);
+        var rev2Dto = await lifecycleService.CreateRevisionAsync(
+            fam.Id,
+            new CreateRevisionRequest
+            {
+                Title = $"PN Rev 2 Draft {suffix}",
+                SourceRevisionId = rev1.Id,
+                CopyQuestions = true
+            },
+            adminClaims);
+
+        Assert.Equal(fam.Id, rev2Dto.ExaminationId);
+        Assert.Equal(familyCode, rev2Dto.ExaminationCode);
+        Assert.Equal(2, rev2Dto.RevisionNumber);
+        Assert.Equal("Draft", rev2Dto.LifecycleState);
+        Assert.Equal(2, rev2Dto.QuestionCount);
+
+        // 2. Concurrency / Single-Draft Invariant Test:
+        // Attempting to create Revision 3 while Revision 2 is still in Draft must fail
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            lifecycleService.CreateRevisionAsync(
+                fam.Id,
+                new CreateRevisionRequest
+                {
+                    Title = $"PN Rev 3 Draft Attempt {suffix}",
+                    SourceRevisionId = rev1.Id
+                },
+                adminClaims));
+
+        Assert.Contains("already has an active revision in Draft state", ex.Message);
+    }
 }
