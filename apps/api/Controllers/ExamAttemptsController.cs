@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Preform.Api.Data;
 using Preform.Api.Models;
 using Preform.Api.Services;
@@ -171,6 +172,7 @@ public class ExamAttemptsController : ControllerBase
     {
     }
 
+    [ActivatorUtilitiesConstructor]
     public ExamAttemptsController(
         AppDbContext context,
         ILogger<ExamAttemptsController> logger,

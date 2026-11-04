@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
@@ -22,6 +23,12 @@ public class ExamContinuityReauthTests
             .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.InMemoryEventId.TransactionIgnoredWarning))
             .Options;
         return new AppDbContext(options);
+    }
+
+    private static JsonElement ToJsonElement(object? value)
+    {
+        var json = JsonSerializer.Serialize(value);
+        return JsonDocument.Parse(json).RootElement;
     }
 
     private static (ExamAttemptsController controller, SessionSecurityService sessionSecurity, PasswordHasher<User> hasher) CreateController(
@@ -225,31 +232,31 @@ public class ExamContinuityReauthTests
         var result = await controller.ReauthenticateAttempt(attempt.Id, request, default);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
-        dynamic data = okResult.Value!;
-        Assert.True((bool)data.success);
-        Assert.NotNull(data.sessionId);
-        Assert.NotNull(data.token);
+        var root = ToJsonElement(okResult.Value);
+        Assert.True(root.GetProperty("success").GetBoolean());
+        var sessionId = root.GetProperty("sessionId").GetString();
+        Assert.NotNull(sessionId);
+        Assert.NotNull(root.GetProperty("token").GetString());
 
         // Core Invariants verification
-        Assert.Equal(originalAttemptId, (string)data.attempt.id);
-        Assert.Equal(originalStartedAt, (DateTime)data.attempt.startedAt);
-        Assert.Equal(60, (int)data.attempt.timeLimitMinutes);
-        Assert.Equal(2, (int)data.attempt.totalResponses);
+        var attemptEl = root.GetProperty("attempt");
+        Assert.Equal(originalAttemptId, attemptEl.GetProperty("id").GetString());
+        Assert.Equal(originalStartedAt, attemptEl.GetProperty("startedAt").GetDateTime());
+        Assert.Equal(60, attemptEl.GetProperty("timeLimitMinutes").GetInt32());
+        Assert.Equal(2, attemptEl.GetProperty("totalResponses").GetInt32());
 
         // Authoritative Timer verification: remaining seconds must reflect elapsed time (~45 mins remaining = ~2700s)
-        int remainingSeconds = (int)data.attempt.remainingSeconds;
+        int remainingSeconds = attemptEl.GetProperty("remainingSeconds").GetInt32();
         Assert.True(remainingSeconds > 2600 && remainingSeconds <= 2700, $"Expected remaining seconds ~2700, but got {remainingSeconds}");
 
         // Verify session was created in DB
-        string sessionId = (string)data.sessionId;
         var session = await context.UserSessions.FirstOrDefaultAsync(s => s.Id == sessionId);
         Assert.NotNull(session);
         Assert.Equal(user.Id, session.UserId);
         Assert.Equal(user.SecurityVersion, session.SecurityVersion);
 
         // Verify Audit Log
-        string attemptIdStr = (string)data.attempt.id;
-        var audit = await context.AuditLogs.FirstOrDefaultAsync(a => a.Action == "ExamAttemptReauthenticated" && a.EntityId == attemptIdStr);
+        var audit = await context.AuditLogs.FirstOrDefaultAsync(a => a.Action == "ExamAttemptReauthenticated" && a.EntityId == originalAttemptId);
         Assert.NotNull(audit);
         Assert.Equal(user.Id, audit.ActorId);
     }
@@ -271,9 +278,9 @@ public class ExamContinuityReauthTests
         var result = await controller.ReauthenticateAttempt(attempt.Id, request, default);
 
         var unauthorizedResult = Assert.IsType<UnauthorizedObjectResult>(result);
-        dynamic data = unauthorizedResult.Value!;
-        Assert.False((bool)data.success);
-        Assert.Equal("INVALID_CREDENTIALS", (string)data.errorCode);
+        var root = ToJsonElement(unauthorizedResult.Value);
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal("INVALID_CREDENTIALS", root.GetProperty("errorCode").GetString());
 
         // Assert no session was created
         var sessionsCount = await context.UserSessions.CountAsync();
@@ -298,9 +305,9 @@ public class ExamContinuityReauthTests
 
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status403Forbidden, statusResult.StatusCode);
-        dynamic data = statusResult.Value!;
-        Assert.False((bool)data.success);
-        Assert.Equal("ATTEMPT_OWNERSHIP_MISMATCH", (string)data.errorCode);
+        var root = ToJsonElement(statusResult.Value);
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal("ATTEMPT_OWNERSHIP_MISMATCH", root.GetProperty("errorCode").GetString());
     }
 
     [Fact]
@@ -322,9 +329,9 @@ public class ExamContinuityReauthTests
 
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status410Gone, statusResult.StatusCode);
-        dynamic data = statusResult.Value!;
-        Assert.False((bool)data.success);
-        Assert.Equal("ATTEMPT_EXPIRED", (string)data.errorCode);
+        var root = ToJsonElement(statusResult.Value);
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal("ATTEMPT_EXPIRED", root.GetProperty("errorCode").GetString());
 
         // Verify attempt was transitioned to Completed with deadline timestamp
         var updatedAttempt = await context.ExamAttempts.FindAsync(attempt.Id);
@@ -351,9 +358,9 @@ public class ExamContinuityReauthTests
 
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status409Conflict, statusResult.StatusCode);
-        dynamic data = statusResult.Value!;
-        Assert.False((bool)data.success);
-        Assert.Equal("ATTEMPT_NOT_IN_PROGRESS", (string)data.errorCode);
+        var root = ToJsonElement(statusResult.Value);
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal("ATTEMPT_NOT_IN_PROGRESS", root.GetProperty("errorCode").GetString());
     }
 
     [Fact]
@@ -370,9 +377,9 @@ public class ExamContinuityReauthTests
         var result = await controller.ReauthenticateAttempt("nonexistent_attempt_id", request, default);
 
         var notFoundResult = Assert.IsType<NotFoundObjectResult>(result);
-        dynamic data = notFoundResult.Value!;
-        Assert.False((bool)data.success);
-        Assert.Equal("ATTEMPT_NOT_FOUND", (string)data.errorCode);
+        var root = ToJsonElement(notFoundResult.Value);
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal("ATTEMPT_NOT_FOUND", root.GetProperty("errorCode").GetString());
     }
 
     [Fact]
@@ -416,9 +423,9 @@ public class ExamContinuityReauthTests
 
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status403Forbidden, statusResult.StatusCode);
-        dynamic data = statusResult.Value!;
-        Assert.False((bool)data.success);
-        Assert.Equal("CONCURRENT_SESSION_LIMIT_EXCEEDED", (string)data.errorCode);
+        var root = ToJsonElement(statusResult.Value);
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal("CONCURRENT_SESSION_LIMIT_EXCEEDED", root.GetProperty("errorCode").GetString());
     }
 
     [Fact]
@@ -442,9 +449,9 @@ public class ExamContinuityReauthTests
 
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status403Forbidden, statusResult.StatusCode);
-        dynamic data = statusResult.Value!;
-        Assert.False((bool)data.success);
-        Assert.Equal("ACCOUNT_INACTIVE", (string)data.errorCode);
+        var root = ToJsonElement(statusResult.Value);
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal("ACCOUNT_INACTIVE", root.GetProperty("errorCode").GetString());
     }
 
     [Fact]
@@ -466,9 +473,9 @@ public class ExamContinuityReauthTests
 
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status410Gone, statusResult.StatusCode);
-        dynamic data = statusResult.Value!;
-        Assert.False((bool)data.success);
-        Assert.Equal("ATTEMPT_EXPIRED", (string)data.errorCode);
+        var root = ToJsonElement(statusResult.Value);
+        Assert.False(root.GetProperty("success").GetBoolean());
+        Assert.Equal("ATTEMPT_EXPIRED", root.GetProperty("errorCode").GetString());
 
         // Verify attempt was transitioned to Completed
         var updatedAttempt = await context.ExamAttempts.FindAsync(attempt.Id);
@@ -494,8 +501,8 @@ public class ExamContinuityReauthTests
         var result = await controller.SubmitResponse(attempt.Id, submitRequest, default);
 
         var okResult = Assert.IsType<OkObjectResult>(result);
-        dynamic data = okResult.Value!;
-        Assert.True((bool)data.success);
+        var root = ToJsonElement(okResult.Value);
+        Assert.True(root.GetProperty("success").GetBoolean());
 
         // Verify response was saved
         var savedResponse = await context.AttemptResponses.FirstOrDefaultAsync(r => r.ExamAttemptId == attempt.Id && r.QuestionId == "q_reauth_01");
