@@ -343,3 +343,25 @@ Route (app)
 - [x] No unauthorized changes to database schema, CAT engines, payments, or candidate-facing systems.
 
 **Recommendation:** **READY FOR PRODUCT OWNER REVIEW AND ACCEPTANCE**
+
+---
+
+## 21. Formal Acceptance & Phase Closure Record
+
+- **Formal Acceptance Status:** **FORMALLY ACCEPTED AND CLOSED**
+- **Acceptance Audit Document:** `docs/exam-management-p3-5-final-acceptance-audit.md`
+- **Audited Baseline Commit:** `0b6638dee57ceb40ec60dcb34581862d93ace4d7` (`0b6638d`)
+- **Remediation Commit:** `966afa79b7c4a64ce480add77dbefa8d3ebacc1f` (`966afa7`)
+- **Closure Date:** November 4, 2026
+- **Final Verification Summary:**
+  - **REM-01 (Question Removal Confirmation):** Replaced immediate deletion with accessible confirmation modal (`Dialog`), explicit question identity, and cancel/confirm safeguards. Verified.
+  - **REM-02 (Revision Studio Duplication Shortcut):** Extracted reusable `<DuplicateExaminationDialog>`, integrated shortcut in Revision Studio header action bar for eligible revisions, preserved domain invariants and Family Hub workflow. Verified.
+  - **REM-03 (Browser History Synchronization):** Added `parseLibraryQueryParams` whitelist sanitization and bi-directional URL state synchronization with loop guards and search debounce protection. Verified.
+  - **Automated Verification Gates:**
+    - 8/8 focused remediation tests passed.
+    - 401/401 full frontend Vitest tests passed across 48 test files.
+    - TypeScript typecheck passed cleanly with 0 errors.
+    - Next.js production build succeeded with 94/94 static routes generated.
+    - 274/274 backend unit tests passed.
+    - 21/21 isolated PostgreSQL integration tests passed.
+  - **Acceptance Matrix:** All 23 original P3.5 acceptance criteria (P3.5-01 through P3.5-23) verified as **PASS**.
