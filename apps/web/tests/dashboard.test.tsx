@@ -219,6 +219,10 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
 
     const quickNav = screen.getByTestId("dashboard-quick-nav");
     expect(within(quickNav).getByRole("link", { name: /Account & Profile/i })).toHaveAttribute("href", "/profile");
+    expect(within(quickNav).getByRole("link", { name: /Security & Devices/i })).toHaveAttribute(
+      "href",
+      "/dashboard/settings/security"
+    );
     expect(within(quickNav).getByRole("link", { name: /All Study Plans/i })).toHaveAttribute("href", "/subscriptions");
     expect(within(quickNav).getByRole("link", { name: /Cart \(0\)/i })).toHaveAttribute("href", "/cart");
     expect(within(quickNav).getByRole("link", { name: /Learner FAQ/i })).toHaveAttribute("href", "/faq");
@@ -279,6 +283,11 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
     expect(within(sidebar).getByText(/^Test Bank & Assessments$/i)).toBeInTheDocument();
     expect(within(sidebar).getByText(/^Reports$/i)).toBeInTheDocument();
     expect(within(sidebar).getByText(/^Account$/i)).toBeInTheDocument();
+
+    // Verify Security & Devices sidebar navigation link
+    const securityNavLink = within(sidebar).getByTestId("sidebar-nav-security");
+    expect(securityNavLink).toBeInTheDocument();
+    expect(securityNavLink).toHaveAttribute("href", "/dashboard/settings/security");
 
     // Verify active report view highlight
     expect(within(sidebar).getByText("Previous Tests")).toBeInTheDocument();
