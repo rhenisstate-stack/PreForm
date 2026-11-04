@@ -876,8 +876,29 @@ public class ExamLifecycleService : IExamLifecycleService
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Include(e => e.Revisions.OrderByDescending(r => r.RevisionNumber))
-                .ThenInclude(r => r.ExamQuestions)
             .ToListAsync(ct);
+
+        var revisionIds = pagedExaminations
+            .SelectMany(e => e.Revisions)
+            .Select(r => r.Id)
+            .Distinct()
+            .ToList();
+
+        var questionCounts = revisionIds.Count == 0
+            ? new Dictionary<string, int>()
+            : await _context.ExamQuestions
+                .AsNoTracking()
+                .Where(eq => revisionIds.Contains(eq.ExamId))
+                .GroupBy(eq => eq.ExamId)
+                .Select(g => new
+                {
+                    ExamId = g.Key,
+                    Count = g.Count()
+                })
+                .ToDictionaryAsync(
+                    x => x.ExamId,
+                    x => x.Count,
+                    ct);
 
         var items = new List<ExaminationLibraryItemDto>();
         var legacyList = new List<ExaminationDto>();
@@ -888,7 +909,11 @@ public class ExamLifecycleService : IExamLifecycleService
                 ? examFamily.Revisions.Where(r => r.LifecycleState == ExamLifecycleState.Published).ToList()
                 : examFamily.Revisions.ToList();
 
-            var summaryDtos = visibleRevisions.Select(r => MapToRevisionSummaryDto(r, examFamily.Code, r.ExamQuestions.Count)).ToList();
+            var summaryDtos = visibleRevisions.Select(r =>
+            {
+                questionCounts.TryGetValue(r.Id, out var questionCount);
+                return MapToRevisionSummaryDto(r, examFamily.Code, questionCount);
+            }).ToList();
             var publishedSummary = summaryDtos.FirstOrDefault(r => r.LifecycleState == ExamLifecycleState.Published.ToString());
             var latestSummary = summaryDtos.OrderByDescending(r => r.RevisionNumber).FirstOrDefault();
             var currentSummary = summaryDtos.FirstOrDefault(r => r.Id == examFamily.CurrentRevisionId)
@@ -911,7 +936,7 @@ public class ExamLifecycleService : IExamLifecycleService
                 CurrentRevision = currentSummary
             });
 
-            legacyList.Add(MapToExaminationDto(examFamily, visibleRevisions));
+            legacyList.Add(MapToExaminationDto(examFamily, visibleRevisions, questionCounts));
         }
 
         return new ExaminationLibraryResponseDto
@@ -1572,9 +1597,15 @@ public class ExamLifecycleService : IExamLifecycleService
         }).ToList();
     }
 
-    private static ExaminationDto MapToExaminationDto(Examination examination, List<Exam> revisions)
+    private static ExaminationDto MapToExaminationDto(Examination examination, List<Exam> revisions, IReadOnlyDictionary<string, int>? questionCounts = null)
     {
-        var revisionDtos = revisions.Select(r => MapToRevisionDto(r, examination.Code, r.ExamQuestions?.Count ?? 0)).ToList();
+        var revisionDtos = revisions.Select(r =>
+        {
+            var count = questionCounts != null && questionCounts.TryGetValue(r.Id, out var qc)
+                ? qc
+                : (r.ExamQuestions?.Count ?? 0);
+            return MapToRevisionDto(r, examination.Code, count);
+        }).ToList();
         var currentRev = revisionDtos.FirstOrDefault(r => r.Id == examination.CurrentRevisionId)
                       ?? revisionDtos.FirstOrDefault(r => r.LifecycleState == ExamLifecycleState.Published.ToString())
                       ?? revisionDtos.FirstOrDefault();

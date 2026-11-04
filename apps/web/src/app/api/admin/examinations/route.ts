@@ -12,7 +12,6 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const pathway = searchParams.get("pathway") || undefined;
     const search = searchParams.get("search") || undefined;
-    const status = searchParams.get("status") || undefined;
     const revisionStatus = searchParams.get("revisionStatus") || undefined;
     const sortBy = searchParams.get("sortBy") || undefined;
     const sortDirection = (searchParams.get("sortDirection") as "asc" | "desc") || undefined;
@@ -20,7 +19,7 @@ export async function GET(request: Request) {
     const pageSize = searchParams.get("pageSize") ? Number(searchParams.get("pageSize")) : undefined;
 
     const res = await examinationsService.queryExaminations(
-      { pathway, search, status, revisionStatus, sortBy, sortDirection, page, pageSize },
+      { pathway, search, revisionStatus, sortBy, sortDirection, page, pageSize },
       auth.session
     );
     if (!res.success) {

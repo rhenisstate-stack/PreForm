@@ -218,9 +218,6 @@ public sealed class ExaminationQueryParameters
     public string? Pathway { get; set; } // "rn", "pn", or null for all
 
     [MaxLength(32)]
-    public string? Status { get; set; } // Family status filter if applicable
-
-    [MaxLength(32)]
     public string? RevisionStatus { get; set; } // "Draft", "InReview", "Approved", "Published", "Archived", "Retired"
 
     [MaxLength(32)]

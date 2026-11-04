@@ -541,7 +541,6 @@ export interface BackendFamilyRevisionsResponseDto {
 export interface ExaminationQueryParams {
   search?: string;
   pathway?: string;
-  status?: string;
   revisionStatus?: string;
   sortBy?: string;
   sortDirection?: "asc" | "desc";
@@ -627,7 +626,6 @@ export const examinationsService = {
     const searchParams = new URLSearchParams();
     if (params?.search) searchParams.set("search", params.search);
     if (params?.pathway && params.pathway !== "all") searchParams.set("pathway", params.pathway);
-    if (params?.status) searchParams.set("status", params.status);
     if (params?.revisionStatus && params.revisionStatus !== "all") searchParams.set("revisionStatus", params.revisionStatus);
     if (params?.sortBy) searchParams.set("sortBy", params.sortBy);
     if (params?.sortDirection) searchParams.set("sortDirection", params.sortDirection);
