@@ -199,6 +199,42 @@ describe("Security Regression & Architecture Boundary Tests", () => {
     expect(emptyHash).toBe("e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
   });
 
+  it("SEC-03: canonical signer binds the raw query string into the canonical path (examination remediation regression)", () => {
+    // The BFF signs the dispatched endpoint exactly as sent, including its raw
+    // query string. The ASP.NET Core PrepfordAuthHandler canonicalizes the same
+    // representation (Request.Path + Request.QueryString.Value), so a signature
+    // made against the query-less path alone must be different from one made
+    // for the full dispatched endpoint.
+    const fixedTimestamp = 1793280000;
+    const fixedNonce = "test-nonce-fedcba0987654321";
+
+    const headersWithQuery = createCanonicalGatewayAuthHeaders(dummySession, "corr-sec03-2", {
+      method: "GET",
+      path: "/api/v1/examinations?sortBy=code&sortDirection=asc&page=1&pageSize=20",
+      timestamp: fixedTimestamp,
+      nonce: fixedNonce,
+    });
+
+    const canonicalPayload = `${fixedTimestamp}\nGET\n/api/v1/examinations?sortBy=code&sortDirection=asc&page=1&pageSize=20\n${fixedNonce}\n${EMPTY_BODY_SHA256}\n${dummySession.userId}\n${dummySession.email}\n${dummySession.role}`;
+    const expectedSig = crypto
+      .createHmac("sha256", getGatewaySecret())
+      .update(canonicalPayload)
+      .digest("hex")
+      .toLowerCase();
+
+    expect(headersWithQuery["X-Gateway-Signature"]).toBe(expectedSig);
+
+    // The same principal at the same instant signing the query-less path must
+    // produce a DIFFERENT signature: the query string is authenticated material.
+    const headersWithoutQuery = createCanonicalGatewayAuthHeaders(dummySession, "corr-sec03-2", {
+      method: "GET",
+      path: "/api/v1/examinations",
+      timestamp: fixedTimestamp,
+      nonce: fixedNonce,
+    });
+    expect(headersWithoutQuery["X-Gateway-Signature"]).not.toBe(headersWithQuery["X-Gateway-Signature"]);
+  });
+
   // ── SEC-02: Authoritative Session Revocation Dispatch ─────────────────────
 
   it("SEC-02: authService.revokeSession dispatches revocation request to ASP.NET Core", async () => {

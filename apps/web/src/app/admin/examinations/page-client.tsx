@@ -45,6 +45,21 @@ import type {
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
 
+/**
+ * Error carrying the HTTP status so the catalogue UI can distinguish an
+ * authentication failure (401) from an authorization failure (403) from a
+ * server fault, instead of collapsing every failure into one generic retry
+ * state.
+ */
+export class ExaminationLibraryError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ExaminationLibraryError";
+    this.status = status;
+  }
+}
+
 function getStatusBadge(state?: string) {
   switch (state?.toLowerCase()) {
     case "published":
@@ -244,11 +259,28 @@ export function AdminExaminationsClient() {
 
       const res = await fetch(`/api/admin/examinations?${params.toString()}`);
       if (!res.ok) {
-        throw new Error("Failed to load examination library catalogue");
+        // Preserve the HTTP status: 401 (session expired) and 403 (insufficient
+        // role) must not be presented to administrators as a generic transient
+        // failure, and 401/403 must not trigger query retries (which would turn
+        // an authentication failure into an unbounded refetch loop).
+        if (res.status === 401) {
+          throw new ExaminationLibraryError("Your session has expired. Please sign in again.", 401);
+        }
+        if (res.status === 403) {
+          throw new ExaminationLibraryError(
+            "Your account does not have permission to view the examination catalogue.",
+            403
+          );
+        }
+        throw new ExaminationLibraryError("Failed to load examination library catalogue", res.status);
       }
       return res.json();
     },
     enabled: isAuthenticated && capabilities.canViewExaminations,
+    retry: (failureCount, error) =>
+      error instanceof ExaminationLibraryError && (error.status === 401 || error.status === 403)
+        ? false
+        : failureCount < 1,
   });
 
   const createMutation = useMutation({
@@ -487,12 +519,37 @@ export function AdminExaminationsClient() {
       ) : libraryError ? (
         <div className="p-8 text-center bg-rose-50 dark:bg-rose-950/20 rounded-xl border border-rose-200 dark:border-rose-900/40">
           <AlertTriangle className="h-8 w-8 text-rose-500 mx-auto mb-2" />
-          <p className="text-sm text-rose-700 dark:text-rose-300 font-medium">
-            Failed to load examination library catalogue.
-          </p>
-          <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4">
-            <RotateCcw className="h-3.5 w-3.5 mr-2" /> Retry
-          </Button>
+          {libraryError instanceof ExaminationLibraryError && libraryError.status === 401 ? (
+            <>
+              <p className="text-sm text-rose-700 dark:text-rose-300 font-medium">
+                Your session has expired. Please sign in again to manage the examination catalogue.
+              </p>
+              <Link
+                href="/sign-in"
+                className="mt-4 inline-flex items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+              >
+                Sign In Again
+              </Link>
+            </>
+          ) : libraryError instanceof ExaminationLibraryError && libraryError.status === 403 ? (
+            <>
+              <p className="text-sm text-rose-700 dark:text-rose-300 font-medium">
+                Your account does not have permission to view the examination catalogue.
+              </p>
+              <p className="text-xs text-rose-600/80 dark:text-rose-400/80 mt-2">
+                Contact a super administrator if you believe this is an error.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-rose-700 dark:text-rose-300 font-medium">
+                Failed to load examination library catalogue.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-4">
+                <RotateCcw className="h-3.5 w-3.5 mr-2" /> Retry
+              </Button>
+            </>
+          )}
         </div>
       ) : items.length === 0 ? (
         <div className="p-12 text-center bg-slate-50 dark:bg-slate-900/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-800">
