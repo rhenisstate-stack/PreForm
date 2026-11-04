@@ -886,13 +886,7 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         var executedSqlCommands = new List<string>();
         var loggingOptions = new DbContextOptionsBuilder<AppDbContext>()
             .UseNpgsql(PostgresTestFixture.ConnectionString)
-            .LogTo(msg =>
-            {
-                if (msg.Contains("Executing DbCommand"))
-                {
-                    executedSqlCommands.Add(msg);
-                }
-            }, LogLevel.Information)
+            .LogTo(msg => executedSqlCommands.Add(msg), LogLevel.Information)
             .Options;
 
         using var testContext = new AppDbContext(loggingOptions);
