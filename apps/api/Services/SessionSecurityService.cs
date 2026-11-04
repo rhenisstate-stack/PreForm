@@ -67,6 +67,14 @@ public class SessionSecurityService : ISessionSecurityService
                 return await strategy.ExecuteAsync(async () =>
                 {
                     await using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken);
+                    if (_dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        // Transaction-scoped PostgreSQL advisory xact lock keyed to the user ID ensures strict cross-instance serializability
+                        await _dbContext.Database.ExecuteSqlRawAsync(
+                            "SELECT pg_advisory_xact_lock(hashtext('user_session_' || {0}));",
+                            new object[] { user.Id },
+                            cancellationToken);
+                    }
                     var result = await ProcessSessionCreationAsync(user, role, effectiveClientId, ipAddress, userAgent, fingerprintHash, policy, now, cancellationToken);
                     if (result.Success)
                     {
@@ -569,6 +577,30 @@ public class SessionSecurityService : ISessionSecurityService
     {
         if (string.IsNullOrWhiteSpace(userId)) return;
 
+        if (_dbContext.Database.IsRelational())
+        {
+            var strategy = _dbContext.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken);
+                if (_dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+                {
+                    await _dbContext.Database.ExecuteSqlRawAsync(
+                        "SELECT pg_advisory_xact_lock(hashtext('user_session_' || {0}));",
+                        new object[] { userId },
+                        cancellationToken);
+                }
+                await ProcessInvalidateUserSecurityVersionAsync(userId, reason, cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            });
+            return;
+        }
+
+        await ProcessInvalidateUserSecurityVersionAsync(userId, reason, cancellationToken);
+    }
+
+    private async Task ProcessInvalidateUserSecurityVersionAsync(string userId, string reason, CancellationToken cancellationToken)
+    {
         var user = await _dbContext.Users.FindAsync(new object[] { userId }, cancellationToken);
         if (user == null) return;
 

@@ -163,6 +163,50 @@ public class ExamAttemptsController : ControllerBase
         "admin", "superadmin", "administrator", "exam_manager"
     };
 
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (int FailedAttempts, DateTime WindowStart, DateTime? LockoutUntil)> _reauthRateLimits = new();
+
+    public static void ResetReauthRateLimitsForTesting()
+    {
+        _reauthRateLimits.Clear();
+    }
+
+    private static bool IsReauthRateLimited(string key, out int retryAfterSeconds)
+    {
+        retryAfterSeconds = 0;
+        var now = DateTime.UtcNow;
+        if (_reauthRateLimits.TryGetValue(key, out var record))
+        {
+            if (record.LockoutUntil.HasValue && now < record.LockoutUntil.Value)
+            {
+                retryAfterSeconds = Math.Max(1, (int)Math.Ceiling((record.LockoutUntil.Value - now).TotalSeconds));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void RecordFailedReauthAttempt(string key)
+    {
+        var now = DateTime.UtcNow;
+        _reauthRateLimits.AddOrUpdate(key,
+            _ => (1, now, null),
+            (_, old) =>
+            {
+                if (now - old.WindowStart > TimeSpan.FromMinutes(15))
+                {
+                    return (1, now, null);
+                }
+                var newCount = old.FailedAttempts + 1;
+                DateTime? lockout = newCount >= 5 ? now.AddMinutes(15) : null;
+                return (newCount, old.WindowStart, lockout);
+            });
+    }
+
+    private static void ClearFailedReauthAttempts(string key)
+    {
+        _reauthRateLimits.TryRemove(key, out _);
+    }
+
     public ExamAttemptsController(
         AppDbContext context,
         ILogger<ExamAttemptsController> logger,

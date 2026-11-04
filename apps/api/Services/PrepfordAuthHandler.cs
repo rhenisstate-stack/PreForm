@@ -274,6 +274,16 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
                         return AuthenticateResult.Fail("Authoritative session record not found in datastore.");
                     }
                 }
+                else if (validation.Session != null)
+                {
+                    // Enforce session ownership against gateway user identity
+                    if (!string.Equals(validation.Session.UserId, gatewayUserId.Trim(), StringComparison.Ordinal))
+                    {
+                        Context.Items["AuthFailureCode"] = "SESSION_USER_MISMATCH";
+                        Context.Items["AuthFailureReason"] = "Session user does not match authenticated gateway user.";
+                        return AuthenticateResult.Fail("Session user does not match authenticated gateway user.");
+                    }
+                }
             }
 
             var claims = new List<Claim>
