@@ -8,6 +8,7 @@ using Preform.Api.Controllers;
 using Preform.Api.Data;
 using Preform.Api.Models;
 using Preform.Api.Services;
+using Preform.Api.Services.Grading;
 using Xunit;
 
 namespace Preform.Api.Tests;
@@ -127,8 +128,14 @@ public class ExamContinuityReauthTests
         {
             Id = "q_reauth_01",
             Stem = "Clinical prioritization question 1",
-            QuestionType = QuestionTypeKind.MultipleChoice,
-            CorrectAnswer = "0",
+            QuestionTypeKey = "single-choice",
+            Pathway = "rn",
+            Status = QuestionStatus.Published,
+            Options = new List<QuestionOption>
+            {
+                new QuestionOption { Id = "opt_1_0", OptionKey = "0", Content = "Option A", IsCorrect = true, DisplayOrder = 0 },
+                new QuestionOption { Id = "opt_1_1", OptionKey = "1", Content = "Option B", IsCorrect = false, DisplayOrder = 1 }
+            },
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -136,8 +143,14 @@ public class ExamContinuityReauthTests
         {
             Id = "q_reauth_02",
             Stem = "Clinical prioritization question 2",
-            QuestionType = QuestionTypeKind.MultipleChoice,
-            CorrectAnswer = "1",
+            QuestionTypeKey = "single-choice",
+            Pathway = "rn",
+            Status = QuestionStatus.Published,
+            Options = new List<QuestionOption>
+            {
+                new QuestionOption { Id = "opt_2_0", OptionKey = "0", Content = "Option A", IsCorrect = false, DisplayOrder = 0 },
+                new QuestionOption { Id = "opt_2_1", OptionKey = "1", Content = "Option B", IsCorrect = true, DisplayOrder = 1 }
+            },
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
         };
@@ -228,13 +241,15 @@ public class ExamContinuityReauthTests
         Assert.True(remainingSeconds > 2600 && remainingSeconds <= 2700, $"Expected remaining seconds ~2700, but got {remainingSeconds}");
 
         // Verify session was created in DB
-        var session = await context.UserSessions.FirstOrDefaultAsync(s => s.Id == (string)data.sessionId);
+        string sessionId = (string)data.sessionId;
+        var session = await context.UserSessions.FirstOrDefaultAsync(s => s.Id == sessionId);
         Assert.NotNull(session);
         Assert.Equal(user.Id, session.UserId);
         Assert.Equal(user.SecurityVersion, session.SecurityVersion);
 
         // Verify Audit Log
-        var audit = await context.AuditLogs.FirstOrDefaultAsync(a => a.Action == "ExamAttemptReauthenticated" && a.EntityId == originalAttemptId);
+        string attemptIdStr = (string)data.attempt.id;
+        var audit = await context.AuditLogs.FirstOrDefaultAsync(a => a.Action == "ExamAttemptReauthenticated" && a.EntityId == attemptIdStr);
         Assert.NotNull(audit);
         Assert.Equal(user.Id, audit.ActorId);
     }
@@ -381,9 +396,11 @@ public class ExamContinuityReauthTests
             ClientId = "client_existing",
             TokenHash = "hash1",
             CreatedAt = DateTime.UtcNow,
-            LastActivityAt = DateTime.UtcNow,
+            LastActiveAt = DateTime.UtcNow,
             ExpiresAt = DateTime.UtcNow.AddHours(2),
-            IsRevoked = false,
+            IdleExpiresAt = DateTime.UtcNow.AddHours(2),
+            AbsoluteExpiresAt = DateTime.UtcNow.AddDays(7),
+            Revoked = false,
             SecurityVersion = user.SecurityVersion
         });
         await context.SaveChangesAsync();
