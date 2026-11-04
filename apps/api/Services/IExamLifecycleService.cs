@@ -35,4 +35,7 @@ public interface IExamLifecycleService
     // ── P3.3 Examination Library Query & Discovery Operations ──
     Task<ExaminationLibraryResponseDto> QueryExaminationsAsync(ExaminationQueryParameters parameters, ClaimsPrincipal user, CancellationToken ct = default);
     Task<FamilyRevisionsResponseDto> GetFamilyRevisionsAsync(string examinationId, ClaimsPrincipal user, CancellationToken ct = default);
+
+    // ── P3.4 Examination Duplication & Revision Lineage ──
+    Task<DuplicateExaminationResponseDto> DuplicateExaminationAsync(string examinationId, DuplicateExaminationRequest request, ClaimsPrincipal user, CancellationToken ct = default);
 }

@@ -10,10 +10,12 @@ namespace Preform.Api.Services;
 public class ExamLifecycleService : IExamLifecycleService
 {
     private readonly AppDbContext _context;
+    private readonly IExaminationCodeService _codeService;
 
-    public ExamLifecycleService(AppDbContext context)
+    public ExamLifecycleService(AppDbContext context, IExaminationCodeService? codeService = null)
     {
         _context = context;
+        _codeService = codeService ?? new ExaminationCodeService(context);
     }
 
     private static (string actorId, string role) ResolveActor(ClaimsPrincipal user)
@@ -66,6 +68,17 @@ public class ExamLifecycleService : IExamLifecycleService
         var (actorId, role) = ResolveActor(user);
         EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin }, "CreateRevision");
 
+        var isRelational = _context.Database.IsRelational();
+        await using var transaction = isRelational ? await _context.Database.BeginTransactionAsync(ct) : null;
+
+        if (_context.Database.IsNpgsql())
+        {
+            // Row-level lock on the Examination record to serialize revision number allocation and prevent concurrency race conditions
+            await _context.Examinations
+                .FromSqlInterpolated($"SELECT * FROM public.\"Examinations\" WHERE \"Id\" = {examinationId} FOR UPDATE")
+                .FirstOrDefaultAsync(ct);
+        }
+
         var examination = await _context.Examinations
             .Include(e => e.Revisions)
             .FirstOrDefaultAsync(e => e.Id == examinationId, ct);
@@ -84,12 +97,61 @@ public class ExamLifecycleService : IExamLifecycleService
             throw new InvalidOperationException($"Examination '{examination.Code}' already has an active revision in Draft state. Only one draft revision is permitted at a time.");
         }
 
+        Exam? sourceRevision = null;
+        if (!string.IsNullOrWhiteSpace(request.SourceRevisionId))
+        {
+            sourceRevision = await _context.Exams
+                .Include(e => e.ExamQuestions)
+                .FirstOrDefaultAsync(e => e.Id == request.SourceRevisionId, ct);
+
+            if (sourceRevision == null)
+            {
+                throw new KeyNotFoundException($"Source revision '{request.SourceRevisionId}' not found.");
+            }
+
+            if (sourceRevision.ExaminationId != examinationId)
+            {
+                throw new InvalidOperationException($"Source revision '{request.SourceRevisionId}' does not belong to examination family '{examinationId}'.");
+            }
+
+            if (sourceRevision.LifecycleState == ExamLifecycleState.Draft)
+            {
+                throw new InvalidOperationException($"Cannot branch a new revision from a revision in Draft state. The active draft must first be progressed or discarded.");
+            }
+            if (sourceRevision.LifecycleState == ExamLifecycleState.InReview)
+            {
+                throw new InvalidOperationException($"Cannot branch a new revision from revision '{sourceRevision.Id}' while it is InReview.");
+            }
+            if (sourceRevision.LifecycleState == ExamLifecycleState.Retired)
+            {
+                throw new InvalidOperationException($"Cannot branch a new revision from revision '{sourceRevision.Id}' because it is in terminal Retired state.");
+            }
+            if (sourceRevision.LifecycleState != ExamLifecycleState.Published &&
+                sourceRevision.LifecycleState != ExamLifecycleState.Approved &&
+                sourceRevision.LifecycleState != ExamLifecycleState.Archived)
+            {
+                throw new InvalidOperationException($"Cannot branch a new revision from revision in '{sourceRevision.LifecycleState}' state. Only Published, Approved, or Archived revisions are eligible.");
+            }
+        }
+
         var maxRevision = await _context.Exams
             .Where(e => e.ExaminationId == examinationId)
             .MaxAsync(e => (int?)e.RevisionNumber, ct) ?? 0;
 
         var nextRevisionNumber = maxRevision + 1;
         var now = DateTime.UtcNow;
+
+        var title = !string.IsNullOrWhiteSpace(request.Title)
+            ? request.Title.Trim()
+            : (sourceRevision != null ? sourceRevision.Title : examination.Title);
+
+        var description = !string.IsNullOrWhiteSpace(request.Description)
+            ? request.Description.Trim()
+            : (sourceRevision != null ? sourceRevision.Description : string.Empty);
+
+        var examType = request.ExamType;
+        var timeLimit = request.TimeLimitMinutes > 0 ? request.TimeLimitMinutes : (sourceRevision?.TimeLimitMinutes ?? 0);
+        var passingScore = request.PassingScorePercent > 0 ? request.PassingScorePercent : (sourceRevision?.PassingScorePercent ?? 75.0m);
 
         var revision = new Exam
         {
@@ -98,12 +160,12 @@ public class ExamLifecycleService : IExamLifecycleService
             RevisionNumber = nextRevisionNumber,
             LifecycleState = ExamLifecycleState.Draft,
             ConcurrencyToken = 1,
-            Title = string.IsNullOrWhiteSpace(request.Title) ? examination.Title : request.Title.Trim(),
-            Description = request.Description?.Trim() ?? string.Empty,
+            Title = title,
+            Description = description,
             Pathway = examination.Pathway,
-            ExamType = request.ExamType,
-            TimeLimitMinutes = request.TimeLimitMinutes,
-            PassingScorePercent = request.PassingScorePercent,
+            ExamType = examType,
+            TimeLimitMinutes = timeLimit,
+            PassingScorePercent = passingScore,
             IsPublished = false,
             CreatedBy = actorId,
             CreatedAt = now,
@@ -111,6 +173,45 @@ public class ExamLifecycleService : IExamLifecycleService
         };
 
         _context.Exams.Add(revision);
+
+        var copiedCount = 0;
+        if (sourceRevision != null && request.CopyQuestions && sourceRevision.ExamQuestions.Any())
+        {
+            var sourceQuestions = sourceRevision.ExamQuestions.OrderBy(eq => eq.DisplayOrder).ToList();
+            var questionIds = sourceQuestions.Select(eq => eq.QuestionId).Distinct().ToList();
+
+            var activeQuestions = await _context.Questions
+                .Where(q => questionIds.Contains(q.Id))
+                .ToDictionaryAsync(q => q.Id, ct);
+
+            foreach (var sq in sourceQuestions)
+            {
+                if (!activeQuestions.TryGetValue(sq.QuestionId, out var question))
+                {
+                    throw new InvalidOperationException($"Question '{sq.QuestionId}' was not found in question bank and cannot be copied.");
+                }
+
+                if (!string.Equals(question.Pathway, examination.Pathway, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Question '{question.Id}' pathway '{question.Pathway}' does not match examination pathway '{examination.Pathway}'.");
+                }
+
+                if (question.Status != QuestionStatus.Approved && question.Status != QuestionStatus.Published)
+                {
+                    throw new InvalidOperationException($"Question '{question.Id}' is in '{question.Status}' state and is not eligible to be copied.");
+                }
+
+                var newEq = new ExamQuestion
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ExamId = revision.Id,
+                    QuestionId = sq.QuestionId,
+                    DisplayOrder = sq.DisplayOrder
+                };
+                _context.ExamQuestions.Add(newEq);
+                copiedCount++;
+            }
+        }
 
         _context.AuditLogs.Add(new AuditLog
         {
@@ -124,7 +225,10 @@ public class ExamLifecycleService : IExamLifecycleService
                 examinationId = examination.Id,
                 examinationCode = examination.Code,
                 revisionNumber = nextRevisionNumber,
+                sourceRevisionId = sourceRevision?.Id,
+                sourceRevisionNumber = sourceRevision?.RevisionNumber,
                 lifecycleState = ExamLifecycleState.Draft.ToString(),
+                questionCount = copiedCount,
                 title = revision.Title
             }),
             Outcome = "Success",
@@ -132,7 +236,246 @@ public class ExamLifecycleService : IExamLifecycleService
         });
 
         await _context.SaveChangesAsync(ct);
-        return MapToRevisionDto(revision, examination.Code, 0);
+        if (transaction != null)
+        {
+            await transaction.CommitAsync(ct);
+        }
+
+        return MapToRevisionDto(revision, examination.Code, copiedCount);
+    }
+
+    public async Task<DuplicateExaminationResponseDto> DuplicateExaminationAsync(
+        string examinationId,
+        DuplicateExaminationRequest request,
+        ClaimsPrincipal user,
+        CancellationToken ct = default)
+    {
+        var (actorId, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin }, "DuplicateExamination");
+
+        var isRelational = _context.Database.IsRelational();
+        await using var transaction = isRelational ? await _context.Database.BeginTransactionAsync(ct) : null;
+
+        var sourceFamily = await _context.Examinations
+            .Include(e => e.Revisions)
+            .FirstOrDefaultAsync(e => e.Id == examinationId, ct);
+
+        if (sourceFamily == null)
+        {
+            throw new KeyNotFoundException($"Source examination '{examinationId}' not found.");
+        }
+
+        Exam? sourceRevision = null;
+        if (!string.IsNullOrWhiteSpace(request.SourceRevisionId))
+        {
+            sourceRevision = await _context.Exams
+                .Include(e => e.ExamQuestions)
+                .FirstOrDefaultAsync(e => e.Id == request.SourceRevisionId, ct);
+
+            if (sourceRevision == null)
+            {
+                throw new KeyNotFoundException($"Source revision '{request.SourceRevisionId}' not found.");
+            }
+
+            if (sourceRevision.ExaminationId != examinationId)
+            {
+                throw new InvalidOperationException($"Source revision '{request.SourceRevisionId}' does not belong to examination family '{examinationId}'.");
+            }
+        }
+        else
+        {
+            sourceRevision = await _context.Exams
+                .Include(e => e.ExamQuestions)
+                .Where(e => e.ExaminationId == examinationId &&
+                            (e.LifecycleState == ExamLifecycleState.Published ||
+                             e.LifecycleState == ExamLifecycleState.Approved ||
+                             e.LifecycleState == ExamLifecycleState.Archived))
+                .OrderByDescending(e => e.LifecycleState == ExamLifecycleState.Published ? 1 : 0)
+                .ThenByDescending(e => e.RevisionNumber)
+                .FirstOrDefaultAsync(ct);
+
+            if (sourceRevision == null)
+            {
+                throw new InvalidOperationException($"Examination '{sourceFamily.Code}' has no eligible published, approved, or archived revision to duplicate.");
+            }
+        }
+
+        if (sourceRevision.LifecycleState == ExamLifecycleState.Draft)
+        {
+            throw new InvalidOperationException($"Cannot duplicate from revision in Draft state. Only Approved, Published, or Archived revisions can be duplicated.");
+        }
+        if (sourceRevision.LifecycleState == ExamLifecycleState.InReview)
+        {
+            throw new InvalidOperationException($"Cannot duplicate from revision '{sourceRevision.Id}' while it is InReview.");
+        }
+        if (sourceRevision.LifecycleState == ExamLifecycleState.Retired)
+        {
+            throw new InvalidOperationException($"Cannot duplicate from revision '{sourceRevision.Id}' because it is in terminal Retired state.");
+        }
+        if (sourceRevision.LifecycleState != ExamLifecycleState.Published &&
+            sourceRevision.LifecycleState != ExamLifecycleState.Approved &&
+            sourceRevision.LifecycleState != ExamLifecycleState.Archived)
+        {
+            throw new InvalidOperationException($"Cannot duplicate from revision in '{sourceRevision.LifecycleState}' state. Only Published, Approved, or Archived revisions are eligible.");
+        }
+
+        var newCode = await _codeService.AllocateCodeAsync(sourceFamily.Pathway, ct);
+        var now = DateTime.UtcNow;
+
+        var newTitle = !string.IsNullOrWhiteSpace(request.Title)
+            ? request.Title.Trim()
+            : $"{sourceFamily.Title} (Copy)";
+
+        var newFamily = new Examination
+        {
+            Id = Guid.NewGuid().ToString(),
+            Pathway = sourceFamily.Pathway,
+            Code = newCode,
+            Title = newTitle,
+            CreatedAt = now,
+            CreatedBy = actorId
+        };
+        _context.Examinations.Add(newFamily);
+
+        var newDescription = !string.IsNullOrWhiteSpace(request.Description)
+            ? request.Description.Trim()
+            : sourceRevision.Description;
+
+        var timeLimit = request.TimeLimitMinutes.HasValue && request.TimeLimitMinutes.Value >= 0
+            ? request.TimeLimitMinutes.Value
+            : sourceRevision.TimeLimitMinutes;
+
+        var passingScore = request.PassingScorePercent.HasValue && request.PassingScorePercent.Value > 0
+            ? request.PassingScorePercent.Value
+            : sourceRevision.PassingScorePercent;
+
+        var newRevision = new Exam
+        {
+            Id = Guid.NewGuid().ToString(),
+            ExaminationId = newFamily.Id,
+            RevisionNumber = 1,
+            LifecycleState = ExamLifecycleState.Draft,
+            ConcurrencyToken = 1,
+            Title = newTitle,
+            Description = newDescription,
+            Pathway = newFamily.Pathway,
+            ExamType = sourceRevision.ExamType,
+            TimeLimitMinutes = timeLimit,
+            PassingScorePercent = passingScore,
+            IsPublished = false,
+            CreatedBy = actorId,
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        _context.Exams.Add(newRevision);
+
+        var copiedCount = 0;
+        if (sourceRevision.ExamQuestions.Any())
+        {
+            var sourceQuestions = sourceRevision.ExamQuestions.OrderBy(eq => eq.DisplayOrder).ToList();
+            var questionIds = sourceQuestions.Select(eq => eq.QuestionId).Distinct().ToList();
+
+            var activeQuestions = await _context.Questions
+                .Where(q => questionIds.Contains(q.Id))
+                .ToDictionaryAsync(q => q.Id, ct);
+
+            foreach (var sq in sourceQuestions)
+            {
+                if (!activeQuestions.TryGetValue(sq.QuestionId, out var question))
+                {
+                    throw new InvalidOperationException($"Question '{sq.QuestionId}' was not found in question bank and cannot be copied.");
+                }
+
+                if (!string.Equals(question.Pathway, newFamily.Pathway, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException($"Question '{question.Id}' pathway '{question.Pathway}' does not match examination pathway '{newFamily.Pathway}'.");
+                }
+
+                if (question.Status != QuestionStatus.Approved && question.Status != QuestionStatus.Published)
+                {
+                    throw new InvalidOperationException($"Question '{question.Id}' is in '{question.Status}' state and is not eligible to be copied.");
+                }
+
+                var newEq = new ExamQuestion
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    ExamId = newRevision.Id,
+                    QuestionId = sq.QuestionId,
+                    DisplayOrder = sq.DisplayOrder
+                };
+                _context.ExamQuestions.Add(newEq);
+                copiedCount++;
+            }
+        }
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorId,
+            Action = "ExamDuplicated",
+            EntityType = "Examination",
+            EntityId = newFamily.Id,
+            Description = JsonSerializer.Serialize(new
+            {
+                sourceExaminationId = sourceFamily.Id,
+                sourceExaminationCode = sourceFamily.Code,
+                sourceRevisionId = sourceRevision.Id,
+                sourceRevisionNumber = sourceRevision.RevisionNumber,
+                newExaminationId = newFamily.Id,
+                newExaminationCode = newFamily.Code,
+                newRevisionId = newRevision.Id,
+                newRevisionNumber = 1,
+                questionCount = copiedCount,
+                pathway = newFamily.Pathway,
+                title = newFamily.Title
+            }),
+            Outcome = "Success",
+            Timestamp = now
+        });
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorId,
+            Action = "ExamRevisionCreated",
+            EntityType = "Exam",
+            EntityId = newRevision.Id,
+            Description = JsonSerializer.Serialize(new
+            {
+                examinationId = newFamily.Id,
+                examinationCode = newFamily.Code,
+                revisionNumber = 1,
+                sourceRevisionId = sourceRevision.Id,
+                sourceRevisionNumber = sourceRevision.RevisionNumber,
+                lifecycleState = ExamLifecycleState.Draft.ToString(),
+                questionCount = copiedCount,
+                title = newRevision.Title
+            }),
+            Outcome = "Success",
+            Timestamp = now
+        });
+
+        await _context.SaveChangesAsync(ct);
+        if (transaction != null)
+        {
+            await transaction.CommitAsync(ct);
+        }
+
+        var familyDto = MapToExaminationDto(newFamily, new List<Exam> { newRevision }, new Dictionary<string, int> { [newRevision.Id] = copiedCount });
+
+        return new DuplicateExaminationResponseDto
+        {
+            Success = true,
+            ExaminationId = newFamily.Id,
+            ExaminationCode = newFamily.Code,
+            ExaminationTitle = newFamily.Title,
+            Pathway = newFamily.Pathway,
+            RevisionId = newRevision.Id,
+            RevisionNumber = 1,
+            LifecycleState = ExamLifecycleState.Draft.ToString(),
+            QuestionCount = copiedCount,
+            Examination = familyDto
+        };
     }
 
     public async Task<ExamRevisionDto> SubmitForReviewAsync(string revisionId, long concurrencyToken, ClaimsPrincipal user, CancellationToken ct = default)

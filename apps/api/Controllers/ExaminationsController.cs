@@ -204,6 +204,16 @@ public class ExaminationsController : ControllerBase
         });
     }
 
+    [HttpPost("{id}/duplicate")]
+    public async Task<IActionResult> DuplicateExamination(string id, [FromBody] DuplicateExaminationRequest request, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var result = await _lifecycleService.DuplicateExaminationAsync(id, request, User, ct);
+            return StatusCode(StatusCodes.Status201Created, result);
+        });
+    }
+
     [HttpPost("{id}/revisions")]
     public async Task<IActionResult> CreateRevision(string id, [FromBody] CreateRevisionRequest request, CancellationToken ct)
     {

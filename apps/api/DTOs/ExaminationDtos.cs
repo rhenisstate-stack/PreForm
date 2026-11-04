@@ -86,6 +86,10 @@ public sealed class CreateRevisionRequest
     public int TimeLimitMinutes { get; set; } = 0;
 
     public decimal PassingScorePercent { get; set; } = 75.0m;
+
+    public string? SourceRevisionId { get; set; }
+
+    public bool CopyQuestions { get; set; } = true;
 }
 
 public sealed class TransitionRevisionRequest
@@ -295,4 +299,33 @@ public sealed class FamilyRevisionsResponseDto
     public string ExaminationTitle { get; set; } = string.Empty;
     public string Pathway { get; set; } = string.Empty;
     public List<ExamRevisionDto> Revisions { get; set; } = new();
+}
+
+public sealed class DuplicateExaminationRequest
+{
+    [MaxLength(128)]
+    public string? Title { get; set; }
+
+    public string? SourceRevisionId { get; set; }
+
+    [MaxLength(1024)]
+    public string? Description { get; set; }
+
+    public int? TimeLimitMinutes { get; set; }
+
+    public decimal? PassingScorePercent { get; set; }
+}
+
+public sealed class DuplicateExaminationResponseDto
+{
+    public bool Success { get; set; } = true;
+    public string ExaminationId { get; set; } = string.Empty;
+    public string ExaminationCode { get; set; } = string.Empty;
+    public string ExaminationTitle { get; set; } = string.Empty;
+    public string Pathway { get; set; } = string.Empty;
+    public string RevisionId { get; set; } = string.Empty;
+    public int RevisionNumber { get; set; } = 1;
+    public string LifecycleState { get; set; } = "Draft";
+    public int QuestionCount { get; set; }
+    public ExaminationDto Examination { get; set; } = null!;
 }
