@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { attemptsService } from "@/lib/api-services";
-import { createServerSession, setSessionCookie, getVerifiedSession } from "@/lib/session";
+import { createServerSession, setSessionCookie, resolveSession } from "@/lib/session";
 import { ensureClientId } from "@/lib/client-id";
 
 export async function POST(
@@ -25,7 +25,7 @@ export async function POST(
     }
 
     const cookieStore = await cookies();
-    const existingSession = await getVerifiedSession(cookieStore);
+    const existingSession = await resolveSession(request);
     const { clientId } = ensureClientId(cookieStore, request);
 
     const userEmail = email || existingSession?.email;

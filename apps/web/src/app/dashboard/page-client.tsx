@@ -2536,6 +2536,22 @@ export function DashboardClient() {
           </div>
         </div>
       )}
+
+      {/* In-Exam Reauthentication Modal */}
+      {inExamReauthOpen && activeAttemptId && (
+        <InExamReauthModal
+          isOpen={inExamReauthOpen}
+          attemptId={activeAttemptId}
+          userEmail={user?.email || ""}
+          reasonCode={inExamReauthReason}
+          onReauthenticated={handleExamReauthenticated}
+          onAbandon={() => {
+            setInExamReauthOpen(false);
+            setTestInProgress(false);
+            setCreateModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }
