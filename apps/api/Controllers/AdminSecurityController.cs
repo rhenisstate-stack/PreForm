@@ -42,7 +42,8 @@ public class AdminSecurityController : ControllerBase
         "IpAddressChanged",
         "SuspiciousSessionContext",
         "RepeatedClientReplacement",
-        "CredentialSecurityEvent"
+        "CredentialSecurityEvent",
+        "ExamAttemptReauthenticated"
     };
 
     public AdminSecurityController(

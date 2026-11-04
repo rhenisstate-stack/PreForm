@@ -130,6 +130,12 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
 
                     return AuthenticateResult.Success(ticket);
                 }
+                else
+                {
+                    Context.Items["AuthFailureCode"] = validation.FailureCode ?? "INVALID_TOKEN";
+                    Context.Items["AuthFailureReason"] = validation.FailureReason ?? "Invalid session token.";
+                    return AuthenticateResult.Fail($"Authoritative token rejected: {validation.FailureReason}");
+                }
             }
         }
 
@@ -247,6 +253,9 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
 
                 if (!validation.IsValid)
                 {
+                    Context.Items["AuthFailureCode"] = validation.FailureCode ?? "INVALID_SESSION";
+                    Context.Items["AuthFailureReason"] = validation.FailureReason ?? "Invalid session.";
+
                     // If the session exists in datastore but failed validation (revoked, expired, security version changed), reject
                     if (validation.FailureCode != "SESSION_NOT_FOUND")
                     {
@@ -289,5 +298,26 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
         }
 
         return AuthenticateResult.NoResult();
+    }
+
+    protected override async Task HandleChallengeAsync(AuthenticationProperties properties)
+    {
+        Response.StatusCode = StatusCodes.Status401Unauthorized;
+
+        if (Context.Items.TryGetValue("AuthFailureCode", out var codeObj) && codeObj is string code)
+        {
+            Response.Headers["X-Auth-Failure-Code"] = code;
+        }
+        else
+        {
+            Response.Headers["X-Auth-Failure-Code"] = "AUTHENTICATION_REQUIRED";
+        }
+
+        if (Context.Items.TryGetValue("AuthFailureReason", out var reasonObj) && reasonObj is string reason)
+        {
+            Response.Headers["X-Auth-Failure-Reason"] = reason;
+        }
+
+        await base.HandleChallengeAsync(properties);
     }
 }

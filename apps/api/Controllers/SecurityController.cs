@@ -38,7 +38,8 @@ public class SecurityController : ControllerBase
         "IpAddressChanged",
         "SuspiciousSessionContext",
         "RepeatedClientReplacement",
-        "CredentialSecurityEvent"
+        "CredentialSecurityEvent",
+        "ExamAttemptReauthenticated"
     };
 
     public SecurityController(
@@ -265,6 +266,7 @@ public class SecurityController : ControllerBase
             "SuspiciousSessionContext" => "Unusual device context detected",
             "RepeatedClientReplacement" => "Multiple browser session refreshes observed",
             "CredentialSecurityEvent" => "Account credentials updated",
+            "ExamAttemptReauthenticated" => "Examination session successfully reauthenticated. Exam attempt and answers preserved.",
             _ => rawDescription
         };
     }

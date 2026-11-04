@@ -2,6 +2,7 @@ using System.Security.Claims;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Preform.Api.Data;
@@ -9,6 +10,13 @@ using Preform.Api.Models;
 using Preform.Api.Services;
 
 namespace Preform.Api.Controllers;
+
+public class ReauthenticateAttemptRequest
+{
+    public string? Email { get; set; }
+    public string Password { get; set; } = string.Empty;
+    public string? ClientId { get; set; }
+}
 
 public class StartAttemptRequest
 {
@@ -139,12 +147,15 @@ public class CandidateAttemptResponseDto
 [ApiController]
 [Authorize]
 [Route("api/v1/attempts")]
+[Route("api/v1/exam-attempts")]
 public class ExamAttemptsController : ControllerBase
 {
     private readonly AppDbContext _context;
     private readonly ILogger<ExamAttemptsController> _logger;
     private readonly IResponseValidationService _responseValidationService;
     private readonly IAttemptQuestionService _attemptQuestionService;
+    private readonly ISessionSecurityService? _sessionSecurityService;
+    private readonly IPasswordHasher<User> _passwordHasher;
 
     private static readonly HashSet<string> AdminRoles = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -156,11 +167,33 @@ public class ExamAttemptsController : ControllerBase
         ILogger<ExamAttemptsController> logger,
         IResponseValidationService responseValidationService,
         IAttemptQuestionService attemptQuestionService)
+        : this(context, logger, responseValidationService, attemptQuestionService, null, null)
+    {
+    }
+
+    public ExamAttemptsController(
+        AppDbContext context,
+        ILogger<ExamAttemptsController> logger,
+        IResponseValidationService responseValidationService,
+        IAttemptQuestionService attemptQuestionService,
+        ISessionSecurityService? sessionSecurityService,
+        IPasswordHasher<User>? passwordHasher)
     {
         _context = context;
         _logger = logger;
         _responseValidationService = responseValidationService;
         _attemptQuestionService = attemptQuestionService;
+        _sessionSecurityService = sessionSecurityService;
+        _passwordHasher = passwordHasher ?? new PasswordHasher<User>();
+    }
+
+    private string? GetClientIpAddress()
+    {
+        if (Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor) && !string.IsNullOrWhiteSpace(forwardedFor))
+        {
+            return forwardedFor.ToString().Split(',')[0].Trim();
+        }
+        return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 
     private (string? userId, string? role) ResolveCaller()
@@ -399,6 +432,198 @@ public class ExamAttemptsController : ControllerBase
         return Ok(new { success = true, attempt = detail });
     }
 
+    [HttpPost("{id}/reauthenticate")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ReauthenticateAttempt(string id, [FromBody] ReauthenticateAttemptRequest request, CancellationToken cancellationToken)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.Password))
+        {
+            return BadRequest(new
+            {
+                success = false,
+                errorCode = "INVALID_REQUEST",
+                error = "Password is required for reauthentication."
+            });
+        }
+
+        var attempt = await _context.ExamAttempts
+            .Include(ea => ea.Exam)
+            .Include(ea => ea.Responses)
+            .Include(ea => ea.User)
+            .FirstOrDefaultAsync(ea => ea.Id == id, cancellationToken);
+
+        if (attempt == null)
+        {
+            return NotFound(new
+            {
+                success = false,
+                errorCode = "ATTEMPT_NOT_FOUND",
+                error = "Assessment attempt not found."
+            });
+        }
+
+        // Ownership enforcement: candidate must be the owner of the attempt
+        var caller = ResolveCaller();
+        if (!string.IsNullOrWhiteSpace(caller.userId) &&
+            !string.Equals(caller.userId, attempt.UserId, StringComparison.Ordinal))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                success = false,
+                errorCode = "ATTEMPT_OWNERSHIP_MISMATCH",
+                error = "Forbidden: Cannot reauthenticate another candidate's assessment attempt."
+            });
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Email) &&
+            attempt.User != null &&
+            !string.Equals(attempt.User.Email, request.Email.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                success = false,
+                errorCode = "ATTEMPT_OWNERSHIP_MISMATCH",
+                error = "Forbidden: Cannot reauthenticate another candidate's assessment attempt."
+            });
+        }
+
+        if (attempt.Status != AttemptStatus.InProgress)
+        {
+            return StatusCode(StatusCodes.Status409Conflict, new
+            {
+                success = false,
+                errorCode = "ATTEMPT_NOT_IN_PROGRESS",
+                error = "Cannot resume an attempt that has already been completed or abandoned."
+            });
+        }
+
+        // Server-Authoritative Deadline enforcement
+        if (attempt.Exam != null && attempt.Exam.TimeLimitMinutes > 0)
+        {
+            var deadlineUtc = attempt.StartedAt.AddMinutes(attempt.Exam.TimeLimitMinutes);
+            if (DateTime.UtcNow >= deadlineUtc)
+            {
+                attempt.Status = AttemptStatus.Completed;
+                attempt.CompletedAt = deadlineUtc;
+                await _context.SaveChangesAsync(cancellationToken);
+
+                return StatusCode(StatusCodes.Status410Gone, new
+                {
+                    success = false,
+                    errorCode = "ATTEMPT_EXPIRED",
+                    error = "The time limit for this examination has expired. Continuation is not permitted."
+                });
+            }
+        }
+
+        if (attempt.User == null || !attempt.User.IsActive)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                success = false,
+                errorCode = "ACCOUNT_INACTIVE",
+                error = "Account is inactive or disabled."
+            });
+        }
+
+        // Authoritative credential verification
+        var verifyResult = _passwordHasher.VerifyHashedPassword(attempt.User, attempt.User.PasswordHash, request.Password);
+        if (verifyResult == PasswordVerificationResult.Failed)
+        {
+            return Unauthorized(new
+            {
+                success = false,
+                errorCode = "INVALID_CREDENTIALS",
+                error = "Invalid password. Reauthentication failed."
+            });
+        }
+
+        // Create fresh replacement session via SessionSecurityService
+        string? sessionId = null;
+        string? token = null;
+
+        if (_sessionSecurityService != null)
+        {
+            var ip = GetClientIpAddress();
+            var ua = Request.Headers.UserAgent.ToString();
+            var sessionResult = await _sessionSecurityService.CreateOrRotateSessionAsync(
+                attempt.User,
+                attempt.User.Role,
+                request.ClientId,
+                ip,
+                ua,
+                existingSessionId: null,
+                isQualifyingActivity: true);
+
+            if (!sessionResult.Success || sessionResult.Session == null)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = sessionResult.ErrorCode ?? "SESSION_CREATION_FAILED",
+                    error = sessionResult.ErrorMessage ?? "Failed to create authentication session."
+                });
+            }
+
+            sessionId = sessionResult.Session.Id;
+            token = sessionResult.Token;
+        }
+
+        // Calculate authoritative remaining seconds and deadline
+        DateTime? deadline = null;
+        int? remainingSeconds = null;
+        if (attempt.Exam != null && attempt.Exam.TimeLimitMinutes > 0)
+        {
+            deadline = attempt.StartedAt.AddMinutes(attempt.Exam.TimeLimitMinutes);
+            remainingSeconds = Math.Max(0, (int)(deadline.Value - DateTime.UtcNow).TotalSeconds);
+        }
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            ActorId = attempt.UserId,
+            Action = "ExamAttemptReauthenticated",
+            EntityType = "ExamAttempt",
+            EntityId = attempt.Id,
+            Description = $"Learner reauthenticated during active attempt '{attempt.Id}'. Authoritative timer: {(remainingSeconds.HasValue ? remainingSeconds.Value + "s remaining" : "untimed")}.",
+            Outcome = "Success",
+            Timestamp = DateTime.UtcNow
+        });
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Ok(new
+        {
+            success = true,
+            sessionId,
+            token,
+            user = new
+            {
+                id = attempt.User.Id,
+                email = attempt.User.Email,
+                name = attempt.User.DisplayName,
+                displayName = attempt.User.DisplayName,
+                role = attempt.User.Role,
+                pathway = attempt.User.Pathway
+            },
+            attempt = new
+            {
+                id = attempt.Id,
+                startedAt = attempt.StartedAt,
+                timeLimitMinutes = attempt.Exam?.TimeLimitMinutes ?? 0,
+                deadlineUtc = deadline,
+                remainingSeconds,
+                status = attempt.Status.ToString(),
+                totalResponses = attempt.Responses.Count,
+                responses = attempt.Responses.OrderBy(r => r.AnsweredAt).Select(r => new
+                {
+                    questionId = r.QuestionId,
+                    selectedOptionsJson = r.SelectedOptionsJson,
+                    timeSpentSeconds = r.TimeSpentSeconds,
+                    answeredAt = r.AnsweredAt
+                }).ToList()
+            }
+        });
+    }
+
     [HttpPost]
     public async Task<IActionResult> StartAttempt([FromBody] StartAttemptRequest request, CancellationToken cancellationToken)
     {
@@ -509,6 +734,7 @@ public class ExamAttemptsController : ControllerBase
         }
 
         var attempt = await _context.ExamAttempts
+            .Include(ea => ea.Exam)
             .Include(ea => ea.Responses)
             .FirstOrDefaultAsync(ea => ea.Id == id, cancellationToken);
 
@@ -526,6 +752,25 @@ public class ExamAttemptsController : ControllerBase
         if (attempt.Status != AttemptStatus.InProgress)
         {
             return BadRequest(new { success = false, error = "Cannot add responses to a completed or abandoned attempt." });
+        }
+
+        // Server-Authoritative Deadline check
+        if (attempt.Exam != null && attempt.Exam.TimeLimitMinutes > 0)
+        {
+            var deadlineUtc = attempt.StartedAt.AddMinutes(attempt.Exam.TimeLimitMinutes);
+            if (DateTime.UtcNow >= deadlineUtc)
+            {
+                attempt.Status = AttemptStatus.Completed;
+                attempt.CompletedAt = deadlineUtc;
+                await _context.SaveChangesAsync(cancellationToken);
+
+                return StatusCode(StatusCodes.Status410Gone, new
+                {
+                    success = false,
+                    errorCode = "ATTEMPT_EXPIRED",
+                    error = "The time limit for this examination has expired. Further responses cannot be recorded."
+                });
+            }
         }
 
         if (request == null || string.IsNullOrWhiteSpace(request.QuestionId))
@@ -680,7 +925,17 @@ public class ExamAttemptsController : ControllerBase
 
         attempt.Passed = attempt.ScorePercent >= passingThreshold;
         attempt.Status = AttemptStatus.Completed;
-        attempt.CompletedAt = DateTime.UtcNow;
+
+        var now = DateTime.UtcNow;
+        if (attempt.Exam != null && attempt.Exam.TimeLimitMinutes > 0)
+        {
+            var deadlineUtc = attempt.StartedAt.AddMinutes(attempt.Exam.TimeLimitMinutes);
+            attempt.CompletedAt = now > deadlineUtc ? deadlineUtc : now;
+        }
+        else
+        {
+            attempt.CompletedAt = now;
+        }
 
         if (_context.Database.IsRelational())
         {
