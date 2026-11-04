@@ -488,6 +488,8 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
           json: () =>
             Promise.resolve({
               success: true,
+              examinationId: "fam_copy_001",
+              examinationCode: "RN-EX-000002",
               examination: {
                 id: "fam_copy_001",
                 code: "RN-EX-000002",
@@ -497,16 +499,10 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
             }),
         });
       }
-      if (urlStr.includes("/api/admin/examinations/fam_rn_001")) {
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2/validate")) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ examination: mockFamilyWithRevisions }),
-        });
-      }
-      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2")) {
-        return Promise.resolve({
-          ok: true,
-          json: () => Promise.resolve({ revision: mockRevisionDraft }),
+          json: () => Promise.resolve({ validation: mockValidationResult }),
         });
       }
       if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2/questions")) {
@@ -515,10 +511,16 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
           json: () => Promise.resolve({ questions: mockRevisionQuestions }),
         });
       }
-      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2/validate")) {
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2")) {
         return Promise.resolve({
           ok: true,
-          json: () => Promise.resolve({ validation: mockValidationResult }),
+          json: () => Promise.resolve({ revision: mockRevisionDraft }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/fam_rn_001")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ examination: mockFamilyWithRevisions }),
         });
       }
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
@@ -541,15 +543,15 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
 
     // Confirmation modal should be open
     await waitFor(() => {
-      expect(screen.getByText("Duplicate Examination")).toBeInTheDocument();
+      expect(screen.getByText("Duplicate as New Examination Family")).toBeInTheDocument();
     });
 
     // Check prefilled title
-    const titleInput = screen.getByLabelText(/New Examination Title/i);
+    const titleInput = screen.getByLabelText(/New Examination Family Title/i);
     expect(titleInput).toHaveValue("NCLEX-RN Comprehensive Practice Examination (Copy)");
 
     // Submit duplication
-    const submitBtn = screen.getByRole("button", { name: "Create Duplicate Examination" });
+    const submitBtn = screen.getByRole("button", { name: "Duplicate Examination" });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -568,6 +570,18 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
         return Promise.resolve({
           ok: true,
           json: () => Promise.resolve({ examination: mockFamilyZeroRevisions }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2/validate")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ validation: mockValidationResult }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2/questions")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ questions: mockRevisionQuestions }),
         });
       }
       if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2")) {
