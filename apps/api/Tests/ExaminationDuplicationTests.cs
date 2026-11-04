@@ -121,7 +121,7 @@ public class ExaminationDuplicationTests
             Id = "att_001",
             ExamId = sourceRev.Id,
             UserId = "user_cand_1",
-            Score = 80.0m
+            ScorePercent = 80.0m
         };
         context.ExamAttempts.Add(attempt);
         await context.SaveChangesAsync();
@@ -156,7 +156,7 @@ public class ExaminationDuplicationTests
 
         Assert.NotNull(newFamily);
         Assert.Single(newFamily.Revisions);
-        var initialRev = newFamily.Revisions[0];
+        var initialRev = newFamily.Revisions.First();
         Assert.Equal(1, initialRev.RevisionNumber);
         Assert.Equal(ExamLifecycleState.Draft, initialRev.LifecycleState);
         Assert.False(initialRev.IsPublished);
@@ -271,7 +271,7 @@ public class ExaminationDuplicationTests
         var rev1 = await SeedRevisionAsync(context, fam.Id, 1, "Rev 1 Published", ExamLifecycleState.Published, "rn", 4);
 
         // Seed attempt on rev 1
-        context.ExamAttempts.Add(new ExamAttempt { Id = "att_rev1", ExamId = rev1.Id, UserId = "u1", Score = 90.0m });
+        context.ExamAttempts.Add(new ExamAttempt { Id = "att_rev1", ExamId = rev1.Id, UserId = "u1", ScorePercent = 90.0m });
         await context.SaveChangesAsync();
 
         var request = new CreateRevisionRequest
