@@ -958,6 +958,7 @@ public class PostgresIntegrationTests : IClassFixture<PostgresTestFixture>
         Assert.Equal(1, candRn.RevisionCount); // only published revision
         Assert.NotNull(candRn.PublishedRevision);
         Assert.Equal(3, candRn.PublishedRevision!.QuestionCount);
-        Assert.Null(candRn.LatestRevision); // draft revision not exposed as latest
+        Assert.Equal(1, candRn.LatestRevision?.RevisionNumber); // draft revision (rev 2) not exposed as latest
+        Assert.Equal("Published", candRn.LatestRevision?.LifecycleState);
     }
 }
