@@ -212,7 +212,10 @@ describe("AdminShell rendering by role", () => {
     expect(screen.getByRole("heading", { name: /Restricted Privilege Level/i })).toBeInTheDocument();
     expect(screen.getByText(/does not hold administrative access/i)).toBeInTheDocument();
     expect(screen.queryByRole("navigation", { name: "Admin navigation" })).not.toBeInTheDocument();
-    expect(screen.queryByText("Overview content")).not.toBeInTheDocument();
+    // Gate branches keep {children} mounted but hidden behind the gate: omitting
+    // the children slot makes child page segments unrendered during the App
+    // Shell prerender and drops them from Next.js instant-navigation validation.
+    expect(screen.getByText("Overview content")).not.toBeVisible();
   });
 
   it("renders the authentication gate for signed-out visitors", () => {
@@ -231,7 +234,8 @@ describe("AdminShell rendering by role", () => {
       "href",
       "/sign-in"
     );
-    expect(screen.queryByText("Overview content")).not.toBeInTheDocument();
+    // Signed-out pages remain mounted-but-hidden behind the auth gate (see above).
+    expect(screen.getByText("Overview content")).not.toBeVisible();
   });
 
   it("keeps the branded loading state while the session is resolving", () => {
@@ -242,8 +246,9 @@ describe("AdminShell rendering by role", () => {
       </AdminShell>
     );
 
-    // Chrome and page body are withheld until the session resolves.
-    expect(screen.queryByText("Overview content")).toBeNull();
+    // Chrome is withheld until the session resolves; page content stays mounted
+    // but hidden behind the full-screen credential verification loader.
+    expect(screen.getByText("Overview content")).not.toBeVisible();
     expect(screen.queryByRole("navigation", { name: "Admin navigation" })).not.toBeInTheDocument();
   });
 });
