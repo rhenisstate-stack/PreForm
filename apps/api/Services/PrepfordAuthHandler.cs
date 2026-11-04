@@ -126,7 +126,22 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
             !string.IsNullOrWhiteSpace(gatewayUserId) &&
             !string.IsNullOrWhiteSpace(gatewayEmail))
         {
-            var gatewaySecret = _configuration["GATEWAY_SHARED_SECRET"] ?? "prepford-default-internal-gateway-secret-32-chars!";
+            var configuredSecret = _configuration["GATEWAY_SHARED_SECRET"];
+            if (string.IsNullOrWhiteSpace(configuredSecret))
+            {
+                // Fail closed outside development/testing: mutual authentication requires a
+                // shared secret, and silently falling back to a default would let
+                // unconfigured production deployments trust unattestable signatures.
+                if (_hostEnvironment.IsDevelopment() || _hostEnvironment.IsEnvironment("Testing"))
+                {
+                    configuredSecret = "prepford-default-internal-gateway-secret-32-chars!";
+                }
+                else
+                {
+                    return AuthenticateResult.Fail("Gateway mutual authentication secret is not configured.");
+                }
+            }
+            var gatewaySecret = configuredSecret;
             var isCanonicalV1 = string.Equals(version, "1", StringComparison.Ordinal) ||
                                 (!string.IsNullOrWhiteSpace(timestampStr) && !string.IsNullOrWhiteSpace(nonce));
 
@@ -150,17 +165,24 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
                     return AuthenticateResult.Fail("Gateway request nonce has already been seen or is invalid.");
                 }
 
-                // Canonical HTTP method & request path
+                // Canonical HTTP method, request path, and raw query string.
+                // The BFF signer canonicalizes the dispatched endpoint exactly as sent,
+                // including its query string (e.g. /api/v1/examinations?sortBy=code&...).
+                // Verification therefore must use the same deterministic representation:
+                // Request.QueryString.Value preserves the raw, as-transmitted query
+                // (with its leading '?' when present).
                 var method = Request.Method.ToUpperInvariant();
                 var path = Request.Path.Value ?? "/";
                 if (string.IsNullOrWhiteSpace(path)) path = "/";
+                var rawQuery = Request.QueryString.Value;
+                var canonicalPath = string.IsNullOrEmpty(rawQuery) ? path : $"{path}{rawQuery}";
 
                 var bodyHash = !string.IsNullOrWhiteSpace(bodySha256Header)
                     ? bodySha256Header.Trim().ToLowerInvariant()
                     : EmptyBodySha256;
 
-                // Canonical payload: timestamp\nmethod\npath\nnonce\nbodyHash\nuserId\nemail\nrole
-                var canonicalPayload = $"{timestampSeconds}\n{method}\n{path}\n{nonce.Trim()}\n{bodyHash}\n{gatewayUserId.Trim()}\n{gatewayEmail.Trim().ToLowerInvariant()}\n{gatewayRole.Trim().ToLowerInvariant()}";
+                // Canonical payload: timestamp\nmethod\ncanonicalPath\nnonce\nbodyHash\nuserId\nemail\nrole
+                var canonicalPayload = $"{timestampSeconds}\n{method}\n{canonicalPath}\n{nonce.Trim()}\n{bodyHash}\n{gatewayUserId.Trim()}\n{gatewayEmail.Trim().ToLowerInvariant()}\n{gatewayRole.Trim().ToLowerInvariant()}";
 
                 var expectedSignature = Convert.ToHexString(
                     HMACSHA256.HashData(Encoding.UTF8.GetBytes(gatewaySecret), Encoding.UTF8.GetBytes(canonicalPayload))

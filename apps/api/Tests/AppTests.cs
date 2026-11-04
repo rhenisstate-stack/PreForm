@@ -751,6 +751,147 @@ public class GatewayHmacAndReplaySecurityTests : IClassFixture<WebApplicationFac
         var response = await client.GetAsync("/api/v1/profile/image");
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    [Fact]
+    public async Task CanonicalV1Signature_WrongSecret_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        // Sign with a secret that differs from the configured shared secret
+        AddCanonicalHeaders(client, "GET", "/api/v1/profile/image", "user-gw-106", "gw6@prepford.com", "candidate",
+            secret: "prepford-wrong-secret-not-the-shared-one!");
+
+        var response = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CanonicalV1Signature_MalformedTimestamp_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        AddCanonicalHeaders(client, "GET", "/api/v1/profile/image", "user-gw-107", "gw7@prepford.com", "candidate");
+        // Replace the timestamp header with a non-numeric value. The handler validates
+        // timestamp parsing before signature comparison, so this must fail closed (401)
+        // even before an HMAC mismatch could be considered.
+        client.DefaultRequestHeaders.Remove("X-Gateway-Timestamp");
+        client.DefaultRequestHeaders.Add("X-Gateway-Timestamp", "not-a-unix-timestamp");
+
+        var response = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CanonicalV1Signature_CanonicalPathIncludesRawQueryString_AcceptsSignedExaminationQuery()
+    {
+        var client = _factory.CreateClient();
+        // The BFF signs the dispatched endpoint exactly as sent, including its raw query
+        // string. Verification must use the same deterministic representation.
+        const string signedPath = "/api/v1/examinations?sortBy=code&sortDirection=asc&page=1&pageSize=20";
+        AddCanonicalHeaders(client, "GET", signedPath, "exam-mgr-gw-001", "exam-manager@prepford.com", "exam_manager");
+
+        var response = await client.GetAsync(signedPath);
+        // Authorized administrator reaches the examination library (200, empty catalogue on a clean store)
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CanonicalV1Signature_ModifiedQueryString_ReorderedParams_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        // Signature is computed over the raw query string in its original parameter order
+        AddCanonicalHeaders(client, "GET", "/api/v1/examinations?sortBy=code&sortDirection=asc&page=1&pageSize=20",
+            "exam-mgr-gw-002", "exam-manager-2@prepford.com", "exam_manager");
+
+        // Reordering the query parameters changes the canonical bytes and must be rejected
+        var response = await client.GetAsync("/api/v1/examinations?pageSize=20&page=1&sortDirection=asc&sortBy=code");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CanonicalV1Signature_ModifiedQueryString_AlteredParameterValue_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        AddCanonicalHeaders(client, "GET", "/api/v1/examinations?page=1&pageSize=20",
+            "exam-mgr-gw-003", "exam-manager-3@prepford.com", "exam_manager");
+
+        var response = await client.GetAsync("/api/v1/examinations?page=2&pageSize=20");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExaminationList_GatewayHeadersWithoutSignature_ReturnsUnauthorized401()
+    {
+        var client = _factory.CreateClient();
+        // Id/Email/Role headers alone are not trusted on the examination surface:
+        // a valid canonical gateway signature is mandatory.
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Id", "spoofed-exam-mgr");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Email", "spoofed@prepford.com");
+        client.DefaultRequestHeaders.Add("X-Authenticated-User-Role", "exam_manager");
+
+        var response = await client.GetAsync("/api/v1/examinations");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateExamination_CandidateRoleViaGateway_ReturnsForbidden403()
+    {
+        var client = _factory.CreateClient();
+        var requestBody = System.Text.Json.JsonSerializer.Serialize(new
+        {
+            pathway = "rn",
+            title = "Candidateforge Attempt Examination",
+            description = "Insufficient privilege attempt",
+            examType = 0,
+            timeLimitMinutes = 60,
+            passingScorePercent = 75.0
+        });
+        var bodyHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(requestBody))
+        ).ToLowerInvariant();
+
+        AddCanonicalHeaders(client, "POST", "/api/v1/examinations", "candidate-gw-001",
+            "candidate@prepford.com", "candidate", bodyHash);
+
+        var response = await client.PostAsync("/api/v1/examinations",
+            new StringContent(requestBody, System.Text.Encoding.UTF8, "application/json"));
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+}
+
+/// <summary>
+/// Verifies fail-closed behavior when GATEWAY_SHARED_SECRET is not configured
+/// outside development/testing environments, per the documented environment
+/// contract (both BFF and backend must refuse unconfigured deployments).
+/// </summary>
+public class GatewayHmacMissingSecretFailClosedTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+
+    public GatewayHmacMissingSecretFailClosedTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Production");
+            builder.ConfigureServices(services =>
+            {
+                var descriptor = services.SingleOrDefault(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
+                if (descriptor != null) services.Remove(descriptor);
+                services.AddDbContext<AppDbContext>(options => options.UseInMemoryDatabase("TestingGatewaySecurityProdDb"));
+            });
+        });
+    }
+
+    [Fact]
+    public async Task CanonicalV1Signature_MissingGatewaySecretInProduction_FailsClosed_ReturnsUnauthorized401()
+    {
+        // No GATEWAY_SHARED_SECRET is configured; a signature computed with the
+        // development fallback secret must NOT be accepted in production.
+        var client = _factory.CreateClient();
+        GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
+            client, "GET", "/api/v1/profile/image", "user-gw-prod-01", "prod-user@prepford.com", "candidate");
+
+        var response = await client.GetAsync("/api/v1/profile/image");
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }
 
 public class AuthoritativeSessionManagementTests : IClassFixture<WebApplicationFactory<Program>>
