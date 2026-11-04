@@ -413,6 +413,43 @@ export interface BackendAttemptResponseDto {
   answeredAt?: string;
 }
 
+export interface BackendReauthenticateAttemptRequest {
+  password: string;
+  email?: string;
+  clientId?: string;
+}
+
+export interface BackendReauthenticateAttemptResponse {
+  success: boolean;
+  sessionId?: string;
+  token?: string;
+  user?: {
+    id: string;
+    email: string;
+    name: string;
+    displayName: string;
+    role: string;
+    pathway?: string;
+  };
+  attempt?: {
+    id: string;
+    startedAt: string;
+    timeLimitMinutes: number;
+    deadlineUtc: string | null;
+    remainingSeconds: number | null;
+    status: string;
+    totalResponses: number;
+    responses: Array<{
+      questionId: string;
+      selectedOptionsJson: string;
+      timeSpentSeconds: number;
+      answeredAt: string;
+    }>;
+  };
+  error?: string;
+  errorCode?: string;
+}
+
 export const attemptsService = {
   getAttempts: async (
     session: VerifiedSession
@@ -439,6 +476,16 @@ export const attemptsService = {
     return apiClient.post<{ success: boolean; attempt: BackendExamAttemptDto }>("/api/v1/attempts/sync", attempt, {
       session,
     });
+  },
+
+  reauthenticateAttempt: async (
+    id: string,
+    credentials: BackendReauthenticateAttemptRequest
+  ): Promise<ApiResponse<BackendReauthenticateAttemptResponse>> => {
+    return apiClient.post<BackendReauthenticateAttemptResponse>(
+      `/api/v1/attempts/${encodeURIComponent(id)}/reauthenticate`,
+      credentials
+    );
   },
 };
 

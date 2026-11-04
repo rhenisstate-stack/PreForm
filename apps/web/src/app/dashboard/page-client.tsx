@@ -43,6 +43,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { QuestionFlagButton } from "@/components/assessments/question-flag-button";
+import { InExamReauthModal, ExamReauthResult } from "@/components/assessments/in-exam-reauth-modal";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
 import { BRAND } from "@/lib/brand";
@@ -200,6 +201,21 @@ export function DashboardClient() {
   const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number | number[]>>({});
   const [activeQuestionIndex, setActiveQuestionIndex] = React.useState<number>(0);
   const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
+
+  // Examination continuity: active attempt tracking and in-exam reauthentication modal
+  const [activeAttemptId, setActiveAttemptId] = React.useState<string | null>(null);
+  const [inExamReauthOpen, setInExamReauthOpen] = React.useState<boolean>(false);
+  const [inExamReauthReason, setInExamReauthReason] = React.useState<string>("SESSION_EXPIRED");
+
+  const handleExamReauthenticated = (result: ExamReauthResult) => {
+    setInExamReauthOpen(false);
+    if (result.attempt?.remainingSeconds !== null && result.attempt?.remainingSeconds !== undefined) {
+      setSessionSeconds(result.attempt.remainingSeconds);
+    }
+    if (result.attempt?.id) {
+      setActiveAttemptId(result.attempt.id);
+    }
+  };
 
   // Cognitive fatigue relief: calm timer, note-taking scratchpad, collapsible rationales
   const [isTimerVisible, setIsTimerVisible] = React.useState<boolean>(true);
@@ -1981,6 +1997,7 @@ export function DashboardClient() {
                     type="button"
                     onClick={() => {
                       setTestInProgress(true);
+                      setActiveAttemptId("att_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8));
                       setCurrentTestAnswers({});
                       setActiveQuestionIndex(0);
                     }}
