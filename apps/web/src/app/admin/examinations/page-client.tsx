@@ -63,6 +63,56 @@ function getStatusBadge(state?: string) {
   }
 }
 
+export function parseLibraryQueryParams(searchParams: URLSearchParams | { get: (key: string) => string | null }) {
+  const ALLOWED_PATHWAYS = new Set(["all", "rn", "pn"]);
+  const ALLOWED_STATUSES = new Set(["all", "draft", "inreview", "approved", "published", "archived", "retired"]);
+  const ALLOWED_SORT_BY = new Set(["code", "title", "pathway", "revisions", "createdat", "updatedat"]);
+  const ALLOWED_SORT_DIR = new Set(["asc", "desc"]);
+
+  const rawPathway = (searchParams.get("pathway") || "all").toLowerCase().trim();
+  const pathway = ALLOWED_PATHWAYS.has(rawPathway) ? rawPathway : "all";
+
+  const rawStatus = (searchParams.get("revisionStatus") || "all").trim();
+  const matchedStatus = Array.from(ALLOWED_STATUSES).find(
+    (s) => s.toLowerCase() === rawStatus.toLowerCase()
+  );
+  // Match original case if one of the known uppercase variants
+  let revisionStatus = "all";
+  if (matchedStatus) {
+    if (matchedStatus === "draft") revisionStatus = "Draft";
+    else if (matchedStatus === "inreview") revisionStatus = "InReview";
+    else if (matchedStatus === "approved") revisionStatus = "Approved";
+    else if (matchedStatus === "published") revisionStatus = "Published";
+    else if (matchedStatus === "archived") revisionStatus = "Archived";
+    else if (matchedStatus === "retired") revisionStatus = "Retired";
+    else revisionStatus = "all";
+  }
+
+  const search = searchParams.get("search") || "";
+
+  const rawSortBy = (searchParams.get("sortBy") || "code").toLowerCase().trim();
+  const sortBy = ALLOWED_SORT_BY.has(rawSortBy) ? rawSortBy : "code";
+
+  const rawSortDir = (searchParams.get("sortDirection") || "asc").toLowerCase().trim();
+  const sortDirection: "asc" | "desc" = ALLOWED_SORT_DIR.has(rawSortDir) ? (rawSortDir as "asc" | "desc") : "asc";
+
+  const rawPage = Number(searchParams.get("page"));
+  const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+
+  const rawPageSize = Number(searchParams.get("pageSize"));
+  const pageSize = Number.isInteger(rawPageSize) && rawPageSize > 0 && rawPageSize <= 100 ? rawPageSize : 20;
+
+  return {
+    pathway,
+    revisionStatus,
+    search,
+    sortBy,
+    sortDirection,
+    page,
+    pageSize,
+  };
+}
+
 export function AdminExaminationsClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -70,24 +120,16 @@ export function AdminExaminationsClient() {
   const queryClient = useQueryClient();
 
   // URL Query State initialization
-  const initialPathway = searchParams.get("pathway") || "all";
-  const initialSearch = searchParams.get("search") || "";
-  const initialStatus = searchParams.get("revisionStatus") || "all";
-  const initialSortBy = searchParams.get("sortBy") || "code";
-  const initialSortDir = (searchParams.get("sortDirection") as "asc" | "desc") || "asc";
-  const rawPage = Number(searchParams.get("page"));
-  const initialPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
-  const rawPageSize = Number(searchParams.get("pageSize"));
-  const initialPageSize = Number.isInteger(rawPageSize) && rawPageSize > 0 && rawPageSize <= 100 ? rawPageSize : 20;
+  const initialParams = React.useMemo(() => parseLibraryQueryParams(searchParams), []);
 
-  const [pathwayFilter, setPathwayFilter] = React.useState<string>(initialPathway);
-  const [revisionStatusFilter, setRevisionStatusFilter] = React.useState<string>(initialStatus);
-  const [searchInput, setSearchInput] = React.useState<string>(initialSearch);
-  const [debouncedSearch, setDebouncedSearch] = React.useState<string>(initialSearch);
-  const [sortBy, setSortBy] = React.useState<string>(initialSortBy);
-  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(initialSortDir);
-  const [page, setPage] = React.useState<number>(initialPage);
-  const [pageSize, setPageSize] = React.useState<number>(initialPageSize);
+  const [pathwayFilter, setPathwayFilter] = React.useState<string>(initialParams.pathway);
+  const [revisionStatusFilter, setRevisionStatusFilter] = React.useState<string>(initialParams.revisionStatus);
+  const [searchInput, setSearchInput] = React.useState<string>(initialParams.search);
+  const [debouncedSearch, setDebouncedSearch] = React.useState<string>(initialParams.search);
+  const [sortBy, setSortBy] = React.useState<string>(initialParams.sortBy);
+  const [sortDirection, setSortDirection] = React.useState<"asc" | "desc">(initialParams.sortDirection);
+  const [page, setPage] = React.useState<number>(initialParams.page);
+  const [pageSize, setPageSize] = React.useState<number>(initialParams.pageSize);
 
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
 
@@ -101,17 +143,46 @@ export function AdminExaminationsClient() {
 
   const capabilities = getAdminCapabilities(user?.role);
 
+  // Synchronize local state when searchParams changes (e.g. browser Back / Forward popstate navigation)
+  const isNavigatingHistoryRef = React.useRef(false);
+  const searchParamsString = searchParams.toString();
+
+  React.useEffect(() => {
+    const parsed = parseLibraryQueryParams(searchParams);
+
+    isNavigatingHistoryRef.current = true;
+    setPathwayFilter((prev) => (prev !== parsed.pathway ? parsed.pathway : prev));
+    setRevisionStatusFilter((prev) => (prev !== parsed.revisionStatus ? parsed.revisionStatus : prev));
+    setSortBy((prev) => (prev !== parsed.sortBy ? parsed.sortBy : prev));
+    setSortDirection((prev) => (prev !== parsed.sortDirection ? parsed.sortDirection : prev));
+    setPage((prev) => (prev !== parsed.page ? parsed.page : prev));
+    setPageSize((prev) => (prev !== parsed.pageSize ? parsed.pageSize : prev));
+
+    setSearchInput((prev) => (prev !== parsed.search ? parsed.search : prev));
+    setDebouncedSearch((prev) => (prev !== parsed.search ? parsed.search : prev));
+  }, [searchParamsString]);
+
   // Debounce search input
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchInput);
-      setPage(1); // Reset page on new search
+      setDebouncedSearch((prev) => {
+        if (prev !== searchInput) {
+          setPage(1); // Reset page on new search
+          return searchInput;
+        }
+        return prev;
+      });
     }, 300);
     return () => clearTimeout(timer);
   }, [searchInput]);
 
-  // Synchronize URL query params on filter/page change
+  // Synchronize URL query params on filter/page/sort/search change
   React.useEffect(() => {
+    if (isNavigatingHistoryRef.current) {
+      isNavigatingHistoryRef.current = false;
+      return;
+    }
+
     const params = new URLSearchParams();
     if (pathwayFilter !== "all") params.set("pathway", pathwayFilter);
     if (revisionStatusFilter !== "all") params.set("revisionStatus", revisionStatusFilter);
@@ -122,8 +193,26 @@ export function AdminExaminationsClient() {
     if (pageSize !== 20) params.set("pageSize", pageSize.toString());
 
     const qs = params.toString() ? `?${params.toString()}` : "";
-    router.replace(`/admin/examinations${qs}`, { scroll: false });
-  }, [pathwayFilter, revisionStatusFilter, debouncedSearch, sortBy, sortDirection, page, pageSize, router]);
+    const currentQs = searchParams.toString() ? `?${searchParams.toString()}` : "";
+
+    if (qs !== currentQs) {
+      const urlHasDifferentSearch = (searchParams.get("search") || "") !== debouncedSearch.trim();
+      const onlySearchChanged =
+        urlHasDifferentSearch &&
+        (searchParams.get("pathway") || "all") === pathwayFilter &&
+        (searchParams.get("revisionStatus") || "all") === revisionStatusFilter &&
+        (searchParams.get("sortBy") || "code") === sortBy &&
+        (searchParams.get("sortDirection") || "asc") === sortDirection &&
+        (Number(searchParams.get("page")) || 1) === page &&
+        (Number(searchParams.get("pageSize")) || 20) === pageSize;
+
+      if (onlySearchChanged) {
+        router.replace(`/admin/examinations${qs}`, { scroll: false });
+      } else {
+        router.push(`/admin/examinations${qs}`, { scroll: false });
+      }
+    }
+  }, [pathwayFilter, revisionStatusFilter, debouncedSearch, sortBy, sortDirection, page, pageSize, router, searchParams]);
 
   // Main Discovery Library Query
   const {

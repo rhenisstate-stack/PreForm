@@ -36,6 +36,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { BackendExaminationDto, BackendExamRevisionDto } from "@/lib/api-services";
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
+import { DuplicateExaminationDialog } from "@/components/admin/duplicate-examination-dialog";
 
 function getStatusBadge(state?: string) {
   switch (state?.toLowerCase()) {
@@ -677,81 +678,16 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
       </Dialog>
 
       {/* Duplicate as New Examination Dialog */}
-      <Dialog open={isDuplicateOpen} onOpenChange={setIsDuplicateOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Duplicate as New Examination Family</DialogTitle>
-            <DialogDescription>
-              Creates an independent examination family with a newly allocated permanent code ({examination.pathway.toUpperCase()}-EX-XXXXXX) starting at Revision 1.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="p-3 rounded-lg bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 space-y-1">
-              <p className="font-semibold">Independent Identity & Clean Lineage</p>
-              <ul className="list-disc list-inside space-y-0.5 text-[11px] text-indigo-800 dark:text-indigo-300">
-                <li>Allocates a new permanent examination code from the sequence generator.</li>
-                <li>Initializes Revision 1 in Draft lifecycle state.</li>
-                <li>Copies question memberships and preserves ordering from source.</li>
-                <li>Candidate attempts and historical statistics are NOT copied (0 attempts).</li>
-                <li>Original examination ({examination.code}) remains completely untouched.</li>
-              </ul>
-            </div>
-
-            <div>
-              <Label htmlFor="dup-title" className="text-xs font-semibold">
-                New Examination Family Title *
-              </Label>
-              <Input
-                id="dup-title"
-                value={duplicateTitle}
-                onChange={(e) => setDuplicateTitle(e.target.value)}
-                className="mt-1"
-                placeholder="e.g. NCLEX-RN Comprehensive Readiness Exam (Copy)"
-                maxLength={128}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="dup-source" className="text-xs font-semibold">
-                Source Revision *
-              </Label>
-              <select
-                id="dup-source"
-                value={duplicateSourceRevId}
-                onChange={(e) => setDuplicateSourceRevId(e.target.value)}
-                className="w-full mt-1 px-3 py-2 text-xs border rounded-md border-slate-300 dark:border-slate-800 bg-background text-foreground"
-              >
-                {eligibleRevisions.length > 0 ? (
-                  eligibleRevisions.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      Rev {r.revisionNumber} ({r.lifecycleState}) — {r.questionCount} Questions — {r.title}
-                    </option>
-                  ))
-                ) : (
-                  <option value="" disabled>No eligible source revisions available</option>
-                )}
-              </select>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Only Published, Approved, or Archived revisions can be duplicated into a new family.
-              </p>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDuplicateOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => duplicateMutation.mutate()}
-              disabled={!duplicateTitle.trim() || !duplicateSourceRevId || duplicateMutation.isPending || eligibleRevisions.length === 0}
-              className="bg-[#142B4A] hover:bg-[#1E3A8A] text-white"
-            >
-              {duplicateMutation.isPending ? "Duplicating..." : "Duplicate Examination"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DuplicateExaminationDialog
+        open={isDuplicateOpen}
+        onOpenChange={setIsDuplicateOpen}
+        examinationId={examination.id}
+        examinationCode={examination.code}
+        examinationTitle={examination.title}
+        examinationPathway={examination.pathway}
+        eligibleRevisions={eligibleRevisions}
+        defaultSourceRevisionId={duplicateSourceRevId}
+      />
     </div>
   );
 }
