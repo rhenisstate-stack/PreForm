@@ -23,6 +23,7 @@ import {
   RotateCcw,
   AlertCircle,
   HelpCircle,
+  Copy,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { BrandedLoading } from "@/components/layout/branded-loading";
@@ -46,6 +47,7 @@ import type {
   BackendRevisionValidationDto,
 } from "@/lib/api-services";
 import { QuestionPickerDialog } from "@/components/admin/question-picker-dialog";
+import { DuplicateExaminationDialog } from "@/components/admin/duplicate-examination-dialog";
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
 
@@ -104,6 +106,12 @@ export function AdminRevisionStudioClient({
   const [lifecycleReason, setLifecycleReason] = React.useState("");
   const [lifecycleNotes, setLifecycleNotes] = React.useState("");
   const [isDiscardOpen, setIsDiscardOpen] = React.useState(false);
+  const [questionToRemove, setQuestionToRemove] = React.useState<{
+    questionId: string;
+    position: number;
+    stem?: string;
+  } | null>(null);
+  const [isDuplicateOpen, setIsDuplicateOpen] = React.useState(false);
 
   // Fetch Revision
   const {
@@ -154,17 +162,43 @@ export function AdminRevisionStudioClient({
   });
 
   // Fetch Sibling Revisions for Family
-  const { data: familyData } = useQuery<{ examination: { revisions: BackendExamRevisionDto[] } }>({
+  const { data: familyData } = useQuery<{
+    examination: {
+      id: string;
+      code: string;
+      title: string;
+      pathway: string;
+      revisions: BackendExamRevisionDto[];
+    };
+  }>({
     queryKey: ["admin-examination-family", familyId],
     queryFn: async () => {
       const res = await fetch(`/api/admin/examinations/${encodeURIComponent(familyId)}`);
-      if (!res.ok) return { examination: { revisions: [] } };
+      if (!res.ok)
+        return {
+          examination: {
+            id: familyId,
+            code: "",
+            title: "",
+            pathway: "",
+            revisions: [],
+          },
+        };
       return res.json();
     },
     enabled: isAuthenticated && capabilities.canViewExaminations && Boolean(familyId),
   });
 
   const siblingRevisions = familyData?.examination?.revisions || [];
+
+  const eligibleRevisions = React.useMemo(() => {
+    return (
+      siblingRevisions.filter((r) => {
+        const st = r.lifecycleState.toLowerCase();
+        return st === "published" || st === "approved" || st === "archived";
+      }) || []
+    );
+  }, [siblingRevisions]);
 
   React.useEffect(() => {
     if (revision) {
@@ -242,6 +276,7 @@ export function AdminRevisionStudioClient({
     },
     onSuccess: () => {
       notify.success("Question removed from examination.");
+      setQuestionToRemove(null);
       queryClient.invalidateQueries({ queryKey: ["admin-revision", revisionId] });
       queryClient.invalidateQueries({ queryKey: ["admin-revision-questions", revisionId] });
       queryClient.invalidateQueries({ queryKey: ["admin-revision-validation", revisionId] });
@@ -686,6 +721,24 @@ export function AdminRevisionStudioClient({
                 </Button>
               </div>
             )}
+
+            {capabilities.canManageExaminations && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsDuplicateOpen(true)}
+                disabled={eligibleRevisions.length === 0}
+                className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-slate-900 border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 gap-1.5"
+                title={
+                  eligibleRevisions.length === 0
+                    ? "No eligible (Published, Approved, or Archived) revisions available in this family to duplicate"
+                    : "Duplicate this examination into an independent examination family"
+                }
+              >
+                <Copy className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span>Duplicate as New Examination</span>
+              </Button>
+            )}
           </div>
         </div>
 
@@ -945,7 +998,7 @@ export function AdminRevisionStudioClient({
                         <ArrowDown className="h-3.5 w-3.5" />
                       </button>
                       <button
-                        onClick={() => removeQuestionMutation.mutate(q.questionId)}
+                        onClick={() => setQuestionToRemove({ questionId: q.questionId, position: idx + 1, stem: q.stem })}
                         disabled={removeQuestionMutation.isPending}
                         className="p-1 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-500 ml-1"
                         title="Remove question"
@@ -1166,6 +1219,72 @@ export function AdminRevisionStudioClient({
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Remove Question Confirmation Dialog */}
+      <Dialog
+        open={Boolean(questionToRemove)}
+        onOpenChange={(open) => {
+          if (!open && !removeQuestionMutation.isPending) {
+            setQuestionToRemove(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-rose-600">
+              <AlertTriangle className="h-5 w-5" /> Remove question from examination?
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to remove Question {questionToRemove?.position} from this examination revision? This changes the revision's question membership and may affect the displayed question order. This action cannot be assumed to be reversible.
+            </DialogDescription>
+          </DialogHeader>
+
+          {questionToRemove?.stem && (
+            <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-md border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 line-clamp-3">
+              <p className="font-semibold text-slate-800 dark:text-slate-200 mb-1">Question prompt:</p>
+              <p className="italic">{questionToRemove.stem}</p>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setQuestionToRemove(null)}
+              disabled={removeQuestionMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (questionToRemove) {
+                  removeQuestionMutation.mutate(questionToRemove.questionId);
+                }
+              }}
+              disabled={removeQuestionMutation.isPending}
+              className="bg-rose-600 hover:bg-rose-700 text-white"
+            >
+              {removeQuestionMutation.isPending ? "Removing..." : "Remove Question"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate as New Examination Dialog */}
+      <DuplicateExaminationDialog
+        open={isDuplicateOpen}
+        onOpenChange={setIsDuplicateOpen}
+        examinationId={familyId}
+        examinationCode={familyData?.examination?.code || revision?.examinationCode || ""}
+        examinationTitle={familyData?.examination?.title || revision?.title || "Examination"}
+        examinationPathway={familyData?.examination?.pathway || revision?.pathway || "rn"}
+        eligibleRevisions={eligibleRevisions}
+        defaultSourceRevisionId={
+          revision && ["published", "approved", "archived"].includes(revision.lifecycleState.toLowerCase())
+            ? revision.id
+            : undefined
+        }
+      />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import * as React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AdminExaminationsClient } from "@/app/admin/examinations/page-client";
+import { AdminExaminationsClient, parseLibraryQueryParams } from "@/app/admin/examinations/page-client";
 import { AdminExaminationFamilyClient } from "@/app/admin/examinations/[id]/page-client";
 import { AdminRevisionStudioClient } from "@/app/admin/examinations/[id]/revisions/[revisionId]/page-client";
 import { QuestionPickerDialog } from "@/components/admin/question-picker-dialog";
@@ -171,6 +171,9 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
       sequenceOrder: 1,
       points: 1,
       questionText: "What is the primary action of beta blockers?",
+      stem: "What is the primary action of beta blockers?",
+      difficulty: "Medium",
+      status: "Approved",
       format: "multiple_choice",
       cognitiveLevel: "Application",
       isClinicalCase: false,
@@ -380,5 +383,257 @@ describe("P3.5 Examination Library Frontend Integration & Workflow Consolidation
 
     // Match counter check
     expect(screen.getByText(/Showing 1 item/i)).toBeInTheDocument();
+  });
+
+  it("REM-01: requires explicit confirmation before removing question from revision and provides question details", async () => {
+    let deleteCalled = false;
+    global.fetch = vi.fn().mockImplementation((url: string, options?: any) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("/questions/q_101") && options?.method === "DELETE") {
+        deleteCalled = true;
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2/questions")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ questions: mockRevisionQuestions }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2/validate")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ validation: mockValidationResult }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ revision: mockRevisionDraft }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/fam_rn_001")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ examination: mockFamilyWithRevisions }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AdminRevisionStudioClient familyId="fam_rn_001" revisionId="rev_rn_2" />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/Revision 2/i)).toBeInTheDocument();
+    });
+
+    // Switch to tab 2: Question Membership
+    const tab2 = screen.getByRole("button", { name: /Question Membership/i });
+    fireEvent.click(tab2);
+
+    // Wait for question to be rendered
+    await waitFor(() => {
+      expect(screen.getByText(/What is the primary action of beta blockers\?/i)).toBeInTheDocument();
+    });
+
+    // Locate the remove question button
+    const removeBtn = screen.getByRole("button", { name: /Remove question 1 from revision/i });
+    expect(removeBtn).toBeInTheDocument();
+
+    // Clicking remove should NOT delete immediately; it must open the confirmation dialog
+    fireEvent.click(removeBtn);
+    expect(deleteCalled).toBe(false);
+
+    // Verify confirmation dialog title and content
+    expect(screen.getByText(/Remove question from examination\?/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Are you sure you want to remove Question 1 from this examination revision\?/i)
+    ).toBeInTheDocument();
+
+    // Verify Cancel button closes the dialog without triggering delete
+    const cancelBtn = screen.getByRole("button", { name: "Cancel" });
+    fireEvent.click(cancelBtn);
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Remove question from examination\?/i)).not.toBeInTheDocument();
+    });
+    expect(deleteCalled).toBe(false);
+
+    // Click remove button again to confirm removal
+    fireEvent.click(removeBtn);
+    expect(screen.getByText(/Remove question from examination\?/i)).toBeInTheDocument();
+
+    const confirmRemoveBtn = screen.getByRole("button", { name: "Remove Question" });
+    fireEvent.click(confirmRemoveBtn);
+
+    await waitFor(() => {
+      expect(deleteCalled).toBe(true);
+    });
+  });
+
+  it("REM-02: renders 'Duplicate as New Examination' in Revision Studio header and opens duplication dialog with prefilled copy title", async () => {
+    let duplicatePayload: any = null;
+    global.fetch = vi.fn().mockImplementation((url: string, options?: any) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("/api/admin/examinations/fam_rn_001/duplicate") && options?.method === "POST") {
+        duplicatePayload = JSON.parse(options.body);
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve({
+              success: true,
+              examination: {
+                id: "fam_copy_001",
+                code: "RN-EX-000002",
+                title: duplicatePayload.title,
+                pathway: "rn",
+              },
+            }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/fam_rn_001")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ examination: mockFamilyWithRevisions }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ revision: mockRevisionDraft }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2/questions")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ questions: mockRevisionQuestions }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2/validate")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ validation: mockValidationResult }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AdminRevisionStudioClient familyId="fam_rn_001" revisionId="rev_rn_2" />
+      </QueryClientProvider>
+    );
+
+    // Wait for the duplicate button to be enabled (eligibleRevisions has rev_rn_1 Published)
+    let duplicateBtn: HTMLElement | null = null;
+    await waitFor(() => {
+      duplicateBtn = screen.getByRole("button", { name: /Duplicate as New Examination/i });
+      expect(duplicateBtn).toBeEnabled();
+    });
+
+    fireEvent.click(duplicateBtn!);
+
+    // Confirmation modal should be open
+    await waitFor(() => {
+      expect(screen.getByText("Duplicate Examination")).toBeInTheDocument();
+    });
+
+    // Check prefilled title
+    const titleInput = screen.getByLabelText(/New Examination Title/i);
+    expect(titleInput).toHaveValue("NCLEX-RN Comprehensive Practice Examination (Copy)");
+
+    // Submit duplication
+    const submitBtn = screen.getByRole("button", { name: "Create Duplicate Examination" });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(duplicatePayload).toEqual({
+        title: "NCLEX-RN Comprehensive Practice Examination (Copy)",
+        sourceRevisionId: "rev_rn_1",
+      });
+      expect(mockPush).toHaveBeenCalledWith("/admin/examinations/fam_copy_001");
+    });
+  });
+
+  it("REM-02 (edge case): disables Duplicate button in Revision Studio when no eligible revisions exist in family", async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      const urlStr = url.toString();
+      if (urlStr.includes("/api/admin/examinations/fam_empty_001")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ examination: mockFamilyZeroRevisions }),
+        });
+      }
+      if (urlStr.includes("/api/admin/examinations/revisions/rev_rn_2")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ revision: mockRevisionDraft }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AdminRevisionStudioClient familyId="fam_empty_001" revisionId="rev_rn_2" />
+      </QueryClientProvider>
+    );
+
+    await waitFor(() => {
+      const duplicateBtn = screen.getByRole("button", { name: /Duplicate as New Examination/i });
+      expect(duplicateBtn).toBeDisabled();
+    });
+  });
+
+  it("REM-03: parseLibraryQueryParams defensively sanitizes invalid and malicious query parameters", () => {
+    // 1. Defaults when empty
+    const emptyParams = parseLibraryQueryParams(new URLSearchParams(""));
+    expect(emptyParams).toEqual({
+      pathway: "all",
+      revisionStatus: "all",
+      search: "",
+      sortBy: "code",
+      sortDirection: "asc",
+      page: 1,
+      pageSize: 20,
+    });
+
+    // 2. Defensive handling of invalid/malicious values
+    const maliciousParams = parseLibraryQueryParams(
+      new URLSearchParams(
+        "pathway=drop_table&revisionStatus=<script>&sortBy=eval&sortDirection=sideways&page=-10&pageSize=9999"
+      )
+    );
+    expect(maliciousParams).toEqual({
+      pathway: "all",
+      revisionStatus: "all",
+      search: "",
+      sortBy: "code",
+      sortDirection: "asc",
+      page: 1,
+      pageSize: 20,
+    });
+
+    // 3. Normalizes valid parameters and case
+    const validParams = parseLibraryQueryParams(
+      new URLSearchParams(
+        "pathway=rn&revisionStatus=published&search=cardiac&sortBy=title&sortDirection=desc&page=3&pageSize=50"
+      )
+    );
+    expect(validParams).toEqual({
+      pathway: "rn",
+      revisionStatus: "Published",
+      search: "cardiac",
+      sortBy: "title",
+      sortDirection: "desc",
+      page: 3,
+      pageSize: 50,
+    });
   });
 });
