@@ -28,12 +28,21 @@ public class AdminSecurityController : ControllerBase
         "SessionReplacedSameClient",
         "ConcurrentSessionLimitExceeded",
         "SecurityVersionInvalidated",
+        "SecurityVersionIncremented",
+        "SessionsInvalidatedBySecurityVersion",
         "PasswordChanged",
         "SessionPolicyUpdated",
         "SessionPolicyReset",
         "AdminRevokeSession",
         "AdminRevokeAllUserSessions",
-        "UnauthorizedSessionRevocationAttempt"
+        "UnauthorizedSessionRevocationAttempt",
+        "NewClientDetected",
+        "ClientIdentityChanged",
+        "UserAgentChanged",
+        "IpAddressChanged",
+        "SuspiciousSessionContext",
+        "RepeatedClientReplacement",
+        "CredentialSecurityEvent"
     };
 
     public AdminSecurityController(

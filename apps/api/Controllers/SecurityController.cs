@@ -28,8 +28,17 @@ public class SecurityController : ControllerBase
         "SessionReplacedSameClient",
         "ConcurrentSessionLimitExceeded",
         "SecurityVersionInvalidated",
+        "SecurityVersionIncremented",
+        "SessionsInvalidatedBySecurityVersion",
         "PasswordChanged",
-        "ProfileUpdated"
+        "ProfileUpdated",
+        "NewClientDetected",
+        "ClientIdentityChanged",
+        "UserAgentChanged",
+        "IpAddressChanged",
+        "SuspiciousSessionContext",
+        "RepeatedClientReplacement",
+        "CredentialSecurityEvent"
     };
 
     public SecurityController(
@@ -245,8 +254,17 @@ public class SecurityController : ControllerBase
             "SessionReplacedSameClient" => "Session refreshed on this browser",
             "ConcurrentSessionLimitExceeded" => "Sign-in prevented: simultaneous active session limit reached",
             "SecurityVersionInvalidated" => "Security credentials updated",
+            "SecurityVersionIncremented" => "Account security version updated",
+            "SessionsInvalidatedBySecurityVersion" => "All prior active sessions signed out for account protection",
             "PasswordChanged" => "Password changed successfully",
             "ProfileUpdated" => "Account profile details updated",
+            "NewClientDetected" => "Signed in from a new device",
+            "ClientIdentityChanged" => "Browser session refreshed",
+            "UserAgentChanged" => "Browser or operating system updated",
+            "IpAddressChanged" => "Network connection changed",
+            "SuspiciousSessionContext" => "Unusual device context detected",
+            "RepeatedClientReplacement" => "Multiple browser session refreshes observed",
+            "CredentialSecurityEvent" => "Account credentials updated",
             _ => rawDescription
         };
     }

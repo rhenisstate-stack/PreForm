@@ -100,6 +100,8 @@ public class SessionSecurityService : ISessionSecurityService
         DateTime now,
         CancellationToken cancellationToken)
     {
+        var deviceLabel = DeviceDetectionHelper.GetDeviceLabel(userAgent);
+
         // 1. Fetch currently active, unrevoked sessions for this user
         var activeSessions = await _dbContext.UserSessions
             .Where(s => s.UserId == user.Id && !s.Revoked &&
@@ -120,6 +122,18 @@ public class SessionSecurityService : ISessionSecurityService
                 oldClientSession.RevokedAt = now;
                 oldClientSession.RevocationReason = "ReplacedBySameClient";
                 activeSessions.Remove(oldClientSession);
+
+                _dbContext.AuditLogs.Add(new AuditLog
+                {
+                    ActorId = user.Id,
+                    Action = "ClientIdentityChanged",
+                    EntityType = "UserSession",
+                    EntityId = oldClientSession.Id,
+                    Description = $"Session on client {effectiveClientId} rotated ({deviceLabel})",
+                    Outcome = "Rotated",
+                    IpAddress = ipAddress,
+                    Timestamp = now
+                });
             }
         }
 
@@ -165,7 +179,6 @@ public class SessionSecurityService : ISessionSecurityService
         }
 
         var effectiveRole = string.IsNullOrWhiteSpace(role) ? "candidate" : role.Trim().ToLowerInvariant();
-        var deviceLabel = DeviceDetectionHelper.GetDeviceLabel(userAgent);
 
         var session = new UserSession
         {
@@ -190,7 +203,25 @@ public class SessionSecurityService : ISessionSecurityService
             Revoked = false
         };
 
+        var isExistingClient = await _dbContext.UserSessions
+            .AnyAsync(s => s.UserId == user.Id && s.ClientId == effectiveClientId, cancellationToken);
+
         _dbContext.UserSessions.Add(session);
+
+        if (!isExistingClient)
+        {
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                ActorId = user.Id,
+                Action = "NewClientDetected",
+                EntityType = "UserSession",
+                EntityId = session.Id,
+                Description = $"New client device detected: {effectiveClientId} ({deviceLabel})",
+                Outcome = "Success",
+                IpAddress = ipAddress,
+                Timestamp = now
+            });
+        }
 
         _dbContext.AuditLogs.Add(new AuditLog
         {
@@ -325,6 +356,99 @@ public class SessionSecurityService : ISessionSecurityService
         // Effective Expiration calculation: min(Idle, Absolute)
         var effectiveExpiry = idleLimit < absoluteLimit ? idleLimit : absoluteLimit;
 
+        // Context Change & Anomaly Assessment
+        var riskAssessment = DeviceDetectionHelper.AssessContextChange(
+            session.UserAgent,
+            userAgent,
+            session.LastIpAddress,
+            ipAddress);
+
+        if (riskAssessment.IsOsChanged)
+        {
+            var oldOs = DeviceDetectionHelper.ResolveOperatingSystem(session.UserAgent ?? string.Empty);
+            var newOs = DeviceDetectionHelper.ResolveOperatingSystem(userAgent ?? string.Empty);
+
+            _logger.LogWarning("Suspicious session context detected for session {SessionId}: OS changed from {OldOs} to {NewOs}",
+                session.Id, oldOs, newOs);
+
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                ActorId = session.UserId,
+                Action = "SuspiciousSessionContext",
+                EntityType = "UserSession",
+                EntityId = session.Id,
+                Description = $"Suspicious session context: Operating system changed from {oldOs} to {newOs} on active session",
+                Outcome = "Flagged",
+                IpAddress = ipAddress,
+                Timestamp = now
+            });
+
+            session.UserAgent = userAgent;
+            session.DeviceLabel = DeviceDetectionHelper.GetDeviceLabel(userAgent);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        else if (riskAssessment.IsBrowserChanged)
+        {
+            var oldBrowser = DeviceDetectionHelper.ResolveBrowser(session.UserAgent ?? string.Empty);
+            var newBrowser = DeviceDetectionHelper.ResolveBrowser(userAgent ?? string.Empty);
+
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                ActorId = session.UserId,
+                Action = "UserAgentChanged",
+                EntityType = "UserSession",
+                EntityId = session.Id,
+                Description = $"Browser family changed from {oldBrowser} to {newBrowser} on active session",
+                Outcome = "Updated",
+                IpAddress = ipAddress,
+                Timestamp = now
+            });
+
+            session.UserAgent = userAgent;
+            session.DeviceLabel = DeviceDetectionHelper.GetDeviceLabel(userAgent);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        else if (riskAssessment.IsIpChanged)
+        {
+            if (!policy.AllowIpDrift || policy.EnforceIpConsistency)
+            {
+                _logger.LogWarning("IP consistency violation for session {SessionId}: {OldIp} vs {NewIp}",
+                    session.Id, session.LastIpAddress, ipAddress);
+
+                _dbContext.AuditLogs.Add(new AuditLog
+                {
+                    ActorId = session.UserId,
+                    Action = "SuspiciousSessionContext",
+                    EntityType = "UserSession",
+                    EntityId = session.Id,
+                    Description = $"IP consistency violation: IP changed from {session.LastIpAddress} to {ipAddress} while AllowIpDrift is disabled",
+                    Outcome = "Flagged",
+                    IpAddress = ipAddress,
+                    Timestamp = now
+                });
+                await _dbContext.SaveChangesAsync(cancellationToken);
+
+                return SessionValidationResult.Fail("IP_CONSISTENCY_VIOLATION", "Session IP address mismatch under strict IP policy.");
+            }
+            else
+            {
+                _dbContext.AuditLogs.Add(new AuditLog
+                {
+                    ActorId = session.UserId,
+                    Action = "IpAddressChanged",
+                    EntityType = "UserSession",
+                    EntityId = session.Id,
+                    Description = $"IP address changed from {session.LastIpAddress} to {ipAddress}",
+                    Outcome = "Allowed",
+                    IpAddress = ipAddress,
+                    Timestamp = now
+                });
+
+                session.LastIpAddress = ipAddress;
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
+        }
+
         // Qualifying Activity & Activity Throttling
         if (isQualifyingActivity)
         {
@@ -451,11 +575,44 @@ public class SessionSecurityService : ISessionSecurityService
         user.SecurityVersion++;
         user.UpdatedAt = DateTime.UtcNow;
 
+        var now = DateTime.UtcNow;
         var policy = await GetActivePolicyAsync(cancellationToken);
-        if (policy.RotateOnPrivilegeChange)
+
+        var activeSessions = await _dbContext.UserSessions
+            .Where(s => s.UserId == userId && !s.Revoked)
+            .ToListAsync(cancellationToken);
+
+        if (policy.RotateOnPrivilegeChange && activeSessions.Count > 0)
         {
-            await RevokeAllUserSessionsAsync(userId, reason, "system", cancellationToken);
+            foreach (var s in activeSessions)
+            {
+                s.Revoked = true;
+                s.RevokedAt = now;
+                s.RevocationReason = string.IsNullOrWhiteSpace(reason) ? "SecurityVersionChanged" : reason;
+            }
+
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                ActorId = userId,
+                Action = "SessionsInvalidatedBySecurityVersion",
+                EntityType = "User",
+                EntityId = userId,
+                Description = $"Invalidated {activeSessions.Count} active session(s) following security version increment (Reason: {reason})",
+                Outcome = "Success",
+                Timestamp = now
+            });
         }
+
+        _dbContext.AuditLogs.Add(new AuditLog
+        {
+            ActorId = userId,
+            Action = "SecurityVersionIncremented",
+            EntityType = "User",
+            EntityId = userId,
+            Description = $"Security version incremented to {user.SecurityVersion} (Reason: {reason})",
+            Outcome = "Success",
+            Timestamp = now
+        });
 
         _dbContext.AuditLogs.Add(new AuditLog
         {
@@ -465,7 +622,7 @@ public class SessionSecurityService : ISessionSecurityService
             EntityId = userId,
             Description = $"Security version incremented to {user.SecurityVersion} (Reason: {reason})",
             Outcome = "Success",
-            Timestamp = DateTime.UtcNow
+            Timestamp = now
         });
 
         await _dbContext.SaveChangesAsync(cancellationToken);
