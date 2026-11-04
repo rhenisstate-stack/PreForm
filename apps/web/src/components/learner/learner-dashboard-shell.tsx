@@ -425,12 +425,8 @@ export function LearnerDashboardShell({
             <nav
               data-testid="dashboard-breadcrumbs"
               aria-label="Breadcrumb"
-              className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground"
+              className="flex items-center gap-1.5 text-xs text-muted-foreground"
             >
-              <Link href="/" className="hover:text-foreground transition-colors">
-                Home
-              </Link>
-              <span>/</span>
               <Link href="/dashboard" className="hover:text-foreground transition-colors">
                 Dashboard
               </Link>
@@ -440,7 +436,7 @@ export function LearnerDashboardShell({
               </Link>
               <span>/</span>
               <span className="text-foreground font-medium" aria-current="page">
-                {breadcrumbPageTitle || "Security"}
+                {breadcrumbPageTitle || "Security & Sessions"}
               </span>
             </nav>
           </div>

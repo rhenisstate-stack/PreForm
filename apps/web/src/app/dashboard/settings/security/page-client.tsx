@@ -40,6 +40,7 @@ import {
   BackendLearnerSession,
   BackendSecurityEvent,
 } from "@/lib/api-services";
+import { LearnerDashboardShell } from "@/components/learner/learner-dashboard-shell";
 
 export function SecuritySettingsClient() {
   const router = useRouter();
@@ -267,73 +268,153 @@ export function SecuritySettingsClient() {
   const otherSessionsCount = sessions.filter((s) => !s.isCurrent).length;
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4 sm:px-6 lg:px-8 max-w-5xl mx-auto space-y-8">
-      {/* Breadcrumb Navigation */}
-      <nav aria-label="Breadcrumb" className="flex items-center text-sm text-muted-foreground space-x-2">
-        <Link href="/dashboard" className="hover:text-foreground transition-colors">
-          Dashboard
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link href="/profile" className="hover:text-foreground transition-colors">
-          Settings
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <span className="text-foreground font-medium" aria-current="page">
-          Security & Sessions
-        </span>
-      </nav>
-
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-6">
-        <div>
-          <h1 className="text-3xl font-serif font-bold tracking-tight text-foreground">
-            Account Security & Sessions
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Review active browser sessions, manage signed-in devices, and inspect your security event history.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              fetchSessions();
-              fetchEvents();
-            }}
-            disabled={loadingSessions || loadingEvents}
-            className="flex items-center gap-2"
-          >
-            <RefreshCw className={`h-4 w-4 ${loadingSessions || loadingEvents ? "animate-spin" : ""}`} />
-            <span>Refresh</span>
-          </Button>
-          <Link href="/profile">
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back to Profile</span>
+    <LearnerDashboardShell activeNav="security" breadcrumbPageTitle="Security & Sessions">
+      <div className="space-y-8">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border pb-6">
+          <div>
+            <h1 className="text-3xl font-serif font-bold tracking-tight text-foreground">
+              Account Security & Sessions
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Review active browser sessions, manage signed-in devices, and inspect your security event history.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                fetchSessions();
+                fetchEvents();
+              }}
+              disabled={loadingSessions || loadingEvents}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${loadingSessions || loadingEvents ? "animate-spin" : ""}`} />
+              <span>Refresh</span>
             </Button>
-          </Link>
+            <Link href="/profile">
+              <Button variant="outline" size="sm" className="flex items-center gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                <span>Back to Profile</span>
+              </Button>
+            </Link>
+          </div>
         </div>
-      </div>
 
-      {/* Action Banner / Notification */}
-      {actionFeedback && (
+        {/* Action Banner / Notification */}
+        {actionFeedback && (
+          <div
+            role="status"
+            className={`p-4 rounded-xl flex items-start gap-3 border ${
+              actionFeedback.type === "success"
+                ? "bg-emerald-50 text-emerald-900 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800"
+                : "bg-red-50 text-red-900 border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-800"
+            }`}
+          >
+            {actionFeedback.type === "success" ? (
+              <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+            ) : (
+              <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
+            )}
+            <p className="text-sm font-medium">{actionFeedback.text}</p>
+          </div>
+        )}
+
+        {/* Security Overview Metric Cards */}
         <div
-          role="status"
-          className={`p-4 rounded-xl flex items-start gap-3 border ${
-            actionFeedback.type === "success"
-              ? "bg-emerald-50 text-emerald-900 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800"
-              : "bg-red-50 text-red-900 border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-800"
-          }`}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+          data-testid="security-overview-metrics"
         >
-          {actionFeedback.type === "success" ? (
-            <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-          ) : (
-            <AlertCircle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 shrink-0" />
-          )}
-          <p className="text-sm font-medium">{actionFeedback.text}</p>
+          {/* Metric 1: Active Sessions */}
+          <Card data-testid="metric-active-sessions" className="border-border">
+            <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Active Sessions
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold font-mono text-foreground">
+                    {loadingSessions ? "—" : sessions.length}
+                  </span>
+                  <span className="text-xs text-muted-foreground">simultaneous</span>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-primary/10 text-primary">
+                <Monitor className="h-5 w-5" aria-hidden="true" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Metric 2: Other Devices */}
+          <Card data-testid="metric-other-devices" className="border-border">
+            <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Other Devices
+                </p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold font-mono text-foreground">
+                    {loadingSessions ? "—" : otherSessionsCount}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {otherSessionsCount === 1 ? "remote login" : "remote logins"}
+                  </span>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-muted text-muted-foreground">
+                <Smartphone className="h-5 w-5" aria-hidden="true" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Metric 3: Current Device */}
+          <Card data-testid="metric-current-device" className="border-border">
+            <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Current Device
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground truncate max-w-[140px]">
+                    {loadingSessions
+                      ? "Identifying..."
+                      : sessions.find((s) => s.isCurrent)?.browser || "This Device"}
+                  </span>
+                  <Badge className="bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 text-[10px] px-1.5 py-0 font-medium">
+                    Active
+                  </Badge>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Metric 4: Account Protection Status */}
+          <Card data-testid="metric-protection-status" className="border-border">
+            <CardContent className="p-4 sm:p-5 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  Protection Status
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    Enforced
+                  </span>
+                  <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0">
+                    Guarded
+                  </Badge>
+                </div>
+              </div>
+              <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                <Shield className="h-5 w-5" aria-hidden="true" />
+              </div>
+            </CardContent>
+          </Card>
         </div>
-      )}
 
       {/* Section 1: Active Sessions & Devices */}
       <section aria-labelledby="active-sessions-heading" className="space-y-4">
@@ -646,6 +727,7 @@ export function SecuritySettingsClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </LearnerDashboardShell>
   );
 }
