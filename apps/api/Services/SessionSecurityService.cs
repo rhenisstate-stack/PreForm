@@ -246,28 +246,31 @@ public class SessionSecurityService : ISessionSecurityService
             return SessionValidationResult.Fail("SESSION_NOT_FOUND", "Session record does not exist.");
         }
 
-        if (session.Revoked)
-        {
-            return SessionValidationResult.Fail("SESSION_REVOKED", "Session has been revoked.");
-        }
-
         if (session.User == null || !session.User.IsActive)
         {
             return SessionValidationResult.Fail("ACCOUNT_INACTIVE", "Account is inactive or disabled.");
         }
 
-        // Security Version Check
-        if (session.SecurityVersion != session.User.SecurityVersion)
+        // Security Version Check (prioritize specific security version change error)
+        if (session.SecurityVersion != session.User.SecurityVersion || session.RevocationReason == "PrivilegeOrSecurityVersionChanged")
         {
-            session.Revoked = true;
-            session.RevokedAt = now;
-            session.RevocationReason = "PrivilegeOrSecurityVersionChanged";
-            await _dbContext.SaveChangesAsync(cancellationToken);
+            if (!session.Revoked)
+            {
+                session.Revoked = true;
+                session.RevokedAt = now;
+                session.RevocationReason = "PrivilegeOrSecurityVersionChanged";
+                await _dbContext.SaveChangesAsync(cancellationToken);
+            }
 
             _logger.LogWarning("Session {SessionId} invalidated: SecurityVersion mismatch ({SessionVer} vs {UserVer})",
                 session.Id, session.SecurityVersion, session.User.SecurityVersion);
 
             return SessionValidationResult.Fail("SECURITY_VERSION_CHANGED", "Account privileges or security credentials have changed. Reauthentication required.");
+        }
+
+        if (session.Revoked)
+        {
+            return SessionValidationResult.Fail("SESSION_REVOKED", "Session has been revoked.");
         }
 
         var absoluteLimit = session.AbsoluteExpiresAt != default ? session.AbsoluteExpiresAt : session.ExpiresAt;

@@ -296,7 +296,7 @@ public class SessionSecurityEngineTests
 
         var res = await service.CreateOrRotateSessionAsync(user, "candidate", "client_1", "10.0.0.1", "Browser", null, false);
 
-        // Invalidate security version (e.g. password changed or privileges updated)
+        // Invalidate security version via InvalidateUserSecurityVersionAsync
         await service.InvalidateUserSecurityVersionAsync(user.Id, "PasswordReset");
 
         var val = await service.ValidateSessionAsync(res.Token!, isToken: true);
@@ -305,7 +305,23 @@ public class SessionSecurityEngineTests
 
         var sessionCheck = await context.UserSessions.FindAsync(res.Session!.Id);
         Assert.True(sessionCheck!.Revoked);
-        Assert.Equal("PrivilegeOrSecurityVersionChanged", sessionCheck.RevocationReason);
+        Assert.Equal("PasswordReset", sessionCheck.RevocationReason);
+
+        // Also verify direct SecurityVersion mismatch without prior revocation
+        var user2 = await SeedUserAsync(context, "user_direct_bump", "direct@example.com");
+        var res2 = await service.CreateOrRotateSessionAsync(user2, "candidate", "client_2", "10.0.0.1", "Browser", null, false);
+
+        // Manually bump user.SecurityVersion without revoking session
+        user2.SecurityVersion++;
+        await context.SaveChangesAsync();
+
+        var val2 = await service.ValidateSessionAsync(res2.Token!, isToken: true);
+        Assert.False(val2.IsValid);
+        Assert.Equal("SECURITY_VERSION_CHANGED", val2.FailureCode);
+
+        var sessionCheck2 = await context.UserSessions.FindAsync(res2.Session!.Id);
+        Assert.True(sessionCheck2!.Revoked);
+        Assert.Equal("PrivilegeOrSecurityVersionChanged", sessionCheck2.RevocationReason);
     }
 
     [Fact]
