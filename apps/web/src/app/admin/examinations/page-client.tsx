@@ -75,8 +75,10 @@ export function AdminExaminationsClient() {
   const initialStatus = searchParams.get("revisionStatus") || "all";
   const initialSortBy = searchParams.get("sortBy") || "code";
   const initialSortDir = (searchParams.get("sortDirection") as "asc" | "desc") || "asc";
-  const initialPage = Number(searchParams.get("page")) || 1;
-  const initialPageSize = Number(searchParams.get("pageSize")) || 20;
+  const rawPage = Number(searchParams.get("page"));
+  const initialPage = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+  const rawPageSize = Number(searchParams.get("pageSize"));
+  const initialPageSize = Number.isInteger(rawPageSize) && rawPageSize > 0 && rawPageSize <= 100 ? rawPageSize : 20;
 
   const [pathwayFilter, setPathwayFilter] = React.useState<string>(initialPathway);
   const [revisionStatusFilter, setRevisionStatusFilter] = React.useState<string>(initialStatus);
@@ -251,7 +253,7 @@ export function AdminExaminationsClient() {
               Examinations
             </h1>
             <Badge variant="outline" className="text-xs uppercase tracking-wider bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30">
-              P3.3 Library
+              Examination Library
             </Badge>
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
@@ -423,91 +425,110 @@ export function AdminExaminationsClient() {
       ) : (
         <div className="space-y-4">
           <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-950/40 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  <th className="py-3 px-4">Examination Code</th>
-                  <th className="py-3 px-4">Family Title</th>
-                  <th className="py-3 px-4">Pathway</th>
-                  <th className="py-3 px-4">Published Revision</th>
-                  <th className="py-3 px-4">Latest Revision</th>
-                  <th className="py-3 px-4 text-center">Revisions</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
-                {items.map((exam) => (
-                  <tr
-                    key={exam.id}
-                    className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
-                  >
-                    <td className="py-3.5 px-4 font-mono font-semibold text-xs text-[#142B4A] dark:text-teal-400">
-                      {exam.code}
-                    </td>
-                    <td className="py-3.5 px-4 font-medium text-slate-900 dark:text-white">
-                      <div>{exam.title}</div>
-                      <div className="text-[11px] text-slate-400 font-normal mt-0.5">
-                        Created {new Date(exam.createdAt).toLocaleDateString()} by {exam.createdBy}
-                      </div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <Badge
-                        variant="outline"
-                        className={`text-xs uppercase font-bold ${
-                          exam.pathway.toLowerCase() === "rn"
-                            ? "border-teal-500/30 text-teal-700 dark:text-teal-300 bg-teal-500/10"
-                            : "border-indigo-500/30 text-indigo-700 dark:text-indigo-300 bg-indigo-500/10"
-                        }`}
-                      >
-                        {exam.pathway.toUpperCase()}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4 text-xs text-slate-600 dark:text-slate-300">
-                      {exam.publishedRevision ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            Rev {exam.publishedRevision.revisionNumber}
-                          </span>
-                          <span className="text-slate-400">
-                            ({exam.publishedRevision.questionCount} Qs)
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 italic">None Published</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4">
-                      {exam.latestRevision ? (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-mono font-semibold">
-                            Rev {exam.latestRevision.revisionNumber}
-                          </span>
-                          {getStatusBadge(exam.latestRevision.lifecycleState)}
-                        </div>
-                      ) : (
-                        <span className="text-slate-400 italic text-xs">No Revisions</span>
-                      )}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <Badge variant="secondary" className="font-mono text-xs">
-                        {exam.revisionCount}
-                      </Badge>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <Link href={`/admin/examinations/${exam.id}`}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-xs font-semibold text-[#0D9488] hover:text-[#0F766E] hover:bg-teal-50 dark:hover:bg-teal-950/30"
-                        >
-                          Open Family <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                        </Button>
-                      </Link>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[700px]">
+                <thead>
+                  <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/75 dark:bg-slate-950/40 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                    <th className="py-3 px-4">Examination Code</th>
+                    <th className="py-3 px-4">Family Title</th>
+                    <th className="py-3 px-4">Pathway</th>
+                    <th className="py-3 px-4">Published Revision</th>
+                    <th className="py-3 px-4">Latest Revision</th>
+                    <th className="py-3 px-4 text-center">Revisions</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm">
+                  {items.map((exam) => (
+                    <tr
+                      key={exam.id}
+                      className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors"
+                    >
+                      <td className="py-3.5 px-4 font-mono font-semibold text-xs text-[#142B4A] dark:text-teal-400">
+                        {exam.code}
+                      </td>
+                      <td className="py-3.5 px-4 font-medium text-slate-900 dark:text-white">
+                        <div>{exam.title}</div>
+                        <div className="text-[11px] text-slate-400 font-normal mt-0.5">
+                          Created {new Date(exam.createdAt).toLocaleDateString()} by {exam.createdBy}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Badge
+                          variant="outline"
+                          className={`text-xs uppercase font-bold ${
+                            exam.pathway.toLowerCase() === "rn"
+                              ? "border-teal-500/30 text-teal-700 dark:text-teal-300 bg-teal-500/10"
+                              : "border-indigo-500/30 text-indigo-700 dark:text-indigo-300 bg-indigo-500/10"
+                          }`}
+                        >
+                          {exam.pathway.toUpperCase()}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-4 text-xs text-slate-600 dark:text-slate-300">
+                        {exam.publishedRevision ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              Rev {exam.publishedRevision.revisionNumber}
+                            </span>
+                            <span className="text-slate-400">
+                              ({exam.publishedRevision.questionCount} Qs)
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic">None Published</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {exam.latestRevision ? (
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono font-semibold">
+                              Rev {exam.latestRevision.revisionNumber}
+                            </span>
+                            {getStatusBadge(exam.latestRevision.lifecycleState)}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400 italic text-xs">No Revisions</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <Badge variant="secondary" className="font-mono text-xs">
+                          {exam.revisionCount}
+                        </Badge>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {capabilities.canManageExaminations &&
+                            exam.latestRevision?.lifecycleState?.toLowerCase() === "draft" && (
+                              <Link
+                                href={`/admin/examinations/${encodeURIComponent(exam.id)}/revisions/${encodeURIComponent(exam.latestRevision.id)}`}
+                              >
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-xs font-semibold text-amber-700 dark:text-amber-300 border-amber-300/60 hover:bg-amber-50 dark:hover:bg-amber-950/30 h-8 px-2.5"
+                                  title="Author active draft revision"
+                                >
+                                  Author Draft
+                                </Button>
+                              </Link>
+                            )}
+                          <Link href={`/admin/examinations/${encodeURIComponent(exam.id)}`}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-xs font-semibold text-[#0D9488] hover:text-[#0F766E] hover:bg-teal-50 dark:hover:bg-teal-950/30 h-8 px-2.5"
+                            >
+                              Open Family <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                            </Button>
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Pagination Footer */}

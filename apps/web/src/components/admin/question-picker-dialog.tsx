@@ -37,8 +37,17 @@ export function QuestionPickerDialog({
   concurrencyToken,
   onQuestionAdded,
 }: QuestionPickerDialogProps) {
-  const [searchTerm, setSearchTerm] = React.useState("");
+  const [searchInput, setSearchInput] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [formatFilter, setFormatFilter] = React.useState<string>("all");
   const [addingId, setAddingId] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchInput.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   const {
     data: eligibleQuestions = [],
@@ -46,11 +55,11 @@ export function QuestionPickerDialog({
     error,
     refetch,
   } = useQuery<BackendExamQuestionMembershipDto[]>({
-    queryKey: ["eligible-questions", revisionPathway, searchTerm],
+    queryKey: ["eligible-questions", revisionPathway, debouncedSearch],
     queryFn: async (): Promise<BackendExamQuestionMembershipDto[]> => {
       const p = new URLSearchParams();
       if (revisionPathway) p.set("pathway", revisionPathway);
-      if (searchTerm.trim()) p.set("search", searchTerm.trim());
+      if (debouncedSearch) p.set("search", debouncedSearch);
       const res = await fetch(`/api/admin/examinations/eligible-questions?${p.toString()}`);
       if (!res.ok) {
         throw new Error("Failed to load eligible questions");
@@ -60,6 +69,21 @@ export function QuestionPickerDialog({
     },
     enabled: open,
   });
+
+  const filteredQuestions = React.useMemo(() => {
+    if (formatFilter === "all") return eligibleQuestions;
+    return eligibleQuestions.filter(
+      (q) => q.questionTypeKey?.toLowerCase() === formatFilter.toLowerCase()
+    );
+  }, [eligibleQuestions, formatFilter]);
+
+  const availableFormats = React.useMemo(() => {
+    const set = new Set<string>();
+    eligibleQuestions.forEach((q) => {
+      if (q.questionTypeKey) set.add(q.questionTypeKey);
+    });
+    return Array.from(set);
+  }, [eligibleQuestions]);
 
   const handleAddQuestion = async (q: BackendExamQuestionMembershipDto) => {
     setAddingId(q.questionId);
@@ -103,14 +127,51 @@ export function QuestionPickerDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="relative my-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by question stem, topic or format..."
-            className="pl-9 text-sm"
-          />
+        <div className="space-y-2 my-2">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Search by question stem, topic or format..."
+              className="pl-9 text-sm"
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-2 text-xs text-slate-500 pt-1">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-medium text-slate-400">Type:</span>
+              <button
+                type="button"
+                onClick={() => setFormatFilter("all")}
+                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                  formatFilter === "all"
+                    ? "bg-[#142B4A] text-white dark:bg-slate-700"
+                    : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300"
+                }`}
+              >
+                All ({eligibleQuestions.length})
+              </button>
+              {availableFormats.map((fmt) => (
+                <button
+                  key={fmt}
+                  type="button"
+                  onClick={() => setFormatFilter(fmt)}
+                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                    formatFilter === fmt
+                      ? "bg-[#0D9488] text-white"
+                      : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300"
+                  }`}
+                >
+                  {fmt}
+                </button>
+              ))}
+            </div>
+
+            <span className="text-[11px] text-slate-400 shrink-0">
+              Showing {filteredQuestions.length} item{filteredQuestions.length === 1 ? "" : "s"}
+            </span>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto min-h-[300px] max-h-[450px] divide-y divide-slate-100 dark:divide-slate-800 border rounded-lg border-slate-200 dark:border-slate-800">
@@ -124,12 +185,12 @@ export function QuestionPickerDialog({
               <AlertCircle className="h-6 w-6 mx-auto mb-1 text-rose-400" />
               Failed to load question catalogue.
             </div>
-          ) : eligibleQuestions.length === 0 ? (
+          ) : filteredQuestions.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs">
-              No approved questions found matching pathway "{revisionPathway}".
+              No approved questions found matching pathway "{revisionPathway}" and selected filters.
             </div>
           ) : (
-            eligibleQuestions.map((q) => {
+            filteredQuestions.map((q) => {
               const isAlreadyAdded = existingQuestionIds.has(q.questionId);
               const isBusy = addingId === q.questionId;
 

@@ -153,6 +153,19 @@ export function AdminRevisionStudioClient({
     enabled: isAuthenticated && capabilities.canViewExaminations,
   });
 
+  // Fetch Sibling Revisions for Family
+  const { data: familyData } = useQuery<{ examination: { revisions: BackendExamRevisionDto[] } }>({
+    queryKey: ["admin-examination-family", familyId],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/examinations/${encodeURIComponent(familyId)}`);
+      if (!res.ok) return { examination: { revisions: [] } };
+      return res.json();
+    },
+    enabled: isAuthenticated && capabilities.canViewExaminations && Boolean(familyId),
+  });
+
+  const siblingRevisions = familyData?.examination?.revisions || [];
+
   React.useEffect(() => {
     if (revision) {
       setMetaTitle(revision.title);
@@ -162,6 +175,15 @@ export function AdminRevisionStudioClient({
       setMetaPassingScore(revision.passingScorePercent);
     }
   }, [revision]);
+
+  const isDirty = Boolean(
+    revision &&
+      (metaTitle !== revision.title ||
+        metaDescription !== (revision.description || "") ||
+        metaExamType !== revision.examType ||
+        metaTimeLimit !== revision.timeLimitMinutes ||
+        metaPassingScore !== revision.passingScorePercent)
+  );
 
   // Mutations
   const updateMetaMutation = useMutation({
@@ -189,9 +211,19 @@ export function AdminRevisionStudioClient({
       notify.success("Draft revision metadata saved.");
       queryClient.invalidateQueries({ queryKey: ["admin-revision", revisionId] });
       queryClient.invalidateQueries({ queryKey: ["admin-revision-validation", revisionId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-examination-family", familyId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-examinations-library"] });
     },
     onError: (err: any) => {
-      notify.error(sanitizeErrorMessage(err.message));
+      const msg = err.message || "";
+      if (msg.toLowerCase().includes("concurrency") || msg.includes("token")) {
+        notify.error("Revision was modified concurrently. Reloading latest data...");
+        refetchRev();
+        refetchQuestions();
+        refetchValidation();
+      } else {
+        notify.error(sanitizeErrorMessage(msg));
+      }
     },
   });
 
@@ -213,9 +245,19 @@ export function AdminRevisionStudioClient({
       queryClient.invalidateQueries({ queryKey: ["admin-revision", revisionId] });
       queryClient.invalidateQueries({ queryKey: ["admin-revision-questions", revisionId] });
       queryClient.invalidateQueries({ queryKey: ["admin-revision-validation", revisionId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-examination-family", familyId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-examinations-library"] });
     },
     onError: (err: any) => {
-      notify.error(sanitizeErrorMessage(err.message));
+      const msg = err.message || "";
+      if (msg.toLowerCase().includes("concurrency") || msg.includes("token")) {
+        notify.error("Question membership was modified concurrently. Reloading latest data...");
+        refetchRev();
+        refetchQuestions();
+        refetchValidation();
+      } else {
+        notify.error(sanitizeErrorMessage(msg));
+      }
     },
   });
 
@@ -243,9 +285,19 @@ export function AdminRevisionStudioClient({
       notify.success("Question order updated.");
       queryClient.invalidateQueries({ queryKey: ["admin-revision", revisionId] });
       queryClient.invalidateQueries({ queryKey: ["admin-revision-questions", revisionId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-examination-family", familyId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-examinations-library"] });
     },
     onError: (err: any) => {
-      notify.error(sanitizeErrorMessage(err.message));
+      const msg = err.message || "";
+      if (msg.toLowerCase().includes("concurrency") || msg.includes("token")) {
+        notify.error("Question ordering was modified concurrently. Reloading latest data...");
+        refetchRev();
+        refetchQuestions();
+        refetchValidation();
+      } else {
+        notify.error(sanitizeErrorMessage(msg));
+      }
     },
   });
 
@@ -282,7 +334,9 @@ export function AdminRevisionStudioClient({
     },
     onSuccess: () => {
       notify.success("Draft revision discarded.");
-      router.push(`/admin/examinations/${familyId}`);
+      queryClient.invalidateQueries({ queryKey: ["admin-examination-family", familyId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-examinations-library"] });
+      router.push(`/admin/examinations/${encodeURIComponent(familyId)}`);
     },
     onError: (err: any) => {
       notify.error(sanitizeErrorMessage(err.message));
@@ -318,9 +372,18 @@ export function AdminRevisionStudioClient({
       queryClient.invalidateQueries({ queryKey: ["admin-revision", revisionId] });
       queryClient.invalidateQueries({ queryKey: ["admin-revision-validation", revisionId] });
       queryClient.invalidateQueries({ queryKey: ["admin-examination-family", familyId] });
+      queryClient.invalidateQueries({ queryKey: ["admin-examinations-library"] });
     },
     onError: (err: any) => {
-      notify.error(sanitizeErrorMessage(err.message));
+      const msg = err.message || "";
+      if (msg.toLowerCase().includes("concurrency") || msg.includes("token")) {
+        notify.error("Revision lifecycle was modified concurrently. Reloading latest data...");
+        refetchRev();
+        refetchQuestions();
+        refetchValidation();
+      } else {
+        notify.error(sanitizeErrorMessage(msg));
+      }
     },
   });
 
