@@ -16,7 +16,7 @@ Test timeout of 30000ms exceeded.
 ```
 
 ```
-Error: page.waitForResponse: Test timeout of 30000ms exceeded.
+TimeoutError: page.waitForResponse: Timeout 15000ms exceeded while waiting for event "response"
 ```
 
 # Page snapshot
@@ -170,7 +170,7 @@ Error: page.waitForResponse: Test timeout of 30000ms exceeded.
   60  |   await page.fill("#password", ADMIN_PASSWORD);
   61  |   await Promise.all([
 > 62  |     page.waitForResponse(
-      |          ^ Error: page.waitForResponse: Test timeout of 30000ms exceeded.
+      |          ^ TimeoutError: page.waitForResponse: Timeout 15000ms exceeded while waiting for event "response"
   63  |       (res) => res.url().includes("/api/auth/login") && res.status() === 200,
   64  |       { timeout: 15000 }
   65  |     ),

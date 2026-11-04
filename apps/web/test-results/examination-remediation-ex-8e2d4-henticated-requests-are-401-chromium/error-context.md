@@ -12,10 +12,6 @@
 # Error details
 
 ```
-Test timeout of 30000ms exceeded.
-```
-
-```
 TimeoutError: page.waitForResponse: Timeout 15000ms exceeded while waiting for event "response"
 ```
 
