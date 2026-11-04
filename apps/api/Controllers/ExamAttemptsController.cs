@@ -482,6 +482,20 @@ public class ExamAttemptsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> ReauthenticateAttempt(string id, [FromBody] ReauthenticateAttemptRequest request, CancellationToken cancellationToken)
     {
+        var clientIp = GetClientIpAddress() ?? "unknown";
+        var rateLimitKey = $"{clientIp}:{id}";
+
+        if (IsReauthRateLimited(rateLimitKey, out var retryAfterSeconds))
+        {
+            Response.Headers.Append("Retry-After", retryAfterSeconds.ToString());
+            return StatusCode(StatusCodes.Status429TooManyRequests, new
+            {
+                success = false,
+                errorCode = "RATE_LIMIT_EXCEEDED",
+                error = $"Too many failed reauthentication attempts. Please wait {retryAfterSeconds} seconds before trying again."
+            });
+        }
+
         if (request == null || string.IsNullOrWhiteSpace(request.Password))
         {
             return BadRequest(new
@@ -578,6 +592,7 @@ public class ExamAttemptsController : ControllerBase
         var verifyResult = _passwordHasher.VerifyHashedPassword(attempt.User, attempt.User.PasswordHash, request.Password);
         if (verifyResult == PasswordVerificationResult.Failed)
         {
+            RecordFailedReauthAttempt(rateLimitKey);
             return Unauthorized(new
             {
                 success = false,
@@ -585,6 +600,9 @@ public class ExamAttemptsController : ControllerBase
                 error = "Invalid password. Reauthentication failed."
             });
         }
+
+        // On successful credential verification, clear rate limit
+        ClearFailedReauthAttempts(rateLimitKey);
 
         // Create fresh replacement session via SessionSecurityService
         string? sessionId = null;
