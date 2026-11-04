@@ -714,6 +714,15 @@ export function DashboardClient() {
               {!sidebarCollapsed && <span>Profile & Settings</span>}
             </Link>
             <Link
+              href="/dashboard/settings/security"
+              data-testid="sidebar-nav-security"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              title="Security & Devices"
+            >
+              <ShieldCheck className="h-4 w-4 shrink-0 text-slate-400" />
+              {!sidebarCollapsed && <span>Security & Devices</span>}
+            </Link>
+            <Link
               href="/cart"
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
               title="Cart"
@@ -1824,6 +1833,14 @@ export function DashboardClient() {
                 className="px-3 py-1.5 rounded-lg bg-muted text-foreground hover:bg-muted/80 font-medium transition-colors"
               >
                 Account & Profile
+              </Link>
+              <Link
+                href="/dashboard/settings/security"
+                data-testid="quick-nav-security"
+                className="px-3 py-1.5 rounded-lg bg-muted text-foreground hover:bg-muted/80 font-medium transition-colors inline-flex items-center gap-1.5"
+              >
+                <ShieldCheck className="h-3.5 w-3.5 text-teal-500" />
+                <span>Security & Devices</span>
               </Link>
               <Link
                 href="/subscriptions"
