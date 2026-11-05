@@ -87,3 +87,27 @@ public class PaymentWebhookRequest
 
     public string? RawPayload { get; set; }
 }
+
+public class IssuePilotGrantRequest
+{
+    [Required]
+    public string PlanId { get; set; } = string.Empty;
+
+    public int DurationDays { get; set; } = 90;
+
+    public string? Reason { get; set; }
+}
+
+public class PilotGrantResponse
+{
+    public bool Success { get; set; }
+    public string? GrantId { get; set; }
+    public string? UserId { get; set; }
+    public string? PlanId { get; set; }
+    public string? PlanName { get; set; }
+    public string? Pathway { get; set; }
+    public DateTime StartsAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
+    public string? Message { get; set; }
+    public string? Error { get; set; }
+}

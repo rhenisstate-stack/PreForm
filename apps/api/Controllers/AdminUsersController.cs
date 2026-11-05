@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Preform.Api.Data;
+using Preform.Api.DTOs;
 using Preform.Api.Models;
 
 namespace Preform.Api.Controllers;
@@ -614,5 +615,183 @@ public class AdminUsersController : ControllerBase
         await _context.SaveChangesAsync(cancellationToken);
 
         return Ok(new { success = true, revokedCount = activeSessions.Count });
+    }
+
+    [HttpPost("{id}/pilot-grant")]
+    public async Task<IActionResult> IssuePilotGrant(
+        string id,
+        [FromBody] IssuePilotGrantRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new { success = false, error = "Invalid grant request parameters." });
+        }
+
+        var user = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
+        if (user == null)
+        {
+            return NotFound(new { success = false, error = "Candidate beneficiary record not found." });
+        }
+
+        if (!user.IsActive || user.AccountStatus.Equals("Suspended", StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequest(new { success = false, error = "Cannot issue pilot grant to an inactive or suspended user." });
+        }
+
+        var normalizedPlanId = request.PlanId.Trim().ToLowerInvariant();
+        var plan = await _context.SubscriptionPlans
+            .FirstOrDefaultAsync(p => p.Id.ToLower() == normalizedPlanId || p.Slug.ToLower() == normalizedPlanId, cancellationToken);
+
+        if (plan == null || !plan.IsActive)
+        {
+            return BadRequest(new { success = false, error = "Requested subscription plan is invalid or inactive." });
+        }
+
+        var now = DateTime.UtcNow;
+        var existingActiveSub = await _context.UserSubscriptions
+            .FirstOrDefaultAsync(s => s.UserId == user.Id && s.PlanId == plan.Id && s.Status == SubscriptionStatus.Active && s.ExpiresAt > now, cancellationToken);
+
+        if (existingActiveSub != null)
+        {
+            return Conflict(new { success = false, error = "User already has an active entitlement for this plan.", existingGrantId = existingActiveSub.Id, expiresAt = existingActiveSub.ExpiresAt });
+        }
+
+        var durationDays = Math.Clamp(request.DurationDays, 1, 365);
+        var expiresAt = now.AddDays(durationDays);
+        var grantId = "grant_" + Guid.NewGuid().ToString("N");
+
+        var userSub = new UserSubscription
+        {
+            Id = grantId,
+            UserId = user.Id,
+            PlanId = plan.Id,
+            OrderId = "pilot_grant_" + Guid.NewGuid().ToString("N"),
+            Pathway = plan.Pathway.ToLowerInvariant(),
+            Status = SubscriptionStatus.Active,
+            StartsAt = now,
+            ExpiresAt = expiresAt
+        };
+        _context.UserSubscriptions.Add(userSub);
+
+        user.ActivePlan = plan.Name;
+        if (!string.Equals(plan.Pathway, "both", StringComparison.OrdinalIgnoreCase))
+        {
+            user.Pathway = plan.Pathway.ToLowerInvariant();
+        }
+        user.UpdatedAt = now;
+
+        var actorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        _context.AuditLogs.Add(new AuditLog
+        {
+            ActorId = actorId,
+            Action = "PilotGrantIssued",
+            EntityType = "UserSubscription",
+            EntityId = grantId,
+            Description = $"Administratively granted {durationDays}-day pilot entitlement for '{plan.Name}' to '{user.Email}'. Reason: {request.Reason ?? "Authorized Pilot Cohort"}",
+            Outcome = "Success",
+            Timestamp = now
+        });
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Ok(new PilotGrantResponse
+        {
+            Success = true,
+            GrantId = grantId,
+            UserId = user.Id,
+            PlanId = plan.Id,
+            PlanName = plan.Name,
+            Pathway = userSub.Pathway,
+            StartsAt = now,
+            ExpiresAt = expiresAt,
+            Message = $"Successfully granted {durationDays}-day pilot entitlement for {plan.Name}."
+        });
+    }
+
+    [HttpDelete("{id}/pilot-grant/{grantId}")]
+    public async Task<IActionResult> RevokePilotGrant(
+        string id,
+        string grantId,
+        [FromQuery] string? reason,
+        CancellationToken cancellationToken)
+    {
+        var user = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
+        if (user == null)
+        {
+            return NotFound(new { success = false, error = "User not found." });
+        }
+
+        var sub = await _context.UserSubscriptions
+            .FirstOrDefaultAsync(s => s.Id == grantId && s.UserId == id, cancellationToken);
+
+        if (sub == null)
+        {
+            return NotFound(new { success = false, error = "Grant entitlement record not found." });
+        }
+
+        if (sub.Status != SubscriptionStatus.Active)
+        {
+            return BadRequest(new { success = false, error = $"Grant is already in '{sub.Status}' state." });
+        }
+
+        var now = DateTime.UtcNow;
+        sub.Status = SubscriptionStatus.Cancelled;
+        sub.CancelledAt = now;
+
+        var remainingActive = await _context.UserSubscriptions
+            .Include(s => s.Plan)
+            .Where(s => s.UserId == id && s.Id != grantId && s.Status == SubscriptionStatus.Active && s.ExpiresAt > now)
+            .OrderByDescending(s => s.ExpiresAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        user.ActivePlan = remainingActive?.Plan?.Name ?? "Free";
+        user.UpdatedAt = now;
+
+        var actorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        _context.AuditLogs.Add(new AuditLog
+        {
+            ActorId = actorId,
+            Action = "PilotGrantRevoked",
+            EntityType = "UserSubscription",
+            EntityId = grantId,
+            Description = $"Administratively revoked pilot grant '{grantId}' for user '{user.Email}'. Reason: {reason ?? "Administrative Decision"}",
+            Outcome = "Success",
+            Timestamp = now
+        });
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return Ok(new { success = true, grantId, message = "Pilot grant entitlement successfully revoked." });
+    }
+
+    [HttpGet("{id}/subscriptions")]
+    public async Task<IActionResult> GetUserSubscriptions(string id, CancellationToken cancellationToken)
+    {
+        var user = await _context.Users.FindAsync(new object[] { id }, cancellationToken);
+        if (user == null)
+        {
+            return NotFound(new { success = false, error = "User not found." });
+        }
+
+        var subscriptions = await _context.UserSubscriptions
+            .Include(s => s.Plan)
+            .Where(s => s.UserId == id)
+            .OrderByDescending(s => s.StartsAt)
+            .Select(s => new
+            {
+                s.Id,
+                s.PlanId,
+                PlanName = s.Plan != null ? s.Plan.Name : "Plan",
+                s.Pathway,
+                Status = s.Status.ToString(),
+                s.StartsAt,
+                s.ExpiresAt,
+                s.CancelledAt,
+                IsActive = s.Status == SubscriptionStatus.Active && s.ExpiresAt > DateTime.UtcNow
+            })
+            .ToListAsync(cancellationToken);
+
+        return Ok(new { success = true, userId = id, subscriptions });
     }
 }
