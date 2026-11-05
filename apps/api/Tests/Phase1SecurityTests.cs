@@ -32,6 +32,19 @@ public class Phase1SecurityTests
         return context;
     }
 
+    private class TestEmailSender : IEmailSender
+    {
+        public string? LastResetLink { get; private set; }
+        public string? LastToEmail { get; private set; }
+
+        public Task SendPasswordResetEmailAsync(string toEmail, string resetLink, CancellationToken cancellationToken = default)
+        {
+            LastToEmail = toEmail;
+            LastResetLink = resetLink;
+            return Task.CompletedTask;
+        }
+    }
+
     // ── 1. Correlation ID Middleware Tests ─────────────────────────────────────
 
     [Fact]
@@ -185,21 +198,21 @@ public class Phase1SecurityTests
         var window = TimeSpan.FromMinutes(10);
         var lockout = TimeSpan.FromMinutes(15);
 
-        // Act & Assert: First 3 attempts are allowed
+        // Act & Assert: First 3 failed attempts are recorded and allowed before threshold
         for (int i = 0; i < maxAttempts; i++)
         {
-            var res = await limiter.RecordAttemptAsync(testKey, maxAttempts, window, lockout);
-            Assert.True(res.Allowed, $"Attempt {i + 1} should be allowed");
+            var res = await limiter.RecordFailedAttemptAsync(testKey, maxAttempts, window, lockout);
+            Assert.False(res.IsRateLimited, $"Attempt {i + 1} should not be rate limited yet");
         }
 
-        // 4th attempt exceeds maxAttempts and triggers lockout
-        var lockedResult = await limiter.RecordAttemptAsync(testKey, maxAttempts, window, lockout);
-        Assert.False(lockedResult.Allowed);
+        // 4th failed attempt exceeds maxAttempts and triggers lockout
+        var lockedResult = await limiter.RecordFailedAttemptAsync(testKey, maxAttempts, window, lockout);
+        Assert.True(lockedResult.IsRateLimited);
         Assert.True(lockedResult.RetryAfterSeconds > 0);
 
         // Subsequent check verifies lockout is active
         var check = await limiter.CheckRateLimitAsync(testKey, maxAttempts, window, lockout);
-        Assert.False(check.Allowed);
+        Assert.True(check.IsRateLimited);
         Assert.True(check.RetryAfterSeconds > 0);
     }
 
@@ -211,7 +224,7 @@ public class Phase1SecurityTests
         // Arrange
         using var context = CreateInMemoryContext("PasswordResetLifecycleDb");
         var hasher = new PasswordHasher<User>();
-        var inMemoryEmail = new DevelopmentEmailSender(NullLogger<DevelopmentEmailSender>.Instance);
+        var testEmailSender = new TestEmailSender();
         var inMemoryConfig = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
         {
             ["App:PublicBaseUrl"] = "https://app.prepford.com"
@@ -220,7 +233,7 @@ public class Phase1SecurityTests
         var resetService = new PasswordResetService(
             context,
             hasher,
-            inMemoryEmail,
+            testEmailSender,
             inMemoryConfig,
             NullLogger<PasswordResetService>.Instance);
 
@@ -230,7 +243,6 @@ public class Phase1SecurityTests
             Email = "doctor.smith@prepford.com",
             PasswordHash = hasher.HashPassword(null!, "InitialOldPassword1!"),
             DisplayName = "Dr. Smith",
-            Role = "candidate",
             SecurityVersion = 1
         };
         context.Users.Add(testUser);
@@ -241,7 +253,7 @@ public class Phase1SecurityTests
             Id = "sess_pwd_1",
             UserId = testUser.Id,
             TokenHash = "hash1",
-            IpAddress = "10.0.0.1",
+            LastIpAddress = "10.0.0.1",
             CreatedAt = DateTime.UtcNow,
             LastActiveAt = DateTime.UtcNow,
             ExpiresAt = DateTime.UtcNow.AddHours(24),
@@ -252,7 +264,7 @@ public class Phase1SecurityTests
             Id = "sess_pwd_2",
             UserId = testUser.Id,
             TokenHash = "hash2",
-            IpAddress = "10.0.0.2",
+            LastIpAddress = "10.0.0.2",
             CreatedAt = DateTime.UtcNow,
             LastActiveAt = DateTime.UtcNow,
             ExpiresAt = DateTime.UtcNow.AddHours(24),
@@ -264,23 +276,27 @@ public class Phase1SecurityTests
         // Act 1: Request Password Reset
         var reqResult = await resetService.RequestPasswordResetAsync(testUser.Email, "127.0.0.1", "TestAgent/1.0");
         Assert.True(reqResult.Success);
-        Assert.NotNull(reqResult.Token);
+        Assert.NotNull(testEmailSender.LastResetLink);
+
+        // Extract token from reset link
+        var resetUri = new Uri(testEmailSender.LastResetLink!);
+        var queryParams = System.Web.HttpUtility.ParseQueryString(resetUri.Query);
+        var rawToken = queryParams["token"];
+        Assert.NotNull(rawToken);
 
         // Verify token is stored as SHA-256 hash in DB
-        var rawToken = reqResult.Token!;
         var expectedHash = PasswordResetService.HashToken(rawToken);
         var dbToken = await context.PasswordResetTokens.FirstOrDefaultAsync(t => t.UserId == testUser.Id);
         Assert.NotNull(dbToken);
         Assert.Equal(expectedHash, dbToken.TokenHash);
-        Assert.False(dbToken.IsUsed);
+        Assert.Null(dbToken.UsedAt);
 
         // Act 2: Validate Reset Token
         var valResult = await resetService.ValidateResetTokenAsync(rawToken);
-        Assert.True(valResult.Valid);
-        Assert.Equal(testUser.Id, valResult.UserId);
+        Assert.True(valResult.IsValid);
 
         var bogusValResult = await resetService.ValidateResetTokenAsync("totally-fake-token-12345");
-        Assert.False(bogusValResult.Valid);
+        Assert.False(bogusValResult.IsValid);
 
         // Act 3: Reset Password
         const string newPassword = "UltraSecureNewPassword99!";
@@ -324,7 +340,6 @@ public class Phase1SecurityTests
             Email = "boss@prepford.com",
             PasswordHash = "hash",
             DisplayName = "Sole Super Admin",
-            Role = "superadmin",
             AccountStatus = "Active"
         };
         var regularUser = new User
@@ -333,7 +348,6 @@ public class Phase1SecurityTests
             Email = "student@prepford.com",
             PasswordHash = "hash",
             DisplayName = "Regular Student",
-            Role = "candidate",
             AccountStatus = "Active"
         };
         context.Users.AddRange(soleSuper, regularUser);
@@ -342,7 +356,8 @@ public class Phase1SecurityTests
         context.UserRoles.Add(new UserRole { UserId = regularUser.Id, RoleId = candidateRole.Id });
         await context.SaveChangesAsync();
 
-        var controller = new AdminUsersController(context, NullLogger<AdminUsersController>.Instance)
+        var hasher = new PasswordHasher<User>();
+        var controller = new AdminUsersController(context, hasher, NullLogger<AdminUsersController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
@@ -392,7 +407,6 @@ public class Phase1SecurityTests
             Email = "super1@prepford.com",
             PasswordHash = "hash",
             DisplayName = "Super Admin 1",
-            Role = "superadmin",
             AccountStatus = "Active"
         };
         var super2 = new User
@@ -401,7 +415,6 @@ public class Phase1SecurityTests
             Email = "super2@prepford.com",
             PasswordHash = "hash",
             DisplayName = "Super Admin 2",
-            Role = "superadmin",
             AccountStatus = "Active"
         };
         context.Users.AddRange(super1, super2);
@@ -409,7 +422,8 @@ public class Phase1SecurityTests
         context.UserRoles.Add(new UserRole { UserId = super2.Id, RoleId = superRole.Id });
         await context.SaveChangesAsync();
 
-        var controller = new AdminUsersController(context, NullLogger<AdminUsersController>.Instance)
+        var hasher = new PasswordHasher<User>();
+        var controller = new AdminUsersController(context, hasher, NullLogger<AdminUsersController>.Instance)
         {
             ControllerContext = new ControllerContext
             {
@@ -449,7 +463,7 @@ public class Phase1SecurityTests
         // Arrange
         using var context = CreateInMemoryContext("RolePermissionRevocationDb");
         var testRole = new Role { Id = "role_editor", Name = "content_editor", Description = "Content Editor" };
-        var testPerm = new Permission { Id = "perm_edit", Key = "content:edit", Description = "Edit Content" };
+        var testPerm = new Permission { Id = "perm_edit", Key = "content:edit", Name = "Edit Content", Category = "Content" };
         context.Roles.Add(testRole);
         context.Permissions.Add(testPerm);
 
@@ -459,7 +473,6 @@ public class Phase1SecurityTests
             Email = "editor@prepford.com",
             PasswordHash = "hash",
             DisplayName = "Editor Jane",
-            Role = "content_editor",
             SecurityVersion = 3
         };
         context.Users.Add(editorUser);
@@ -470,7 +483,7 @@ public class Phase1SecurityTests
             Id = "sess_editor_active",
             UserId = editorUser.Id,
             TokenHash = "token_hash_abc",
-            IpAddress = "127.0.0.1",
+            LastIpAddress = "127.0.0.1",
             CreatedAt = DateTime.UtcNow,
             LastActiveAt = DateTime.UtcNow,
             ExpiresAt = DateTime.UtcNow.AddHours(8),
