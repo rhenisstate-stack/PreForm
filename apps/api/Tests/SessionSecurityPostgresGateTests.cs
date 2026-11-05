@@ -372,9 +372,10 @@ public class SessionSecurityPostgresGateTests : IClassFixture<PostgresTestFixtur
         }
 
         // A stale, unrevoked, absolute-expired session left behind from an interrupted login
+        var phantomId = "sess_pg_rej_" + Guid.NewGuid().ToString("N");
         seedContext.UserSessions.Add(new UserSession
         {
-            Id = "sess_pg_expired_phantom",
+            Id = phantomId,
             UserId = userId,
             Email = user.Email,
             Role = "candidate",
@@ -404,7 +405,7 @@ public class SessionSecurityPostgresGateTests : IClassFixture<PostgresTestFixtur
         Assert.Equal("CONCURRENT_SESSION_LIMIT_EXCEEDED", rejected.ErrorCode);
 
         await using var verifyContext = CreatePostgresDbContext();
-        var sweptSession = await verifyContext.UserSessions.FindAsync("sess_pg_expired_phantom");
+        var sweptSession = await verifyContext.UserSessions.FindAsync(phantomId);
         Assert.NotNull(sweptSession);
         Assert.True(sweptSession!.Revoked);
         Assert.Equal(SessionSecurityService.ExpiredSessionSweptReason, sweptSession.RevocationReason);
@@ -430,12 +431,13 @@ public class SessionSecurityPostgresGateTests : IClassFixture<PostgresTestFixtur
         await using var seedContext = CreatePostgresDbContext();
         var user = await SeedUserAsync(seedContext, userId, $"pgswp_{Guid.NewGuid():N}@prepford.test");
 
-        // Ineligible phantom: revoked must remain untouched because it is already revoked;
-        // expired-unrevoked must be swept exactly once (single audit) across all winners.
+        // Ineligible phantom: expired-unrevoked must be swept exactly once (single audit)
+        // across all winners, each under its own advisory-locked transaction.
+        var sweepTargetId = "sess_pg_swp_" + Guid.NewGuid().ToString("N");
         var now = DateTime.UtcNow;
         seedContext.UserSessions.Add(new UserSession
         {
-            Id = "sess_pg_sweep_target",
+            Id = sweepTargetId,
             UserId = userId,
             Email = user.Email,
             Role = "candidate",
@@ -477,14 +479,14 @@ public class SessionSecurityPostgresGateTests : IClassFixture<PostgresTestFixtur
         Assert.Equal(totalRequests - 2, rejectedCount);
 
         await using var verifyContext = CreatePostgresDbContext();
-        var swept = await verifyContext.UserSessions.FindAsync("sess_pg_sweep_target");
+        var swept = await verifyContext.UserSessions.FindAsync(sweepTargetId);
         Assert.NotNull(swept);
         Assert.True(swept!.Revoked);
         Assert.Equal(SessionSecurityService.ExpiredSessionSweptReason, swept.RevocationReason);
 
         // Swept exactly once: one audit event for this session, no duplicate sweeps
         var sweepAudits = await verifyContext.AuditLogs
-            .Where(a => a.Action == "IneligibleSessionSwept" && a.EntityId == "sess_pg_sweep_target")
+            .Where(a => a.Action == "IneligibleSessionSwept" && a.EntityId == sweepTargetId)
             .CountAsync();
         Assert.Equal(1, sweepAudits);
     }
@@ -512,7 +514,8 @@ public class SessionSecurityPostgresGateTests : IClassFixture<PostgresTestFixtur
         }
 
         // Backfill-style legacy phantom sessions (legacy_ || Id pattern from migration 0009)
-        foreach (var legacyId in new[] { "sess_pg_legacy_01", "sess_pg_legacy_02" })
+        var legacySuffix = Guid.NewGuid().ToString("N").Substring(0, 12);
+        foreach (var legacyId in new[] { $"sess_pg_lgc_a_{legacySuffix}", $"sess_pg_lgc_b_{legacySuffix}" })
         {
             seedContext.UserSessions.Add(new UserSession
             {
@@ -545,7 +548,7 @@ public class SessionSecurityPostgresGateTests : IClassFixture<PostgresTestFixtur
         Assert.Equal(0, recovery.ClearedEligibleCount);
 
         await using var verifyContext = CreatePostgresDbContext();
-        var legacy = await verifyContext.UserSessions.FindAsync("sess_pg_legacy_01");
+        var legacy = await verifyContext.UserSessions.FindAsync($"sess_pg_lgc_a_{legacySuffix}");
         Assert.True(legacy!.Revoked);
         Assert.Equal(SessionSecurityService.LegacySessionDecommissionedReason, legacy.RevocationReason);
 

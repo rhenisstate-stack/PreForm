@@ -391,12 +391,19 @@ public class AdminSecurityControllerTests
 
         var now = DateTime.UtcNow;
 
-        // 2 active sessions for 2 distinct users
+        // 2 active sessions for 2 distinct users. The authoritative active-session rule
+        // (aligned with concurrent-slot accounting) requires the session's SecurityVersion
+        // to match its user's, so users are seeded with the matching version.
+        context.Users.AddRange(
+            new User { Id = "u1", Email = "metrics.u1@prepford.com", DisplayName = "U1", IsActive = true, SecurityVersion = 1, CreatedAt = now, UpdatedAt = now },
+            new User { Id = "u2", Email = "metrics.u2@prepford.com", DisplayName = "U2", IsActive = true, SecurityVersion = 1, CreatedAt = now, UpdatedAt = now },
+            new User { Id = "u3", Email = "metrics.u3@prepford.com", DisplayName = "U3", IsActive = true, SecurityVersion = 1, CreatedAt = now, UpdatedAt = now }
+        );
         context.UserSessions.AddRange(
-            new UserSession { Id = "s1", UserId = "u1", TokenHash = "h1", Revoked = false, IdleExpiresAt = now.AddHours(2), AbsoluteExpiresAt = now.AddDays(1) },
-            new UserSession { Id = "s2", UserId = "u2", TokenHash = "h2", Revoked = false, IdleExpiresAt = now.AddHours(2), AbsoluteExpiresAt = now.AddDays(1) },
-            // 1 revoked session in last 24h
-            new UserSession { Id = "s3", UserId = "u3", TokenHash = "h3", Revoked = true, RevokedAt = now.AddHours(-2) }
+            new UserSession { Id = "s1", UserId = "u1", Email = "metrics.u1@prepford.com", TokenHash = "h1", Revoked = false, IdleExpiresAt = now.AddHours(2), AbsoluteExpiresAt = now.AddDays(1), SecurityVersion = 1 },
+            new UserSession { Id = "s2", UserId = "u2", Email = "metrics.u2@prepford.com", TokenHash = "h2", Revoked = false, IdleExpiresAt = now.AddHours(2), AbsoluteExpiresAt = now.AddDays(1), SecurityVersion = 1 },
+            // 1 revoked session in last 24h (still counted in RevokedLast24Hours regardless of version)
+            new UserSession { Id = "s3", UserId = "u3", Email = "metrics.u3@prepford.com", TokenHash = "h3", Revoked = true, RevokedAt = now.AddHours(-2), SecurityVersion = 1 }
         );
 
         // 1 limit rejection audit log
