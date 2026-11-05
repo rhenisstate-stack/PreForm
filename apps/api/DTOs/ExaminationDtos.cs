@@ -56,6 +56,19 @@ public sealed class ExamRevisionDto
     public decimal PassingScorePercent { get; set; }
     public bool IsPublished { get; set; }
     public int QuestionCount { get; set; }
+    public int TargetQuestionCount { get; set; } = 10;
+    public string SelectionStrategy { get; set; } = "Preset";
+    public string? CompositionRulesJson { get; set; }
+    public bool IsAvailable { get; set; } = true;
+    public DateTime? AvailableFrom { get; set; }
+    public DateTime? AvailableTo { get; set; }
+    public int? MaxAttemptsAllowed { get; set; }
+    public int RetakeCooldownHours { get; set; }
+    public bool AllowInterruptedResume { get; set; } = true;
+    public string ReviewPolicy { get; set; } = "AfterExamSubmission";
+    public bool ShowRationales { get; set; } = true;
+    public bool ShowScoreImmediately { get; set; } = true;
+    public string? ConfigurationSnapshotJson { get; set; }
     public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
     public string? SubmittedBy { get; set; }
@@ -134,6 +147,32 @@ public sealed class UpdateRevisionMetadataRequest
 
     [Range(0.0, 100.0, ErrorMessage = "Passing score percent must be between 0.0 and 100.0.")]
     public decimal PassingScorePercent { get; set; } = 75.0m;
+
+    [Range(1, 265, ErrorMessage = "Target question count must be between 1 and 265.")]
+    public int? TargetQuestionCount { get; set; }
+
+    [MaxLength(32)]
+    public string? SelectionStrategy { get; set; }
+
+    public bool? IsAvailable { get; set; }
+
+    public DateTime? AvailableFrom { get; set; }
+
+    public DateTime? AvailableTo { get; set; }
+
+    public int? MaxAttemptsAllowed { get; set; }
+
+    [Range(0, 720, ErrorMessage = "Retake cooldown must be between 0 and 720 hours.")]
+    public int? RetakeCooldownHours { get; set; }
+
+    public bool? AllowInterruptedResume { get; set; }
+
+    [MaxLength(32)]
+    public string? ReviewPolicy { get; set; }
+
+    public bool? ShowRationales { get; set; }
+
+    public bool? ShowScoreImmediately { get; set; }
 
     [Required]
     public long ConcurrencyToken { get; set; }
@@ -250,6 +289,19 @@ public sealed class ExamRevisionSummaryDto
     public decimal PassingScorePercent { get; set; }
     public bool IsPublished { get; set; }
     public int QuestionCount { get; set; }
+    public int TargetQuestionCount { get; set; } = 10;
+    public string SelectionStrategy { get; set; } = "Preset";
+    public string? CompositionRulesJson { get; set; }
+    public bool IsAvailable { get; set; } = true;
+    public DateTime? AvailableFrom { get; set; }
+    public DateTime? AvailableTo { get; set; }
+    public int? MaxAttemptsAllowed { get; set; }
+    public int RetakeCooldownHours { get; set; }
+    public bool AllowInterruptedResume { get; set; } = true;
+    public string ReviewPolicy { get; set; } = "AfterExamSubmission";
+    public bool ShowRationales { get; set; } = true;
+    public bool ShowScoreImmediately { get; set; } = true;
+    public string? ConfigurationSnapshotJson { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? PublishedAt { get; set; }
@@ -328,4 +380,136 @@ public sealed class DuplicateExaminationResponseDto
     public string LifecycleState { get; set; } = "Draft";
     public int QuestionCount { get; set; }
     public ExaminationDto Examination { get; set; } = null!;
+}
+
+// ── P4.3 Assessment Composition & Blueprint DTOs ────────────────────────────
+
+public sealed class ClientNeedQuotaItem
+{
+    [Required]
+    [MaxLength(16)]
+    public string ClientNeedCode { get; set; } = string.Empty;
+
+    public string ClientNeedName { get; set; } = string.Empty;
+
+    [Range(0.0, 100.0)]
+    public decimal TargetPercentage { get; set; }
+
+    [Range(0, 265)]
+    public int TargetCount { get; set; }
+
+    public int AvailableCount { get; set; }
+}
+
+public sealed class ExamCompositionDto
+{
+    public string RevisionId { get; set; } = string.Empty;
+    public int TargetQuestionCount { get; set; } = 10;
+    public string SelectionStrategy { get; set; } = "Preset";
+    public List<ClientNeedQuotaItem> ClientNeedQuotas { get; set; } = new();
+    public List<string> AllowedQuestionTypes { get; set; } = new();
+    public List<string>? SubjectIds { get; set; }
+    public List<string>? CategoryIds { get; set; }
+    public string? Difficulty { get; set; }
+    public long ConcurrencyToken { get; set; }
+}
+
+public sealed class UpdateExamCompositionRequest
+{
+    [Range(1, 265, ErrorMessage = "Target question count must be between 1 and 265.")]
+    public int TargetQuestionCount { get; set; } = 10;
+
+    [Required]
+    [MaxLength(32)]
+    public string SelectionStrategy { get; set; } = "Preset";
+
+    public List<ClientNeedQuotaItem> ClientNeedQuotas { get; set; } = new();
+    public List<string>? AllowedQuestionTypes { get; set; }
+    public List<string>? SubjectIds { get; set; }
+    public List<string>? CategoryIds { get; set; }
+    public string? Difficulty { get; set; }
+
+    [Required]
+    public long ConcurrencyToken { get; set; }
+}
+
+public sealed class QuestionPoolPreviewItem
+{
+    public string Category { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public int RequestedCount { get; set; }
+    public int AvailableCount { get; set; }
+    public bool IsSufficient { get; set; }
+}
+
+public sealed class QuestionPoolPreviewResponse
+{
+    public bool Success { get; set; } = true;
+    public string RevisionId { get; set; } = string.Empty;
+    public string Pathway { get; set; } = string.Empty;
+    public int TargetQuestionCount { get; set; }
+    public int TotalEligiblePublishedQuestions { get; set; }
+    public bool IsPoolSufficient { get; set; }
+    public List<QuestionPoolPreviewItem> ClientNeedBreakdown { get; set; } = new();
+    public List<QuestionPoolPreviewItem> QuestionTypeBreakdown { get; set; } = new();
+    public List<string> Issues { get; set; } = new();
+}
+
+// ── P4.6 Examination Readiness & Admin Preview DTOs ─────────────────────────
+
+public sealed class ExamReadinessCheckItem
+{
+    public string Category { get; set; } = string.Empty; // "Metadata", "Composition", "QuestionPool", "Policies", "Security"
+    public string Name { get; set; } = string.Empty;
+    public string Status { get; set; } = "PASS"; // "PASS", "WARN", "BLOCK"
+    public string Message { get; set; } = string.Empty;
+}
+
+public sealed class ExamReadinessReportDto
+{
+    public bool Success { get; set; } = true;
+    public string RevisionId { get; set; } = string.Empty;
+    public string OverallStatus { get; set; } = "PASS"; // "PASS", "WARN", "BLOCK"
+    public bool CanPublish { get; set; }
+    public long ConcurrencyToken { get; set; }
+    public string LifecycleState { get; set; } = string.Empty;
+    public List<ExamReadinessCheckItem> Checks { get; set; } = new();
+}
+
+public sealed class AdminExamPreviewOptionDto
+{
+    public string Key { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+    public bool IsCorrect { get; set; }
+}
+
+public sealed class AdminExamPreviewQuestionDto
+{
+    public string Id { get; set; } = string.Empty;
+    public int DisplayOrder { get; set; }
+    public string Stem { get; set; } = string.Empty;
+    public string QuestionType { get; set; } = string.Empty;
+    public string ClientNeed { get; set; } = string.Empty;
+    public string Difficulty { get; set; } = string.Empty;
+    public List<AdminExamPreviewOptionDto> Options { get; set; } = new();
+    public string? Rationale { get; set; }
+    public List<string> CorrectOptionKeys { get; set; } = new();
+}
+
+public sealed class AdminExamPreviewDto
+{
+    public bool Success { get; set; } = true;
+    public string RevisionId { get; set; } = string.Empty;
+    public string ExaminationCode { get; set; } = string.Empty;
+    public string ExaminationTitle { get; set; } = string.Empty;
+    public string RevisionTitle { get; set; } = string.Empty;
+    public string Pathway { get; set; } = string.Empty;
+    public int TimeLimitMinutes { get; set; }
+    public decimal PassingScorePercent { get; set; }
+    public int QuestionCount { get; set; }
+    public string SelectionStrategy { get; set; } = "Preset";
+    public string ReviewPolicy { get; set; } = "AfterExamSubmission";
+    public bool ShowRationales { get; set; } = true;
+    public List<AdminExamPreviewQuestionDto> Questions { get; set; } = new();
 }

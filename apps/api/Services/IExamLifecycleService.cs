@@ -38,4 +38,13 @@ public interface IExamLifecycleService
 
     // ── P3.4 Examination Duplication & Revision Lineage ──
     Task<DuplicateExaminationResponseDto> DuplicateExaminationAsync(string examinationId, DuplicateExaminationRequest request, ClaimsPrincipal user, CancellationToken ct = default);
+
+    // ── P4.3 Assessment Composition & Blueprint ──
+    Task<ExamCompositionDto> GetCompositionAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<ExamCompositionDto> UpdateCompositionAsync(string revisionId, UpdateExamCompositionRequest request, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<QuestionPoolPreviewResponse> GetQuestionPoolPreviewAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default);
+
+    // ── P4.6 Examination Readiness & Admin Preview ──
+    Task<ExamReadinessReportDto> GetReadinessReportAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<AdminExamPreviewDto> GetAdminPreviewAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default);
 }

@@ -1408,6 +1408,58 @@ public class ExamLifecycleService : IExamLifecycleService
         revision.ExamType = request.ExamType;
         revision.TimeLimitMinutes = request.TimeLimitMinutes;
         revision.PassingScorePercent = request.PassingScorePercent;
+
+        if (request.TargetQuestionCount.HasValue && request.TargetQuestionCount.Value > 0)
+        {
+            revision.TargetQuestionCount = request.TargetQuestionCount.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.SelectionStrategy))
+        {
+            revision.SelectionStrategy = request.SelectionStrategy;
+        }
+
+        if (request.IsAvailable.HasValue)
+        {
+            revision.IsAvailable = request.IsAvailable.Value;
+        }
+
+        if (request.AvailableFrom.HasValue || request.AvailableTo.HasValue)
+        {
+            revision.AvailableFrom = request.AvailableFrom;
+            revision.AvailableTo = request.AvailableTo;
+        }
+
+        if (request.MaxAttemptsAllowed.HasValue)
+        {
+            revision.MaxAttemptsAllowed = request.MaxAttemptsAllowed.Value;
+        }
+
+        if (request.RetakeCooldownHours.HasValue)
+        {
+            revision.RetakeCooldownHours = request.RetakeCooldownHours.Value;
+        }
+
+        if (request.AllowInterruptedResume.HasValue)
+        {
+            revision.AllowInterruptedResume = request.AllowInterruptedResume.Value;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.ReviewPolicy))
+        {
+            revision.ReviewPolicy = request.ReviewPolicy;
+        }
+
+        if (request.ShowRationales.HasValue)
+        {
+            revision.ShowRationales = request.ShowRationales.Value;
+        }
+
+        if (request.ShowScoreImmediately.HasValue)
+        {
+            revision.ShowScoreImmediately = request.ShowScoreImmediately.Value;
+        }
+
         revision.ConcurrencyToken++;
         revision.UpdatedAt = now;
 
@@ -1986,6 +2038,19 @@ public class ExamLifecycleService : IExamLifecycleService
             PassingScorePercent = r.PassingScorePercent,
             IsPublished = r.IsPublished,
             QuestionCount = questionCount,
+            TargetQuestionCount = r.TargetQuestionCount,
+            SelectionStrategy = r.SelectionStrategy,
+            CompositionRulesJson = r.CompositionRulesJson,
+            IsAvailable = r.IsAvailable,
+            AvailableFrom = r.AvailableFrom,
+            AvailableTo = r.AvailableTo,
+            MaxAttemptsAllowed = r.MaxAttemptsAllowed,
+            RetakeCooldownHours = r.RetakeCooldownHours,
+            AllowInterruptedResume = r.AllowInterruptedResume,
+            ReviewPolicy = r.ReviewPolicy,
+            ShowRationales = r.ShowRationales,
+            ShowScoreImmediately = r.ShowScoreImmediately,
+            ConfigurationSnapshotJson = r.ConfigurationSnapshotJson,
             CreatedAt = r.CreatedAt,
             CreatedBy = r.CreatedBy,
             SubmittedBy = r.SubmittedBy,
@@ -2020,6 +2085,19 @@ public class ExamLifecycleService : IExamLifecycleService
             PassingScorePercent = r.PassingScorePercent,
             IsPublished = r.IsPublished,
             QuestionCount = questionCount,
+            TargetQuestionCount = r.TargetQuestionCount,
+            SelectionStrategy = r.SelectionStrategy,
+            CompositionRulesJson = r.CompositionRulesJson,
+            IsAvailable = r.IsAvailable,
+            AvailableFrom = r.AvailableFrom,
+            AvailableTo = r.AvailableTo,
+            MaxAttemptsAllowed = r.MaxAttemptsAllowed,
+            RetakeCooldownHours = r.RetakeCooldownHours,
+            AllowInterruptedResume = r.AllowInterruptedResume,
+            ReviewPolicy = r.ReviewPolicy,
+            ShowRationales = r.ShowRationales,
+            ShowScoreImmediately = r.ShowScoreImmediately,
+            ConfigurationSnapshotJson = r.ConfigurationSnapshotJson,
             CreatedAt = r.CreatedAt,
             UpdatedAt = r.UpdatedAt,
             PublishedAt = r.PublishedAt

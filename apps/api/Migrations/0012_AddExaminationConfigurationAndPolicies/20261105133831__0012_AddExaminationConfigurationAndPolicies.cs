@@ -17,7 +17,7 @@ namespace Preform.Api.Migrations._0012_AddExaminationConfigurationAndPolicies
                 table: "Exams",
                 type: "boolean",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "AvailableFrom",
@@ -53,7 +53,7 @@ namespace Preform.Api.Migrations._0012_AddExaminationConfigurationAndPolicies
                 table: "Exams",
                 type: "boolean",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<int>(
                 name: "MaxAttemptsAllowed",
@@ -77,7 +77,7 @@ namespace Preform.Api.Migrations._0012_AddExaminationConfigurationAndPolicies
                 type: "character varying(32)",
                 maxLength: 32,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "AfterExamSubmission");
 
             migrationBuilder.AddColumn<string>(
                 name: "SelectionStrategy",
@@ -86,7 +86,7 @@ namespace Preform.Api.Migrations._0012_AddExaminationConfigurationAndPolicies
                 type: "character varying(32)",
                 maxLength: 32,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "Preset");
 
             migrationBuilder.AddColumn<bool>(
                 name: "ShowRationales",
@@ -94,7 +94,7 @@ namespace Preform.Api.Migrations._0012_AddExaminationConfigurationAndPolicies
                 table: "Exams",
                 type: "boolean",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<bool>(
                 name: "ShowScoreImmediately",
@@ -102,7 +102,7 @@ namespace Preform.Api.Migrations._0012_AddExaminationConfigurationAndPolicies
                 table: "Exams",
                 type: "boolean",
                 nullable: false,
-                defaultValue: false);
+                defaultValue: true);
 
             migrationBuilder.AddColumn<int>(
                 name: "TargetQuestionCount",
@@ -110,7 +110,7 @@ namespace Preform.Api.Migrations._0012_AddExaminationConfigurationAndPolicies
                 table: "Exams",
                 type: "integer",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: 10);
 
             migrationBuilder.CreateIndex(
                 name: "IX_Exams_IsAvailable",
