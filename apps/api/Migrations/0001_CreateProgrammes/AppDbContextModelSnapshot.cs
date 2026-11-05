@@ -279,6 +279,9 @@ namespace Preform.Api.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<bool>("AllowInterruptedResume")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -293,9 +296,21 @@ namespace Preform.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<DateTime?>("AvailableFrom")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("AvailableTo")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CompositionRulesJson")
+                        .HasColumnType("jsonb");
+
                     b.Property<long>("ConcurrencyToken")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint");
+
+                    b.Property<string>("ConfigurationSnapshotJson")
+                        .HasColumnType("jsonb");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -317,10 +332,16 @@ namespace Preform.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsAvailable")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsPublished")
                         .HasColumnType("boolean");
 
                     b.Property<int>("LifecycleState")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxAttemptsAllowed")
                         .HasColumnType("integer");
 
                     b.Property<decimal>("PassingScorePercent")
@@ -338,12 +359,20 @@ namespace Preform.Api.Migrations
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
+                    b.Property<int>("RetakeCooldownHours")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime?>("RetiredAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("RetiredBy")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ReviewPolicy")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("timestamp with time zone");
@@ -355,12 +384,26 @@ namespace Preform.Api.Migrations
                     b.Property<int>("RevisionNumber")
                         .HasColumnType("integer");
 
+                    b.Property<string>("SelectionStrategy")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<bool>("ShowRationales")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("ShowScoreImmediately")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("SubmittedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("SubmittedBy")
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
+
+                    b.Property<int>("TargetQuestionCount")
+                        .HasColumnType("integer");
 
                     b.Property<int>("TimeLimitMinutes")
                         .HasColumnType("integer");
@@ -375,6 +418,8 @@ namespace Preform.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IsAvailable");
+
                     b.HasIndex("IsPublished");
 
                     b.HasIndex("LifecycleState");
@@ -383,6 +428,8 @@ namespace Preform.Api.Migrations
 
                     b.HasIndex("ExaminationId", "RevisionNumber")
                         .IsUnique();
+
+                    b.HasIndex("IsAvailable", "AvailableFrom", "AvailableTo");
 
                     b.HasIndex("IsPublished", "Pathway", "UpdatedAt");
 
