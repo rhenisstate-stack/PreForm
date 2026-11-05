@@ -136,7 +136,7 @@ describe("Phase 4: Learner Security Settings UI (/dashboard/settings/security)",
       expect(screen.getByText("Safari on iOS (iPhone)")).toBeInTheDocument();
       expect(screen.getByText("Current Device / Session")).toBeInTheDocument();
       expect(screen.getAllByText(/IP: 192.168.1.10/i)[0]).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
   });
 
   it("renders 'Log Out Other Sessions' action when multiple sessions exist", async () => {

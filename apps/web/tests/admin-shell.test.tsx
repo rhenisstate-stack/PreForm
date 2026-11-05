@@ -117,12 +117,22 @@ describe("Admin navigation configuration", () => {
   it("only lists routes that exist (no placeholder links)", () => {
     const hrefs = getAuthorizedNavItems(getAdminCapabilities("superadmin")).map((n) => n.href);
     expect(hrefs).not.toContain("/admin/programmes");
-    expect(hrefs).not.toContain("/admin/questions");
     expect(hrefs).not.toContain("/admin/exams");
-    expect(hrefs).not.toContain("/admin/users");
-    expect(hrefs).not.toContain("/admin/audit-logs");
     expect(hrefs).toEqual(
-      expect.arrayContaining(["/admin", "/admin/question-types", "/admin/subscriptions"])
+      expect.arrayContaining([
+        "/admin",
+        "/admin/questions",
+        "/admin/examinations",
+        "/admin/question-types",
+        "/admin/subscriptions",
+        "/admin/users",
+        "/admin/roles",
+        "/admin/security/sessions",
+        "/admin/security/ip-rules",
+        "/admin/audit-logs",
+        "/admin/reports",
+        "/admin/monitoring",
+      ])
     );
   });
 
