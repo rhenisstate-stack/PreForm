@@ -40,19 +40,17 @@ public class AssessmentSelectionService : IAssessmentSelectionService
             .Include(q => q.Options)
             .Include(q => q.ClientNeed)
             .Include(q => q.Topic)
-            .Include(q => q.Course)
-                .ThenInclude(c => c!.Programme)
-            .Where(q => q.LifecycleState == QuestionLifecycleState.Published && q.IsActive)
+            .Where(q => q.Status == QuestionStatus.Published)
             .Where(q => gradableTypeKeys.Contains(q.QuestionTypeKey));
 
         // Pathway matching
         if (normalizedPathway == "pn")
         {
-            query = query.Where(q => q.Course == null || q.Course.ProgrammeId == "prog-pn" || (q.Course.Programme != null && q.Course.Programme.Code == ProgrammeCode.PN));
+            query = query.Where(q => q.Pathway == "pn" || q.Pathway == "both");
         }
         else
         {
-            query = query.Where(q => q.Course == null || q.Course.ProgrammeId == "prog-rn" || (q.Course.Programme != null && q.Course.Programme.Code == ProgrammeCode.RN));
+            query = query.Where(q => q.Pathway == "rn" || q.Pathway == "both");
         }
 
         // Optional taxonomy filters

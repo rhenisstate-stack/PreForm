@@ -658,18 +658,18 @@ public class ExamAttemptsController : ControllerBase
                         QuestionNumber = qNum++,
                         Stem = q.Stem,
                         QuestionType = q.QuestionTypeKey,
-                        Domain = q.ClientNeed?.Name ?? q.Topic?.Name,
-                        Subdomain = q.Topic?.Name,
-                        MediaUrl = q.MediaUrl,
+                        Domain = q.ClientNeed?.Name ?? q.Topic?.Title,
+                        Subdomain = q.Topic?.Title,
+                        MediaUrl = null,
                         Options = options.Select(o => new CandidateQuestionOptionDto
                         {
                             Id = o.Id,
                             Index = o.DisplayOrder,
-                            Text = o.OptionText,
+                            Text = o.Content,
                             MediaUrl = o.MediaUrl
                         }).ToList(),
                         CorrectAnswerIndices = isCompleted ? correctIndices : null,
-                        Rationale = isCompleted ? q.Explanation : null
+                        Rationale = isCompleted ? q.OverallRationale : null
                     });
                 }
             }
@@ -1086,10 +1086,11 @@ public class ExamAttemptsController : ControllerBase
             selectedQuestions = selectionResult.SelectedQuestions;
 
             // Ensure Level 1 membership (ExamQuestion) exists for each selected question
-            var existingExamQIds = await _context.ExamQuestions
+            var existingList = await _context.ExamQuestions
                 .Where(eq => eq.ExamId == exam.Id)
                 .Select(eq => eq.QuestionId)
-                .ToHashSetAsync(cancellationToken);
+                .ToListAsync(cancellationToken);
+            var existingExamQIds = new HashSet<string>(existingList, StringComparer.Ordinal);
 
             var newExamQuestions = selectedQuestions
                 .Where(sq => !existingExamQIds.Contains(sq.Question.Id))
@@ -1114,7 +1115,7 @@ public class ExamAttemptsController : ControllerBase
                 .Include(q => q.Options)
                 .Include(q => q.ClientNeed)
                 .Include(q => q.Topic)
-                .Where(q => q.LifecycleState == QuestionLifecycleState.Published && q.IsActive)
+                .Where(q => q.Status == QuestionStatus.Published)
                 .Take(request?.QuestionCount > 0 ? request.QuestionCount : 10)
                 .ToListAsync(cancellationToken);
 
@@ -1164,15 +1165,15 @@ public class ExamAttemptsController : ControllerBase
                 clientNeedId = sq.Question.ClientNeedId,
                 clientNeedName = sq.Question.ClientNeed?.Name,
                 topicId = sq.Question.TopicId,
-                topicName = sq.Question.Topic?.Name,
-                mediaUrl = sq.Question.MediaUrl,
-                explanation = sq.Question.Explanation,
+                topicName = sq.Question.Topic?.Title,
+                mediaUrl = (string?)null,
+                explanation = sq.Question.OverallRationale,
                 displayOrder = sq.DisplayOrder,
                 options = sq.Options.Select(o => new
                 {
                     id = o.Id,
                     displayOrder = o.DisplayOrder,
-                    text = o.OptionText,
+                    text = o.Content,
                     isCorrect = o.IsCorrect,
                     mediaUrl = o.MediaUrl
                 }).ToList()
