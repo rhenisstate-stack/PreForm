@@ -313,19 +313,51 @@ public class ExamAttemptsController : ControllerBase
 
     private async Task<Exam> GetOrCreateDefaultExamAsync(string pathway, CancellationToken cancellationToken)
     {
+        return await GetOrCreateExamAsync(pathway, ExamType.CAT, cancellationToken);
+    }
+
+    private async Task<Exam> GetOrCreateExamAsync(string pathway, ExamType examType, CancellationToken cancellationToken)
+    {
         var normalizedPathway = string.Equals(pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn";
-        var exam = await _context.Exams.FirstOrDefaultAsync(e => e.Pathway == normalizedPathway, cancellationToken);
+        var prefix = examType switch
+        {
+            ExamType.DiagnosticReadiness => $"exam_{normalizedPathway}_diagnostic_rat",
+            ExamType.Practice => $"exam_{normalizedPathway}_practice",
+            _ => $"exam_{normalizedPathway}_adaptive_cat"
+        };
+
+        var exam = await _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.ExamQuestions)
+                .ThenInclude(eq => eq.Question)
+                    .ThenInclude(q => q.Options)
+            .FirstOrDefaultAsync(e => e.Id == prefix, cancellationToken);
 
         if (exam == null)
         {
             exam = new Exam
             {
-                Id = $"exam_{normalizedPathway}_adaptive_cat",
-                Title = normalizedPathway == "pn" ? "NCLEX-PN Adaptive CAT" : "NCLEX-RN Adaptive CAT",
-                Description = "Standard adaptive computerized exam simulation",
+                Id = prefix,
+                Title = examType switch
+                {
+                    ExamType.DiagnosticReadiness => normalizedPathway == "pn" ? "NCLEX-PN Diagnostic Readiness Assessment (RAT)" : "NCLEX-RN Diagnostic Readiness Assessment (RAT)",
+                    ExamType.Practice => normalizedPathway == "pn" ? "NCLEX-PN Practice Examination" : "NCLEX-RN Practice Examination",
+                    _ => normalizedPathway == "pn" ? "NCLEX-PN Adaptive CAT" : "NCLEX-RN Adaptive CAT"
+                },
+                Description = examType switch
+                {
+                    ExamType.DiagnosticReadiness => "Comprehensive diagnostic assessment measuring readiness for the official NCLEX examination.",
+                    ExamType.Practice => "Flexible practice examination drawn from published clinical items.",
+                    _ => "Standard adaptive computerized exam simulation"
+                },
                 Pathway = normalizedPathway,
-                ExamType = ExamType.CAT,
-                TimeLimitMinutes = 300,
+                ExamType = examType,
+                TimeLimitMinutes = examType switch
+                {
+                    ExamType.DiagnosticReadiness => 150,
+                    ExamType.Practice => 0,
+                    _ => 300
+                },
                 PassingScorePercent = 75.0m,
                 IsPublished = true,
                 LifecycleState = ExamLifecycleState.Published,
@@ -537,7 +569,128 @@ public class ExamAttemptsController : ControllerBase
                 .ToList(),
         };
 
+        // ── Phase 3 Question Delivery (Protected Answer Keys) ──
+        if (metadataSnapshotObj is JsonElement jsonEl && jsonEl.TryGetProperty("questions", out var questionsEl) && questionsEl.ValueKind == JsonValueKind.Array)
+        {
+            var qNum = 1;
+            foreach (var qObj in questionsEl.EnumerateArray())
+            {
+                var qId = qObj.TryGetProperty("id", out var idProp) ? idProp.GetString() ?? "" : "";
+                var stem = qObj.TryGetProperty("stem", out var stemProp) ? stemProp.GetString() ?? "" : "";
+                var qType = qObj.TryGetProperty("questionType", out var typeProp) ? typeProp.GetString() ?? "" : "";
+                var domain = qObj.TryGetProperty("clientNeedName", out var domProp) ? domProp.GetString() : null;
+                var subdomain = qObj.TryGetProperty("topicName", out var subProp) ? subProp.GetString() : null;
+                var mediaUrl = qObj.TryGetProperty("mediaUrl", out var medProp) ? medProp.GetString() : null;
+                var explanation = qObj.TryGetProperty("explanation", out var expProp) ? expProp.GetString() : null;
+
+                var optionsList = new List<CandidateQuestionOptionDto>();
+                var correctIndices = new List<int>();
+
+                if (qObj.TryGetProperty("options", out var optsProp) && optsProp.ValueKind == JsonValueKind.Array)
+                {
+                    var optIdx = 0;
+                    foreach (var opt in optsProp.EnumerateArray())
+                    {
+                        var optId = opt.TryGetProperty("id", out var oIdProp) ? oIdProp.GetString() ?? "" : "";
+                        var optText = opt.TryGetProperty("text", out var oTextProp) ? oTextProp.GetString() ?? "" : "";
+                        var optMed = opt.TryGetProperty("mediaUrl", out var oMedProp) ? oMedProp.GetString() : null;
+                        var optCorrect = opt.TryGetProperty("isCorrect", out var oCorrProp) && oCorrProp.GetBoolean();
+
+                        optionsList.Add(new CandidateQuestionOptionDto
+                        {
+                            Id = optId,
+                            Index = optIdx,
+                            Text = optText,
+                            MediaUrl = optMed
+                        });
+
+                        if (optCorrect)
+                        {
+                            correctIndices.Add(optIdx);
+                        }
+                        optIdx++;
+                    }
+                }
+
+                detail.Questions.Add(new CandidateQuestionDto
+                {
+                    Id = qId,
+                    QuestionNumber = qNum++,
+                    Stem = stem,
+                    QuestionType = qType,
+                    Domain = domain,
+                    Subdomain = subdomain,
+                    MediaUrl = mediaUrl,
+                    Options = optionsList,
+                    CorrectAnswerIndices = isCompleted ? correctIndices : null,
+                    Rationale = isCompleted ? explanation : null
+                });
+            }
+        }
+
+        if (detail.Questions.Count == 0)
+        {
+            var attemptQuestions = await _context.ExamAttemptQuestions
+                .Include(eaq => eaq.Question)
+                    .ThenInclude(q => q.Options)
+                .Include(eaq => eaq.Question.ClientNeed)
+                .Include(eaq => eaq.Question.Topic)
+                .Where(eaq => eaq.ExamAttemptId == attempt.Id)
+                .OrderBy(eaq => eaq.DisplayOrder)
+                .ToListAsync(cancellationToken);
+
+            if (attemptQuestions.Count > 0)
+            {
+                var qNum = 1;
+                foreach (var aq in attemptQuestions)
+                {
+                    var q = aq.Question;
+                    if (q == null) continue;
+
+                    var options = q.Options.OrderBy(o => o.DisplayOrder).ToList();
+                    var correctIndices = isCompleted
+                        ? options.Select((o, idx) => o.IsCorrect ? idx : -1).Where(i => i >= 0).ToList()
+                        : null;
+
+                    detail.Questions.Add(new CandidateQuestionDto
+                    {
+                        Id = q.Id,
+                        QuestionNumber = qNum++,
+                        Stem = q.Stem,
+                        QuestionType = q.QuestionTypeKey,
+                        Domain = q.ClientNeed?.Name ?? q.Topic?.Name,
+                        Subdomain = q.Topic?.Name,
+                        MediaUrl = q.MediaUrl,
+                        Options = options.Select(o => new CandidateQuestionOptionDto
+                        {
+                            Id = o.Id,
+                            Index = o.DisplayOrder,
+                            Text = o.OptionText,
+                            MediaUrl = o.MediaUrl
+                        }).ToList(),
+                        CorrectAnswerIndices = isCompleted ? correctIndices : null,
+                        Rationale = isCompleted ? q.Explanation : null
+                    });
+                }
+            }
+        }
+
         return Ok(new { success = true, attempt = detail });
+    }
+
+    [HttpGet("{id}/questions")]
+    public async Task<IActionResult> GetAttemptQuestions(string id, CancellationToken cancellationToken)
+    {
+        var actionResult = await GetAttemptById(id, cancellationToken);
+        if (actionResult is OkObjectResult okResult && okResult.Value is not null)
+        {
+            var attemptProp = okResult.Value.GetType().GetProperty("attempt")?.GetValue(okResult.Value) as CandidateAttemptDetailDto;
+            if (attemptProp != null)
+            {
+                return Ok(new { success = true, questions = attemptProp.Questions });
+            }
+        }
+        return actionResult;
     }
 
     [HttpPost("{id}/reauthenticate")]
