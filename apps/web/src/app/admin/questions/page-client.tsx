@@ -655,7 +655,7 @@ export function AdminQuestionsClient() {
                         </span>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap">
-                        <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                        <Badge variant={statusInfo.variant} className={statusInfo.className}>{statusInfo.label}</Badge>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
                         {q.authorName || "System"}
@@ -731,7 +731,7 @@ export function AdminQuestionsClient() {
                                     ? "Author cannot approve their own question (Separation of Duties)"
                                     : "Approve Question"
                                 }
-                                disabled={isAuthor && user?.role !== "superadmin"}
+                                disabled={Boolean(isAuthor && user?.role !== "superadmin")}
                                 onClick={() =>
                                   transitionMutation.mutate({ id: q.id, targetStatus: 2 })
                                 }
@@ -846,7 +846,10 @@ export function AdminQuestionsClient() {
             <DialogTitle className="flex items-center gap-2">
               <span>Question Details: {viewingQuestion?.code || "Draft"}</span>
               {viewingQuestion && (
-                <Badge variant={QUESTION_STATUS_LABELS[viewingQuestion.status]?.variant || "secondary"}>
+                <Badge
+                  variant={QUESTION_STATUS_LABELS[viewingQuestion.status]?.variant || "secondary"}
+                  className={QUESTION_STATUS_LABELS[viewingQuestion.status]?.className}
+                >
                   {QUESTION_STATUS_LABELS[viewingQuestion.status]?.label}
                 </Badge>
               )}
@@ -1011,7 +1014,10 @@ export function AdminQuestionsClient() {
                       <span className="font-bold text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">
                         Version {v.versionNumber}
                       </span>
-                      <Badge variant={QUESTION_STATUS_LABELS[v.status]?.variant || "secondary"}>
+                      <Badge
+                        variant={QUESTION_STATUS_LABELS[v.status]?.variant || "secondary"}
+                        className={QUESTION_STATUS_LABELS[v.status]?.className}
+                      >
                         {QUESTION_STATUS_LABELS[v.status]?.label}
                       </Badge>
                     </div>
