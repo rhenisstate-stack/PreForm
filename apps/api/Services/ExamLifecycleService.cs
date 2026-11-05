@@ -2120,7 +2120,6 @@ public class ExamLifecycleService : IExamLifecycleService
         var pathway = revision.Pathway?.ToLowerInvariant() ?? "rn";
         var eligibleQuestionsQuery = _context.Questions
             .Where(q => (q.Status == QuestionStatus.Approved || q.Status == QuestionStatus.Published)
-                     && q.IsActive
                      && (q.Pathway.ToLower() == pathway || q.Pathway.ToLower() == "both")
                      && SupportedQuestionTypeKeys.Contains(q.QuestionTypeKey));
 
@@ -2259,7 +2258,6 @@ public class ExamLifecycleService : IExamLifecycleService
         var eligibleQuery = _context.Questions
             .Include(q => q.Options)
             .Where(q => (q.Status == QuestionStatus.Approved || q.Status == QuestionStatus.Published)
-                     && q.IsActive
                      && (q.Pathway.ToLower() == pathway || q.Pathway.ToLower() == "both")
                      && SupportedQuestionTypeKeys.Contains(q.QuestionTypeKey));
 
@@ -2539,14 +2537,14 @@ public class ExamLifecycleService : IExamLifecycleService
                     QuestionType = eq.Question.QuestionTypeKey,
                     ClientNeed = eq.Question.ClientNeedId ?? "MOC",
                     Difficulty = eq.Question.Difficulty.ToString(),
-                    Rationale = eq.Question.Rationale,
-                    Options = eq.Question.Options.OrderBy(o => o.OrderIndex).Select(o => new AdminExamPreviewOptionDto
+                    Rationale = eq.Question.OverallRationale,
+                    Options = eq.Question.Options.OrderBy(o => o.DisplayOrder).Select(o => new AdminExamPreviewOptionDto
                     {
-                        Key = o.Key,
-                        Text = o.Text,
+                        Key = o.OptionKey,
+                        Text = o.Content,
                         IsCorrect = o.IsCorrect
                     }).ToList(),
-                    CorrectOptionKeys = eq.Question.Options.Where(o => o.IsCorrect).Select(o => o.Key).ToList()
+                    CorrectOptionKeys = eq.Question.Options.Where(o => o.IsCorrect).Select(o => o.OptionKey).ToList()
                 });
             }
         }
@@ -2558,7 +2556,6 @@ public class ExamLifecycleService : IExamLifecycleService
             var eligible = await _context.Questions
                 .Include(q => q.Options)
                 .Where(q => (q.Status == QuestionStatus.Approved || q.Status == QuestionStatus.Published)
-                         && q.IsActive
                          && (q.Pathway.ToLower() == pathway || q.Pathway.ToLower() == "both")
                          && SupportedQuestionTypeKeys.Contains(q.QuestionTypeKey))
                 .Take(targetCount)
@@ -2575,14 +2572,14 @@ public class ExamLifecycleService : IExamLifecycleService
                     QuestionType = q.QuestionTypeKey,
                     ClientNeed = q.ClientNeedId ?? "MOC",
                     Difficulty = q.Difficulty.ToString(),
-                    Rationale = q.Rationale,
-                    Options = q.Options.OrderBy(o => o.OrderIndex).Select(o => new AdminExamPreviewOptionDto
+                    Rationale = q.OverallRationale,
+                    Options = q.Options.OrderBy(o => o.DisplayOrder).Select(o => new AdminExamPreviewOptionDto
                     {
-                        Key = o.Key,
-                        Text = o.Text,
+                        Key = o.OptionKey,
+                        Text = o.Content,
                         IsCorrect = o.IsCorrect
                     }).ToList(),
-                    CorrectOptionKeys = q.Options.Where(o => o.IsCorrect).Select(o => o.Key).ToList()
+                    CorrectOptionKeys = q.Options.Where(o => o.IsCorrect).Select(o => o.OptionKey).ToList()
                 });
             }
         }
