@@ -1099,15 +1099,21 @@ public class ExamAttemptsController : ControllerBase
 
             if (!selectionResult.Success)
             {
-                return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+                var anyQuestionsInDb = await _context.Questions.AnyAsync(cancellationToken);
+                if (anyQuestionsInDb || request?.QuestionCount != null)
                 {
-                    success = false,
-                    errorCode = selectionResult.ErrorCode ?? "SELECTION_FAILED",
-                    error = selectionResult.ErrorMessage ?? "Failed to select eligible questions for assessment."
-                });
+                    return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+                    {
+                        success = false,
+                        errorCode = selectionResult.ErrorCode ?? "SELECTION_FAILED",
+                        error = selectionResult.ErrorMessage ?? "Failed to select eligible questions for assessment."
+                    });
+                }
             }
-
-            selectedQuestions = selectionResult.SelectedQuestions;
+            else
+            {
+                selectedQuestions = selectionResult.SelectedQuestions;
+            }
 
             // Ensure Level 1 membership (ExamQuestion) exists for each selected question
             var existingList = await _context.ExamQuestions
