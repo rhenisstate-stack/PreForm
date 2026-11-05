@@ -1505,4 +1505,217 @@ export const adminAuditLogsService = {
   },
 };
 
+// ── Question Bank & Curriculum DTOs ──────────────────────────────────────────
+
+export interface AdminQuestionOption {
+  id: string;
+  optionKey: string;
+  content: string;
+  displayOrder: number;
+  isCorrect: boolean;
+  rationale?: string;
+  distractorRationale?: string;
+  mediaUrl?: string;
+}
+
+export interface AdminQuestionSummary {
+  id: string;
+  code?: string;
+  pathway: string;
+  topicId?: string;
+  topicTitle?: string;
+  subcategoryName?: string;
+  categoryName?: string;
+  courseTitle?: string;
+  clientNeedId?: string;
+  clientNeedCode?: string;
+  clientNeedName?: string;
+  questionTypeKey: string;
+  questionTypeName: string;
+  stem: string;
+  difficulty: number;
+  status: number;
+  version: number;
+  cognitiveLevel?: string;
+  clinicalJudgmentStep?: string;
+  createdById?: string;
+  authorName?: string;
+  reviewedById?: string;
+  reviewerName?: string;
+  optionsCount: number;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt?: string;
+}
+
+export interface AdminQuestionDetail extends AdminQuestionSummary {
+  instructions?: string;
+  clinicalScenario?: string;
+  exhibitsJson?: string;
+  structuredContentJson?: string;
+  overallRationale?: string;
+  source?: string;
+  rejectionReason?: string;
+  versionsCount: number;
+  options: AdminQuestionOption[];
+}
+
+export interface AdminQuestionVersion {
+  id: string;
+  questionId: string;
+  versionNumber: number;
+  snapshotJson: string;
+  changeSummary?: string;
+  status: number;
+  createdById?: string;
+  createdByName?: string;
+  createdAt: string;
+}
+
+export interface AdminPaginatedQuestionsResponse {
+  success: boolean;
+  result: {
+    items: AdminQuestionSummary[];
+    totalCount: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
+}
+
+export interface AdminCurriculumTreeNode {
+  id: string;
+  type: string;
+  name: string;
+  description?: string;
+  displayOrder: number;
+  isActive: boolean;
+  questionCount: number;
+  children: AdminCurriculumTreeNode[];
+}
+
+export interface AdminClientNeed {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  displayOrder: number;
+  isActive: boolean;
+  pathway: string;
+  questionCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const adminQuestionsService = {
+  getQuestions: async (
+    query: {
+      search?: string;
+      type?: string;
+      pathway?: string;
+      topicId?: string;
+      subcategoryId?: string;
+      categoryId?: string;
+      courseId?: string;
+      clientNeedId?: string;
+      difficulty?: number;
+      status?: number;
+      cognitiveLevel?: string;
+      clinicalJudgmentStep?: string;
+      authorId?: string;
+      page?: number;
+      pageSize?: number;
+      sortBy?: string;
+      sortDirection?: string;
+    },
+    session?: VerifiedSession | null
+  ) => {
+    const params = new URLSearchParams();
+    if (query.search) params.set("search", query.search);
+    if (query.type) params.set("type", query.type);
+    if (query.pathway) params.set("pathway", query.pathway);
+    if (query.topicId) params.set("topicId", query.topicId);
+    if (query.subcategoryId) params.set("subcategoryId", query.subcategoryId);
+    if (query.categoryId) params.set("categoryId", query.categoryId);
+    if (query.courseId) params.set("courseId", query.courseId);
+    if (query.clientNeedId) params.set("clientNeedId", query.clientNeedId);
+    if (query.difficulty !== undefined) params.set("difficulty", String(query.difficulty));
+    if (query.status !== undefined) params.set("status", String(query.status));
+    if (query.cognitiveLevel) params.set("cognitiveLevel", query.cognitiveLevel);
+    if (query.clinicalJudgmentStep) params.set("clinicalJudgmentStep", query.clinicalJudgmentStep);
+    if (query.authorId) params.set("authorId", query.authorId);
+    if (query.page) params.set("page", String(query.page));
+    if (query.pageSize) params.set("pageSize", String(query.pageSize));
+    if (query.sortBy) params.set("sortBy", query.sortBy);
+    if (query.sortDirection) params.set("sortDirection", query.sortDirection);
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get<AdminPaginatedQuestionsResponse>(`/api/v1/questions${qs}`, { session });
+  },
+
+  getQuestionById: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; question: AdminQuestionDetail }>(
+      `/api/v1/questions/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  createQuestion: async (data: any, session?: VerifiedSession | null) => {
+    return apiClient.post<{ success: boolean; question?: AdminQuestionDetail; error?: string }>(
+      "/api/v1/questions",
+      data,
+      { session }
+    );
+  },
+
+  updateQuestion: async (id: string, data: any, session?: VerifiedSession | null) => {
+    return apiClient.put<{ success: boolean; question?: AdminQuestionDetail; error?: string }>(
+      `/api/v1/questions/${encodeURIComponent(id)}`,
+      data,
+      { session }
+    );
+  },
+
+  transitionStatus: async (
+    id: string,
+    data: { targetStatus: number; rejectionReason?: string; changeSummary?: string },
+    session?: VerifiedSession | null
+  ) => {
+    return apiClient.post<{ success: boolean; question?: AdminQuestionDetail; error?: string }>(
+      `/api/v1/questions/${encodeURIComponent(id)}/status`,
+      data,
+      { session }
+    );
+  },
+
+  getQuestionVersions: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; versions: AdminQuestionVersion[] }>(
+      `/api/v1/questions/${encodeURIComponent(id)}/versions`,
+      { session }
+    );
+  },
+};
+
+export const adminCurriculumService = {
+  getTree: async (activeOnly = false, session?: VerifiedSession | null) => {
+    const qs = activeOnly ? "?activeOnly=true" : "";
+    return apiClient.get<{ success: boolean; tree: AdminCurriculumTreeNode[] }>(
+      `/api/v1/curriculum/tree${qs}`,
+      { session }
+    );
+  },
+
+  getClientNeeds: async (pathway?: string, activeOnly = false, session?: VerifiedSession | null) => {
+    const params = new URLSearchParams();
+    if (pathway) params.set("pathway", pathway);
+    if (activeOnly) params.set("activeOnly", "true");
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get<{ success: boolean; clientNeeds: AdminClientNeed[] }>(
+      `/api/v1/client-needs${qs}`,
+      { session }
+    );
+  },
+};
+
+
 

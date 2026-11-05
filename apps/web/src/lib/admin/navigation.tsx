@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   CreditCard,
   FileText,
+  HelpCircle,
   KeyRound,
   Layers,
   LayoutDashboard,
@@ -61,6 +62,14 @@ const EXAMINATION_GROUP: NavGroup = {
   id: "examination",
   label: "Examination",
   items: [
+    {
+      id: "questions",
+      title: "Question Bank",
+      href: "/admin/questions",
+      icon: HelpCircle,
+      capability: "canViewQuestions",
+      description: "Author, review, and manage canonical NCLEX questions and curriculum",
+    },
     {
       id: "examinations",
       title: "Examinations",

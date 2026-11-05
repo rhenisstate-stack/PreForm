@@ -83,6 +83,14 @@ export interface AdminCapabilities {
   canManageSubscriptions: boolean;
   /** Static 18-type question format registry (documentation page, no backend mutation). */
   canViewQuestionTypes: boolean;
+  /** View Question Bank questions and curriculum hierarchy. */
+  canViewQuestions: boolean;
+  /** Author questions: create questions, edit draft options, update rationales. */
+  canManageQuestions: boolean;
+  /** Review questions: evaluate, recommend approval or reject with reason. */
+  canReviewQuestions: boolean;
+  /** Publish questions: release approved questions and manage lifecycle archiving. */
+  canPublishQuestions: boolean;
   /** View examination families and revisions in administrative studio. */
   canViewExaminations: boolean;
   /** Author examinations: create family, create/edit draft revisions, manage question membership. */
@@ -122,6 +130,26 @@ const EXAM_APPROVER_ROLES = new Set<AdminRole>([
   "admin",
 ]);
 
+const CONTENT_AUTHOR_ROLES = new Set<AdminRole>([
+  "superadmin",
+  "admin",
+  "content_manager",
+  "manager",
+]);
+
+const CONTENT_REVIEWER_ROLES = new Set<AdminRole>([
+  "superadmin",
+  "admin",
+  "reviewer",
+  "content_manager",
+]);
+
+const CONTENT_PUBLISHER_ROLES = new Set<AdminRole>([
+  "superadmin",
+  "admin",
+  "content_manager",
+]);
+
 export function getAdminCapabilities(rawRole?: string | null): AdminCapabilities {
   const role = normalizeRole(rawRole);
   const shell = ADMIN_SHELL_ROLES.has(role);
@@ -129,6 +157,10 @@ export function getAdminCapabilities(rawRole?: string | null): AdminCapabilities
     canViewOverview: shell,
     canManageSubscriptions: SUBSCRIPTION_ADMIN_ROLES.has(role),
     canViewQuestionTypes: shell,
+    canViewQuestions: shell,
+    canManageQuestions: CONTENT_AUTHOR_ROLES.has(role),
+    canReviewQuestions: CONTENT_REVIEWER_ROLES.has(role),
+    canPublishQuestions: CONTENT_PUBLISHER_ROLES.has(role),
     canViewExaminations: shell && role !== "instructor",
     canManageExaminations: EXAM_AUTHOR_ROLES.has(role),
     canReviewExaminations: EXAM_REVIEWER_ROLES.has(role),
