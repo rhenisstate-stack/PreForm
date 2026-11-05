@@ -232,6 +232,18 @@ export const authService = {
       input
     );
   },
+
+  recoverSessions: async (input: {
+    email: string;
+    password: string;
+    clearRemainingSessions?: boolean;
+  }): Promise<ApiResponse<{ success: boolean; error?: string; errorCode?: string }>> => {
+    return apiClient.post<{ success: boolean; error?: string; errorCode?: string }>("/api/v1/auth/recover-sessions", {
+      email: input.email,
+      password: input.password,
+      clearRemainingSessions: input.clearRemainingSessions ?? false,
+    });
+  },
 };
 
 export const profileService = {
@@ -247,18 +259,6 @@ export const profileService = {
   ): Promise<ApiResponse<BackendProfileResponse>> => {
     return apiClient.put<BackendProfileResponse>("/api/v1/profile", input, {
       session,
-    });
-  },
-
-  recoverSessions: async (input: {
-    email: string;
-    password: string;
-    clearRemainingSessions?: boolean;
-  }): Promise<ApiResponse<{ success: boolean }>> => {
-    return apiClient.post<{ success: boolean }>("/api/v1/auth/recover-sessions", {
-      email: input.email,
-      password: input.password,
-      clearRemainingSessions: input.clearRemainingSessions ?? false,
     });
   },
 
