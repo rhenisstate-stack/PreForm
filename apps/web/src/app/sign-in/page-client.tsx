@@ -291,13 +291,12 @@ export function SignInPageClient() {
                 >
                   Password
                 </label>
-                <button
-                  type="button"
-                  onClick={() => setShowForgotModal(true)}
+                <Link
+                  href="/forgot-password"
                   className="text-xs font-medium text-secondary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
                 >
                   Forgot password?
-                </button>
+                </Link>
               </div>
               <div className="relative">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-muted-foreground">
