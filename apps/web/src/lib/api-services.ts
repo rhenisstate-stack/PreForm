@@ -1993,5 +1993,279 @@ export const adminCurriculumService = {
   },
 };
 
+// ── Phase 5 Analytics, Reporting & Operational Monitoring ──
+
+export interface LearnerAnalyticsSummary {
+  totalCompletedAttempts: number;
+  totalPracticeQuestions: number;
+  averageScorePercent: number;
+  overallPassRate: number;
+  totalDurationMinutes: number;
+  lastAssessmentDate: string | null;
+  currentReadinessTier: string;
+}
+
+export interface ClientNeedMastery {
+  categoryCode: string;
+  categoryName: string;
+  totalAssessedQuestions: number;
+  correctCount: number;
+  accuracyPercent: number;
+  isLowSample: boolean;
+  performanceTier: string;
+}
+
+export interface TopicMastery {
+  topicId: string;
+  topicName: string;
+  categoryName: string;
+  domainName: string;
+  totalQuestions: number;
+  correctCount: number;
+  accuracyPercent: number;
+  isDeficiencyArea: boolean;
+}
+
+export interface ReadinessAttemptItem {
+  attemptId: string;
+  examTitle: string;
+  scorePercent: number;
+  readinessTier: string;
+  completedAt: string;
+  totalQuestions: number;
+  durationMinutes: number;
+}
+
+export interface ReadinessTrend {
+  latestTier: string;
+  latestScorePercent: number | null;
+  totalDiagnosticAttempts: number;
+  attempts: ReadinessAttemptItem[];
+}
+
+export interface StudyRecommendation {
+  id: string;
+  title: string;
+  description: string;
+  category: "Remediation" | "Practice" | "Simulation";
+  priority: "High" | "Medium" | "Low";
+  targetClientNeedCode: string | null;
+  actionHref: string | null;
+}
+
+export interface AdminOverviewMetrics {
+  totalLearners: number;
+  activeLearners: number;
+  totalQuestions: number;
+  publishedQuestions: number;
+  reviewQueueCount: number;
+  publishedExamsCount: number;
+  totalCompletedAttempts: number;
+  averageCohortScorePercent: number;
+  activeEngagementRate: number;
+}
+
+export interface ScoreDistributionBucket {
+  bucketLabel: string;
+  minScore: number;
+  maxScore: number;
+  count: number;
+  percentage: number;
+}
+
+export interface ExaminationAssessmentBreakdown {
+  examinationId: string;
+  code: string;
+  title: string;
+  pathway: string;
+  totalAttempts: number;
+  completedAttempts: number;
+  averageScorePercent: number;
+  passRate: number;
+  averageDurationMinutes: number;
+}
+
+export interface AssessmentReport {
+  totalAttempts: number;
+  completedAttempts: number;
+  abandonedAttempts: number;
+  completionRate: number;
+  abandonmentRate: number;
+  averageScorePercent: number;
+  passRate: number;
+  averageDurationMinutes: number;
+  scoreDistribution: ScoreDistributionBucket[];
+  examinationBreakdowns: ExaminationAssessmentBreakdown[];
+}
+
+export interface ExaminationRevisionReport {
+  examinationId: string;
+  code: string;
+  title: string;
+  revisionNumber: number;
+  revisionId: string;
+  lifecycleState: string;
+  totalAttempts: number;
+  completedAttempts: number;
+  averageScorePercent: number;
+  passRate: number;
+}
+
+export interface DistractorSelection {
+  optionKey: string;
+  contentPreview: string;
+  isCorrect: boolean;
+  selectionCount: number;
+  selectionRate: number;
+}
+
+export interface QuestionPerformance {
+  questionId: string;
+  code: string | null;
+  stemPreview: string;
+  pathway: string;
+  questionTypeKey: string;
+  difficulty: string;
+  clientNeedCode: string | null;
+  clientNeedName: string | null;
+  timesDelivered: number;
+  timesAnswered: number;
+  correctResponseCount: number;
+  correctResponseRate: number;
+  averageTimeSpentSeconds: number;
+  distractorAnalysis?: DistractorSelection[];
+}
+
+export interface OperationalHealth {
+  status: "Healthy" | "Degraded" | "Unhealthy";
+  databaseLatencyMs: number;
+  databaseStatus: string;
+  totalActiveSessions: number;
+  activeUsers: number;
+  serverUptime: string;
+  committedMemoryMb: number;
+  auditEventsLast24Hours: number;
+  securityIncidentsLast24Hours: number;
+  checkedAt: string;
+}
+
+export const learnerAnalyticsService = {
+  getSummary: async (session: VerifiedSession, userId?: string) => {
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    return apiClient.get<{ success: boolean; data: LearnerAnalyticsSummary }>(
+      `/api/v1/learner/analytics/summary${qs}`,
+      { session }
+    );
+  },
+
+  getClientNeeds: async (session: VerifiedSession, userId?: string) => {
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    return apiClient.get<{ success: boolean; data: ClientNeedMastery[] }>(
+      `/api/v1/learner/analytics/client-needs${qs}`,
+      { session }
+    );
+  },
+
+  getCurriculum: async (session: VerifiedSession, userId?: string) => {
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    return apiClient.get<{ success: boolean; data: TopicMastery[] }>(
+      `/api/v1/learner/analytics/curriculum${qs}`,
+      { session }
+    );
+  },
+
+  getReadinessTrend: async (session: VerifiedSession, userId?: string) => {
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    return apiClient.get<{ success: boolean; data: ReadinessTrend }>(
+      `/api/v1/learner/analytics/readiness-trend${qs}`,
+      { session }
+    );
+  },
+
+  getRecommendations: async (session: VerifiedSession, userId?: string) => {
+    const qs = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    return apiClient.get<{ success: boolean; data: StudyRecommendation[] }>(
+      `/api/v1/learner/analytics/recommendations${qs}`,
+      { session }
+    );
+  },
+};
+
+export const adminReportsService = {
+  getOverview: async (session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; data: AdminOverviewMetrics }>(
+      "/api/v1/admin/reports/overview",
+      { session }
+    );
+  },
+
+  getAssessments: async (
+    params: { pathway?: string; examinationId?: string; status?: string; fromDate?: string; toDate?: string },
+    session?: VerifiedSession | null
+  ) => {
+    const q = new URLSearchParams();
+    if (params.pathway) q.set("pathway", params.pathway);
+    if (params.examinationId) q.set("examinationId", params.examinationId);
+    if (params.status) q.set("status", params.status);
+    if (params.fromDate) q.set("fromDate", params.fromDate);
+    if (params.toDate) q.set("toDate", params.toDate);
+    const qs = q.toString() ? `?${q.toString()}` : "";
+    return apiClient.get<{ success: boolean; data: AssessmentReport }>(
+      `/api/v1/admin/reports/assessments${qs}`,
+      { session }
+    );
+  },
+
+  getExaminationRevisions: async (examinationId: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; data: ExaminationRevisionReport[] }>(
+      `/api/v1/admin/reports/examinations/${encodeURIComponent(examinationId)}/revisions`,
+      { session }
+    );
+  },
+
+  getQuestionsPerformance: async (
+    params: {
+      pathway?: string;
+      questionTypeKey?: string;
+      difficulty?: string;
+      clientNeedCode?: string;
+      search?: string;
+      page?: number;
+      pageSize?: number;
+    },
+    session?: VerifiedSession | null
+  ) => {
+    const q = new URLSearchParams();
+    if (params.pathway) q.set("pathway", params.pathway);
+    if (params.questionTypeKey) q.set("questionTypeKey", params.questionTypeKey);
+    if (params.difficulty) q.set("difficulty", params.difficulty);
+    if (params.clientNeedCode) q.set("clientNeedCode", params.clientNeedCode);
+    if (params.search) q.set("search", params.search);
+    if (params.page) q.set("page", params.page.toString());
+    if (params.pageSize) q.set("pageSize", params.pageSize.toString());
+    const qs = q.toString() ? `?${q.toString()}` : "";
+    return apiClient.get<{ success: boolean; data: { totalCount: number; page: number; pageSize: number; items: QuestionPerformance[] } }>(
+      `/api/v1/admin/reports/questions${qs}`,
+      { session }
+    );
+  },
+
+  getQuestionDetail: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; data: QuestionPerformance }>(
+      `/api/v1/admin/reports/questions/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+};
+
+export const adminMonitoringService = {
+  getHealth: async (session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; data: OperationalHealth }>(
+      "/api/v1/admin/monitoring/health",
+      { session }
+    );
+  },
+};
+
 
 

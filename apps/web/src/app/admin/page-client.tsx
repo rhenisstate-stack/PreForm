@@ -9,158 +9,174 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
+  BarChart3,
+  Activity,
+  Layers,
+  ShieldCheck,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { BrandedLoading } from "@/components/layout/branded-loading";
+import type { AdminOverviewMetrics } from "@/lib/api-services";
 
-/**
- * Admin overview content. The shared admin chrome (sidebar, breadcrumbs,
- * header, auth gates) is provided by `AdminShell` — this component renders
- * only the page body. Metrics become data-driven with explicit unavailable
- * states during P2 (they must not present arbitrary frontend assumptions as
- * production figures).
- */
 export function AdminOverviewClient() {
   const { isLoading, isAuthenticated } = useAuth();
+  const [metrics, setMetrics] = React.useState<AdminOverviewMetrics | null>(null);
+  const [metricsLoading, setMetricsLoading] = React.useState(true);
+  const [metricsError, setMetricsError] = React.useState<string | null>(null);
 
-  // Loading state
+  React.useEffect(() => {
+    let mounted = true;
+    fetch("/api/admin/reports/overview")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!mounted) return;
+        if (data && data.success && data.data) {
+          setMetrics(data.data);
+        } else if (data && data.totalLearners !== undefined) {
+          setMetrics(data);
+        }
+      })
+      .catch((err) => {
+        if (mounted) setMetricsError(err.message || "Failed to load overview");
+      })
+      .finally(() => {
+        if (mounted) setMetricsLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   if (isLoading) {
     return <BrandedLoading message="Preparing admin workspace..." fullScreen={false} />;
   }
 
-  // If not authenticated, auth gates in AdminShell will handle this
-  // This component only renders for authenticated admin users
-
   return (
     <div className="space-y-8">
-      {/* Overview Metric Cards - Data will be populated from real APIs during P2 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Candidate Cohort - Real data would come from API */}
+      {/* Overview Metric Cards - Live PostgreSQL Authoritative Data */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" data-testid="admin-overview-metrics">
+        {/* Candidate Cohort */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Candidate Cohort</span>
             <Users className="h-4 w-4 text-secondary" aria-hidden="true" />
           </div>
           <p className="text-2xl font-serif font-bold text-foreground">
-            {/* TODO: Replace with real data or explicit unavailable state */}
-            TBD
+            {metricsLoading ? "..." : (metrics?.totalLearners ?? 0).toLocaleString()}
           </p>
           <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
             <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
-            94% active study engagements
+            {metricsLoading ? "Calculating..." : `${metrics?.activeLearners ?? 0} active (${metrics?.activeEngagementRate ?? 0}% rate)`}
           </p>
         </div>
 
-        {/* Question Repository - Real data would come from API */}
+        {/* Question Repository */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Question Repository</span>
             <FileQuestion className="h-4 w-4 text-primary" aria-hidden="true" />
           </div>
           <p className="text-2xl font-serif font-bold text-foreground">
-            {/* TODO: Replace with real data or explicit unavailable state */}
-            TBD
+            {metricsLoading ? "..." : (metrics?.totalQuestions ?? 0).toLocaleString()}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            Across 18 validated question formats
+            {metricsLoading ? "Checking..." : `${metrics?.publishedQuestions ?? 0} published across formats`}
           </p>
         </div>
 
-        {/* Review Queue - Real data would come from API */}
+        {/* Review Queue */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Review Queue</span>
             <AlertCircle className="h-4 w-4 text-amber-500" aria-hidden="true" />
           </div>
           <p className="text-2xl font-serif font-bold text-foreground">
-            {/* TODO: Replace with real data or explicit unavailable state */}
-            TBD
+            {metricsLoading ? "..." : (metrics?.reviewQueueCount ?? 0).toLocaleString()}
           </p>
           <p className="mt-2 text-xs text-amber-700 dark:text-amber-400 font-medium">
-            {/* TODO: Update based on real data or show unavailable state */}
-            Review queue will be available once question bank access is implemented
+            {metrics?.reviewQueueCount === 0 ? "Review queue clear" : "Items in draft or review workflow"}
           </p>
         </div>
 
-        {/* Published Exams - Real data would come from API */}
+        {/* Published Exams */}
         <div className="rounded-2xl border border-border bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between text-muted-foreground mb-2">
             <span className="text-xs font-semibold uppercase tracking-wider">Published Exams</span>
             <Award className="h-4 w-4 text-secondary" aria-hidden="true" />
           </div>
           <p className="text-2xl font-serif font-bold text-foreground">
-            {/* TODO: Replace with real data or explicit unavailable state */}
-            TBD
+            {metricsLoading ? "..." : (metrics?.publishedExamsCount ?? 0).toLocaleString()}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            {/* TODO: Update based on real data or show unavailable state */}
-            Exam management will be available with P5 backend implementation
+            {metricsLoading ? "Calculating..." : `${metrics?.totalCompletedAttempts ?? 0} completed (${metrics?.averageCohortScorePercent ?? 0}% avg)`}
           </p>
         </div>
       </div>
 
-      {/* Quick modules */}
+      {/* Quick Access Navigation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
-          <h2 className="font-serif font-semibold text-foreground text-lg">
-            Curriculum Structure
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-serif font-semibold text-foreground text-lg flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" aria-hidden="true" />
+              Reports &amp; Analytics Studio
+            </h2>
+            <Link
+              href="/admin/reports"
+              className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
+            >
+              Open Studio <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Programmes (NCLEX-RN & NCLEX-PN) organize courses, official NCSBN Client Need domains, categories, subcategories, and learning topics. Programme and course administration arrives with the academic management module.
+            Examine system-wide assessment participation, score distributions across 10-point deciles, examination revision comparisons, and item-level distractor performance with CSV export controls.
           </p>
           <div className="grid grid-cols-2 gap-3 pt-2">
-            <div className="rounded-xl border border-border/80 bg-muted/30 p-3 text-center">
-              <p className="text-xl font-bold font-serif text-foreground">2</p>
-              <p className="text-[11px] text-muted-foreground">Programmes (RN/PN)</p>
-            </div>
-            <div className="rounded-xl border border-border/80 bg-muted/30 p-3 text-center">
-              <p className="text-xl font-bold font-serif text-foreground">8</p>
-              <p className="text-[11px] text-muted-foreground">Clinical Domains</p>
-            </div>
+            <Link
+              href="/admin/reports"
+              className="rounded-xl border border-border/80 bg-muted/30 p-3 hover:bg-muted/50 transition-colors text-center"
+            >
+              <p className="text-sm font-semibold text-foreground">Assessment Reports</p>
+              <p className="text-[11px] text-muted-foreground">Pass rates &amp; duration</p>
+            </Link>
+            <Link
+              href="/admin/reports?tab=questions"
+              className="rounded-xl border border-border/80 bg-muted/30 p-3 hover:bg-muted/50 transition-colors text-center"
+            >
+              <p className="text-sm font-semibold text-foreground">Item Analysis</p>
+              <p className="text-[11px] text-muted-foreground">Distractor diagnostics</p>
+            </Link>
           </div>
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4">
-          <h2 className="font-serif font-semibold text-foreground text-lg">
-            Security &amp; Role-Based Access
-          </h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-serif font-semibold text-foreground text-lg flex items-center gap-2">
+              <Activity className="h-5 w-5 text-secondary" aria-hidden="true" />
+              Platform System Health
+            </h2>
+            <Link
+              href="/admin/monitoring"
+              className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
+            >
+              Open Health <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          </div>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Server-side authorization is enforced by the ASP.NET Core backend: Super Admin, Administrator, Content Manager, Exam Manager, Question Reviewer, Instructor, and Student. User and audit administration arrives with the administration module.
+            Monitor real-time database round-trip latency, active candidate session concurrency, committed memory utilization, and trailing 24-hour security incident rates.
           </p>
           <div className="grid grid-cols-2 gap-3 pt-2">
             <div className="rounded-xl border border-border/80 bg-muted/30 p-3 text-center">
-              <p className="text-xl font-bold font-serif text-foreground">7</p>
-              <p className="text-[11px] text-muted-foreground">Defined System Roles</p>
+              <p className="text-xl font-bold font-serif text-emerald-600 dark:text-emerald-400">PostgreSQL</p>
+              <p className="text-[11px] text-muted-foreground">Authoritative Store</p>
             </div>
             <div className="rounded-xl border border-border/80 bg-muted/30 p-3 text-center">
-              <p className="text-xl font-semibold text-foreground font-serif text-sm pt-2">01</p>
-              <p className="text-[11px] text-muted-foreground">Guarded admin endpoints (P0)</p>
+              <p className="text-xl font-bold font-serif text-foreground">8 Domains</p>
+              <p className="text-[11px] text-muted-foreground">Client Needs Taxonomy</p>
             </div>
           </div>
         </div>
-      </div>
-
-      {/* Question Type Registry Showcase Banner */}
-      <div className="rounded-2xl border border-secondary/30 bg-linear-to-r from-secondary/10 via-card to-background p-6 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-mono">
-              18 Formats Verified
-            </span>
-            <h3 className="text-base font-serif font-semibold text-foreground">
-              Configurable Question-Type Registry
-            </h3>
-          </div>
-          <p className="text-xs text-muted-foreground max-w-xl">
-            Inspect the 18 question types catalogued for traditional NCLEX and Next Generation NCLEX (NGN) clinical judgment assessments.
-          </p>
-        </div>
-        <Link
-          href="/admin/question-types"
-          className="shrink-0 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90 transition-colors shadow-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          Review Question Types <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
       </div>
     </div>
   );

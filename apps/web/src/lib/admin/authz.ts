@@ -111,6 +111,10 @@ export interface AdminCapabilities {
   canViewAuditLogs: boolean;
   /** IP Blacklist / Whitelist rules. */
   canManageIpRules: boolean;
+  /** Assessment and question performance reporting. */
+  canViewReports: boolean;
+  /** Platform operational health monitoring. */
+  canViewMonitoring: boolean;
 }
 
 const EXAM_AUTHOR_ROLES = new Set<AdminRole>([
@@ -171,5 +175,7 @@ export function getAdminCapabilities(rawRole?: string | null): AdminCapabilities
     canManageRoles: role === "superadmin" || role === "admin",
     canViewAuditLogs: role === "superadmin" || role === "admin" || role === "support",
     canManageIpRules: role === "superadmin" || role === "admin",
+    canViewReports: role === "superadmin" || role === "admin" || role === "manager" || role === "content_manager" || role === "exam_manager",
+    canViewMonitoring: role === "superadmin" || role === "admin",
   };
 }

@@ -1,5 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
+  BarChart3,
   CreditCard,
   FileText,
   HelpCircle,
@@ -166,12 +168,36 @@ const GOVERNANCE_GROUP: NavGroup = {
   ],
 };
 
+const ANALYTICS_GROUP: NavGroup = {
+  id: "analytics",
+  label: "Analytics & Monitoring",
+  items: [
+    {
+      id: "reports",
+      title: "Reports & Analytics",
+      href: "/admin/reports",
+      icon: BarChart3,
+      capability: "canViewReports",
+      description: "Assessment outcomes, question performance, and data exports",
+    },
+    {
+      id: "monitoring",
+      title: "System Health",
+      href: "/admin/monitoring",
+      icon: Activity,
+      capability: "canViewMonitoring",
+      description: "Database latency, active sessions, and operational health status",
+    },
+  ],
+};
+
 /** All navigation groups. */
 const ALL_GROUPS: NavGroup[] = [
   OVERVIEW_GROUP,
   IDENTITY_GROUP,
   EXAMINATION_GROUP,
   MONETIZATION_GROUP,
+  ANALYTICS_GROUP,
   SECURITY_GROUP,
   GOVERNANCE_GROUP,
 ];

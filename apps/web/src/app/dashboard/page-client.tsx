@@ -37,6 +37,7 @@ import {
   ShoppingCart,
   Sparkles,
   Stethoscope,
+  Target,
   TrendingUp,
   UserCheck,
   X,
@@ -68,7 +69,7 @@ import {
   QuestionType,
   getPerformanceTier,
 } from "@/lib/assessment-store";
-import type { AvailableAssessmentDto, CandidateQuestionDto } from "@/lib/api-services";
+import type { AvailableAssessmentDto, CandidateQuestionDto, ClientNeedMastery, StudyRecommendation } from "@/lib/api-services";
 
 export const RECENT_ACTIVITY_STORAGE_KEY = "prepford_recent_study_activity";
 
@@ -197,6 +198,43 @@ export function DashboardClient() {
         .catch(() => {});
     }
   }, [userId, userEmail, userName, userDisplayName, userRole, userPathway]);
+
+  // Phase 5 Learner Analytics: Live Client Needs & Recommendations
+  const [clientNeeds, setClientNeeds] = React.useState<ClientNeedMastery[]>([]);
+  const [recommendations, setRecommendations] = React.useState<StudyRecommendation[]>([]);
+
+  React.useEffect(() => {
+    if (!userId) return;
+    let cancelled = false;
+
+    fetch("/api/learner/analytics/client-needs")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        if (data && data.success && data.data) {
+          setClientNeeds(data.data);
+        } else if (Array.isArray(data)) {
+          setClientNeeds(data);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/learner/analytics/recommendations")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        if (data && data.success && data.data) {
+          setRecommendations(data.data);
+        } else if (Array.isArray(data)) {
+          setRecommendations(data);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [userId, attemptRefreshKey]);
 
   // Create test interactive form state
   const [createTestType, setCreateTestType] = React.useState<"tutored_cat" | "rat">("tutored_cat");
@@ -1764,6 +1802,137 @@ export function DashboardClient() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            )}
+          </section>
+
+          {/* =====================================================================
+              SECTION 2.5: CLIENT NEEDS CATEGORY MASTERY & RECOMMENDATIONS (Phase 5)
+             ===================================================================== */}
+          <section className="space-y-6" data-testid="client-needs-mastery-section">
+            <div className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h2 className="text-lg sm:text-xl font-serif font-bold text-foreground flex items-center gap-2">
+                    <Target className="h-5 w-5 text-primary" aria-hidden="true" />
+                    <span>NCSBN Client Needs Category Mastery</span>
+                  </h2>
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Authoritative empirical performance across the 8 official NCSBN NCLEX examination domains.
+                  </p>
+                </div>
+              </div>
+
+              {clientNeeds.length === 0 ? (
+                <div className="py-6 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
+                  Complete an assessment attempt to populate your Client Needs mastery profile.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
+                  {clientNeeds.map((cn) => (
+                    <div
+                      key={cn.categoryCode}
+                      className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                          {cn.categoryCode}
+                        </span>
+                        <span
+                          className={`text-xs font-bold ${
+                            cn.accuracyPercent >= 75
+                              ? "text-emerald-600 dark:text-emerald-400"
+                              : cn.accuracyPercent >= 65
+                              ? "text-teal-600 dark:text-teal-400"
+                              : cn.totalAssessedQuestions === 0
+                              ? "text-muted-foreground"
+                              : "text-amber-600 dark:text-amber-400"
+                          }`}
+                        >
+                          {cn.totalAssessedQuestions > 0 ? `${cn.accuracyPercent}%` : "Unassessed"}
+                        </span>
+                      </div>
+                      <p className="text-xs font-medium text-foreground line-clamp-1" title={cn.categoryName}>
+                        {cn.categoryName}
+                      </p>
+                      <div className="w-full bg-muted/60 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ${
+                            cn.accuracyPercent >= 75
+                              ? "bg-emerald-600"
+                              : cn.accuracyPercent >= 65
+                              ? "bg-teal-600"
+                              : "bg-amber-500"
+                          }`}
+                          style={{ width: `${cn.totalAssessedQuestions > 0 ? cn.accuracyPercent : 0}%` }}
+                        />
+                      </div>
+                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
+                        <span>{cn.correctCount} / {cn.totalAssessedQuestions} correct</span>
+                        {cn.isLowSample && (
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
+                            &lt; 5 items
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recommendations Section */}
+            {recommendations.length > 0 && (
+              <div
+                className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-4"
+                data-testid="study-recommendations-section"
+              >
+                <div>
+                  <h3 className="text-base font-serif font-bold text-foreground flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-amber-500" aria-hidden="true" />
+                    <span>Targeted Study Recommendations</span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Actionable clinical review steps prioritized by your empirical diagnostic assessment results.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {recommendations.map((rec) => (
+                    <div
+                      key={rec.id}
+                      className="p-4 rounded-xl border border-border bg-muted/20 space-y-2 flex flex-col justify-between"
+                    >
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                            {rec.category}
+                          </span>
+                          <span
+                            className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                              rec.priority === "High"
+                                ? "bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20"
+                                : "bg-primary/10 text-primary"
+                            }`}
+                          >
+                            {rec.priority} Priority
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-bold text-foreground">{rec.title}</h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">{rec.description}</p>
+                      </div>
+
+                      <div className="pt-2">
+                        <Link
+                          href={rec.actionHref || "/dashboard"}
+                          className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          Start Practice <ArrowRight className="h-3 w-3" aria-hidden="true" />
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
