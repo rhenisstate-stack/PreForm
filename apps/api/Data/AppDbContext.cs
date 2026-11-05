@@ -27,6 +27,9 @@ public class AppDbContext : DbContext
     public DbSet<RolePermission> RolePermissions => Set<RolePermission>();
     public DbSet<UserRole> UserRoles => Set<UserRole>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<RateLimitBucket> RateLimitBuckets => Set<RateLimitBucket>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<IpAccessRule> IpAccessRules => Set<IpAccessRule>();
 
     // Question Bank
     public DbSet<QuestionTypeDefinition> QuestionTypeDefinitions => Set<QuestionTypeDefinition>();
@@ -108,7 +111,9 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(u => u.Email).IsUnique();
             entity.HasIndex(u => u.IsActive);
+            entity.HasIndex(u => u.AccountStatus);
             entity.Property(u => u.SecurityVersion).HasDefaultValue(1);
+            entity.Property(u => u.AccountStatus).HasMaxLength(32).HasDefaultValue("Active");
         });
 
         // UserSession Indexes & Relationships
@@ -398,6 +403,43 @@ public class AppDbContext : DbContext
             entity.HasIndex(al => al.ActorId);
             entity.HasIndex(al => al.Action);
             entity.HasIndex(al => al.Timestamp);
+            entity.HasIndex(al => al.CorrelationId);
+            entity.Property(al => al.Severity).HasMaxLength(32).HasDefaultValue("Information");
+        });
+
+        // Security & Governance: RateLimitBucket
+        modelBuilder.Entity<RateLimitBucket>(entity =>
+        {
+            entity.ToTable("RateLimitBuckets", "public");
+            entity.HasKey(r => r.Key);
+            entity.Property(r => r.Key).HasMaxLength(128);
+            entity.HasIndex(r => r.ExpiresAtUtc);
+            entity.HasIndex(r => r.LockoutUntilUtc);
+        });
+
+        // Security & Governance: PasswordResetToken
+        modelBuilder.Entity<PasswordResetToken>(entity =>
+        {
+            entity.ToTable("PasswordResetTokens", "public");
+            entity.HasKey(t => t.Id);
+            entity.HasIndex(t => t.TokenHash).IsUnique();
+            entity.HasIndex(t => new { t.UserId, t.ExpiresAt, t.UsedAt });
+            entity.HasOne(t => t.User)
+                  .WithMany(u => u.PasswordResetTokens)
+                  .HasForeignKey(t => t.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Security & Governance: IpAccessRule
+        modelBuilder.Entity<IpAccessRule>(entity =>
+        {
+            entity.ToTable("IpAccessRules", "public");
+            entity.HasKey(r => r.Id);
+            entity.Property(r => r.IpAddressOrCidr).IsRequired().HasMaxLength(64);
+            entity.Property(r => r.RuleType).IsRequired().HasMaxLength(16);
+            entity.Property(r => r.IsActive).HasDefaultValue(true);
+            entity.HasIndex(r => new { r.RuleType, r.IsActive });
+            entity.HasIndex(r => r.IpAddressOrCidr);
         });
 
         // ── AI Study Studio: Flashcard Decks, Cards & Reviews ──

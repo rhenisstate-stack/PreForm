@@ -36,6 +36,14 @@ public class User
 
     public bool IsActive { get; set; } = true;
 
+    [MaxLength(32)]
+    public string AccountStatus { get; set; } = "Active"; // "Active", "Suspended", "Deactivated"
+
+    public DateTime? SuspendedAt { get; set; }
+
+    [MaxLength(256)]
+    public string? SuspensionReason { get; set; }
+
     public int SecurityVersion { get; set; } = 1;
 
     public bool HasProfileImage { get; set; } = false;
@@ -48,6 +56,7 @@ public class User
     public ICollection<UserSession> UserSessions { get; set; } = new List<UserSession>();
     public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
     public ICollection<AuditLog> AuditLogs { get; set; } = new List<AuditLog>();
+    public ICollection<PasswordResetToken> PasswordResetTokens { get; set; } = new List<PasswordResetToken>();
 }
 
 [Table("UserSessions", Schema = "public")]
@@ -236,6 +245,19 @@ public class AuditLog
 
     [MaxLength(64)]
     public string? IpAddress { get; set; }
+
+    [MaxLength(128)]
+    public string? CorrelationId { get; set; }
+
+    [MaxLength(512)]
+    public string? UserAgent { get; set; }
+
+    public string? BeforeValueJson { get; set; }
+
+    public string? AfterValueJson { get; set; }
+
+    [MaxLength(32)]
+    public string Severity { get; set; } = "Information"; // "Information", "Warning", "Error", "Critical"
 
     public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 }
