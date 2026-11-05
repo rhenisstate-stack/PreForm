@@ -152,9 +152,9 @@ public class QuestionBankService : IQuestionBankService
                 CognitiveLevel = x.CognitiveLevel,
                 ClinicalJudgmentStep = x.ClinicalJudgmentStep,
                 CreatedById = x.CreatedById,
-                AuthorName = x.CreatedBy != null ? (x.CreatedBy.FirstName + " " + x.CreatedBy.LastName).Trim() : null,
+                AuthorName = x.CreatedBy != null ? x.CreatedBy.DisplayName : null,
                 ReviewedById = x.ReviewedById,
-                ReviewerName = x.ReviewedBy != null ? (x.ReviewedBy.FirstName + " " + x.ReviewedBy.LastName).Trim() : null,
+                ReviewerName = x.ReviewedBy != null ? x.ReviewedBy.DisplayName : null,
                 OptionsCount = x.Options.Count,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt,
@@ -239,9 +239,9 @@ public class QuestionBankService : IQuestionBankService
             RejectionReason = q.RejectionReason,
             PublishedAt = q.PublishedAt,
             CreatedById = q.CreatedById,
-            AuthorName = q.CreatedBy != null ? $"{q.CreatedBy.FirstName} {q.CreatedBy.LastName}".Trim() : null,
+            AuthorName = q.CreatedBy != null ? q.CreatedBy.DisplayName : null,
             ReviewedById = q.ReviewedById,
-            ReviewerName = q.ReviewedBy != null ? $"{q.ReviewedBy.FirstName} {q.ReviewedBy.LastName}".Trim() : null,
+            ReviewerName = q.ReviewedBy != null ? q.ReviewedBy.DisplayName : null,
             CreatedAt = q.CreatedAt,
             UpdatedAt = q.UpdatedAt,
             VersionsCount = q.Versions.Count,
@@ -361,7 +361,7 @@ public class QuestionBankService : IQuestionBankService
                 difficulty = question.Difficulty.ToString(),
                 pathway = question.Pathway
             }),
-            CreatedAt = now
+            Timestamp = now
         });
 
         await _context.SaveChangesAsync(ct);
@@ -478,7 +478,7 @@ public class QuestionBankService : IQuestionBankService
                 version = question.Version,
                 changeSummary = request.ChangeSummary
             }),
-            CreatedAt = now
+            Timestamp = now
         });
 
         await _context.SaveChangesAsync(ct);
@@ -624,7 +624,7 @@ public class QuestionBankService : IQuestionBankService
                 rejectionReason = request.RejectionReason,
                 changeSummary = request.ChangeSummary
             }),
-            CreatedAt = now
+            Timestamp = now
         });
 
         await _context.SaveChangesAsync(ct);
@@ -644,7 +644,7 @@ public class QuestionBankService : IQuestionBankService
         var userNames = await _context.Users
             .AsNoTracking()
             .Where(u => userIds.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id, u => $"{u.FirstName} {u.LastName}".Trim(), ct);
+            .ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
 
         return versions.Select(v => new QuestionVersionDto
         {

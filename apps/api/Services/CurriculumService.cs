@@ -222,7 +222,7 @@ public class CurriculumService : ICurriculumService
         {
             Id = c.Id,
             ProgrammeId = c.ProgrammeId,
-            ProgrammeName = c.Programme?.Name ?? string.Empty,
+            ProgrammeName = c.Programme?.DisplayName ?? string.Empty,
             Title = c.Title,
             Description = c.Description,
             DisplayOrder = c.DisplayOrder,
@@ -249,7 +249,7 @@ public class CurriculumService : ICurriculumService
         {
             Id = c.Id,
             ProgrammeId = c.ProgrammeId,
-            ProgrammeName = c.Programme?.Name ?? string.Empty,
+            ProgrammeName = c.Programme?.DisplayName ?? string.Empty,
             Title = c.Title,
             Description = c.Description,
             DisplayOrder = c.DisplayOrder,
