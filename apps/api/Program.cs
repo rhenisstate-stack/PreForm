@@ -95,6 +95,10 @@ builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
 builder.Services.AddScoped<IIpAccessService, IpAccessService>();
 builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
+// Phase 2 Curriculum Taxonomy & Question Bank
+builder.Services.AddScoped<ICurriculumService, CurriculumService>();
+builder.Services.AddScoped<IQuestionBankService, QuestionBankService>();
+
 // Authentication with PrepfordAuth scheme (Bearer Session Token & Gateway HMAC)
 builder.Services.AddAuthentication(options =>
 {
