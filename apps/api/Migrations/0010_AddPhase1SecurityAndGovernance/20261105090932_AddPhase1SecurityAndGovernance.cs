@@ -11,7 +11,6 @@ namespace Preform.Api.Migrations._0010_AddPhase1SecurityAndGovernance
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            // 1. Add governance columns to Users
             migrationBuilder.AddColumn<string>(
                 name: "AccountStatus",
                 schema: "public",
@@ -36,27 +35,11 @@ namespace Preform.Api.Migrations._0010_AddPhase1SecurityAndGovernance
                 maxLength: 256,
                 nullable: true);
 
-            migrationBuilder.CreateIndex(
-                name: "IX_Users_AccountStatus",
-                schema: "public",
-                table: "Users",
-                column: "AccountStatus");
-
-            // 2. Add observability and audit columns to AuditLogs
             migrationBuilder.AddColumn<string>(
-                name: "CorrelationId",
+                name: "AfterValueJson",
                 schema: "public",
                 table: "AuditLogs",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "UserAgent",
-                schema: "public",
-                table: "AuditLogs",
-                type: "character varying(512)",
-                maxLength: 512,
+                type: "text",
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
@@ -67,10 +50,11 @@ namespace Preform.Api.Migrations._0010_AddPhase1SecurityAndGovernance
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
-                name: "AfterValueJson",
+                name: "CorrelationId",
                 schema: "public",
                 table: "AuditLogs",
-                type: "text",
+                type: "character varying(128)",
+                maxLength: 128,
                 nullable: true);
 
             migrationBuilder.AddColumn<string>(
@@ -82,43 +66,33 @@ namespace Preform.Api.Migrations._0010_AddPhase1SecurityAndGovernance
                 nullable: false,
                 defaultValue: "Information");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_AuditLogs_CorrelationId",
+            migrationBuilder.AddColumn<string>(
+                name: "UserAgent",
                 schema: "public",
                 table: "AuditLogs",
-                column: "CorrelationId");
+                type: "character varying(512)",
+                maxLength: 512,
+                nullable: true);
 
-            // 3. Create RateLimitBuckets table
             migrationBuilder.CreateTable(
-                name: "RateLimitBuckets",
+                name: "IpAccessRules",
                 schema: "public",
                 columns: table => new
                 {
-                    Key = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    AttemptCount = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    WindowStartUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    LockoutUntilUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ExpiresAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    LastAttemptUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Id = table.Column<string>(type: "text", nullable: false),
+                    IpAddressOrCidr = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
+                    RuleType = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
+                    Description = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CreatedBy = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RateLimitBuckets", x => x.Key);
+                    table.PrimaryKey("PK_IpAccessRules", x => x.Id);
                 });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_RateLimitBuckets_ExpiresAtUtc",
-                schema: "public",
-                table: "RateLimitBuckets",
-                column: "ExpiresAtUtc");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_RateLimitBuckets_LockoutUntilUtc",
-                schema: "public",
-                table: "RateLimitBuckets",
-                column: "LockoutUntilUtc");
-
-            // 4. Create PasswordResetTokens table
             migrationBuilder.CreateTable(
                 name: "PasswordResetTokens",
                 schema: "public",
@@ -145,6 +119,47 @@ namespace Preform.Api.Migrations._0010_AddPhase1SecurityAndGovernance
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "RateLimitBuckets",
+                schema: "public",
+                columns: table => new
+                {
+                    Key = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    AttemptCount = table.Column<int>(type: "integer", nullable: false),
+                    WindowStartUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LockoutUntilUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ExpiresAtUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastAttemptUtc = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RateLimitBuckets", x => x.Key);
+                });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Users_AccountStatus",
+                schema: "public",
+                table: "Users",
+                column: "AccountStatus");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AuditLogs_CorrelationId",
+                schema: "public",
+                table: "AuditLogs",
+                column: "CorrelationId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_IpAccessRules_IpAddressOrCidr",
+                schema: "public",
+                table: "IpAccessRules",
+                column: "IpAddressOrCidr");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_IpAccessRules_RuleType_IsActive",
+                schema: "public",
+                table: "IpAccessRules",
+                columns: new[] { "RuleType", "IsActive" });
+
             migrationBuilder.CreateIndex(
                 name: "IX_PasswordResetTokens_TokenHash",
                 schema: "public",
@@ -158,37 +173,17 @@ namespace Preform.Api.Migrations._0010_AddPhase1SecurityAndGovernance
                 table: "PasswordResetTokens",
                 columns: new[] { "UserId", "ExpiresAt", "UsedAt" });
 
-            // 5. Create IpAccessRules table
-            migrationBuilder.CreateTable(
-                name: "IpAccessRules",
+            migrationBuilder.CreateIndex(
+                name: "IX_RateLimitBuckets_ExpiresAtUtc",
                 schema: "public",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    IpAddressOrCidr = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    RuleType = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
-                    Description = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false, defaultValue: ""),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CreatedBy = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_IpAccessRules", x => x.Id);
-                });
+                table: "RateLimitBuckets",
+                column: "ExpiresAtUtc");
 
             migrationBuilder.CreateIndex(
-                name: "IX_IpAccessRules_IpAddressOrCidr",
+                name: "IX_RateLimitBuckets_LockoutUntilUtc",
                 schema: "public",
-                table: "IpAccessRules",
-                column: "IpAddressOrCidr");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_IpAccessRules_RuleType_IsActive",
-                schema: "public",
-                table: "IpAccessRules",
-                columns: new[] { "RuleType", "IsActive" });
+                table: "RateLimitBuckets",
+                column: "LockoutUntilUtc");
         }
 
         /// <inheritdoc />
@@ -207,39 +202,14 @@ namespace Preform.Api.Migrations._0010_AddPhase1SecurityAndGovernance
                 schema: "public");
 
             migrationBuilder.DropIndex(
-                name: "IX_AuditLogs_CorrelationId",
-                schema: "public",
-                table: "AuditLogs");
-
-            migrationBuilder.DropColumn(
-                name: "CorrelationId",
-                schema: "public",
-                table: "AuditLogs");
-
-            migrationBuilder.DropColumn(
-                name: "UserAgent",
-                schema: "public",
-                table: "AuditLogs");
-
-            migrationBuilder.DropColumn(
-                name: "BeforeValueJson",
-                schema: "public",
-                table: "AuditLogs");
-
-            migrationBuilder.DropColumn(
-                name: "AfterValueJson",
-                schema: "public",
-                table: "AuditLogs");
-
-            migrationBuilder.DropColumn(
-                name: "Severity",
-                schema: "public",
-                table: "AuditLogs");
-
-            migrationBuilder.DropIndex(
                 name: "IX_Users_AccountStatus",
                 schema: "public",
                 table: "Users");
+
+            migrationBuilder.DropIndex(
+                name: "IX_AuditLogs_CorrelationId",
+                schema: "public",
+                table: "AuditLogs");
 
             migrationBuilder.DropColumn(
                 name: "AccountStatus",
@@ -255,6 +225,31 @@ namespace Preform.Api.Migrations._0010_AddPhase1SecurityAndGovernance
                 name: "SuspensionReason",
                 schema: "public",
                 table: "Users");
+
+            migrationBuilder.DropColumn(
+                name: "AfterValueJson",
+                schema: "public",
+                table: "AuditLogs");
+
+            migrationBuilder.DropColumn(
+                name: "BeforeValueJson",
+                schema: "public",
+                table: "AuditLogs");
+
+            migrationBuilder.DropColumn(
+                name: "CorrelationId",
+                schema: "public",
+                table: "AuditLogs");
+
+            migrationBuilder.DropColumn(
+                name: "Severity",
+                schema: "public",
+                table: "AuditLogs");
+
+            migrationBuilder.DropColumn(
+                name: "UserAgent",
+                schema: "public",
+                table: "AuditLogs");
         }
     }
 }
