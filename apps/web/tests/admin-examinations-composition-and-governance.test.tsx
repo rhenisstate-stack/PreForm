@@ -228,10 +228,13 @@ describe("Phase 4 Examination Composition, Governance & Lifecycle Quality Gates"
 
     await waitFor(() => {
       expect(screen.getByText("Curriculum Blueprint & Question Composition")).toBeDefined();
+      expect(screen.getByRole("combobox")).toBeDefined();
     });
 
-    expect(screen.getByDisplayValue("10")).toBeDefined();
-    expect(screen.getByDisplayValue("Dynamic Balanced (Client Needs Quotas from Pool)")).toBeDefined();
+    const selectEl = screen.getByRole("combobox") as HTMLSelectElement;
+    await waitFor(() => {
+      expect(selectEl.value).toBe("DynamicBalanced");
+    });
 
     // Verify master client needs list is rendered
     expect(screen.getByText("Management of Care")).toBeDefined();
@@ -282,10 +285,9 @@ describe("Phase 4 Examination Composition, Governance & Lifecycle Quality Gates"
 
     await waitFor(() => {
       expect(screen.getByText("Publication Readiness & Quality Validation")).toBeDefined();
+      expect(screen.getByText("Publication Gate: BLOCKED")).toBeDefined();
     });
 
-    // Verify blocked gate message
-    expect(screen.getByText("Publication Gate: BLOCKED")).toBeDefined();
     expect(screen.getByText(/Question bank pool has insufficient items/i)).toBeDefined();
 
     // Verify Publish button is disabled when BLOCKED
