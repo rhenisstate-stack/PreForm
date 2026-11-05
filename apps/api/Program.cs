@@ -1,12 +1,21 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Formatters;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Preform.Api.Common;
+using Preform.Api.Configuration;
 using Preform.Api.Data;
 using Preform.Api.Formatters;
 using Preform.Api.Models;
+using Preform.Api.Security;
 using Preform.Api.Services;
+using Preform.Api.Services.Email;
 using Preform.Api.Services.Grading;
+using Preform.Api.Services.PasswordReset;
+using Preform.Api.Services.RateLimiting;
+using Preform.Api.Services.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,6 +24,44 @@ builder.Services.AddControllers(options =>
 {
     options.OutputFormatters.RemoveType<SystemTextJsonOutputFormatter>();
     options.OutputFormatters.Insert(0, new StreamJsonOutputFormatter());
+});
+
+// RFC 7807 Problem Details & Global Exception Handler
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+
+// Trusted Reverse Proxy Configuration
+var reverseProxyOptions = builder.Configuration.GetSection(ReverseProxyOptions.SectionName).Get<ReverseProxyOptions>()
+    ?? new ReverseProxyOptions();
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownProxies.Clear();
+    options.KnownNetworks.Clear();
+
+    foreach (var proxy in reverseProxyOptions.KnownProxies)
+    {
+        if (System.Net.IPAddress.TryParse(proxy, out var ip))
+        {
+            options.KnownProxies.Add(ip);
+        }
+    }
+
+    foreach (var network in reverseProxyOptions.KnownNetworks)
+    {
+        var parts = network.Split('/');
+        if (parts.Length == 2 && System.Net.IPAddress.TryParse(parts[0], out var prefix) && int.TryParse(parts[1], out var prefixLength))
+        {
+            options.KnownNetworks.Add(new IPNetwork(prefix, prefixLength));
+        }
+    }
+
+    options.ForwardLimit = reverseProxyOptions.ForwardLimit;
+    if (reverseProxyOptions.RequireHeaderSymmetry)
+    {
+        options.RequireHeaderSymmetry = true;
+    }
 });
 
 // Domain Services & Password Hasher
@@ -40,6 +87,13 @@ builder.Services.AddScoped<IFlashcardService, FlashcardService>();
 // Examination Domain Foundation (P3.1)
 builder.Services.AddScoped<IExaminationCodeService, ExaminationCodeService>();
 builder.Services.AddScoped<IExamLifecycleService, ExamLifecycleService>();
+
+// Phase 1 Security, Observability, Rate Limiting & Identity Foundations
+builder.Services.AddScoped<ISharedRateLimitingService, PostgresRateLimitingService>();
+builder.Services.AddScoped<IEmailSender, DevelopmentEmailSender>();
+builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
+builder.Services.AddScoped<IIpAccessService, IpAccessService>();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
 
 // Authentication with PrepfordAuth scheme (Bearer Session Token & Gateway HMAC)
 builder.Services.AddAuthentication(options =>
@@ -67,6 +121,13 @@ builder.Services.AddAuthorization(options =>
 
     options.AddPolicy("RequireExamManager", policy =>
         policy.RequireRole("exam_manager", "superadmin"));
+
+    // Granular RBAC Permission Policies
+    foreach (var perm in PermissionsCatalog.All)
+    {
+        options.AddPolicy($"Permission:{perm.Key}", policy =>
+            policy.Requirements.Add(new PermissionRequirement(perm.Key)));
+    }
 });
 
 // CORS for Next.js frontend (WEB_ORIGIN, default http://localhost:3000)
@@ -119,6 +180,15 @@ builder.Services.AddHealthChecks()
 
 var app = builder.Build();
 
+// 1. Forwarded Headers (MUST run before any middleware inspecting remote IP or scheme)
+app.UseForwardedHeaders();
+
+// 2. Correlation ID Propagation & Request Tracing Scope
+app.UseMiddleware<CorrelationIdMiddleware>();
+
+// 3. RFC 7807 Problem Details Global Exception Handler
+app.UseExceptionHandler();
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -129,6 +199,9 @@ if (app.Environment.IsDevelopment())
         c.RoutePrefix = string.Empty;
     });
 }
+
+// 4. IP Access Blacklist / Whitelist Filter
+app.UseMiddleware<IpFilteringMiddleware>();
 
 app.UseHttpsRedirection();
 
