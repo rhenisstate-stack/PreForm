@@ -211,6 +211,18 @@ export function SignInPageClient() {
                 <ShieldCheck className="h-5 w-5 shrink-0 mt-0.5 text-destructive" />
                 <p className="leading-snug font-medium">{displayError}</p>
               </div>
+              {isSessionLimitError && (
+                <button
+                  type="button"
+                  onClick={handleRecoverAccess}
+                  disabled={isRecovering || isLoading}
+                  className="mt-3 w-full rounded-lg border border-destructive/40 bg-background px-3 py-2 text-xs font-semibold text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isRecovering
+                    ? "Cleaning up stale sessions and signing you in..."
+                    : "Clear stale sessions and sign in"}
+                </button>
+              )}
             </div>
           )}
 
