@@ -37,7 +37,25 @@ export async function PUT(
   try {
     const { revisionId } = await props.params;
     const body = await request.json();
-    const { title, description, examType, timeLimitMinutes, passingScorePercent, concurrencyToken } = body;
+    const {
+      title,
+      description,
+      examType,
+      timeLimitMinutes,
+      passingScorePercent,
+      concurrencyToken,
+      targetQuestionCount,
+      selectionStrategy,
+      isAvailable,
+      availableFrom,
+      availableTo,
+      maxAttemptsAllowed,
+      retakeCooldownHours,
+      allowInterruptedResume,
+      reviewPolicy,
+      showRationales,
+      showScoreImmediately,
+    } = body;
 
     if (!title || typeof title !== "string" || title.trim().length === 0) {
       return NextResponse.json({ success: false, error: "Title is required" }, { status: 400 });
@@ -56,6 +74,17 @@ export async function PUT(
         timeLimitMinutes: Number(timeLimitMinutes) || 0,
         passingScorePercent: Number(passingScorePercent) || 75.0,
         concurrencyToken: Number(concurrencyToken),
+        targetQuestionCount: targetQuestionCount !== undefined ? Number(targetQuestionCount) : undefined,
+        selectionStrategy: typeof selectionStrategy === "string" ? selectionStrategy : undefined,
+        isAvailable: typeof isAvailable === "boolean" ? isAvailable : undefined,
+        availableFrom: availableFrom !== undefined ? availableFrom : undefined,
+        availableTo: availableTo !== undefined ? availableTo : undefined,
+        maxAttemptsAllowed: maxAttemptsAllowed !== undefined && maxAttemptsAllowed !== null ? Number(maxAttemptsAllowed) : (maxAttemptsAllowed === null ? null : undefined),
+        retakeCooldownHours: retakeCooldownHours !== undefined ? Number(retakeCooldownHours) : undefined,
+        allowInterruptedResume: typeof allowInterruptedResume === "boolean" ? allowInterruptedResume : undefined,
+        reviewPolicy: typeof reviewPolicy === "string" ? reviewPolicy : undefined,
+        showRationales: typeof showRationales === "boolean" ? showRationales : undefined,
+        showScoreImmediately: typeof showScoreImmediately === "boolean" ? showScoreImmediately : undefined,
       },
       auth.session
     );

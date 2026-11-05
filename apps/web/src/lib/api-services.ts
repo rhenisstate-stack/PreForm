@@ -657,6 +657,19 @@ export interface BackendExamRevisionDto {
   passingScorePercent: number;
   isPublished: boolean;
   questionCount: number;
+  targetQuestionCount?: number;
+  selectionStrategy?: string;
+  compositionRulesJson?: string | null;
+  isAvailable?: boolean;
+  availableFrom?: string | null;
+  availableTo?: string | null;
+  maxAttemptsAllowed?: number | null;
+  retakeCooldownHours?: number;
+  allowInterruptedResume?: boolean;
+  reviewPolicy?: string;
+  showRationales?: boolean;
+  showScoreImmediately?: boolean;
+  configurationSnapshotJson?: string | null;
   createdAt: string;
   createdBy: string;
   submittedBy?: string | null;
@@ -820,6 +833,105 @@ export interface BackendDuplicateExaminationResponseDto {
   examination: BackendExaminationDto;
 }
 
+export interface ClientNeedQuotaItem {
+  clientNeedId: string;
+  clientNeedName: string;
+  targetCount: number;
+  targetPercentage: number;
+  availableCount: number;
+}
+
+export interface BackendExamCompositionDto {
+  revisionId: string;
+  targetQuestionCount: number;
+  selectionStrategy: string;
+  allowedQuestionTypes: string[];
+  clientNeedQuotas: ClientNeedQuotaItem[];
+  concurrencyToken: number;
+}
+
+export interface UpdateExamCompositionInput {
+  targetQuestionCount: number;
+  selectionStrategy: string;
+  allowedQuestionTypes: string[];
+  clientNeedQuotas: Array<{
+    clientNeedId: string;
+    targetCount: number;
+    targetPercentage: number;
+  }>;
+  concurrencyToken: number;
+}
+
+export interface QuestionPoolPreviewItem {
+  clientNeedId: string;
+  clientNeedName: string;
+  requiredCount: number;
+  availableApprovedQuestions: number;
+  isSufficient: boolean;
+}
+
+export interface BackendQuestionPoolPreviewDto {
+  revisionId: string;
+  pathway: string;
+  selectionStrategy: string;
+  totalRequiredQuestions: number;
+  totalAvailableApprovedQuestions: number;
+  isOverallPoolSufficient: boolean;
+  items: QuestionPoolPreviewItem[];
+}
+
+export interface ExamReadinessCheckItem {
+  code: string;
+  area: string;
+  severity: "PASS" | "WARN" | "BLOCK";
+  message: string;
+}
+
+export interface BackendExamReadinessDto {
+  revisionId: string;
+  examinationCode: string;
+  title: string;
+  lifecycleState: string;
+  overallStatus: "READY" | "NEEDS_ATTENTION" | "BLOCKED";
+  canPublish: boolean;
+  checks: ExamReadinessCheckItem[];
+  evaluatedAtUtc: string;
+}
+
+export interface AdminExamPreviewOptionDto {
+  id: string;
+  optionKey: string;
+  content: string;
+  isCorrect: boolean;
+  rationale?: string | null;
+  displayOrder: number;
+}
+
+export interface AdminExamPreviewQuestionDto {
+  id: string;
+  displayOrder: number;
+  stem: string;
+  questionTypeKey: string;
+  clientNeedId?: string | null;
+  clientNeedName?: string | null;
+  topicTitle?: string | null;
+  overallRationale?: string | null;
+  options: AdminExamPreviewOptionDto[];
+}
+
+export interface BackendAdminExamPreviewDto {
+  revisionId: string;
+  examinationCode: string;
+  title: string;
+  pathway: string;
+  selectionStrategy: string;
+  targetQuestionCount: number;
+  timeLimitMinutes: number;
+  passingScorePercent: number;
+  reviewPolicy: string;
+  questions: AdminExamPreviewQuestionDto[];
+}
+
 export interface UpdateRevisionMetadataInput {
   title: string;
   description?: string;
@@ -827,6 +939,17 @@ export interface UpdateRevisionMetadataInput {
   timeLimitMinutes?: number;
   passingScorePercent?: number;
   concurrencyToken: number;
+  targetQuestionCount?: number;
+  selectionStrategy?: string;
+  isAvailable?: boolean;
+  availableFrom?: string | null;
+  availableTo?: string | null;
+  maxAttemptsAllowed?: number | null;
+  retakeCooldownHours?: number;
+  allowInterruptedResume?: boolean;
+  reviewPolicy?: string;
+  showRationales?: boolean;
+  showScoreImmediately?: boolean;
 }
 
 export interface AddQuestionInput {
@@ -1058,6 +1181,58 @@ export const examinationsService = {
     return apiClient.post<{ success: boolean; revision: BackendExamRevisionDto }>(
       `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/${action}`,
       input,
+      { session }
+    );
+  },
+
+  getComposition: async (
+    revisionId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; composition: BackendExamCompositionDto }>> => {
+    return apiClient.get<{ success: boolean; composition: BackendExamCompositionDto }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/composition`,
+      { session }
+    );
+  },
+
+  updateComposition: async (
+    revisionId: string,
+    input: UpdateExamCompositionInput,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; composition: BackendExamCompositionDto }>> => {
+    return apiClient.put<{ success: boolean; composition: BackendExamCompositionDto }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/composition`,
+      input,
+      { session }
+    );
+  },
+
+  getPoolPreview: async (
+    revisionId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; preview: BackendQuestionPoolPreviewDto }>> => {
+    return apiClient.get<{ success: boolean; preview: BackendQuestionPoolPreviewDto }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/pool-preview`,
+      { session }
+    );
+  },
+
+  getReadiness: async (
+    revisionId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; readiness: BackendExamReadinessDto }>> => {
+    return apiClient.get<{ success: boolean; readiness: BackendExamReadinessDto }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/readiness`,
+      { session }
+    );
+  },
+
+  getAdminPreview: async (
+    revisionId: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; preview: BackendAdminExamPreviewDto }>> => {
+    return apiClient.get<{ success: boolean; preview: BackendAdminExamPreviewDto }>(
+      `/api/v1/examinations/revisions/${encodeURIComponent(revisionId)}/preview`,
       { session }
     );
   },

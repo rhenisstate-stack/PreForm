@@ -24,6 +24,9 @@ import {
   AlertCircle,
   HelpCircle,
   Copy,
+  Eye,
+  Sliders,
+  Shield,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { BrandedLoading } from "@/components/layout/branded-loading";
@@ -48,6 +51,10 @@ import type {
 } from "@/lib/api-services";
 import { QuestionPickerDialog } from "@/components/admin/question-picker-dialog";
 import { DuplicateExaminationDialog } from "@/components/admin/duplicate-examination-dialog";
+import { ExaminationCompositionTab } from "@/components/admin/examination-composition-tab";
+import { ExaminationPoliciesTab } from "@/components/admin/examination-policies-tab";
+import { ExaminationReadinessTab } from "@/components/admin/examination-readiness-tab";
+import { ExaminationPreviewDialog } from "@/components/admin/examination-preview-dialog";
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
 
@@ -82,7 +89,8 @@ export function AdminRevisionStudioClient({
   const capabilities = getAdminCapabilities(user?.role);
 
   // Active Tab: "metadata" | "questions" | "validation"
-  const [activeTab, setActiveTab] = React.useState<"metadata" | "questions" | "validation">("metadata");
+  const [activeTab, setActiveTab] = React.useState<"metadata" | "composition" | "questions" | "policies" | "validation">("metadata");
+  const [isPreviewOpen, setIsPreviewOpen] = React.useState(false);
   const [isPickerOpen, setIsPickerOpen] = React.useState(false);
 
   // Metadata form
@@ -739,6 +747,16 @@ export function AdminRevisionStudioClient({
                 <span>Duplicate as New Examination</span>
               </Button>
             )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsPreviewOpen(true)}
+              className="text-xs font-semibold text-teal-700 dark:text-teal-300 hover:text-teal-900 border-teal-500/30 hover:bg-teal-50 dark:hover:bg-teal-950/30 gap-1.5"
+            >
+              <Eye className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
+              <span>Preview Examination</span>
+            </Button>
           </div>
         </div>
 
@@ -755,6 +773,16 @@ export function AdminRevisionStudioClient({
             1. Metadata Settings
           </button>
           <button
+            onClick={() => setActiveTab("composition")}
+            className={`text-xs font-semibold pb-1 border-b-2 transition-all ${
+              activeTab === "composition"
+                ? "border-teal-500 text-teal-600 dark:text-teal-400"
+                : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white"
+            }`}
+          >
+            2. Blueprint & Composition
+          </button>
+          <button
             onClick={() => setActiveTab("questions")}
             className={`text-xs font-semibold pb-1 border-b-2 transition-all flex items-center gap-1.5 ${
               activeTab === "questions"
@@ -762,7 +790,17 @@ export function AdminRevisionStudioClient({
                 : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white"
             }`}
           >
-            2. Question Membership ({questions.length})
+            3. Question Membership ({questions.length})
+          </button>
+          <button
+            onClick={() => setActiveTab("policies")}
+            className={`text-xs font-semibold pb-1 border-b-2 transition-all ${
+              activeTab === "policies"
+                ? "border-teal-500 text-teal-600 dark:text-teal-400"
+                : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white"
+            }`}
+          >
+            4. Policies & Governance
           </button>
           <button
             onClick={() => setActiveTab("validation")}
@@ -772,7 +810,7 @@ export function AdminRevisionStudioClient({
                 : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-white"
             }`}
           >
-            3. Readiness & Audit
+            5. Readiness & Audit
             {validationResult?.isValid ? (
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
             ) : (
@@ -898,7 +936,19 @@ export function AdminRevisionStudioClient({
         </div>
       )}
 
-      {/* Tab 2: Question Membership Builder */}
+      {/* Tab 2: Blueprint & Composition */}
+      {activeTab === "composition" && (
+        <ExaminationCompositionTab
+          revisionId={revision.id}
+          isDraft={isDraft}
+          concurrencyToken={revision.concurrencyToken}
+          onConcurrencyTokenChange={() => {
+            queryClient.invalidateQueries({ queryKey: ["admin-revision", revisionId] });
+          }}
+        />
+      )}
+
+      {/* Tab 3: Question Membership Builder */}
       {activeTab === "questions" && (
         <div className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -1015,9 +1065,33 @@ export function AdminRevisionStudioClient({
         </div>
       )}
 
-      {/* Tab 3: Pre-flight Readiness Checklist & Audit Info */}
+      {/* Tab 4: Policies & Governance */}
+      {activeTab === "policies" && (
+        <ExaminationPoliciesTab
+          revision={revision}
+          isDraft={isDraft}
+          onConcurrencyTokenChange={() => {
+            queryClient.invalidateQueries({ queryKey: ["admin-revision", revisionId] });
+          }}
+        />
+      )}
+
+      {/* Tab 5: Pre-flight Readiness Checklist & Quality Gate */}
       {activeTab === "validation" && (
         <div className="space-y-6">
+          <ExaminationReadinessTab
+            revisionId={revision.id}
+            lifecycleState={revision.lifecycleState}
+            canPublish={capabilities.canPublishExaminations}
+            onTriggerPublish={() =>
+              setLifecycleModal({
+                action: "publish",
+                title: "Publish Examination Revision",
+                description: "Publishes this revision as the authoritative active examination. Any previously published revision will be archived atomically.",
+                buttonText: "Publish Now",
+              })
+            }
+          />
           <div className="bg-white dark:bg-slate-900 rounded-xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -1284,6 +1358,13 @@ export function AdminRevisionStudioClient({
             ? revision.id
             : undefined
         }
+      />
+
+      {/* Examination Candidate Simulator Preview Dialog */}
+      <ExaminationPreviewDialog
+        open={isPreviewOpen}
+        onOpenChange={setIsPreviewOpen}
+        revisionId={revision.id}
       />
     </div>
   );
