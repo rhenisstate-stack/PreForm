@@ -39,7 +39,9 @@ public class SecurityController : ControllerBase
         "SuspiciousSessionContext",
         "RepeatedClientReplacement",
         "CredentialSecurityEvent",
-        "ExamAttemptReauthenticated"
+        "ExamAttemptReauthenticated",
+        "IneligibleSessionSwept",
+        "LoginAccessRecovered"
     };
 
     public SecurityController(
@@ -267,6 +269,8 @@ public class SecurityController : ControllerBase
             "RepeatedClientReplacement" => "Multiple browser session refreshes observed",
             "CredentialSecurityEvent" => "Account credentials updated",
             "ExamAttemptReauthenticated" => "Examination session successfully reauthenticated. Exam attempt and answers preserved.",
+            "IneligibleSessionSwept" => "Expired or outdated session cleaned up automatically",
+            "LoginAccessRecovered" => "Sign-in access recovery completed after identity verification",
             _ => rawDescription
         };
     }

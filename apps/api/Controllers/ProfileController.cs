@@ -183,7 +183,7 @@ public class ProfileController : ControllerBase
         var sessionResult = await _sessionSecurityService.CreateOrRotateSessionAsync(
             user,
             role,
-            clientId: null,
+            clientId: request.ClientId,
             ipAddress: ipAddress,
             userAgent: userAgent,
             fingerprintHash: null,

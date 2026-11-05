@@ -43,6 +43,54 @@ public class AuthController : ControllerBase
         return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 
+    // Credential-verified login-access recovery rate limiting. Same in-process window/lockout
+    // pattern as exam reauthentication (ExamAttemptsController): 5 failed attempts per
+    // 15-minute window triggers a 15-minute lockout. Documented limitation: this limiter is
+    // process-local; deployments behind multiple API instances should share state externally.
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, (int FailedAttempts, DateTime WindowStart, DateTime? LockoutUntil)> _loginRecoveryRateLimits = new();
+
+    public static void ResetLoginRecoveryRateLimitsForTesting()
+    {
+        _loginRecoveryRateLimits.Clear();
+    }
+
+    private static bool IsLoginRecoveryRateLimited(string key, out int retryAfterSeconds)
+    {
+        retryAfterSeconds = 0;
+        var now = DateTime.UtcNow;
+        if (_loginRecoveryRateLimits.TryGetValue(key, out var record))
+        {
+            if (record.LockoutUntil.HasValue && now < record.LockoutUntil.Value)
+            {
+                retryAfterSeconds = Math.Max(1, (int)Math.Ceiling((record.LockoutUntil.Value - now).TotalSeconds));
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void RecordFailedLoginRecoveryAttempt(string key)
+    {
+        var now = DateTime.UtcNow;
+        _loginRecoveryRateLimits.AddOrUpdate(key,
+            _ => (1, now, null),
+            (_, old) =>
+            {
+                if (now - old.WindowStart > TimeSpan.FromMinutes(15))
+                {
+                    return (1, now, null);
+                }
+                var newCount = old.FailedAttempts + 1;
+                DateTime? lockout = newCount >= 5 ? now.AddMinutes(15) : null;
+                return (newCount, old.WindowStart, lockout);
+            });
+    }
+
+    private static void ClearFailedLoginRecoveryAttempts(string key)
+    {
+        _loginRecoveryRateLimits.TryRemove(key, out _);
+    }
+
     /// <summary>
     /// Builds the user summary DTO consistently across register, login, validate-session and session endpoints.
     /// Profile image reference is always included so that the web session/BFF layer can restore the
@@ -155,6 +203,100 @@ public class AuthController : ControllerBase
             SessionId = sessionResult.Session?.Id,
             User = BuildUserSummary(user, sessionResult.Session?.Role ?? "candidate")
         });
+    }
+
+    /// <summary>
+    /// Pre-authentication, credential-verified recovery from concurrent-session lockouts.
+    /// Requires valid credentials, is rate limited, scoped strictly to the verified user's
+    /// own sessions, and returns no information about whether other sessions or devices
+    /// exist. Revoked-by-recovery sessions are always audited.
+    /// </summary>
+    [HttpPost("recover-sessions")]
+    [AllowAnonymous]
+    public async Task<IActionResult> RecoverSessions([FromBody] RecoverSessionsRequest request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
+        {
+            return BadRequest(new { success = false, error = "Email and password are required." });
+        }
+
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+        var rateLimitKey = $"login-recovery:{normalizedEmail}";
+        if (IsLoginRecoveryRateLimited(rateLimitKey, out var retryAfterSeconds))
+        {
+            Response.Headers.Append("Retry-After", retryAfterSeconds.ToString());
+            return StatusCode(StatusCodes.Status429TooManyRequests, new
+            {
+                success = false,
+                error = "Too many recovery attempts. Please wait before trying again.",
+                errorCode = "RATE_LIMITED"
+            });
+        }
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == normalizedEmail, cancellationToken);
+
+        // Generic invalid-credentials response for both unknown accounts and inactive
+        // accounts: recovery must not disclose whether other sessions or devices exist,
+        // nor reveal account status before credential verification succeeds.
+        if (user == null || !user.IsActive)
+        {
+            RecordFailedLoginRecoveryAttempt(rateLimitKey);
+            return Unauthorized(new
+            {
+                success = false,
+                error = "Invalid credentials. Please verify your email and password.",
+                errorCode = "INVALID_CREDENTIALS"
+            });
+        }
+
+        var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
+        if (verificationResult == PasswordVerificationResult.Failed)
+        {
+            RecordFailedLoginRecoveryAttempt(rateLimitKey);
+            _context.AuditLogs.Add(new AuditLog
+            {
+                ActorId = user.Id,
+                Action = "UserLoginFailed",
+                EntityType = "User",
+                EntityId = user.Id,
+                Description = "Failed credential verification during login access recovery",
+                Outcome = "Failed",
+                Timestamp = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync(cancellationToken);
+
+            return Unauthorized(new
+            {
+                success = false,
+                error = "Invalid credentials. Please verify your email and password.",
+                errorCode = "INVALID_CREDENTIALS"
+            });
+        }
+
+        var recoveryResult = await _sessionSecurityService.RecoverLoginAccessAsync(
+            user.Id,
+            request.ClearRemainingSessions,
+            cancellationToken);
+
+        if (!recoveryResult.Success)
+        {
+            var status = recoveryResult.ErrorCode == "ACCOUNT_INACTIVE"
+                ? StatusCodes.Status403Forbidden
+                : StatusCodes.Status400BadRequest;
+            return StatusCode(status, new
+            {
+                success = false,
+                error = recoveryResult.ErrorMessage,
+                errorCode = recoveryResult.ErrorCode
+            });
+        }
+
+        ClearFailedLoginRecoveryAttempts(rateLimitKey);
+
+        // Deliberately returns no counts, session identifiers, or device details. The
+        // service layer already persisted a LoginAccessRecovered audit event.
+        return Ok(new { success = true });
     }
 
     [HttpPost("login")]

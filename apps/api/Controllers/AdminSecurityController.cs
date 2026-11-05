@@ -43,7 +43,9 @@ public class AdminSecurityController : ControllerBase
         "SuspiciousSessionContext",
         "RepeatedClientReplacement",
         "CredentialSecurityEvent",
-        "ExamAttemptReauthenticated"
+        "ExamAttemptReauthenticated",
+        "IneligibleSessionSwept",
+        "LoginAccessRecovered"
     };
 
     public AdminSecurityController(
