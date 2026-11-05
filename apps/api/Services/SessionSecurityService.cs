@@ -12,6 +12,28 @@ public class SessionSecurityService : ISessionSecurityService
     private readonly ILogger<SessionSecurityService> _logger;
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _userLocks = new();
 
+    /// <summary>
+    /// Client identity prefix assigned by migration 0009 to every pre-existing session that
+    /// predated the canonical `cid_*` browser-identity architecture. Such sessions were
+    /// never claimed by any recognized browser client, cannot be rotated by the BFF client
+    /// flow, and at most one of them is reachable through a preserved legacy token. They are
+    /// therefore excluded from concurrent-slot accounting and eligible-session listing, and
+    /// are decommissioned during explicit credential-verified login recovery.
+    /// </summary>
+    public const string LegacyBackfilledClientPrefix = "legacy_";
+
+    /// <summary>Revocation reason for sessions that cannot authenticate (time-expired).</summary>
+    public const string ExpiredSessionSweptReason = "ExpiredSessionSwept";
+
+    /// <summary>Revocation reason for security-version-stale sessions (matches the sentinel used by ValidateSessionAsync).</summary>
+    public const string PrivilegeOrSecurityVersionChangedReason = "PrivilegeOrSecurityVersionChanged";
+
+    /// <summary>Revocation reason for migration-backfilled legacy sessions during credential-verified recovery.</summary>
+    public const string LegacySessionDecommissionedReason = "LegacyBackfillDecommissioned";
+
+    /// <summary>Revocation reason for eligible sessions cleared at the user's explicit recovery request.</summary>
+    public const string LoginAccessRecoveryRevokedReason = "LoginAccessRecoveryRevoked";
+
     public SessionSecurityService(AppDbContext dbContext, ILogger<SessionSecurityService> logger)
     {
         _dbContext = dbContext;
@@ -76,14 +98,13 @@ public class SessionSecurityService : ISessionSecurityService
                             cancellationToken);
                     }
                     var result = await ProcessSessionCreationAsync(user, role, effectiveClientId, ipAddress, userAgent, fingerprintHash, policy, now, cancellationToken);
-                    if (result.Success)
-                    {
-                        await transaction.CommitAsync(cancellationToken);
-                    }
-                    else
-                    {
-                        await transaction.RollbackAsync(cancellationToken);
-                    }
+                    // Commit both on success AND on structured rejection: rejection carries no
+                    // session row, but it must persist the ineligible-session sweep and the
+                    // ConcurrentSessionLimitExceeded audit entry performed under this advisory
+                    // lock (previously a rejection rolled the sweep and the audit into a
+                    // discarded transaction, leaving stale sessions to keep consuming slots
+                    // and hiding limit rejections from operational metrics on PostgreSQL).
+                    await transaction.CommitAsync(cancellationToken);
                     return result;
                 });
             }
@@ -95,6 +116,64 @@ public class SessionSecurityService : ISessionSecurityService
         {
             userLock.Release();
         }
+    }
+
+    /// <summary>
+    /// Revokes unrevoked sessions that can no longer authenticate: expired by absolute or
+    /// idle timeout, or invalidated by a security-version change (using the sentinel reason
+    /// that keeps <see cref="ValidateSessionAsync"/> failure messages consistent). Scoped
+    /// strictly to the affected user's own session records, persisted with per-session audit
+    /// events, and intended to run inside the per-user advisory-locked transaction so
+    /// concurrent logins cannot over-count ineligible sessions.
+    /// </summary>
+    private async Task<int> SweepIneligibleSessionsAsync(
+        User user,
+        DateTime now,
+        string? ipAddress,
+        CancellationToken cancellationToken)
+    {
+        var staleSessions = await _dbContext.UserSessions
+            .Where(s => s.UserId == user.Id && !s.Revoked && (
+                (s.AbsoluteExpiresAt != default && s.AbsoluteExpiresAt <= now) ||
+                (s.AbsoluteExpiresAt == default && s.ExpiresAt <= now) ||
+                (s.IdleExpiresAt != default && s.IdleExpiresAt <= now) ||
+                (s.IdleExpiresAt == default && s.ExpiresAt <= now) ||
+                s.SecurityVersion != user.SecurityVersion))
+            .ToListAsync(cancellationToken);
+
+        foreach (var stale in staleSessions)
+        {
+            var securityStale = stale.SecurityVersion != user.SecurityVersion;
+            stale.Revoked = true;
+            stale.RevokedAt = now;
+            stale.RevocationReason = securityStale
+                ? PrivilegeOrSecurityVersionChangedReason
+                : ExpiredSessionSweptReason;
+
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                ActorId = user.Id,
+                Action = "IneligibleSessionSwept",
+                EntityType = "UserSession",
+                EntityId = stale.Id,
+                Description = securityStale
+                    ? "Swept session that was invalidated by a security-version change while enforcing concurrent-session accounting."
+                    : "Swept session that had expired while enforcing concurrent-session accounting.",
+                Outcome = "Swept",
+                IpAddress = ipAddress,
+                Timestamp = now
+            });
+        }
+
+        if (staleSessions.Count > 0)
+        {
+            await _dbContext.SaveChangesAsync(cancellationToken);
+            _logger.LogInformation(
+                "Swept {Count} ineligible session(s) for user {UserId} during session accounting",
+                staleSessions.Count, user.Id);
+        }
+
+        return staleSessions.Count;
     }
 
     private async Task<SessionCreationResult> ProcessSessionCreationAsync(
@@ -110,11 +189,25 @@ public class SessionSecurityService : ISessionSecurityService
     {
         var deviceLabel = DeviceDetectionHelper.GetDeviceLabel(userAgent);
 
-        // 1. Fetch currently active, unrevoked sessions for this user
+        // 0. Server-authoritative sweep: revoke unrevoked sessions that can no longer
+        //    authenticate (time-expired or security-version stale) so they stop consuming
+        //    concurrent-session slots. Runs inside the per-user advisory-locked transaction,
+        //    persists with an audit trail, and never removes security audit events.
+        //    Legacy backfilled sessions are NOT swept here: they are excluded from slot
+        //    accounting below and are decommissioned only via explicit login recovery.
+        await SweepIneligibleSessionsAsync(user, now, ipAddress, cancellationToken);
+
+        // 1. Fetch currently active, unrevoked, authentication-eligible sessions for this
+        //    user. Uses the authoritative eligibility rule shared with ValidateSessionAsync,
+        //    the learner session listing, and admin metrics: revoked, time-expired,
+        //    security-version-stale, and migration-backfilled legacy sessions must not
+        //    consume a concurrent-session slot.
         var activeSessions = await _dbContext.UserSessions
             .Where(s => s.UserId == user.Id && !s.Revoked &&
+                s.SecurityVersion == user.SecurityVersion &&
                 (s.AbsoluteExpiresAt > now || (s.AbsoluteExpiresAt == default && s.ExpiresAt > now)) &&
-                (s.IdleExpiresAt > now || (s.IdleExpiresAt == default && s.ExpiresAt > now)))
+                (s.IdleExpiresAt > now || (s.IdleExpiresAt == default && s.ExpiresAt > now)) &&
+                !s.ClientId.StartsWith(LegacyBackfilledClientPrefix))
             .OrderBy(s => s.CreatedAt)
             .ToListAsync(cancellationToken);
 
@@ -664,13 +757,170 @@ public class SessionSecurityService : ISessionSecurityService
     {
         if (string.IsNullOrWhiteSpace(userId)) return new List<UserSession>();
 
+        // Very similar eligibility to concurrent-slot accounting and ValidateSessionAsync:
+        // revoked, time-expired, security-version-stale, and migration-backfilled legacy
+        // sessions cannot authenticate, so they are not listed as active.
+        var securityVersion = await _dbContext.Users
+            .AsNoTracking()
+            .Where(u => u.Id == userId)
+            .Select(u => (int?)u.SecurityVersion)
+            .FirstOrDefaultAsync(cancellationToken);
+        if (securityVersion == null) return new List<UserSession>();
+
         var now = DateTime.UtcNow;
         return await _dbContext.UserSessions
             .AsNoTracking()
             .Where(s => s.UserId == userId && !s.Revoked &&
+                s.SecurityVersion == securityVersion.Value &&
                 (s.AbsoluteExpiresAt > now || (s.AbsoluteExpiresAt == default && s.ExpiresAt > now)) &&
-                (s.IdleExpiresAt > now || (s.IdleExpiresAt == default && s.ExpiresAt > now)))
+                (s.IdleExpiresAt > now || (s.IdleExpiresAt == default && s.ExpiresAt > now)) &&
+                !s.ClientId.StartsWith(LegacyBackfilledClientPrefix))
             .OrderByDescending(s => s.LastActiveAt)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<LoginRecoveryResult> RecoverLoginAccessAsync(
+        string userId,
+        bool clearRemainingEligibleSessions,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return LoginRecoveryResult.Rejected("INVALID_USER", "A valid user account is required.");
+        }
+
+        // Same per-user lock + transaction-scoped advisory lock strategy as session creation
+        // and security-version invalidation, so recovery cannot race concurrent logins.
+        var userLock = _userLocks.GetOrAdd(userId, _ => new SemaphoreSlim(1, 1));
+        await userLock.WaitAsync(cancellationToken);
+
+        try
+        {
+            if (_dbContext.Database.IsRelational())
+            {
+                var strategy = _dbContext.Database.CreateExecutionStrategy();
+                return await strategy.ExecuteAsync(async () =>
+                {
+                    await using var transaction = await _dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, cancellationToken);
+                    if (_dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) == true)
+                    {
+                        await _dbContext.Database.ExecuteSqlRawAsync(
+                            "SELECT pg_advisory_xact_lock(hashtext('user_session_' || {0}));",
+                            new object[] { userId },
+                            cancellationToken);
+                    }
+                    var result = await ProcessLoginRecoveryAsync(userId, clearRemainingEligibleSessions, cancellationToken);
+                    await transaction.CommitAsync(cancellationToken);
+                    return result;
+                });
+            }
+
+            return await ProcessLoginRecoveryAsync(userId, clearRemainingEligibleSessions, cancellationToken);
+        }
+        finally
+        {
+            userLock.Release();
+        }
+    }
+
+    private async Task<LoginRecoveryResult> ProcessLoginRecoveryAsync(
+        string userId,
+        bool clearRemainingEligibleSessions,
+        CancellationToken cancellationToken)
+    {
+        var user = await _dbContext.Users.FindAsync(new object[] { userId }, cancellationToken);
+        if (user == null)
+        {
+            return LoginRecoveryResult.Rejected("INVALID_USER", "A valid user account is required.");
+        }
+
+        if (!user.IsActive)
+        {
+            return LoginRecoveryResult.Rejected("ACCOUNT_INACTIVE", "This user account is inactive or disabled.");
+        }
+
+        var now = DateTime.UtcNow;
+
+        // 1. Sweep sessions that can no longer authenticate (expired or security-stale),
+        //    exactly as login accounting would.
+        var sweptCount = await SweepIneligibleSessionsAsync(user, now, null, cancellationToken);
+
+        // 2. Decommission migration-backfilled legacy sessions. They were never claimed by
+        //    any recognized browser client (legacy_sess_* ids from migration 0009), cannot be
+        //    rotated by the canonical cid_* flow, and at most one was ever reachable through
+        //    a preserved pre-migration token. This is the explicit, documented path that
+        //    releases phantom slots produced by the backfill.
+        var legacySessions = await _dbContext.UserSessions
+            .Where(s => s.UserId == user.Id && !s.Revoked && s.ClientId.StartsWith(LegacyBackfilledClientPrefix))
+            .ToListAsync(cancellationToken);
+
+        foreach (var legacy in legacySessions)
+        {
+            legacy.Revoked = true;
+            legacy.RevokedAt = now;
+            legacy.RevocationReason = LegacySessionDecommissionedReason;
+
+            _dbContext.AuditLogs.Add(new AuditLog
+            {
+                ActorId = user.Id,
+                Action = "SessionRevoked",
+                EntityType = "UserSession",
+                EntityId = legacy.Id,
+                Description = "Decommissioned migration-backfilled legacy session during credential-verified login access recovery.",
+                Outcome = "Revoked",
+                Timestamp = now
+            });
+        }
+        sweptCount += legacySessions.Count;
+
+        // 3. Optionally clear remaining authentication-eligible sessions, but only at the
+        //    user's explicit request — never silently, and never for another user.
+        var clearedCount = 0;
+        if (clearRemainingEligibleSessions)
+        {
+            var remainingSessions = await _dbContext.UserSessions
+                .Where(s => s.UserId == user.Id && !s.Revoked &&
+                    s.SecurityVersion == user.SecurityVersion &&
+                    (s.AbsoluteExpiresAt > now || (s.AbsoluteExpiresAt == default && s.ExpiresAt > now)) &&
+                    (s.IdleExpiresAt > now || (s.IdleExpiresAt == default && s.ExpiresAt > now)))
+                .ToListAsync(cancellationToken);
+
+            foreach (var remaining in remainingSessions)
+            {
+                remaining.Revoked = true;
+                remaining.RevokedAt = now;
+                remaining.RevocationReason = LoginAccessRecoveryRevokedReason;
+
+                _dbContext.AuditLogs.Add(new AuditLog
+                {
+                    ActorId = user.Id,
+                    Action = "SessionRevoked",
+                    EntityType = "UserSession",
+                    EntityId = remaining.Id,
+                    Description = "Revoked eligible session at the user's explicit request during credential-verified login access recovery.",
+                    Outcome = "Revoked",
+                    Timestamp = now
+                });
+            }
+            clearedCount = remainingSessions.Count;
+        }
+
+        _dbContext.AuditLogs.Add(new AuditLog
+        {
+            ActorId = user.Id,
+            Action = "LoginAccessRecovered",
+            EntityType = "User",
+            EntityId = user.Id,
+            Description = $"Credential-verified login access recovery swept {sweptCount} ineligible session(s) and cleared {clearedCount} eligible session(s) at the user's request.",
+            Outcome = "Success",
+            Timestamp = now
+        });
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation(
+            "Login access recovery completed for user {UserId}: swept {Swept}, cleared {Cleared}",
+            user.Id, sweptCount, clearedCount);
+
+        return LoginRecoveryResult.Ok(sweptCount, clearedCount);
     }
 }

@@ -30,6 +30,25 @@ public class ChangePasswordRequest
     [MinLength(8, ErrorMessage = "New password must be at least 8 characters.")]
     [MaxLength(128)]
     public string NewPassword { get; set; } = string.Empty;
+
+    /// <summary>Stable browser client identity (cid_* form) so the rotation session stays bound to the same client.</summary>
+    [MaxLength(64)]
+    public string? ClientId { get; set; }
+}
+
+public class RecoverSessionsRequest
+{
+    [Required]
+    [EmailAddress]
+    [MaxLength(256)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(128)]
+    public string Password { get; set; } = string.Empty;
+
+    /// <summary>Explicit request to also revoke authentication-eligible sessions after credential verification.</summary>
+    public bool ClearRemainingSessions { get; set; } = false;
 }
 
 public class UserProfileDto

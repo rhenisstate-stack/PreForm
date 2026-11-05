@@ -141,7 +141,7 @@ public class AuthController : ControllerBase
         var sessionResult = await _sessionSecurityService.CreateOrRotateSessionAsync(
             user,
             "candidate",
-            clientId: null,
+            clientId: request.ClientId,
             ipAddress: ip,
             userAgent: ua,
             fingerprintHash: null,

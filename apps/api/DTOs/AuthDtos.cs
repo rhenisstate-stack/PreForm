@@ -20,6 +20,10 @@ public class RegisterRequest
 
     [MaxLength(10)]
     public string Pathway { get; set; } = "rn"; // "rn", "pn", "both"
+
+    /// <summary>Stable browser client identity (cid_* form) so the registration session is rotatable by the same client.</summary>
+    [MaxLength(64)]
+    public string? ClientId { get; set; }
 }
 
 public class LoginRequest
