@@ -43,8 +43,9 @@ public static class PermissionsCatalog
         new("content.view", "View Question Bank", "Content", "Browse and inspect questions"),
         new("content.create", "Create Questions", "Content", "Draft new questions across question types"),
         new("content.edit", "Edit Questions", "Content", "Edit draft questions and clinical rationales"),
-        new("content.delete", "Delete Questions", "Content", "Archive or delete question bank items"),
+        new("content.review", "Review Questions", "Content", "Review submitted draft questions and recommend approval or rejection"),
         new("content.publish", "Publish Questions", "Content", "Approve and publish questions to the bank"),
+        new("content.delete", "Delete Questions", "Content", "Archive or delete question bank items"),
 
         // Subscriptions & Monetization
         new("subscriptions.view", "View Subscriptions", "Monetization", "View subscription plans and entitlements"),

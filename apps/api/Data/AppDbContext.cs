@@ -16,6 +16,7 @@ public class AppDbContext : DbContext
     public DbSet<Category> Categories => Set<Category>();
     public DbSet<Subcategory> Subcategories => Set<Subcategory>();
     public DbSet<Topic> Topics => Set<Topic>();
+    public DbSet<ClientNeed> ClientNeeds => Set<ClientNeed>();
 
     // Identity & RBAC
     public DbSet<User> Users => Set<User>();
@@ -254,15 +255,29 @@ public class AppDbContext : DbContext
             entity.HasIndex(r => r.Name).IsUnique();
         });
 
+        // Client Needs Indexes
+        modelBuilder.Entity<ClientNeed>(entity =>
+        {
+            entity.HasIndex(cn => cn.Code).IsUnique();
+            entity.HasIndex(cn => cn.IsActive);
+            entity.HasIndex(cn => cn.Pathway);
+        });
+
         // Question Indexes & Relationships
         modelBuilder.Entity<Question>(entity =>
         {
+            entity.HasIndex(q => q.Code).IsUnique();
             entity.HasIndex(q => q.Pathway);
             entity.HasIndex(q => q.QuestionTypeKey);
             entity.HasIndex(q => q.Status);
+            entity.HasIndex(q => q.ClientNeedId);
             entity.HasOne(q => q.Topic)
                   .WithMany()
                   .HasForeignKey(q => q.TopicId)
+                  .OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne(q => q.ClientNeed)
+                  .WithMany(cn => cn.Questions)
+                  .HasForeignKey(q => q.ClientNeedId)
                   .OnDelete(DeleteBehavior.SetNull);
             entity.HasOne(q => q.CreatedBy)
                   .WithMany()
@@ -272,6 +287,37 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(q => q.ReviewedById)
                   .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // Curriculum Taxonomy Indexes
+        modelBuilder.Entity<Course>(entity =>
+        {
+            entity.HasIndex(c => c.ProgrammeId);
+            entity.HasIndex(c => c.IsActive);
+        });
+
+        modelBuilder.Entity<SubjectDomain>(entity =>
+        {
+            entity.HasIndex(sd => sd.CourseId);
+            entity.HasIndex(sd => sd.IsActive);
+        });
+
+        modelBuilder.Entity<Category>(entity =>
+        {
+            entity.HasIndex(cat => cat.SubjectDomainId);
+            entity.HasIndex(cat => cat.IsActive);
+        });
+
+        modelBuilder.Entity<Subcategory>(entity =>
+        {
+            entity.HasIndex(sc => sc.CategoryId);
+            entity.HasIndex(sc => sc.IsActive);
+        });
+
+        modelBuilder.Entity<Topic>(entity =>
+        {
+            entity.HasIndex(t => t.SubcategoryId);
+            entity.HasIndex(t => t.IsPublished);
         });
 
         modelBuilder.Entity<QuestionTypeDefinition>(entity =>

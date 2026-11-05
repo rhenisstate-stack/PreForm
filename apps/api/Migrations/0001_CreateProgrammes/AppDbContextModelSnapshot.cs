@@ -175,9 +175,60 @@ namespace Preform.Api.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("IsActive");
+
                     b.HasIndex("SubjectDomainId");
 
                     b.ToTable("Categories", "public");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.ClientNeed", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<int>("DisplayOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Pathway")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("IsActive");
+
+                    b.HasIndex("Pathway");
+
+                    b.ToTable("ClientNeeds", "public");
                 });
 
             modelBuilder.Entity("Preform.Api.Models.Course", b =>
@@ -196,6 +247,9 @@ namespace Preform.Api.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsPublished")
                         .HasColumnType("boolean");
 
@@ -212,6 +266,8 @@ namespace Preform.Api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IsActive");
 
                     b.HasIndex("ProgrammeId");
 
@@ -936,8 +992,24 @@ namespace Preform.Api.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<string>("ClientNeedId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("ClinicalJudgmentStep")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<string>("ClinicalScenario")
                         .HasColumnType("text");
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("CognitiveLevel")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -962,19 +1034,33 @@ namespace Preform.Api.Migrations
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("QuestionTypeKey")
                         .IsRequired()
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<string>("ReviewedById")
                         .HasColumnType("text");
+
+                    b.Property<string>("Source")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<string>("Stem")
                         .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("StructuredContentJson")
                         .HasColumnType("text");
 
                     b.Property<string>("TopicId")
@@ -987,6 +1073,11 @@ namespace Preform.Api.Migrations
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ClientNeedId");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
 
                     b.HasIndex("CreatedById");
 
@@ -1020,6 +1111,10 @@ namespace Preform.Api.Migrations
 
                     b.Property<bool>("IsCorrect")
                         .HasColumnType("boolean");
+
+                    b.Property<string>("MediaUrl")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
 
                     b.Property<string>("OptionKey")
                         .IsRequired()
@@ -1097,6 +1192,10 @@ namespace Preform.Api.Migrations
                     b.Property<string>("Id")
                         .HasColumnType("text");
 
+                    b.Property<string>("ChangeSummary")
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1110,6 +1209,9 @@ namespace Preform.Api.Migrations
                     b.Property<string>("SnapshotJson")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
 
                     b.Property<int>("VersionNumber")
                         .HasColumnType("integer");
@@ -1291,6 +1393,8 @@ namespace Preform.Api.Migrations
 
                     b.HasIndex("CategoryId");
 
+                    b.HasIndex("IsActive");
+
                     b.ToTable("Subcategories", "public");
                 });
 
@@ -1328,6 +1432,8 @@ namespace Preform.Api.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CourseId");
+
+                    b.HasIndex("IsActive");
 
                     b.ToTable("SubjectDomains", "public");
                 });
@@ -1513,6 +1619,9 @@ namespace Preform.Api.Migrations
                     b.Property<int>("DisplayOrder")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsPublished")
                         .HasColumnType("boolean");
 
@@ -1534,6 +1643,8 @@ namespace Preform.Api.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("IsPublished");
 
                     b.HasIndex("SubcategoryId");
 
@@ -2059,6 +2170,11 @@ namespace Preform.Api.Migrations
 
             modelBuilder.Entity("Preform.Api.Models.Question", b =>
                 {
+                    b.HasOne("Preform.Api.Models.ClientNeed", "ClientNeed")
+                        .WithMany("Questions")
+                        .HasForeignKey("ClientNeedId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("Preform.Api.Models.User", "CreatedBy")
                         .WithMany()
                         .HasForeignKey("CreatedById")
@@ -2073,6 +2189,8 @@ namespace Preform.Api.Migrations
                         .WithMany()
                         .HasForeignKey("TopicId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ClientNeed");
 
                     b.Navigation("CreatedBy");
 
@@ -2225,6 +2343,11 @@ namespace Preform.Api.Migrations
             modelBuilder.Entity("Preform.Api.Models.Category", b =>
                 {
                     b.Navigation("Subcategories");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.ClientNeed", b =>
+                {
+                    b.Navigation("Questions");
                 });
 
             modelBuilder.Entity("Preform.Api.Models.Course", b =>

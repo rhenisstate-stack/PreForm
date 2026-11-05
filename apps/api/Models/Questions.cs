@@ -152,12 +152,19 @@ public class Question
     [Key]
     public string Id { get; set; } = Guid.NewGuid().ToString();
 
+    [MaxLength(32)]
+    public string? Code { get; set; } // e.g. "QN-000001"
+
     [Required]
     [MaxLength(10)]
-    public string Pathway { get; set; } = "rn"; // "rn" or "pn"
+    public string Pathway { get; set; } = "rn"; // "rn", "pn", "both"
 
     public string? TopicId { get; set; }
     public Topic? Topic { get; set; }
+
+    [MaxLength(128)]
+    public string? ClientNeedId { get; set; }
+    public ClientNeed? ClientNeed { get; set; }
 
     [Required]
     [MaxLength(64)]
@@ -178,7 +185,23 @@ public class Question
 
     public string? ExhibitsJson { get; set; } // Labs, vitals, provider notes
 
+    public string? StructuredContentJson { get; set; } // Validated structured schema for NGN types
+
     public string? OverallRationale { get; set; }
+
+    [MaxLength(64)]
+    public string? CognitiveLevel { get; set; } // e.g. "Application", "Analysis", "Evaluation"
+
+    [MaxLength(64)]
+    public string? ClinicalJudgmentStep { get; set; } // e.g. "Recognize Cues", "Analyze Cues", "Prioritize Hypotheses"
+
+    [MaxLength(256)]
+    public string? Source { get; set; } // Provenance / Author / Review source
+
+    [MaxLength(512)]
+    public string? RejectionReason { get; set; } // Reviewer feedback when returned or rejected
+
+    public DateTime? PublishedAt { get; set; }
 
     public string? CreatedById { get; set; }
     public User? CreatedBy { get; set; }
@@ -217,6 +240,9 @@ public class QuestionOption
     public string? Rationale { get; set; } // Specific clinical rationale for this choice
 
     public string? DistractorRationale { get; set; } // Why this option is clinically unsafe or distractor
+
+    [MaxLength(512)]
+    public string? MediaUrl { get; set; } // Optional image / asset URL for image-based options
 }
 
 [Table("QuestionVersions", Schema = "public")]
@@ -233,6 +259,11 @@ public class QuestionVersion
 
     [Required]
     public string SnapshotJson { get; set; } = string.Empty;
+
+    [MaxLength(512)]
+    public string? ChangeSummary { get; set; }
+
+    public QuestionStatus Status { get; set; } = QuestionStatus.Draft;
 
     public string? CreatedById { get; set; }
 

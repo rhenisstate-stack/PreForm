@@ -137,7 +137,38 @@ public class Topic
 
     public int DisplayOrder { get; set; } = 0;
     public bool IsPublished { get; set; } = true;
+    public bool IsActive { get; set; } = true;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+[Table("ClientNeeds", Schema = "public")]
+public class ClientNeed
+{
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    [Required]
+    [MaxLength(32)]
+    public string Code { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(256)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(1024)]
+    public string Description { get; set; } = string.Empty;
+
+    public int DisplayOrder { get; set; } = 0;
+
+    public bool IsActive { get; set; } = true;
+
+    [MaxLength(10)]
+    public string Pathway { get; set; } = "both"; // "rn", "pn", "both"
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public ICollection<Question> Questions { get; set; } = new List<Question>();
 }

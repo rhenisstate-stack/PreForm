@@ -121,7 +121,7 @@ public static class CatalogSeeder
         Assign("admin", "users.*", "roles.view", "roles.create", "roles.edit", "audit_logs.*", "security.*", "content.*", "exams.*", "subscriptions.*", "system.health");
         Assign("content_manager", "content.*", "exams.view", "exams.create", "exams.edit", "exams.review");
         Assign("exam_manager", "exams.*", "content.view");
-        Assign("reviewer", "content.view", "content.edit", "exams.view", "exams.review");
+        Assign("reviewer", "content.view", "content.review", "content.edit", "exams.view", "exams.review");
         Assign("instructor", "content.view", "content.create", "content.edit", "exams.view");
         Assign("support", "users.view", "users.sessions", "audit_logs.view", "security.sessions", "system.health");
 
@@ -538,6 +538,239 @@ public static class CatalogSeeder
                 UpdatedBy = "system",
                 IsActive = true
             });
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        // 6. Seed Canonical NCLEX Client Needs Categories (NCSBN 8 domains)
+        var canonicalClientNeeds = new[]
+        {
+            new ClientNeed
+            {
+                Id = "cn_moc",
+                Code = "MOC",
+                Name = "Safe and Effective Care Environment: Management of Care",
+                Description = "Providing and directing nursing care that enhances the care delivery setting to protect clients and healthcare personnel (advance directives, advocacy, case management, confidentiality, delegation, informed consent, ethical/legal responsibilities).",
+                DisplayOrder = 1,
+                IsActive = true,
+                Pathway = "both"
+            },
+            new ClientNeed
+            {
+                Id = "cn_sic",
+                Code = "SIC",
+                Name = "Safe and Effective Care Environment: Safety and Infection Control",
+                Description = "Protecting clients and healthcare personnel from health and environmental hazards (accident prevention, emergency response, hazardous materials, infection control, surgical asepsis).",
+                DisplayOrder = 2,
+                IsActive = true,
+                Pathway = "both"
+            },
+            new ClientNeed
+            {
+                Id = "cn_hpm",
+                Code = "HPM",
+                Name = "Health Promotion and Maintenance",
+                Description = "Providing and directing nursing care incorporating knowledge of expected growth and development principles, prevention and early detection of health problems, and strategies to achieve optimal health.",
+                DisplayOrder = 3,
+                IsActive = true,
+                Pathway = "both"
+            },
+            new ClientNeed
+            {
+                Id = "cn_psi",
+                Code = "PSI",
+                Name = "Psychosocial Integrity",
+                Description = "Promoting and supporting the emotional, mental, and social well-being of the client experiencing stressful events, as well as clients with acute or chronic mental illness.",
+                DisplayOrder = 4,
+                IsActive = true,
+                Pathway = "both"
+            },
+            new ClientNeed
+            {
+                Id = "cn_bcc",
+                Code = "BCC",
+                Name = "Physiological Integrity: Basic Care and Comfort",
+                Description = "Providing comfort and assistance in the performance of activities of daily living (assistive devices, elimination, mobility, nutrition, personal hygiene, rest and sleep).",
+                DisplayOrder = 5,
+                IsActive = true,
+                Pathway = "both"
+            },
+            new ClientNeed
+            {
+                Id = "cn_ppt",
+                Code = "PPT",
+                Name = "Physiological Integrity: Pharmacological and Parenteral Therapies",
+                Description = "Providing care related to the administration of medications and parenteral therapies (adverse effects, blood products, dosage calculation, expected outcomes, intravenous therapy, total parenteral nutrition).",
+                DisplayOrder = 6,
+                IsActive = true,
+                Pathway = "both"
+            },
+            new ClientNeed
+            {
+                Id = "cn_rrp",
+                Code = "RRP",
+                Name = "Physiological Integrity: Reduction of Risk Potential",
+                Description = "Reducing the likelihood that clients will develop complications or health problems related to existing conditions, treatments or procedures (vital signs, diagnostic tests, lab values, post-op complications, surgical procedures).",
+                DisplayOrder = 7,
+                IsActive = true,
+                Pathway = "both"
+            },
+            new ClientNeed
+            {
+                Id = "cn_pha",
+                Code = "PHA",
+                Name = "Physiological Integrity: Physiological Adaptation",
+                Description = "Managing and providing care for clients with acute, chronic or life-threatening physical health conditions (alterations in body systems, fluid and electrolyte imbalances, hemodynamics, illness management, medical emergencies, pathophysiology).",
+                DisplayOrder = 8,
+                IsActive = true,
+                Pathway = "both"
+            }
+        };
+
+        var existingClientNeeds = await context.ClientNeeds
+            .ToDictionaryAsync(cn => cn.Code, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        var missingClientNeeds = canonicalClientNeeds
+            .Where(cn => !existingClientNeeds.ContainsKey(cn.Code))
+            .ToList();
+
+        if (missingClientNeeds.Count > 0)
+        {
+            logger.LogInformation("Seeding {Count} missing NCLEX Client Needs categories...", missingClientNeeds.Count);
+            context.ClientNeeds.AddRange(missingClientNeeds);
+            await context.SaveChangesAsync(cancellationToken);
+        }
+
+        // 7. Seed Initial Curriculum Taxonomy Hierarchy (if empty)
+        if (!await context.Courses.AnyAsync(cancellationToken))
+        {
+            logger.LogInformation("Seeding initial NCLEX-RN and NCLEX-PN curriculum taxonomy...");
+            var rnProgramme = await context.Programmes.FirstOrDefaultAsync(p => p.Code == ProgrammeCode.RN, cancellationToken);
+            var pnProgramme = await context.Programmes.FirstOrDefaultAsync(p => p.Code == ProgrammeCode.PN, cancellationToken);
+
+            if (rnProgramme != null)
+            {
+                var rnCourse = new Course
+                {
+                    Id = "course_rn_core",
+                    ProgrammeId = rnProgramme.Id,
+                    Title = "NCLEX-RN Comprehensive Nursing Curriculum",
+                    Description = "Official comprehensive curriculum framework for Registered Nurse licensure candidates.",
+                    DisplayOrder = 1,
+                    IsPublished = true,
+                    IsActive = true,
+                };
+                context.Courses.Add(rnCourse);
+
+                var rnDomain = new SubjectDomain
+                {
+                    Id = "domain_rn_safe_care",
+                    CourseId = rnCourse.Id,
+                    Title = "Safe and Effective Care Environment",
+                    Description = "Management of care, safety protocols, and infection control standards.",
+                    DisplayOrder = 1,
+                    IsActive = true,
+                };
+                context.SubjectDomains.Add(rnDomain);
+
+                var rnCategory = new Category
+                {
+                    Id = "cat_rn_mgmt_care",
+                    SubjectDomainId = rnDomain.Id,
+                    Name = "Management of Care",
+                    Slug = "management-of-care",
+                    Description = "Principles of clinical delegation, legal rights, and prioritization.",
+                    DisplayOrder = 1,
+                    IsActive = true,
+                };
+                context.Categories.Add(rnCategory);
+
+                var rnSubcat = new Subcategory
+                {
+                    Id = "subcat_rn_delegation",
+                    CategoryId = rnCategory.Id,
+                    Name = "Prioritization and Delegation",
+                    Slug = "prioritization-and-delegation",
+                    Description = "Assignment and supervision of nursing activities to UAP, LPN/VN, and team members.",
+                    DisplayOrder = 1,
+                    IsActive = true,
+                };
+                context.Subcategories.Add(rnSubcat);
+
+                var rnTopic = new Topic
+                {
+                    Id = "topic_rn_delegation_rules",
+                    SubcategoryId = rnSubcat.Id,
+                    Title = "Five Rights of Nursing Delegation",
+                    Summary = "Clinical criteria: Right task, circumstances, person, direction/communication, and supervision.",
+                    Content = "Nursing delegation requires evaluation of client stability, scope of practice, and competence verification.",
+                    DisplayOrder = 1,
+                    IsPublished = true,
+                };
+                context.Topics.Add(rnTopic);
+            }
+
+            if (pnProgramme != null)
+            {
+                var pnCourse = new Course
+                {
+                    Id = "course_pn_core",
+                    ProgrammeId = pnProgramme.Id,
+                    Title = "NCLEX-PN Practical Nursing Review",
+                    Description = "Curriculum framework for Practical / Vocational Nurse licensure candidates.",
+                    DisplayOrder = 2,
+                    IsPublished = true,
+                    IsActive = true,
+                };
+                context.Courses.Add(pnCourse);
+
+                var pnDomain = new SubjectDomain
+                {
+                    Id = "domain_pn_safe_care",
+                    CourseId = pnCourse.Id,
+                    Title = "Safe and Effective Care Environment",
+                    Description = "Coordinated care, safety protocols, and client protection.",
+                    DisplayOrder = 1,
+                    IsActive = true,
+                };
+                context.SubjectDomains.Add(pnDomain);
+
+                var pnCategory = new Category
+                {
+                    Id = "cat_pn_coord_care",
+                    SubjectDomainId = pnDomain.Id,
+                    Name = "Coordinated Care",
+                    Slug = "coordinated-care",
+                    Description = "Collaboration with healthcare team and supervision within scope.",
+                    DisplayOrder = 1,
+                    IsActive = true,
+                };
+                context.Categories.Add(pnCategory);
+
+                var pnSubcat = new Subcategory
+                {
+                    Id = "subcat_pn_collaboration",
+                    CategoryId = pnCategory.Id,
+                    Name = "Clinical Collaboration",
+                    Slug = "clinical-collaboration",
+                    Description = "Participating in interprofessional care planning and implementation.",
+                    DisplayOrder = 1,
+                    IsActive = true,
+                };
+                context.Subcategories.Add(pnSubcat);
+
+                var pnTopic = new Topic
+                {
+                    Id = "topic_pn_scope_practice",
+                    SubcategoryId = pnSubcat.Id,
+                    Title = "Scope of Practice and Client Advocacy",
+                    Summary = "Roles and responsibilities of the practical nurse in multidisciplinary settings.",
+                    Content = "The LPN/VN participates in data collection, planning, and care delivery under RN or physician direction.",
+                    DisplayOrder = 1,
+                    IsPublished = true,
+                };
+                context.Topics.Add(pnTopic);
+            }
+
             await context.SaveChangesAsync(cancellationToken);
         }
     }
