@@ -1028,7 +1028,8 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
             Name = "NCLEX-RN Diagnostic Assessment"
         });
 
-        response.EnsureSuccessStatusCode();
+        var errorBody = await response.Content.ReadAsStringAsync();
+        Assert.True(response.IsSuccessStatusCode, $"Status: {response.StatusCode}, Body: {errorBody}");
         var body = await response.Content.ReadFromJsonAsync<System.Text.Json.JsonElement>();
         Assert.True(body.GetProperty("success").GetBoolean());
         var attemptId = body.GetProperty("attemptId").GetString();

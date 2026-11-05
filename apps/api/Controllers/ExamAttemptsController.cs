@@ -1013,13 +1013,20 @@ public class ExamAttemptsController : ControllerBase
         }
         else
         {
-            var targetExamType = string.Equals(request?.TestType, "rat", StringComparison.OrdinalIgnoreCase)
-                ? ExamType.DiagnosticReadiness
-                : (string.Equals(request?.TestType, "cat", StringComparison.OrdinalIgnoreCase) || string.Equals(request?.TestType, "tutored_cat", StringComparison.OrdinalIgnoreCase)
-                    ? ExamType.CAT
-                    : ExamType.Practice);
+            if (!string.IsNullOrWhiteSpace(request?.TestType))
+            {
+                var targetExamType = string.Equals(request.TestType, "rat", StringComparison.OrdinalIgnoreCase)
+                    ? ExamType.DiagnosticReadiness
+                    : (string.Equals(request.TestType, "cat", StringComparison.OrdinalIgnoreCase) || string.Equals(request.TestType, "tutored_cat", StringComparison.OrdinalIgnoreCase)
+                        ? ExamType.CAT
+                        : ExamType.Practice);
 
-            exam = await GetOrCreateExamAsync(normalizedPathway, targetExamType, cancellationToken);
+                exam = await GetOrCreateExamAsync(normalizedPathway, targetExamType, cancellationToken);
+            }
+            else
+            {
+                exam = await GetOrCreateDefaultExamAsync(normalizedPathway, cancellationToken);
+            }
         }
 
         // ── Phase 3 Concurrency Guard ──
@@ -1084,8 +1091,9 @@ public class ExamAttemptsController : ControllerBase
         }
         else if (_assessmentSelectionService != null)
         {
-            var count = request?.QuestionCount > 0
-                ? request.QuestionCount
+            var isExplicitCount = request != null && request.QuestionCount > 0;
+            var count = isExplicitCount
+                ? request!.QuestionCount
                 : (exam.ExamType == ExamType.DiagnosticReadiness ? 75 : 10);
 
             var selectionResult = await _assessmentSelectionService.SelectQuestionsAsync(new AssessmentSelectionRequest
@@ -1097,10 +1105,29 @@ public class ExamAttemptsController : ControllerBase
                 TopicId = request?.TopicId
             }, cancellationToken);
 
+            if (!selectionResult.Success && !isExplicitCount && exam.ExamType != ExamType.DiagnosticReadiness)
+            {
+                var availableCount = await _context.Questions
+                    .Where(q => q.Status == QuestionStatus.Published && (q.Pathway == exam.Pathway || q.Pathway == "both"))
+                    .CountAsync(cancellationToken);
+
+                if (availableCount > 0)
+                {
+                    selectionResult = await _assessmentSelectionService.SelectQuestionsAsync(new AssessmentSelectionRequest
+                    {
+                        Pathway = exam.Pathway,
+                        QuestionCount = availableCount,
+                        ExamType = exam.ExamType,
+                        ClientNeedId = request?.ClientNeedId,
+                        TopicId = request?.TopicId
+                    }, cancellationToken);
+                }
+            }
+
             if (!selectionResult.Success)
             {
-                var anyQuestionsInDb = await _context.Questions.AnyAsync(cancellationToken);
-                if (anyQuestionsInDb || request?.QuestionCount != null)
+                var isRatRequested = string.Equals(request?.TestType, "rat", StringComparison.OrdinalIgnoreCase);
+                if (isExplicitCount || isRatRequested)
                 {
                     return StatusCode(StatusCodes.Status422UnprocessableEntity, new
                     {
