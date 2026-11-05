@@ -347,4 +347,241 @@ public class SessionSecurityPostgresGateTests : IClassFixture<PostgresTestFixtur
             await restoreContext.SaveChangesAsync();
         }
     }
+
+    /// <summary>
+    /// Core P0 lockout regression against real PostgreSQL: an expired, unrevoked session
+    /// must not block a legitimate login, the rejection path must still persist the sweep
+    /// and the ConcurrentSessionLimitExceeded audit (previously rolled back on Npgsql).
+    /// </summary>
+    [Fact]
+    public async Task RejectionPath_AgainstPostgreSql_PersistsSweepAndLimitAudit()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        var userId = "usr_pgrej_" + Guid.NewGuid().ToString("N");
+        await using var seedContext = CreatePostgresDbContext();
+        var user = await SeedUserAsync(seedContext, userId, $"pgrej_{Guid.NewGuid():N}@prepford.test");
+
+        var now = DateTime.UtcNow;
+        // Both slots occupied by healthy sessions
+        await using (var ctx = CreatePostgresDbContext())
+        {
+            var s1 = CreateService(ctx);
+            Assert.True((await s1.CreateOrRotateSessionAsync(user, "candidate", $"cid_pghealthy_a_{Guid.NewGuid():N}", "127.0.0.1", "Mozilla/5.0 PG", null, false)).Success);
+            var s2 = CreateService(ctx);
+            Assert.True((await s2.CreateOrRotateSessionAsync(user, "candidate", $"cid_pghealthy_b_{Guid.NewGuid():N}", "127.0.0.2", "Mozilla/5.0 PG", null, false)).Success);
+        }
+
+        // A stale, unrevoked, absolute-expired session left behind from an interrupted login
+        seedContext.UserSessions.Add(new UserSession
+        {
+            Id = "sess_pg_expired_phantom",
+            UserId = userId,
+            Email = user.Email,
+            Role = "candidate",
+            DisplayName = user.DisplayName,
+            TokenHash = "hash_pg_expired_phantom",
+            CsrfToken = "csrf_pg_expired_phantom",
+            ClientId = "cid_pgexpiredphantom00000000000000000",
+            CreatedAt = now.AddHours(-3),
+            ExpiresAt = now.AddHours(-1),
+            IdleExpiresAt = now.AddHours(-1),
+            AbsoluteExpiresAt = now.AddHours(-1),
+            LastActiveAt = now.AddHours(-3),
+            SecurityVersion = user.SecurityVersion,
+            Revoked = false
+        });
+        await seedContext.SaveChangesAsync();
+
+        // A fresh login must be rejected only by the two healthy sessions (limit reached),
+        // but the sweep must run and PERSIST despite the structured rejection.
+        await using var rejectContext = CreatePostgresDbContext();
+        var rejectService = CreateService(rejectContext);
+        var rejected = await rejectService.CreateOrRotateSessionAsync(
+            rejectContext.Users.AsNoTracking().First(u => u.Id == userId),
+            "candidate", $"cid_pgrejected_{Guid.NewGuid():N}", "127.0.0.3", "Mozilla/5.0 PG", null, false);
+
+        Assert.False(rejected.Success);
+        Assert.Equal("CONCURRENT_SESSION_LIMIT_EXCEEDED", rejected.ErrorCode);
+
+        await using var verifyContext = CreatePostgresDbContext();
+        var sweptSession = await verifyContext.UserSessions.FindAsync("sess_pg_expired_phantom");
+        Assert.NotNull(sweptSession);
+        Assert.True(sweptSession!.Revoked);
+        Assert.Equal(SessionSecurityService.ExpiredSessionSweptReason, sweptSession.RevocationReason);
+
+        // The audit previously vanished with the rolled-back transaction
+        var limitAudits = await verifyContext.AuditLogs
+            .Where(a => a.Action == "ConcurrentSessionLimitExceeded" && a.EntityId == userId)
+            .CountAsync();
+        Assert.True(limitAudits >= 1);
+    }
+
+    /// <summary>
+    /// The lockout-fix eligibility exclusion must hold under concurrent load on real
+    /// PostgreSQL: ineligible (expired) sessions are excluded before counting, so fresh
+    /// logins are not starved while concurrent requests sweep the same stale row under the
+    /// advisory lock exactly once.
+    /// </summary>
+    [Fact]
+    public async Task SweepUnderAdvisoryLock_AgainstPostgreSql_ExcludesIneligibleThenCountsOnce()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        var userId = "usr_pgswp_" + Guid.NewGuid().ToString("N");
+        await using var seedContext = CreatePostgresDbContext();
+        var user = await SeedUserAsync(seedContext, userId, $"pgswp_{Guid.NewGuid():N}@prepford.test");
+
+        // Ineligible phantom: revoked must remain untouched because it is already revoked;
+        // expired-unrevoked must be swept exactly once (single audit) across all winners.
+        var now = DateTime.UtcNow;
+        seedContext.UserSessions.Add(new UserSession
+        {
+            Id = "sess_pg_sweep_target",
+            UserId = userId,
+            Email = user.Email,
+            Role = "candidate",
+            DisplayName = user.DisplayName,
+            TokenHash = "hash_pg_sweep_target",
+            CsrfToken = "csrf_pg_sweep_target",
+            ClientId = "cid_pgsweeptarget000000000000000000",
+            CreatedAt = now.AddHours(-2),
+            ExpiresAt = now.AddMinutes(-10),
+            IdleExpiresAt = now.AddMinutes(-10),
+            AbsoluteExpiresAt = now.AddMinutes(-10),
+            LastActiveAt = now.AddHours(-2),
+            SecurityVersion = user.SecurityVersion,
+            Revoked = false
+        });
+        await seedContext.SaveChangesAsync();
+
+        const int totalRequests = 6;
+        var tasks = new Task<SessionCreationResult>[totalRequests];
+        for (int i = 0; i < totalRequests; i++)
+        {
+            var capturedClientId = $"cid_pgswp_{Guid.NewGuid():N}_{i}";
+            tasks[i] = Task.Run(async () =>
+            {
+                await using var requestContext = CreatePostgresDbContext();
+                var requestUser = await requestContext.Users.AsNoTracking().FirstAsync(u => u.Id == userId);
+                var requestService = CreateService(requestContext);
+                return await requestService.CreateOrRotateSessionAsync(
+                    requestUser!, "candidate", capturedClientId, "127.0.0.1", "Mozilla/5.0 PG", null, false);
+            });
+        }
+
+        var results = await Task.WhenAll(tasks);
+
+        // The expired session must not consume a slot: exactly 2 fresh successes
+        var successCount = results.Count(r => r.Success);
+        var rejectedCount = results.Count(r => !r.Success && r.ErrorCode == "CONCURRENT_SESSION_LIMIT_EXCEEDED");
+        Assert.Equal(2, successCount);
+        Assert.Equal(totalRequests - 2, rejectedCount);
+
+        await using var verifyContext = CreatePostgresDbContext();
+        var swept = await verifyContext.UserSessions.FindAsync("sess_pg_sweep_target");
+        Assert.NotNull(swept);
+        Assert.True(swept!.Revoked);
+        Assert.Equal(SessionSecurityService.ExpiredSessionSweptReason, swept.RevocationReason);
+
+        // Swept exactly once: one audit event for this session, no duplicate sweeps
+        var sweepAudits = await verifyContext.AuditLogs
+            .Where(a => a.Action == "IneligibleSessionSwept" && a.EntityId == "sess_pg_sweep_target")
+            .CountAsync();
+        Assert.Equal(1, sweepAudits);
+    }
+
+    /// <summary>
+    /// Credential-verified login-access recovery against real PostgreSQL: legacy migration-
+    /// backfilled sessions (the reported P0 lockout) are decommissioned and the operation is
+    /// committed atomically under the same advisory lock used by session creation.
+    /// </summary>
+    [Fact]
+    public async Task RecoverLoginAccess_AgainstPostgreSql_DecommissionsLegacySessionsAndUnblocksLogin()
+    {
+        await _factory.InitializePostgresDatabaseAsync();
+        var userId = "usr_pgrcv_" + Guid.NewGuid().ToString("N");
+        await using var seedContext = CreatePostgresDbContext();
+        var user = await SeedUserAsync(seedContext, userId, $"pgrcv_{Guid.NewGuid():N}@prepford.test");
+
+        // Reproduce the reported production state: every slot occupied by legacy backfilled ids
+        await using (var ctx = CreatePostgresDbContext())
+        {
+            var first = CreateService(ctx);
+            Assert.True((await first.CreateOrRotateSessionAsync(user, "candidate", $"cid_pgrcv_a_{Guid.NewGuid():N}", "127.0.0.1", "Mozilla/5.0 PG", null, false)).Success);
+            var second = CreateService(ctx);
+            Assert.True((await second.CreateOrRotateSessionAsync(user, "candidate", $"cid_pgrcv_b_{Guid.NewGuid():N}", "127.0.0.2", "Mozilla/5.0 PG", null, false)).Success);
+        }
+
+        // Backfill-style legacy phantom sessions (legacy_ || Id pattern from migration 0009)
+        foreach (var legacyId in new[] { "sess_pg_legacy_01", "sess_pg_legacy_02" })
+        {
+            seedContext.UserSessions.Add(new UserSession
+            {
+                Id = legacyId,
+                UserId = userId,
+                Email = user.Email,
+                Role = "candidate",
+                DisplayName = user.DisplayName,
+                TokenHash = $"hash_{legacyId}",
+                CsrfToken = $"csrf_{legacyId}",
+                ClientId = "legacy_" + legacyId,
+                CreatedAt = DateTime.UtcNow.AddDays(-3),
+                ExpiresAt = DateTime.UtcNow.AddDays(4),
+                IdleExpiresAt = DateTime.UtcNow.AddDays(4),
+                AbsoluteExpiresAt = DateTime.UtcNow.AddDays(4),
+                LastActiveAt = DateTime.UtcNow.AddDays(-3),
+                SecurityVersion = user.SecurityVersion,
+                Revoked = false
+            });
+        }
+        await seedContext.SaveChangesAsync();
+
+        // Login is already at the configured limit from healthy sessions; recovery (without
+        // clearing eligible sessions) decommissions only the unreclaimable legacy rows.
+        await using var recoveryContext = CreatePostgresDbContext();
+        var recoveryService = CreateService(recoveryContext);
+        var recovery = await recoveryService.RecoverLoginAccessAsync(userId, clearRemainingEligibleSessions: false);
+        Assert.True(recovery.Success);
+        Assert.Equal(2, recovery.SweptIneligibleCount);
+        Assert.Equal(0, recovery.ClearedEligibleCount);
+
+        await using var verifyContext = CreatePostgresDbContext();
+        var legacy = await verifyContext.UserSessions.FindAsync("sess_pg_legacy_01");
+        Assert.True(legacy!.Revoked);
+        Assert.Equal(SessionSecurityService.LegacySessionDecommissionedReason, legacy.RevocationReason);
+
+        var recoveryAudit = await verifyContext.AuditLogs
+            .Where(a => a.Action == "LoginAccessRecovered" && a.EntityId == userId)
+            .CountAsync();
+        Assert.True(recoveryAudit >= 1);
+
+        // Login remains governed by the unchanged policy: still at the limit (healthy
+        // sessions were NOT silently revoked), but an explicit clear unblocks the user.
+        await using var stillContext = CreatePostgresDbContext();
+        var stillService = CreateService(stillContext);
+        var stillLimited = await stillService.CreateOrRotateSessionAsync(
+            stillContext.Users.AsNoTracking().First(u => u.Id == userId),
+            "candidate", "cid_pgrcv_post_recovery", "127.0.0.3", "Mozilla/5.0 PG", null, false);
+        Assert.False(stillLimited.Success);
+
+        await using var clearContext = CreatePostgresDbContext();
+        var clearService = CreateService(clearContext);
+        var cleared = await clearService.RecoverLoginAccessAsync(userId, clearRemainingEligibleSessions: true);
+        Assert.True(cleared.Success);
+        Assert.Equal(0, cleared.SweptIneligibleCount); // legacy rows were already decommissioned in the first pass
+        Assert.Equal(2, cleared.ClearedEligibleCount);
+
+        await using var unblockedContext = CreatePostgresDbContext();
+        var unblockedService = CreateService(unblockedContext);
+        var unblocked = await unblockedService.CreateOrRotateSessionAsync(
+            unblockedContext.Users.AsNoTracking().First(u => u.Id == userId),
+            "candidate", "cid_pgrcv_final", "127.0.0.4", "Mozilla/5.0 PG", null, false);
+        Assert.True(unblocked.Success);
+
+        // Expired-after-hibernate guard: eligible sessions were revoked with the explicit intent reason
+        await using var reasonsContext = CreatePostgresDbContext();
+        var revokedReasons = await reasonsContext.UserSessions
+            .Where(s => s.UserId == userId && s.Revoked && s.RevocationReason == SessionSecurityService.LoginAccessRecoveryRevokedReason)
+            .CountAsync();
+        Assert.Equal(2, revokedReasons);
+    }
 }

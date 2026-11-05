@@ -511,4 +511,437 @@ public class SessionSecurityEngineTests
         Assert.False(val.IsValid);
         Assert.Equal("SECURITY_VERSION_CHANGED", val.FailureCode);
     }
+
+    [Fact]
+    public async Task Lockout_AbsoluteTimeoutExpiredSession_DoesNotConsumeSlotAndIsSwept()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        // Seed an unrevoked but absolute-time-expired session (the defect: it counts today)
+        context.UserSessions.Add(new UserSession
+        {
+            Id = "sess_expired_abs",
+            UserId = user.Id,
+            Email = user.Email,
+            Role = "candidate",
+            DisplayName = user.DisplayName,
+            TokenHash = "hash_abs",
+            CsrfToken = "csrf_abs",
+            ClientId = "cid_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            CreatedAt = DateTime.UtcNow.AddDays(-1),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(-30),
+            IdleExpiresAt = DateTime.UtcNow.AddMinutes(-30),
+            AbsoluteExpiresAt = DateTime.UtcNow.AddMinutes(-30),
+            LastActiveAt = DateTime.UtcNow.AddMinutes(-40),
+            SecurityVersion = user.SecurityVersion,
+            Revoked = false
+        });
+
+        // Plus one healthy session occupying the other slot
+        var res1 = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", "10.0.0.1", "Browser", null, false);
+        Assert.True(res1.Success);
+
+        await context.SaveChangesAsync();
+
+        // Login from a third client: the expired session must not block authentication
+        var res2 = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_cccccccccccccccccccccccccccccccc", "10.0.0.2", "Browser 2", null, false);
+        Assert.True(res2.Success);
+
+        var swept = await context.UserSessions.FindAsync("sess_expired_abs");
+        Assert.NotNull(swept);
+        Assert.True(swept.Revoked);
+        Assert.Equal(SessionSecurityService.ExpiredSessionSweptReason, swept.RevocationReason);
+    }
+
+    [Fact]
+    public async Task Lockout_IdleTimeoutExpiredSession_DoesNotConsumeSlotAndIsSwept()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        context.UserSessions.Add(new UserSession
+        {
+            Id = "sess_expired_idle",
+            UserId = user.Id,
+            Email = user.Email,
+            Role = "candidate",
+            DisplayName = user.DisplayName,
+            TokenHash = "hash_idle",
+            CsrfToken = "csrf_idle",
+            ClientId = "cid_dddddddddddddddddddddddddddddddd",
+            CreatedAt = DateTime.UtcNow.AddHours(-2),
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            IdleExpiresAt = DateTime.UtcNow.AddMinutes(-5),
+            AbsoluteExpiresAt = DateTime.UtcNow.AddDays(7),
+            LastActiveAt = DateTime.UtcNow.AddHours(-2),
+            SecurityVersion = user.SecurityVersion,
+            Revoked = false
+        });
+        await context.SaveChangesAsync();
+
+        // Both slots must now be available
+        var res1 = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee", "10.0.0.1", "Browser", null, false);
+        var res2 = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_ffffffffffffffffffffffffffffffff", "10.0.0.2", "Browser 2", null, false);
+        Assert.True(res1.Success);
+        Assert.True(res2.Success);
+
+        var swept = await context.UserSessions.FindAsync("sess_expired_idle");
+        Assert.NotNull(swept);
+        Assert.True(swept.Revoked);
+        Assert.Equal(SessionSecurityService.ExpiredSessionSweptReason, swept.RevocationReason);
+    }
+
+    [Fact]
+    public async Task Lockout_SecurityVersionStaleSession_DoesNotConsumeSlotAndIsSweptWithSentinelReason()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        context.UserSessions.Add(new UserSession
+        {
+            Id = "sess_version_stale",
+            UserId = user.Id,
+            Email = user.Email,
+            Role = "candidate",
+            DisplayName = user.DisplayName,
+            TokenHash = "hash_stale",
+            CsrfToken = "csrf_stale",
+            ClientId = "cid_11111111111111111111111111111111",
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            IdleExpiresAt = DateTime.UtcNow.AddDays(7),
+            AbsoluteExpiresAt = DateTime.UtcNow.AddDays(7),
+            LastActiveAt = DateTime.UtcNow.AddHours(-1),
+            SecurityVersion = user.SecurityVersion - 1, // stale
+            Revoked = false
+        });
+        await context.SaveChangesAsync();
+
+        var res = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_22222222222222222222222222222222", "10.0.0.1", "Browser", null, false);
+        var res3 = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_33333333333333333333333333333333", "10.0.0.2", "Browser 2", null, false);
+        Assert.True(res.Success);
+        Assert.True(res3.Success);
+
+        var swept = await context.UserSessions.FindAsync("sess_version_stale");
+        Assert.NotNull(swept);
+        Assert.True(swept.Revoked);
+        Assert.Equal(SessionSecurityService.PrivilegeOrSecurityVersionChangedReason, swept.RevocationReason);
+
+        // Validate-path messaging stays consistent with the sentinel reason
+        var val = await service.ValidateSessionAsync("sess_version_stale", isToken: false);
+        Assert.False(val.IsValid);
+        Assert.Equal("SECURITY_VERSION_CHANGED", val.FailureCode);
+    }
+
+    [Fact]
+    public async Task Lockout_RevokedSession_DoesNotConsumeSlot()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        context.UserSessions.Add(new UserSession
+        {
+            Id = "sess_revoked_blocked",
+            UserId = user.Id,
+            Email = user.Email,
+            Role = "candidate",
+            DisplayName = user.DisplayName,
+            TokenHash = "hash_revoked",
+            CsrfToken = "csrf_revoked",
+            ClientId = "cid_44444444444444444444444444444444",
+            CreatedAt = DateTime.UtcNow.AddHours(-1),
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            IdleExpiresAt = DateTime.UtcNow.AddDays(7),
+            AbsoluteExpiresAt = DateTime.UtcNow.AddDays(7),
+            LastActiveAt = DateTime.UtcNow.AddHours(-1),
+            SecurityVersion = user.SecurityVersion,
+            Revoked = true,
+            RevokedAt = DateTime.UtcNow,
+            RevocationReason = "SessionRevoked"
+        });
+        await context.SaveChangesAsync();
+
+        var res1 = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_55555555555555555555555555555555", "10.0.0.1", "Browser", null, false);
+        var res2 = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_66666666666666666666666666666666", "10.0.0.2", "Browser 2", null, false);
+        Assert.True(res1.Success);
+        Assert.True(res2.Success);
+    }
+
+    [Fact]
+    public async Task Lockout_LegacyBackfilledSessions_DoNotConsumeSlots()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        // Reproduce migration 0009 backfill: phantom legacy sessions occupying every slot
+        var now = DateTime.UtcNow;
+        for (int i = 0; i < 4; i++)
+        {
+            var sessionId = $"sess_legacy_{i:D2}";
+            context.UserSessions.Add(new UserSession
+            {
+                Id = sessionId,
+                UserId = user.Id,
+                Email = user.Email,
+                Role = "candidate",
+                DisplayName = user.DisplayName,
+                TokenHash = $"hash_legacy_{i}",
+                CsrfToken = $"csrf_legacy_{i}",
+                ClientId = "legacy_" + sessionId, // exact backfill pattern
+                CreatedAt = now.AddDays(-3),
+                ExpiresAt = now.AddDays(4),
+                IdleExpiresAt = now.AddDays(4),
+                AbsoluteExpiresAt = now.AddDays(4),
+                LastActiveAt = now.AddDays(-3),
+                SecurityVersion = user.SecurityVersion,
+                Revoked = false
+            });
+        }
+        await context.SaveChangesAsync();
+
+        // Login previously impossible with only legacy sessions present; it must succeed now
+        var res = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_77777777777777777777777777777777", "10.0.0.1", "Browser", null, false);
+        Assert.True(res.Success);
+
+        // Legacy sessions are NOT silently swept by accounting; they are only excluded and
+        // decommissioned via explicit recovery.
+        var legacyInDb = await context.UserSessions.FindAsync("sess_legacy_00");
+        Assert.NotNull(legacyInDb);
+        Assert.False(legacyInDb.Revoked);
+
+        // Eligible-session listing must exclude legacy sessions as well
+        var listed = await service.GetActiveSessionsForUserAsync(user.Id);
+        Assert.NotNull(listed);
+        Assert.All(listed, s => Assert.False(s.ClientId!.StartsWith(SessionSecurityService.LegacyBackfilledClientPrefix)));
+        Assert.Contains(listed, s => s.Id == res.Session!.Id);
+    }
+
+    [Fact]
+    public async Task Lockout_LostResponseRetry_DoesNotPermanentlyLockUser()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        // Scenario: the browser holds cid_R for all logins but two sessions were created for it
+        // (e.g. an interrupted rotation), reaching the per-client and per-user limits.
+        var resA = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_repeataaaaaaaaaaaaaaaaaaaaaaaa", "10.0.0.1", "Browser", null, false);
+        Assert.True(resA.Success);
+
+        // A second login from the same client rotates (revokes) the first and creates a new one
+        var resB = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_repeataaaaaaaaaaaaaaaaaaaaaaaa", "10.0.0.1", "Browser", null, false);
+        Assert.True(resB.Success);
+
+        // First token must no longer authenticate (rotated)
+        var valA = await service.ValidateSessionAsync(resA.Session!.Id, isToken: false);
+        Assert.False(valA.IsValid);
+        Assert.Equal("SESSION_REVOKED", valA.FailureCode);
+
+        // Retry cannot lock the user out: same-client login keeps succeeding
+        var resC = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_repeataaaaaaaaaaaaaaaaaaaaaaaa", "10.0.0.1", "Browser", null, false);
+        Assert.True(resC.Success);
+
+        var valB = await service.ValidateSessionAsync(resB.Session!.Id, isToken: false);
+        Assert.False(valB.IsValid);
+
+        var valC = await service.ValidateSessionAsync(resC.Session!.Id, isToken: false);
+        Assert.True(valC.IsValid);
+    }
+
+    [Fact]
+    public async Task RecoverLoginAccessAsync_SweepsLegacyAndSweepsIneligibleWithoutCredentialsScope()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var other = await SeedUserAsync(context, id: "user_other_01", email: "other@example.com");
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        var now = DateTime.UtcNow;
+        // Legacy phantom sessions for the user (never claimed by a browser client)
+        context.UserSessions.Add(new UserSession
+        {
+            Id = "sess_recovery_legacy",
+            UserId = user.Id,
+            Email = user.Email,
+            Role = "candidate",
+            DisplayName = user.DisplayName,
+            TokenHash = "hash_rec_legacy",
+            CsrfToken = "csrf_rec_legacy",
+            ClientId = "legacy_sess_recovery_legacy",
+            CreatedAt = now.AddDays(-3),
+            ExpiresAt = now.AddDays(4),
+            IdleExpiresAt = now.AddDays(4),
+            AbsoluteExpiresAt = now.AddDays(4),
+            LastActiveAt = now.AddDays(-3),
+            SecurityVersion = user.SecurityVersion,
+            Revoked = false
+        });
+        // Time-expired ineligible session
+        context.UserSessions.Add(new UserSession
+        {
+            Id = "sess_recovery_expired",
+            UserId = user.Id,
+            Email = user.Email,
+            Role = "candidate",
+            DisplayName = user.DisplayName,
+            TokenHash = "hash_rec_expired",
+            CsrfToken = "csrf_rec_expired",
+            ClientId = "cid_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+            CreatedAt = now.AddHours(-3),
+            ExpiresAt = now.AddHours(-1),
+            IdleExpiresAt = now.AddHours(-1),
+            AbsoluteExpiresAt = now.AddHours(-1),
+            LastActiveAt = now.AddHours(-3),
+            SecurityVersion = user.SecurityVersion,
+            Revoked = false
+        });
+        // A healthy, unrelated user's session that must NOT be touched
+        context.UserSessions.Add(new UserSession
+        {
+            Id = "sess_recovery_other",
+            UserId = other.Id,
+            Email = other.Email,
+            Role = "candidate",
+            DisplayName = other.DisplayName,
+            TokenHash = "hash_rec_other",
+            CsrfToken = "csrf_rec_other",
+            ClientId = "legacy_sess_other_unreachable",
+            CreatedAt = now.AddDays(-1),
+            ExpiresAt = now.AddDays(6),
+            IdleExpiresAt = now.AddDays(6),
+            AbsoluteExpiresAt = now.AddDays(6),
+            LastActiveAt = now.AddDays(-1),
+            SecurityVersion = other.SecurityVersion,
+            Revoked = false
+        });
+        await context.SaveChangesAsync();
+
+        var result = await service.RecoverLoginAccessAsync(user.Id, clearRemainingEligibleSessions: false);
+
+        Assert.True(result.Success);
+        // 1 legacy decommissioned + 1 time-expired swept
+        Assert.Equal(2, result.SweptIneligibleCount);
+        Assert.Equal(0, result.ClearedEligibleCount);
+
+        var legacy = await context.UserSessions.FindAsync("sess_recovery_legacy");
+        Assert.True(legacy!.Revoked);
+        Assert.Equal(SessionSecurityService.LegacySessionDecommissionedReason, legacy.RevocationReason);
+
+        var expired = await context.UserSessions.FindAsync("sess_recovery_expired");
+        Assert.True(expired!.Revoked);
+        Assert.Equal(SessionSecurityService.ExpiredSessionSweptReason, expired.RevocationReason);
+
+        // Cross-user protection: the other user's session untouched, and login audit written
+        var otherSession = await context.UserSessions.FindAsync("sess_recovery_other");
+        Assert.NotNull(otherSession);
+        Assert.False(otherSession.Revoked);
+
+        var audits = context.AuditLogs.Where(a => a.Action == "LoginAccessRecovered" && a.EntityId == user.Id).ToList();
+        Assert.Single(audits);
+        var otherAudits = context.AuditLogs.Where(a => a.Action == "LoginAccessRecovered" && a.EntityId == other.Id).ToList();
+        Assert.Empty(otherAudits);
+    }
+
+    [Fact]
+    public async Task RecoverLoginAccessAsync_ClearRemainingSessions_RequiresExplicitIntentAndNeverTouchesOtherUsers()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var other = await SeedUserAsync(context, id: "user_other_02", email: "other2@example.com");
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        var healthy1 = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy", "10.0.0.1", "Browser", null, false);
+        var healthy2 = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", "10.0.0.2", "Browser 2", null, false);
+        Assert.True(healthy1.Success);
+        Assert.True(healthy2.Success);
+
+        // The unrelated user's live sessions must remain fully intact
+        var otherSession = await service.CreateOrRotateSessionAsync(other, "candidate", "cid_othercccccccccccccccccccccccccccc", "10.0.0.3", "Browser", null, false);
+        Assert.True(otherSession.Success);
+
+        var result = await service.RecoverLoginAccessAsync(user.Id, clearRemainingEligibleSessions: true);
+
+        Assert.True(result.Success);
+        Assert.Equal(0, result.SweptIneligibleCount);
+        Assert.Equal(2, result.ClearedEligibleCount);
+
+        var s1 = await context.UserSessions.FindAsync(healthy1.Session!.Id);
+        var s2 = await context.UserSessions.FindAsync(healthy2.Session!.Id);
+        Assert.True(s1!.Revoked);
+        Assert.Equal(SessionSecurityService.LoginAccessRecoveryRevokedReason, s1.RevocationReason);
+        Assert.True(s2!.Revoked);
+        Assert.Equal(SessionSecurityService.LoginAccessRecoveryRevokedReason, s2.RevocationReason);
+
+        var otherLive = await context.UserSessions.FindAsync(otherSession.Session!.Id);
+        Assert.False(otherLive!.Revoked);
+
+        // The locked-out user can now authenticate again
+        var res = await service.CreateOrRotateSessionAsync(user, "candidate", "cid_newdddddddddddddddddddddddddddddd", "10.0.0.4", "Browser", null, false);
+        Assert.True(res.Success);
+    }
+
+    [Fact]
+    public async Task GetActiveSessionsForUserAsync_ExcludesSecurityVersionStaleSessions()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        using var context = CreateDbContext(dbName);
+        var user = await SeedUserAsync(context);
+        var service = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
+
+        var now = DateTime.UtcNow;
+        context.UserSessions.Add(new UserSession
+        {
+            Id = "sess_listing_stale",
+            UserId = user.Id,
+            Email = user.Email,
+            Role = "candidate",
+            DisplayName = user.DisplayName,
+            TokenHash = "hash_listing_stale",
+            CsrfToken = "csrf_listing_stale",
+            ClientId = "cid_staleeeeeeeeeeeeeeeeeeeeeeeeeeee",
+            CreatedAt = now.AddHours(-1),
+            ExpiresAt = now.AddDays(7),
+            IdleExpiresAt = now.AddDays(7),
+            AbsoluteExpiresAt = now.AddDays(7),
+            LastActiveAt = now.AddHours(-1),
+            SecurityVersion = user.SecurityVersion - 1,
+            Revoked = false
+        });
+        context.UserSessions.Add(new UserSession
+        {
+            Id = "sess_listing_legacy",
+            UserId = user.Id,
+            Email = user.Email,
+            Role = "candidate",
+            DisplayName = user.DisplayName,
+            TokenHash = "hash_listing_legacy",
+            CsrfToken = "csrf_listing_legacy",
+            ClientId = "legacy_sess_listing_legacy",
+            CreatedAt = now.AddHours(-1),
+            ExpiresAt = now.AddDays(7),
+            IdleExpiresAt = now.AddDays(7),
+            AbsoluteExpiresAt = now.AddDays(7),
+            LastActiveAt = now.AddHours(-1),
+            SecurityVersion = user.SecurityVersion,
+            Revoked = false
+        });
+        await context.SaveChangesAsync();
+
+        var listed = await service.GetActiveSessionsForUserAsync(user.Id);
+        Assert.Empty(listed);
+    }
 }
