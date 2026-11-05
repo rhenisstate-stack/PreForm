@@ -313,7 +313,31 @@ public class ExamAttemptsController : ControllerBase
 
     private async Task<Exam> GetOrCreateDefaultExamAsync(string pathway, CancellationToken cancellationToken)
     {
-        return await GetOrCreateExamAsync(pathway, ExamType.CAT, cancellationToken);
+        var normalizedPathway = string.Equals(pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn";
+        var exam = await _context.Exams.FirstOrDefaultAsync(e => e.Pathway == normalizedPathway, cancellationToken);
+
+        if (exam == null)
+        {
+            exam = new Exam
+            {
+                Id = $"exam_{normalizedPathway}_adaptive_cat",
+                Title = normalizedPathway == "pn" ? "NCLEX-PN Adaptive CAT" : "NCLEX-RN Adaptive CAT",
+                Description = "Standard adaptive computerized exam simulation",
+                Pathway = normalizedPathway,
+                ExamType = ExamType.CAT,
+                TimeLimitMinutes = 300,
+                PassingScorePercent = 75.0m,
+                IsPublished = true,
+                LifecycleState = ExamLifecycleState.Published,
+                ConcurrencyToken = 1,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+            _context.Exams.Add(exam);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        return exam;
     }
 
     private async Task<Exam> GetOrCreateExamAsync(string pathway, ExamType examType, CancellationToken cancellationToken)
@@ -331,7 +355,7 @@ public class ExamAttemptsController : ControllerBase
             .Include(e => e.ExamQuestions)
                 .ThenInclude(eq => eq.Question)
                     .ThenInclude(q => q.Options)
-            .FirstOrDefaultAsync(e => e.Id == prefix, cancellationToken);
+            .FirstOrDefaultAsync(e => e.Id == prefix || (e.Pathway == normalizedPathway && e.ExamType == examType), cancellationToken);
 
         if (exam == null)
         {
