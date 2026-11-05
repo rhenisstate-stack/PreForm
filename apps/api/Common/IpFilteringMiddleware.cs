@@ -54,7 +54,7 @@ public class IpFilteringMiddleware
                 problemDetails.Extensions["traceId"] = correlationId;
                 problemDetails.Extensions["timestamp"] = DateTime.UtcNow;
 
-                await context.Response.WriteAsJsonAsync(problemDetails, cancellationToken: context.RequestAborted);
+                await context.Response.WriteAsJsonAsync(problemDetails, options: null, contentType: "application/problem+json", cancellationToken: context.RequestAborted);
                 return;
             }
         }

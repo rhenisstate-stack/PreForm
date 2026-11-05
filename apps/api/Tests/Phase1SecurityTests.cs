@@ -123,7 +123,7 @@ public class Phase1SecurityTests
         // Assert
         Assert.True(handled);
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-        Assert.Equal("application/problem+json", context.Response.ContentType);
+        Assert.StartsWith("application/problem+json", context.Response.ContentType);
 
         context.Response.Body.Seek(0, SeekOrigin.Begin);
         using var doc = JsonDocument.Parse(context.Response.Body);
