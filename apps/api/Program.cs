@@ -16,6 +16,8 @@ using Preform.Api.Services.Grading;
 using Preform.Api.Services.PasswordReset;
 using Preform.Api.Services.RateLimiting;
 using Preform.Api.Services.Security;
+using Preform.Api.Services.Analytics;
+using Preform.Api.Services.Monitoring;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -101,6 +103,13 @@ builder.Services.AddScoped<IQuestionBankService, QuestionBankService>();
 
 // Phase 3 Learner Assessment, RAT & Exam Delivery Integration
 builder.Services.AddScoped<IAssessmentSelectionService, AssessmentSelectionService>();
+
+// Phase 5 Learner Analytics, Administrative Reporting & Operational Monitoring
+builder.Services.AddScoped<ILearnerAnalyticsService, LearnerAnalyticsService>();
+builder.Services.AddScoped<IAdminReportingService, AdminReportingService>();
+builder.Services.AddScoped<IQuestionAnalyticsService, QuestionAnalyticsService>();
+builder.Services.AddScoped<ICsvExportService, CsvExportService>();
+builder.Services.AddScoped<IOperationalMonitoringService, OperationalMonitoringService>();
 
 // Authentication with PrepfordAuth scheme (Bearer Session Token & Gateway HMAC)
 builder.Services.AddAuthentication(options =>
