@@ -9,6 +9,7 @@ using Preform.Api.Data;
 using Preform.Api.DTOs;
 using Preform.Api.Models;
 using Preform.Api.Services;
+using Preform.Api.Services.Grading;
 using Xunit;
 
 namespace Preform.Api.Tests;
@@ -33,6 +34,24 @@ public class ExaminationConfigurationAndGovernanceTests
         };
         var identity = new ClaimsIdentity(claims, "TestAuth");
         return new ClaimsPrincipal(identity);
+    }
+
+    private static ExamAttemptsController CreateExamAttemptsController(AppDbContext db)
+    {
+        var registry = QuestionTypeRegistry.Instance;
+        var resolver = new QuestionGraderResolver(registry);
+        var validationService = new ResponseValidationService(db, resolver);
+        var attemptQuestionService = new AttemptQuestionService(db);
+        var selectionService = new AssessmentSelectionService(db, registry);
+        return new ExamAttemptsController(
+            db,
+            NullLogger<ExamAttemptsController>.Instance,
+            validationService,
+            attemptQuestionService,
+            sessionSecurityService: null,
+            passwordHasher: null,
+            rateLimitingService: null,
+            assessmentSelectionService: selectionService);
     }
 
     private static async Task<(Examination family, Exam revision)> SeedExamFamilyWithRevisionAsync(
@@ -429,11 +448,7 @@ public class ExaminationConfigurationAndGovernanceTests
         });
         await db.SaveChangesAsync();
 
-        var controller = new ExamAttemptsController(
-            db,
-            new AssessmentSelectionService(db, NullLogger<AssessmentSelectionService>.Instance),
-            NullLogger<ExamAttemptsController>.Instance,
-            new ExamLifecycleService(db));
+        var controller = CreateExamAttemptsController(db);
 
         controller.ControllerContext = new ControllerContext
         {
@@ -475,11 +490,7 @@ public class ExaminationConfigurationAndGovernanceTests
         });
         await db.SaveChangesAsync();
 
-        var controller = new ExamAttemptsController(
-            db,
-            new AssessmentSelectionService(db, NullLogger<AssessmentSelectionService>.Instance),
-            NullLogger<ExamAttemptsController>.Instance,
-            new ExamLifecycleService(db));
+        var controller = CreateExamAttemptsController(db);
 
         controller.ControllerContext = new ControllerContext
         {
@@ -532,11 +543,7 @@ public class ExaminationConfigurationAndGovernanceTests
         });
         await db.SaveChangesAsync();
 
-        var controller = new ExamAttemptsController(
-            db,
-            new AssessmentSelectionService(db, NullLogger<AssessmentSelectionService>.Instance),
-            NullLogger<ExamAttemptsController>.Instance,
-            new ExamLifecycleService(db));
+        var controller = CreateExamAttemptsController(db);
 
         controller.ControllerContext = new ControllerContext
         {
