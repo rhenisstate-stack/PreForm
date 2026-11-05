@@ -99,6 +99,9 @@ builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHand
 builder.Services.AddScoped<ICurriculumService, CurriculumService>();
 builder.Services.AddScoped<IQuestionBankService, QuestionBankService>();
 
+// Phase 3 Learner Assessment, RAT & Exam Delivery Integration
+builder.Services.AddScoped<IAssessmentSelectionService, AssessmentSelectionService>();
+
 // Authentication with PrepfordAuth scheme (Bearer Session Token & Gateway HMAC)
 builder.Services.AddAuthentication(options =>
 {
