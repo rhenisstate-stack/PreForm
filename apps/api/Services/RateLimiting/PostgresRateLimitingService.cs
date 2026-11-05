@@ -117,7 +117,7 @@ public class PostgresRateLimitingService : ISharedRateLimitingService
                 WindowStartUtc = now,
                 LastAttemptUtc = now,
                 ExpiresAtUtc = now + window + lockoutDuration,
-                LockoutUntilUtc = 1 > maxAttempts ? now + lockoutDuration : null
+                LockoutUntilUtc = 1 >= maxAttempts ? now + lockoutDuration : null
             };
             _context.RateLimitBuckets.Add(bucket);
         }
@@ -143,7 +143,7 @@ public class PostgresRateLimitingService : ISharedRateLimitingService
             bucket.LastAttemptUtc = now;
             bucket.ExpiresAtUtc = now + window + lockoutDuration;
 
-            if (bucket.AttemptCount > maxAttempts)
+            if (bucket.AttemptCount >= maxAttempts)
             {
                 bucket.LockoutUntilUtc = now + lockoutDuration;
             }

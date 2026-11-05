@@ -198,14 +198,14 @@ public class Phase1SecurityTests
         var window = TimeSpan.FromMinutes(10);
         var lockout = TimeSpan.FromMinutes(15);
 
-        // Act & Assert: First 3 failed attempts are recorded and allowed before threshold
-        for (int i = 0; i < maxAttempts; i++)
+        // Act & Assert: First (maxAttempts - 1) failed attempts are recorded and allowed before threshold
+        for (int i = 0; i < maxAttempts - 1; i++)
         {
             var res = await limiter.RecordFailedAttemptAsync(testKey, maxAttempts, window, lockout);
             Assert.False(res.IsRateLimited, $"Attempt {i + 1} should not be rate limited yet");
         }
 
-        // 4th failed attempt exceeds maxAttempts and triggers lockout
+        // 3rd failed attempt reaches maxAttempts threshold and triggers lockout
         var lockedResult = await limiter.RecordFailedAttemptAsync(testKey, maxAttempts, window, lockout);
         Assert.True(lockedResult.IsRateLimited);
         Assert.True(lockedResult.RetryAfterSeconds > 0);
