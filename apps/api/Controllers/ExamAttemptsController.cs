@@ -26,7 +26,7 @@ public class StartAttemptRequest
     public string? Pathway { get; set; }
     public string? Name { get; set; }
     public string? TestType { get; set; } // "tutored_cat", "practice", or "rat"
-    public int QuestionCount { get; set; } = 10;
+    public int? QuestionCount { get; set; }
     public string? ClientNeedId { get; set; }
     public string? TopicId { get; set; }
 }
@@ -1091,9 +1091,9 @@ public class ExamAttemptsController : ControllerBase
         }
         else if (_assessmentSelectionService != null)
         {
-            var isExplicitCount = request != null && request.QuestionCount > 0;
+            var isExplicitCount = request?.QuestionCount.HasValue == true && request.QuestionCount.Value > 0;
             var count = isExplicitCount
-                ? request!.QuestionCount
+                ? request!.QuestionCount!.Value
                 : (exam.ExamType == ExamType.DiagnosticReadiness ? 75 : 10);
 
             var selectionResult = await _assessmentSelectionService.SelectQuestionsAsync(new AssessmentSelectionRequest
@@ -1173,7 +1173,7 @@ public class ExamAttemptsController : ControllerBase
                 .Include(q => q.ClientNeed)
                 .Include(q => q.Topic)
                 .Where(q => q.Status == QuestionStatus.Published)
-                .Take(request?.QuestionCount > 0 ? request.QuestionCount : 10)
+                .Take(request?.QuestionCount > 0 ? request.QuestionCount.Value : 10)
                 .ToListAsync(cancellationToken);
 
             selectedQuestions = fallbackQuestions.Select((q, idx) => new SelectedQuestionItem
