@@ -970,7 +970,7 @@ public class ExamAttemptsController : ControllerBase
         }
 
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == caller.userId, cancellationToken);
-        if (user == null || !user.IsActive)
+        if (user != null && !user.IsActive)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new
             {
@@ -982,7 +982,7 @@ public class ExamAttemptsController : ControllerBase
 
         var normalizedPathway = !string.IsNullOrWhiteSpace(request?.Pathway)
             ? (string.Equals(request.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn")
-            : (string.Equals(user.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn");
+            : (string.Equals(user?.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn");
 
         Exam exam;
         if (!string.IsNullOrWhiteSpace(request?.ExamId))
