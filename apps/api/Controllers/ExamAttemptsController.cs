@@ -25,8 +25,10 @@ public class StartAttemptRequest
     public string? ExamId { get; set; }
     public string? Pathway { get; set; }
     public string? Name { get; set; }
-    public string? TestType { get; set; } // "tutored_cat" or "rat"
+    public string? TestType { get; set; } // "tutored_cat", "practice", or "rat"
     public int QuestionCount { get; set; } = 10;
+    public string? ClientNeedId { get; set; }
+    public string? TopicId { get; set; }
 }
 
 public class SubmitAnswerRequest
@@ -130,6 +132,35 @@ public class CandidateAttemptDetailDto
     [JsonPropertyName("metadataSnapshot")]
     public object? MetadataSnapshot { get; set; }
     public List<CandidateAttemptResponseDto> Responses { get; set; } = new();
+    public List<CandidateQuestionDto> Questions { get; set; } = new();
+}
+
+public class CandidateQuestionOptionDto
+{
+    public string Id { get; set; } = string.Empty;
+    public int Index { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public string? MediaUrl { get; set; }
+}
+
+public class CandidateQuestionDto
+{
+    public string Id { get; set; } = string.Empty;
+    public int QuestionNumber { get; set; }
+    public string Stem { get; set; } = string.Empty;
+    public string QuestionType { get; set; } = string.Empty;
+    public string? Domain { get; set; }
+    public string? Subdomain { get; set; }
+    public string? MediaUrl { get; set; }
+    public List<CandidateQuestionOptionDto> Options { get; set; } = new();
+
+    /// <summary>Disclosed only after finalization; null while in progress.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public List<int>? CorrectAnswerIndices { get; set; }
+
+    /// <summary>Disclosed only after finalization; null while in progress.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Rationale { get; set; }
 }
 
 public class CandidateAttemptResponseDto
@@ -213,11 +244,12 @@ public class ExamAttemptsController : ControllerBase
         ILogger<ExamAttemptsController> logger,
         IResponseValidationService responseValidationService,
         IAttemptQuestionService attemptQuestionService)
-        : this(context, logger, responseValidationService, attemptQuestionService, null, null)
+        : this(context, logger, responseValidationService, attemptQuestionService, null, null, null, null)
     {
     }
 
     private readonly ISharedRateLimitingService? _rateLimitingService;
+    private readonly IAssessmentSelectionService? _assessmentSelectionService;
 
     [ActivatorUtilitiesConstructor]
     public ExamAttemptsController(
@@ -227,7 +259,8 @@ public class ExamAttemptsController : ControllerBase
         IAttemptQuestionService attemptQuestionService,
         ISessionSecurityService? sessionSecurityService,
         IPasswordHasher<User>? passwordHasher,
-        ISharedRateLimitingService? rateLimitingService = null)
+        ISharedRateLimitingService? rateLimitingService = null,
+        IAssessmentSelectionService? assessmentSelectionService = null)
     {
         _context = context;
         _logger = logger;
@@ -236,6 +269,7 @@ public class ExamAttemptsController : ControllerBase
         _sessionSecurityService = sessionSecurityService;
         _passwordHasher = passwordHasher ?? new PasswordHasher<User>();
         _rateLimitingService = rateLimitingService;
+        _assessmentSelectionService = assessmentSelectionService;
     }
 
     public ExamAttemptsController(
@@ -245,7 +279,19 @@ public class ExamAttemptsController : ControllerBase
         IAttemptQuestionService attemptQuestionService,
         ISessionSecurityService? sessionSecurityService,
         IPasswordHasher<User>? passwordHasher)
-        : this(context, logger, responseValidationService, attemptQuestionService, sessionSecurityService, passwordHasher, null)
+        : this(context, logger, responseValidationService, attemptQuestionService, sessionSecurityService, passwordHasher, null, null)
+    {
+    }
+
+    public ExamAttemptsController(
+        AppDbContext context,
+        ILogger<ExamAttemptsController> logger,
+        IResponseValidationService responseValidationService,
+        IAttemptQuestionService attemptQuestionService,
+        ISessionSecurityService? sessionSecurityService,
+        IPasswordHasher<User>? passwordHasher,
+        ISharedRateLimitingService? rateLimitingService)
+        : this(context, logger, responseValidationService, attemptQuestionService, sessionSecurityService, passwordHasher, rateLimitingService, null)
     {
     }
 
