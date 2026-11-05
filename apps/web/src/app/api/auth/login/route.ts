@@ -23,17 +23,62 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, password, rememberMe } = result.data;
+    const { email, password, rememberMe, recoverSessions } = result.data;
     const cookieStore = await cookies();
     const { clientId } = ensureClientId(cookieStore, request);
 
     // Dispatch login request to authoritative ASP.NET Core API with client ID
-    const apiRes = await authService.login({
+    let apiRes = await authService.login({
       email,
       password,
       rememberMe,
       clientId,
     });
+
+    // Opt-in credential-verified recovery: when the backend enforces the concurrent-session
+    // limit and the caller explicitly requested recovery, attempt narrowly-scoped recovery
+    // (sweeps sessions that can no longer authenticate) and retry the login exactly once.
+    // Recovery itself requires valid credentials and is rate limited by the backend.
+    if (
+      recoverSessions === true &&
+      apiRes.status === 409 &&
+      apiRes.data?.errorCode === "CONCURRENT_SESSION_LIMIT_EXCEEDED" &&
+      (!apiRes.success || !apiRes.data.success)
+    ) {
+      const recoveryRes = await authService.recoverSessions({
+        email,
+        password,
+        clearRemainingSessions: false,
+      });
+
+      if (recoveryRes.success && recoveryRes.data?.success) {
+        apiRes = await authService.login({
+          email,
+          password,
+          rememberMe,
+          clientId,
+        });
+      } else {
+        const recoveryStatus =
+          recoveryRes.status >= 400 && recoveryRes.status < 600 ? recoveryRes.status : 401;
+        const recoveryError =
+          recoveryStatus === 429
+            ? "Too many recovery attempts. Please wait a few minutes and try again."
+            : mapAuthHttpStatusToMessage(
+                recoveryStatus,
+                recoveryRes.data?.error || recoveryRes.error
+              );
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: recoveryError,
+            errorCode: recoveryRes.data?.errorCode,
+          },
+          { status: recoveryStatus }
+        );
+      }
+    }
 
     if (!apiRes.success || !apiRes.data?.success) {
       const status = apiRes.status >= 400 && apiRes.status < 600 ? apiRes.status : 401;

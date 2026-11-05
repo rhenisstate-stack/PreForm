@@ -40,10 +40,11 @@ export async function POST(request: Request) {
       );
     }
 
-    // Dispatch password change to backend ASP.NET Core API
+    // Dispatch password change to backend ASP.NET Core API with the stable client identity
     const apiRes = await profileService.changePassword(session, {
       currentPassword,
       newPassword,
+      clientId: session.clientId,
     });
 
     if (!apiRes.success) {

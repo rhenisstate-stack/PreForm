@@ -78,6 +78,11 @@ export const signInSchema = z.object({
   rememberMe: z
     .boolean()
     .default(false),
+  // Opt-in flag: when the backend reports a concurrent-session limit, the BFF may retry
+  // once through the credential-verified login-access recovery endpoint (see login route).
+  recoverSessions: z
+    .boolean()
+    .optional(),
 });
 
 export type SignInInput = z.infer<typeof signInSchema>;

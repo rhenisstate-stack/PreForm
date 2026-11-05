@@ -169,6 +169,7 @@ export const authService = {
       password: input.password || "TempP@ssword123!",
       displayName: input.fullName,
       pathway: input.pathway || "rn",
+      clientId: input.clientId,
     });
   },
 
@@ -249,13 +250,29 @@ export const profileService = {
     });
   },
 
+  recoverSessions: async (input: {
+    email: string;
+    password: string;
+    clearRemainingSessions?: boolean;
+  }): Promise<ApiResponse<{ success: boolean }>> => {
+    return apiClient.post<{ success: boolean }>("/api/v1/auth/recover-sessions", {
+      email: input.email,
+      password: input.password,
+      clearRemainingSessions: input.clearRemainingSessions ?? false,
+    });
+  },
+
   changePassword: async (
     session: VerifiedSession,
-    input: { currentPassword: string; newPassword: string }
+    input: { currentPassword: string; newPassword: string; clientId?: string }
   ): Promise<ApiResponse<{ success: boolean; message: string; sessionId?: string; token?: string }>> => {
     return apiClient.post<{ success: boolean; message: string; sessionId?: string; token?: string }>(
       "/api/v1/profile/change-password",
-      input,
+      {
+        currentPassword: input.currentPassword,
+        newPassword: input.newPassword,
+        clientId: input.clientId,
+      },
       { session }
     );
   },
