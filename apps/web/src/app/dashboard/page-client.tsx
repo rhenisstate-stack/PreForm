@@ -64,7 +64,11 @@ import {
   createCompletedAttempt,
   fetchAuthoritativeAttempts,
   CLINICAL_QUESTION_BANK,
+  PerformanceTier,
+  QuestionType,
+  getPerformanceTier,
 } from "@/lib/assessment-store";
+import type { AvailableAssessmentDto, CandidateQuestionDto } from "@/lib/api-services";
 
 export const RECENT_ACTIVITY_STORAGE_KEY = "prepford_recent_study_activity";
 
@@ -201,6 +205,9 @@ export function DashboardClient() {
   const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number | number[]>>({});
   const [activeQuestionIndex, setActiveQuestionIndex] = React.useState<number>(0);
   const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
+  const [availableAssessments, setAvailableAssessments] = React.useState<AvailableAssessmentDto[]>([]);
+  const [selectedAssessmentId, setSelectedAssessmentId] = React.useState<string | null>(null);
+  const [liveQuestions, setLiveQuestions] = React.useState<CandidateQuestionDto[]>([]);
 
   // Examination continuity: active attempt tracking and in-exam reauthentication modal
   const [activeAttemptId, setActiveAttemptId] = React.useState<string | null>(null);
@@ -275,6 +282,23 @@ export function DashboardClient() {
     []
   );
 
+  // Fetch published assessments for active pathway
+  React.useEffect(() => {
+    if (!isAuthenticated) return;
+    let cancelled = false;
+    fetch(`/api/assessments/available?pathway=${encodeURIComponent(activePathway)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.assessments && Array.isArray(data.assessments)) {
+          setAvailableAssessments(data.assessments);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, activePathway]);
+
   // Determine current active attempts list based on tab & preview toggle
   const filteredAttempts = React.useMemo(() => {
     let source = storedAttempts;
@@ -291,62 +315,194 @@ export function DashboardClient() {
     return source;
   }, [storedAttempts, showSamplePreview, activeTab]);
 
+  // Launches an assessment session with backend snapshot dispatch and offline fallback
+  const handleStartTestSession = (overrideAssessmentId?: string) => {
+    const tempId = "att_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+    setActiveAttemptId(tempId);
+    setCurrentTestAnswers({});
+    setActiveQuestionIndex(0);
+    setTestInProgress(true);
+
+    if (isAuthenticated && typeof window !== "undefined") {
+      const examId = overrideAssessmentId || selectedAssessmentId || undefined;
+      fetch("/api/attempts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          examId,
+          pathway: activePathway,
+          testType: createTestType,
+          questionCount: testQuestionCount,
+        }),
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then(async (data) => {
+          if (data?.success && data.attemptId) {
+            setActiveAttemptId(data.attemptId);
+            const qRes = await fetch(`/api/attempts/${encodeURIComponent(data.attemptId)}/questions`);
+            if (qRes.ok) {
+              const qData = await qRes.json();
+              if (qData?.success && Array.isArray(qData.questions) && qData.questions.length > 0) {
+                setLiveQuestions(qData.questions);
+                setTestQuestionCount(qData.questions.length);
+              }
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  };
+
   // Handle submitting a completed test in the test simulator with debounce and double-submit protection
   const handleCompleteTest = () => {
     if (isSubmittingTest) return;
     setIsSubmittingTest(true);
-    try {
-      const qSlice: typeof CLINICAL_QUESTION_BANK = [];
-      for (let i = 0; i < testQuestionCount; i++) {
-        qSlice.push(CLINICAL_QUESTION_BANK[i % CLINICAL_QUESTION_BANK.length]);
-      }
 
-      const formattedAnswers = qSlice.map((q, idx) => {
-        const ans = currentTestAnswers[idx];
-        if (q.questionType === "multi_select") {
-          return {
-            questionIndex: idx,
-            selectedOptionIndices: Array.isArray(ans) ? ans : typeof ans === "number" ? [ans] : [],
-          };
-        } else {
-          return {
-            questionIndex: idx,
-            selectedOptionIndex: typeof ans === "number" ? ans : -1,
-          };
+    const finishLocally = () => {
+      try {
+        const qSlice: typeof CLINICAL_QUESTION_BANK = [];
+        for (let i = 0; i < testQuestionCount; i++) {
+          qSlice.push(CLINICAL_QUESTION_BANK[i % CLINICAL_QUESTION_BANK.length]);
         }
-      });
 
-      const nextAttemptNumber = storedAttempts.filter((a) => a.type === createTestType).length + 1;
-      const completed = createCompletedAttempt({
-        testType: createTestType,
-        attemptNumber: nextAttemptNumber,
-        questionCount: testQuestionCount,
-        userAnswers: formattedAnswers,
-      });
+        const formattedAnswers = qSlice.map((q, idx) => {
+          const ans = currentTestAnswers[idx];
+          if (q.questionType === "multi_select") {
+            return {
+              questionIndex: idx,
+              selectedOptionIndices: Array.isArray(ans) ? ans : typeof ans === "number" ? [ans] : [],
+            };
+          } else {
+            return {
+              questionIndex: idx,
+              selectedOptionIndex: typeof ans === "number" ? ans : -1,
+            };
+          }
+        });
 
-      const candidateSession = user?.id ? {
-        userId: user.id,
-        email: user.email,
-        name: user.name || user.displayName || "Candidate",
-        displayName: user.displayName || user.name || "Candidate",
-        role: user.role || "candidate",
-        pathway: (user.pathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
-        csrfToken: "",
-        sessionId: "",
-        expiresAt: "",
-      } : null;
+        const nextAttemptNumber = storedAttempts.filter((a) => a.type === createTestType).length + 1;
+        const completed = createCompletedAttempt({
+          testType: createTestType,
+          attemptNumber: nextAttemptNumber,
+          questionCount: testQuestionCount,
+          userAnswers: formattedAnswers,
+        });
 
-      saveStoredAttempt(user?.id, completed, candidateSession);
-      setAttemptRefreshKey((k) => k + 1);
-      setTestInProgress(false);
-      setCreateModalOpen(false);
-      setCurrentTestAnswers({});
-      setActiveQuestionIndex(0);
-      // Open review modal immediately for the new attempt
-      setReviewModalAttempt(completed);
-    } finally {
-      setIsSubmittingTest(false);
+        const candidateSession = user?.id ? {
+          userId: user.id,
+          email: user.email,
+          name: user.name || user.displayName || "Candidate",
+          displayName: user.displayName || user.name || "Candidate",
+          role: user.role || "candidate",
+          pathway: (user.pathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
+          csrfToken: "",
+          sessionId: "",
+          expiresAt: "",
+        } : null;
+
+        saveStoredAttempt(user?.id, completed, candidateSession);
+        setAttemptRefreshKey((k) => k + 1);
+        setTestInProgress(false);
+        setCreateModalOpen(false);
+        setCurrentTestAnswers({});
+        setActiveQuestionIndex(0);
+        // Open review modal immediately for the new attempt
+        setReviewModalAttempt(completed);
+      } finally {
+        setIsSubmittingTest(false);
+      }
+    };
+
+    if (activeAttemptId && liveQuestions.length > 0 && !activeAttemptId.startsWith("att_")) {
+      fetch(`/api/attempts/${encodeURIComponent(activeAttemptId)}/submit`, {
+        method: "POST",
+      })
+        .then((res) => (res.ok ? res.json() : null))
+        .then(async (submitData) => {
+          if (submitData?.success) {
+            const detailRes = await fetch(`/api/attempts/${encodeURIComponent(activeAttemptId)}`);
+            if (detailRes.ok) {
+              const detailJson = await detailRes.json();
+              const backendAttempt = detailJson.attempt || detailJson;
+              if (backendAttempt && backendAttempt.id) {
+                const now = new Date();
+                const completed: CompletedAssessmentAttempt = {
+                  id: backendAttempt.id,
+                  name: backendAttempt.name || (createTestType === "tutored_cat" ? `Tutored CAT ${storedAttempts.length + 1}` : `Readiness Test ${storedAttempts.length + 1}`),
+                  type: createTestType,
+                  date: now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+                  timestamp: Date.now(),
+                  scorePercent: Math.round(backendAttempt.scorePercent ?? 0),
+                  performanceTier: (backendAttempt.performanceTier || getPerformanceTier(backendAttempt.scorePercent ?? 0)) as PerformanceTier,
+                  totalQuestions: backendAttempt.totalResponses || liveQuestions.length,
+                  correctCount: backendAttempt.correctCount ?? 0,
+                  durationMinutes: backendAttempt.durationMinutes || Math.max(5, Math.round(liveQuestions.length * 0.8)),
+                  domains: (backendAttempt.domainBreakdown || []).map((db: any) => ({
+                    domain: db.domain || db.domainName || "Care Management",
+                    scorePercent: Math.round(db.scorePercent ?? 0),
+                    totalQuestions: db.totalQuestions ?? 0,
+                    correctCount: db.correctCount ?? 0,
+                  })),
+                  questions: (backendAttempt.questions || liveQuestions).map((q: any, idx: number) => {
+                    const ans = currentTestAnswers[idx];
+                    const selectedIdx = typeof ans === "number" ? ans : -1;
+                    const selectedIndices = Array.isArray(ans) ? ans : typeof ans === "number" ? [ans] : [];
+                    const correctIndices = q.correctAnswerIndices || [];
+                    const isCorrect = q.isCorrect !== undefined
+                      ? q.isCorrect
+                      : (correctIndices.length > 0 && selectedIndices.length === correctIndices.length && selectedIndices.every((i: number) => correctIndices.includes(i)));
+                    return {
+                      id: q.id || `q-${idx}`,
+                      questionNumber: idx + 1,
+                      stem: q.stem,
+                      domain: q.domain || "Safe and Effective Care Environment: Management of Care",
+                      subdomain: q.subdomain,
+                      questionType: (q.questionType === "sata" || q.questionType === "multiple-choice" ? "multi_select" : "single_choice") as QuestionType,
+                      userAnswerIndex: selectedIdx,
+                      userAnswerIndices: selectedIndices,
+                      correctAnswerIndex: correctIndices[0],
+                      correctAnswerIndices: correctIndices,
+                      options: Array.isArray(q.options) ? q.options.map((o: any) => typeof o === "string" ? o : o.text || "") : [],
+                      rationale: q.rationale || q.explanation || "",
+                      isCorrect,
+                      scoreAwarded: isCorrect ? 1 : 0,
+                      isUnanswered: selectedIndices.length === 0 && selectedIdx === -1,
+                    };
+                  }),
+                  isSampleData: false,
+                };
+
+                const candidateSession = user?.id ? {
+                  userId: user.id,
+                  email: user.email,
+                  name: user.name || user.displayName || "Candidate",
+                  displayName: user.displayName || user.name || "Candidate",
+                  role: user.role || "candidate",
+                  pathway: (user.pathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
+                  csrfToken: "",
+                  sessionId: "",
+                  expiresAt: "",
+                } : null;
+
+                saveStoredAttempt(user?.id, completed, candidateSession);
+                setAttemptRefreshKey((k) => k + 1);
+                setTestInProgress(false);
+                setCreateModalOpen(false);
+                setCurrentTestAnswers({});
+                setActiveQuestionIndex(0);
+                setReviewModalAttempt(completed);
+                setIsSubmittingTest(false);
+                return;
+              }
+            }
+          }
+          finishLocally();
+        })
+        .catch(() => finishLocally());
+      return;
     }
+
+    finishLocally();
   };
 
   if (isLoading) {
@@ -1933,11 +2089,78 @@ export function DashboardClient() {
             {!testInProgress ? (
               /* Configuration Step */
               <div className="space-y-5">
+                {/* Standardized Published Assessments if available */}
+                {availableAssessments.length > 0 && (
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                      Standardized Published Assessments
+                    </label>
+                    <div className="space-y-2">
+                      {availableAssessments.map((asm) => (
+                        <div
+                          key={asm.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => {
+                            setSelectedAssessmentId(asm.id);
+                            setCreateTestType(asm.examType === "DiagnosticReadiness" ? "rat" : "tutored_cat");
+                            if (asm.questionCount) {
+                              setTestQuestionCount(asm.questionCount);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              setSelectedAssessmentId(asm.id);
+                              setCreateTestType(asm.examType === "DiagnosticReadiness" ? "rat" : "tutored_cat");
+                              if (asm.questionCount) {
+                                setTestQuestionCount(asm.questionCount);
+                              }
+                            }
+                          }}
+                          className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                            selectedAssessmentId === asm.id
+                              ? "border-teal-500 bg-teal-500/10 text-foreground shadow-2xs"
+                              : "border-border hover:border-border/80 text-muted-foreground"
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-sm text-foreground">{asm.title}</p>
+                              {asm.hasActiveAttempt && (
+                                <Badge variant="secondary" className="bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px]">
+                                  In-Progress Attempt Active
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-xs mt-0.5 text-muted-foreground">
+                              {asm.description || `${asm.questionCount} Questions • Multi-Domain Distribution`}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-xs font-mono shrink-0 ml-2">
+                            {asm.questionCount} Qs
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Test Type Selection */}
                 <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
-                    Assessment Type
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                      Assessment Mode
+                    </label>
+                    {selectedAssessmentId && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAssessmentId(null)}
+                        className="text-[11px] text-teal-600 dark:text-teal-400 hover:underline"
+                      >
+                        Reset to Custom Parameters
+                      </button>
+                    )}
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
@@ -2012,12 +2235,7 @@ export function DashboardClient() {
                   </Button>
                   <Button
                     type="button"
-                    onClick={() => {
-                      setTestInProgress(true);
-                      setActiveAttemptId("att_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8));
-                      setCurrentTestAnswers({});
-                      setActiveQuestionIndex(0);
-                    }}
+                    onClick={() => handleStartTestSession()}
                     className="bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-xl"
                   >
                     <span>Start Test Session</span>
@@ -2029,10 +2247,25 @@ export function DashboardClient() {
               /* Active Test Taking Step */
               <div className="space-y-5">
                 {(() => {
-                  const qSlice: typeof CLINICAL_QUESTION_BANK = [];
-                  for (let i = 0; i < testQuestionCount; i++) {
-                    qSlice.push(CLINICAL_QUESTION_BANK[i % CLINICAL_QUESTION_BANK.length]);
-                  }
+                  const qSlice = liveQuestions.length > 0
+                    ? liveQuestions.map((lq) => ({
+                        id: lq.id,
+                        stem: lq.stem,
+                        domain: lq.domain || "Safe and Effective Care Environment: Management of Care",
+                        subdomain: lq.subdomain,
+                        questionType: (lq.questionType === "sata" || lq.questionType === "multiple-choice" ? "multi_select" : "single_choice") as QuestionType,
+                        options: lq.options.map((o) => o.text),
+                        correctAnswerIndex: lq.correctAnswerIndices?.[0],
+                        correctAnswerIndices: lq.correctAnswerIndices,
+                        rationale: lq.rationale || "",
+                      }))
+                    : (() => {
+                        const slice: typeof CLINICAL_QUESTION_BANK = [];
+                        for (let i = 0; i < testQuestionCount; i++) {
+                          slice.push(CLINICAL_QUESTION_BANK[i % CLINICAL_QUESTION_BANK.length]);
+                        }
+                        return slice;
+                      })();
                   const activeQ = qSlice[activeQuestionIndex] || qSlice[0];
                   const isMultiSelect = activeQ.questionType === "multi_select";
                   const selectedVal = currentTestAnswers[activeQuestionIndex];
@@ -2117,6 +2350,7 @@ export function DashboardClient() {
                               role={isMultiSelect ? "checkbox" : "radio"}
                               aria-checked={isSelected}
                               onClick={() => {
+                                let nextSelected: number[] = [];
                                 if (isMultiSelect) {
                                   setCurrentTestAnswers((prev) => {
                                     const cur = prev[activeQuestionIndex];
@@ -2128,16 +2362,33 @@ export function DashboardClient() {
                                     const nextArr = curArr.includes(optIdx)
                                       ? curArr.filter((i) => i !== optIdx)
                                       : [...curArr, optIdx].sort((a, b) => a - b);
+                                    nextSelected = nextArr;
                                     return {
                                       ...prev,
                                       [activeQuestionIndex]: nextArr,
                                     };
                                   });
                                 } else {
+                                  nextSelected = [optIdx];
                                   setCurrentTestAnswers((prev) => ({
                                     ...prev,
                                     [activeQuestionIndex]: optIdx,
                                   }));
+                                }
+
+                                if (activeAttemptId && !activeAttemptId.startsWith("att_") && liveQuestions.length > 0) {
+                                  const qId = activeQ.id;
+                                  if (qId) {
+                                    fetch(`/api/attempts/${encodeURIComponent(activeAttemptId)}/responses`, {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({
+                                        questionId: qId,
+                                        selectedOptionIndices: nextSelected,
+                                        timeSpentSeconds: 15,
+                                      }),
+                                    }).catch(() => {});
+                                  }
                                 }
                               }}
                               className={`w-full p-4 rounded-xl border text-left text-xs sm:text-sm font-medium transition-all flex items-start gap-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-secondary ${
