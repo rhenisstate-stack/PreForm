@@ -363,11 +363,17 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<Exam>(entity =>
         {
             entity.Property(e => e.ConcurrencyToken).IsConcurrencyToken();
+            entity.Property(e => e.CompositionRulesJson).HasColumnType("jsonb");
+            entity.Property(e => e.ConfigurationSnapshotJson).HasColumnType("jsonb");
+            entity.Property(e => e.SelectionStrategy).HasMaxLength(32);
+            entity.Property(e => e.ReviewPolicy).HasMaxLength(32);
 
             entity.HasIndex(e => e.Pathway);
             entity.HasIndex(e => e.IsPublished);
+            entity.HasIndex(e => e.IsAvailable);
             entity.HasIndex(e => e.LifecycleState);
             entity.HasIndex(e => new { e.IsPublished, e.Pathway, e.UpdatedAt });
+            entity.HasIndex(e => new { e.IsAvailable, e.AvailableFrom, e.AvailableTo });
 
             entity.HasOne(e => e.Examination)
                   .WithMany(ex => ex.Revisions)

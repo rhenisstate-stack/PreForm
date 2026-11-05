@@ -28,6 +28,49 @@ public enum ExamLifecycleState
     Retired = 6
 }
 
+public static class ExaminationSelectionStrategy
+{
+    public const string Preset = "Preset";
+    public const string DynamicBalanced = "DynamicBalanced";
+    public const string Hybrid = "Hybrid";
+}
+
+public static class ExaminationReviewPolicy
+{
+    public const string Immediate = "Immediate";
+    public const string AfterExamSubmission = "AfterExamSubmission";
+    public const string AfterDeadline = "AfterDeadline";
+    public const string Never = "Never";
+    public const string ManualRelease = "ManualRelease";
+}
+
+public static class ClientNeedCategory
+{
+    public const string MOC = "MOC"; // Safe and Effective Care Environment - Management of Care
+    public const string SIC = "SIC"; // Safe and Effective Care Environment - Safety and Infection Control
+    public const string HPM = "HPM"; // Health Promotion and Maintenance
+    public const string PSI = "PSI"; // Psychosocial Integrity
+    public const string BCC = "BCC"; // Physiological Integrity - Basic Care and Comfort
+    public const string PHA = "PHA"; // Physiological Integrity - Pharmacological and Parenteral Therapies
+    public const string RRP = "RRP"; // Physiological Integrity - Reduction of Risk Potential
+    public const string PPT = "PPT"; // Physiological Integrity - Physiological Adaptation
+
+    public static readonly string[] All = { MOC, SIC, HPM, PSI, BCC, PHA, RRP, PPT };
+
+    public static string GetDisplayName(string code) => code?.ToUpperInvariant() switch
+    {
+        MOC => "Management of Care",
+        SIC => "Safety and Infection Control",
+        HPM => "Health Promotion and Maintenance",
+        PSI => "Psychosocial Integrity",
+        BCC => "Basic Care and Comfort",
+        PHA => "Pharmacological and Parenteral Therapies",
+        RRP => "Reduction of Risk Potential",
+        PPT => "Physiological Adaptation",
+        _ => code ?? string.Empty
+    };
+}
+
 /// <summary>
 /// Stable examination family identity across revisions (P3.1 Option B).
 /// Holds permanent sequential code and pathway identity.
@@ -106,6 +149,37 @@ public class Exam
     public decimal PassingScorePercent { get; set; } = 75.0m;
 
     public bool IsPublished { get; set; } = false;
+
+    // ── P4.1 Additive Examination Configuration & Policies ──
+    public int TargetQuestionCount { get; set; } = 10;
+
+    [MaxLength(32)]
+    public string SelectionStrategy { get; set; } = ExaminationSelectionStrategy.Preset;
+
+    [Column(TypeName = "jsonb")]
+    public string? CompositionRulesJson { get; set; }
+
+    public bool IsAvailable { get; set; } = true;
+
+    public DateTime? AvailableFrom { get; set; }
+
+    public DateTime? AvailableTo { get; set; }
+
+    public int? MaxAttemptsAllowed { get; set; }
+
+    public int RetakeCooldownHours { get; set; } = 0;
+
+    public bool AllowInterruptedResume { get; set; } = true;
+
+    [MaxLength(32)]
+    public string ReviewPolicy { get; set; } = ExaminationReviewPolicy.AfterExamSubmission;
+
+    public bool ShowRationales { get; set; } = true;
+
+    public bool ShowScoreImmediately { get; set; } = true;
+
+    [Column(TypeName = "jsonb")]
+    public string? ConfigurationSnapshotJson { get; set; }
 
     // ── P3.1 Additive Revision, Concurrency & Lifecycle Metadata ──
     [MaxLength(128)]
