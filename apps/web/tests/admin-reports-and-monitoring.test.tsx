@@ -123,9 +123,9 @@ describe("Phase 5: Admin Overview, Reports Studio & System Health Observability"
     await waitFor(() => {
       expect(screen.getAllByText("120")[0]).toBeInTheDocument();
       expect(screen.getAllByText("100")[0]).toBeInTheDocument();
-      expect(screen.getByText("83.3%")).toBeInTheDocument();
-      expect(screen.getByText("72.5%")).toBeInTheDocument();
-      expect(screen.getByText("65%")).toBeInTheDocument();
+      expect(screen.getAllByText("83.3%")[0]).toBeInTheDocument();
+      expect(screen.getAllByText("72.5%")[0]).toBeInTheDocument();
+      expect(screen.getAllByText("65%")[0]).toBeInTheDocument();
     });
 
     expect(screen.getByText("Score Distribution Across Decile Buckets")).toBeInTheDocument();
