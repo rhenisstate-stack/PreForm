@@ -945,27 +945,185 @@ public class ExamAttemptsController : ControllerBase
             return Unauthorized(new { success = false, error = "Authentication required." });
         }
 
-        var exam = !string.IsNullOrWhiteSpace(request.ExamId)
-            ? await _context.Exams
-                .Include(e => e.Examination)
-                .Include(e => e.ExamQuestions)
-                .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken)
-            : await GetOrCreateDefaultExamAsync(request.Pathway ?? "rn", cancellationToken);
-
-        if (exam == null)
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == caller.userId, cancellationToken);
+        if (user == null || !user.IsActive)
         {
-            exam = await GetOrCreateDefaultExamAsync("rn", cancellationToken);
-        }
-
-        // Publication guard: only published exams can accept new attempts
-        if (exam.LifecycleState != ExamLifecycleState.Published && !exam.IsPublished)
-        {
-            return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+            return StatusCode(StatusCodes.Status403Forbidden, new
             {
                 success = false,
-                error = "ExamNotAvailable",
-                message = "Examination is not published for new attempts."
+                errorCode = "ACCOUNT_INACTIVE",
+                error = "Account is inactive or disabled."
             });
+        }
+
+        var normalizedPathway = !string.IsNullOrWhiteSpace(request?.Pathway)
+            ? (string.Equals(request.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn")
+            : (string.Equals(user.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn");
+
+        Exam exam;
+        if (!string.IsNullOrWhiteSpace(request?.ExamId))
+        {
+            var foundExam = await _context.Exams
+                .Include(e => e.Examination)
+                .Include(e => e.ExamQuestions)
+                    .ThenInclude(eq => eq.Question)
+                        .ThenInclude(q => q.Options)
+                .FirstOrDefaultAsync(e => e.Id == request.ExamId, cancellationToken);
+
+            if (foundExam == null)
+            {
+                return NotFound(new { success = false, error = $"Examination '{request.ExamId}' not found." });
+            }
+
+            if (foundExam.LifecycleState != ExamLifecycleState.Published && !foundExam.IsPublished)
+            {
+                return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+                {
+                    success = false,
+                    error = "ExamNotAvailable",
+                    message = "Examination is not published for new attempts."
+                });
+            }
+
+            exam = foundExam;
+        }
+        else
+        {
+            var targetExamType = string.Equals(request?.TestType, "rat", StringComparison.OrdinalIgnoreCase)
+                ? ExamType.DiagnosticReadiness
+                : (string.Equals(request?.TestType, "cat", StringComparison.OrdinalIgnoreCase) || string.Equals(request?.TestType, "tutored_cat", StringComparison.OrdinalIgnoreCase)
+                    ? ExamType.CAT
+                    : ExamType.Practice);
+
+            exam = await GetOrCreateExamAsync(normalizedPathway, targetExamType, cancellationToken);
+        }
+
+        // ── Phase 3 Concurrency Guard ──
+        var existingAttempt = await _context.ExamAttempts
+            .Include(ea => ea.Exam)
+            .Include(ea => ea.Responses)
+            .FirstOrDefaultAsync(ea => ea.UserId == caller.userId && ea.ExamId == exam.Id && ea.Status == AttemptStatus.InProgress, cancellationToken);
+
+        if (existingAttempt != null)
+        {
+            if (existingAttempt.Exam != null && existingAttempt.Exam.TimeLimitMinutes > 0)
+            {
+                var deadline = existingAttempt.StartedAt.AddMinutes(existingAttempt.Exam.TimeLimitMinutes);
+                if (DateTime.UtcNow >= deadline)
+                {
+                    existingAttempt.Status = AttemptStatus.Completed;
+                    existingAttempt.CompletedAt = deadline;
+                    await _context.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    return Ok(new
+                    {
+                        success = true,
+                        attemptId = existingAttempt.Id,
+                        examId = exam.Id,
+                        startedAt = existingAttempt.StartedAt,
+                        resumed = true,
+                        message = "Resumed active in-progress assessment attempt."
+                    });
+                }
+            }
+            else
+            {
+                return Ok(new
+                {
+                    success = true,
+                    attemptId = existingAttempt.Id,
+                    examId = exam.Id,
+                    startedAt = existingAttempt.StartedAt,
+                    resumed = true,
+                    message = "Resumed active in-progress assessment attempt."
+                });
+            }
+        }
+
+        // ── Phase 3 Question Selection Engine ──
+        List<SelectedQuestionItem> selectedQuestions = new();
+
+        if (exam.ExamQuestions != null && exam.ExamQuestions.Count > 0)
+        {
+            selectedQuestions = exam.ExamQuestions
+                .OrderBy(eq => eq.DisplayOrder)
+                .Where(eq => eq.Question != null)
+                .Select((eq, idx) => new SelectedQuestionItem
+                {
+                    Question = eq.Question,
+                    DisplayOrder = idx,
+                    Options = eq.Question.Options.OrderBy(o => o.DisplayOrder).ToList()
+                })
+                .ToList();
+        }
+        else if (_assessmentSelectionService != null)
+        {
+            var count = request?.QuestionCount > 0
+                ? request.QuestionCount
+                : (exam.ExamType == ExamType.DiagnosticReadiness ? 75 : 10);
+
+            var selectionResult = await _assessmentSelectionService.SelectQuestionsAsync(new AssessmentSelectionRequest
+            {
+                Pathway = exam.Pathway,
+                QuestionCount = count,
+                ExamType = exam.ExamType,
+                ClientNeedId = request?.ClientNeedId,
+                TopicId = request?.TopicId
+            }, cancellationToken);
+
+            if (!selectionResult.Success)
+            {
+                return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+                {
+                    success = false,
+                    errorCode = selectionResult.ErrorCode ?? "SELECTION_FAILED",
+                    error = selectionResult.ErrorMessage ?? "Failed to select eligible questions for assessment."
+                });
+            }
+
+            selectedQuestions = selectionResult.SelectedQuestions;
+
+            // Ensure Level 1 membership (ExamQuestion) exists for each selected question
+            var existingExamQIds = await _context.ExamQuestions
+                .Where(eq => eq.ExamId == exam.Id)
+                .Select(eq => eq.QuestionId)
+                .ToHashSetAsync(cancellationToken);
+
+            var newExamQuestions = selectedQuestions
+                .Where(sq => !existingExamQIds.Contains(sq.Question.Id))
+                .Select(sq => new ExamQuestion
+                {
+                    Id = "eq_" + Guid.NewGuid().ToString("N"),
+                    ExamId = exam.Id,
+                    QuestionId = sq.Question.Id,
+                    DisplayOrder = sq.DisplayOrder
+                })
+                .ToList();
+
+            if (newExamQuestions.Count > 0)
+            {
+                _context.ExamQuestions.AddRange(newExamQuestions);
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+        }
+        else
+        {
+            var fallbackQuestions = await _context.Questions
+                .Include(q => q.Options)
+                .Include(q => q.ClientNeed)
+                .Include(q => q.Topic)
+                .Where(q => q.LifecycleState == QuestionLifecycleState.Published && q.IsActive)
+                .Take(request?.QuestionCount > 0 ? request.QuestionCount : 10)
+                .ToListAsync(cancellationToken);
+
+            selectedQuestions = fallbackQuestions.Select((q, idx) => new SelectedQuestionItem
+            {
+                Question = q,
+                DisplayOrder = idx,
+                Options = q.Options.OrderBy(o => o.DisplayOrder).ToList()
+            }).ToList();
         }
 
         var now = DateTime.UtcNow;
@@ -979,7 +1137,7 @@ public class ExamAttemptsController : ControllerBase
                 id = exam.Examination?.Id ?? exam.ExaminationId ?? exam.Id,
                 code = exam.Examination?.Code ?? (exam.Pathway == "pn" ? "PN-EX-000000" : "RN-EX-000000"),
                 pathway = exam.Pathway,
-                title = exam.Examination?.Title ?? exam.Title
+                title = !string.IsNullOrWhiteSpace(request?.Name) ? request.Name : (exam.Examination?.Title ?? exam.Title)
             },
             revision = new
             {
@@ -996,13 +1154,35 @@ public class ExamAttemptsController : ControllerBase
             {
                 shuffleQuestions = true,
                 allowReview = true
-            }
+            },
+            questions = selectedQuestions.Select(sq => new
+            {
+                id = sq.Question.Id,
+                version = sq.Question.Version,
+                stem = sq.Question.Stem,
+                questionType = sq.Question.QuestionTypeKey,
+                clientNeedId = sq.Question.ClientNeedId,
+                clientNeedName = sq.Question.ClientNeed?.Name,
+                topicId = sq.Question.TopicId,
+                topicName = sq.Question.Topic?.Name,
+                mediaUrl = sq.Question.MediaUrl,
+                explanation = sq.Question.Explanation,
+                displayOrder = sq.DisplayOrder,
+                options = sq.Options.Select(o => new
+                {
+                    id = o.Id,
+                    displayOrder = o.DisplayOrder,
+                    text = o.OptionText,
+                    isCorrect = o.IsCorrect,
+                    mediaUrl = o.MediaUrl
+                }).ToList()
+            }).ToList()
         };
 
         var attempt = new ExamAttempt
         {
             Id = "att_" + Guid.NewGuid().ToString("N"),
-            UserId = caller.userId, // Authenticated candidate ID strictly enforced
+            UserId = caller.userId,
             ExamId = exam.Id,
             Status = AttemptStatus.InProgress,
             ScorePercent = 0.0m,
@@ -1015,24 +1195,32 @@ public class ExamAttemptsController : ControllerBase
         _context.ExamAttempts.Add(attempt);
         await _context.SaveChangesAsync(cancellationToken);
 
-        // Persist the exact attempt question set at start time. The attempt's
-        // authorized question set is the exam's question list in display order;
-        // adaptive (CAT) sub-selection is not implemented and remains out of scope.
+        // Record immutable question membership in ExamAttemptQuestions
         await _attemptQuestionService.RecordQuestionMembershipAsync(
             attempt.Id,
-            exam.ExamQuestions
-                .OrderBy(eq => eq.DisplayOrder)
-                .Select(eq => eq.QuestionId)
-                .ToList(),
+            selectedQuestions.Select(sq => sq.Question.Id).ToList(),
             now,
             cancellationToken);
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            ActorId = caller.userId,
+            Action = "ExamAttemptStarted",
+            EntityType = "ExamAttempt",
+            EntityId = attempt.Id,
+            Description = $"Learner started attempt for exam '{exam.Title}' with {selectedQuestions.Count} question(s).",
+            Outcome = "Success",
+            Timestamp = now
+        });
+        await _context.SaveChangesAsync(cancellationToken);
 
         return CreatedAtAction(nameof(GetAttemptById), new { id = attempt.Id }, new
         {
             success = true,
             attemptId = attempt.Id,
             examId = exam.Id,
-            startedAt = attempt.StartedAt
+            startedAt = attempt.StartedAt,
+            questionCount = selectedQuestions.Count
         });
     }
 
@@ -1269,12 +1457,15 @@ public class ExamAttemptsController : ControllerBase
             await _context.SaveChangesAsync(cancellationToken);
         }
 
+        var performanceTier = GetPerformanceTier(attempt.ScorePercent);
+
         return Ok(new
         {
             success = true,
             attemptId = attempt.Id,
             scorePercent = attempt.ScorePercent,
             passed = attempt.Passed,
+            performanceTier,
             totalQuestions = totalResponses,
             correctCount = correctResponses,
             completedAt = attempt.CompletedAt
