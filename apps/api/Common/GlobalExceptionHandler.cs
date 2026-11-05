@@ -44,7 +44,7 @@ public class GlobalExceptionHandler : IExceptionHandler
             Type = $"https://httpstatuses.com/{statusCode}",
             Title = title,
             Status = statusCode,
-            Detail = httpContext.RequestServices.GetService<IHostEnvironment>()?.IsDevelopment() == true
+            Detail = httpContext.RequestServices?.GetService<IHostEnvironment>()?.IsDevelopment() == true
                 ? exception.Message
                 : "An unexpected error occurred while processing your request.",
             Instance = httpContext.Request.Path

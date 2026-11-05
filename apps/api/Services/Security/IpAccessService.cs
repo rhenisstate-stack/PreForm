@@ -35,6 +35,7 @@ public class IpAccessService : IIpAccessService
             .Where(r => r.IsActive && (r.ExpiresAt == null || r.ExpiresAt > now))
             .ToListAsync(cancellationToken);
 
+        // 1. Check Blacklist: if client matches ANY active blacklist rule, block immediately
         foreach (var rule in activeRules)
         {
             if (string.Equals(rule.RuleType, "Blacklist", StringComparison.OrdinalIgnoreCase))
@@ -45,6 +46,21 @@ public class IpAccessService : IIpAccessService
                         clientIp, rule.Id, rule.IpAddressOrCidr);
                     return true;
                 }
+            }
+        }
+
+        // 2. Check Whitelist: if there are ANY active whitelist rules, client MUST match at least one
+        var activeWhitelists = activeRules
+            .Where(r => string.Equals(r.RuleType, "Whitelist", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        if (activeWhitelists.Count > 0)
+        {
+            var isWhitelisted = activeWhitelists.Any(r => IsMatch(parsedClientIp, r.IpAddressOrCidr));
+            if (!isWhitelisted)
+            {
+                _logger.LogWarning("Connection blocked: Client IP {ClientIp} does not match any active whitelist rules.", clientIp);
+                return true;
             }
         }
 
