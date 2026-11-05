@@ -140,19 +140,63 @@ public class AssessmentsController : ControllerBase
         });
 
         // 4. Custom published examinations from the Examinations library
+        var nowUtc = DateTime.UtcNow;
         var publishedExams = await _context.Exams
             .Include(e => e.Examination)
             .Include(e => e.ExamQuestions)
             .Where(e => (e.LifecycleState == ExamLifecycleState.Published || e.IsPublished) &&
+                        e.IsAvailable &&
+                        (!e.AvailableFrom.HasValue || e.AvailableFrom.Value <= nowUtc) &&
+                        (!e.AvailableTo.HasValue || e.AvailableTo.Value >= nowUtc) &&
                         (e.Pathway == effectivePathway || e.Pathway == "both") &&
                         e.Id != ratExamId && e.Id != practiceExamId && e.Id != catExamId)
             .OrderByDescending(e => e.PublishedAt ?? e.CreatedAt)
-            .Take(10)
+            .Take(20)
             .ToListAsync(cancellationToken);
+
+        // Fetch completed attempts for this user across published exams to check attempt policies
+        var publishedExamIds = publishedExams.Select(e => e.Id).ToList();
+        var userCompletedAttempts = await _context.ExamAttempts
+            .Where(a => a.UserId == userId && publishedExamIds.Contains(a.ExamId) && a.Status == AttemptStatus.Completed)
+            .Select(a => new { a.ExamId, a.CompletedAt })
+            .ToListAsync(cancellationToken);
+
+        var completedCountByExam = userCompletedAttempts
+            .GroupBy(a => a.ExamId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var lastCompletedByExam = userCompletedAttempts
+            .Where(a => a.CompletedAt.HasValue)
+            .GroupBy(a => a.ExamId)
+            .ToDictionary(g => g.Key, g => g.Max(a => a.CompletedAt!.Value));
 
         foreach (var pub in publishedExams)
         {
             var hasActive = activeAttemptByExamId.TryGetValue(pub.Id, out var actId);
+            var isEligible = true;
+            string? badge = pub.ExamType == ExamType.DiagnosticReadiness ? "Diagnostic RAT" : "Examination";
+
+            if (completedCountByExam.TryGetValue(pub.Id, out var count))
+            {
+                if (pub.MaxAttemptsAllowed.HasValue && count >= pub.MaxAttemptsAllowed.Value)
+                {
+                    isEligible = false;
+                    badge = "Max Attempts Reached";
+                }
+                else if (pub.RetakeCooldownHours > 0 && lastCompletedByExam.TryGetValue(pub.Id, out var lastDone))
+                {
+                    if (nowUtc < lastDone.AddHours(pub.RetakeCooldownHours))
+                    {
+                        isEligible = false;
+                        badge = "Cooldown Active";
+                    }
+                }
+            }
+
+            var qCount = pub.ExamQuestions.Count > 0
+                ? pub.ExamQuestions.Count
+                : (pub.TargetQuestionCount > 0 ? pub.TargetQuestionCount : 50);
+
             assessments.Add(new AvailableAssessmentDto
             {
                 Id = pub.Id,
@@ -160,13 +204,13 @@ public class AssessmentsController : ControllerBase
                 Description = pub.Description,
                 Pathway = pub.Pathway,
                 ExamType = pub.ExamType.ToString(),
-                QuestionCount = pub.ExamQuestions.Count > 0 ? pub.ExamQuestions.Count : 50,
+                QuestionCount = qCount,
                 DurationMinutes = pub.TimeLimitMinutes,
                 PassingScorePercent = pub.PassingScorePercent,
                 HasActiveAttempt = hasActive,
                 ActiveAttemptId = actId,
-                Badge = pub.ExamType == ExamType.DiagnosticReadiness ? "Diagnostic RAT" : "Examination",
-                IsEligible = true
+                Badge = badge,
+                IsEligible = isEligible
             });
         }
 

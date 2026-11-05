@@ -506,13 +506,29 @@ public class ExamAttemptsController : ControllerBase
         }
 
         // Candidate-facing DTO contract: full EF entities are never serialized.
-        // Correctness/scores are disclosed only after authoritative finalization.
+        // Correctness/scores are disclosed only after authoritative finalization and subject to ReviewPolicy.
         var isCompleted = attempt.Status == AttemptStatus.Completed;
         var totalResponses = attempt.Responses.Count;
         var ungradedCount = attempt.Responses.Count(r => r.GradingState == ResponseGradingState.Ungraded);
         var duration = attempt.CompletedAt.HasValue
             ? (int)Math.Max(1, (attempt.CompletedAt.Value - attempt.StartedAt).TotalMinutes)
             : (int)Math.Max(1, (DateTime.UtcNow - attempt.StartedAt).TotalMinutes);
+
+        var reviewPolicy = attempt.Exam?.ReviewPolicy ?? "AfterExamSubmission";
+        var showRationales = attempt.Exam?.ShowRationales ?? true;
+        var showScore = attempt.Exam?.ShowScoreImmediately ?? true;
+
+        bool canShowRationales = isCompleted && showRationales && (
+            string.Equals(reviewPolicy, "Immediate", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(reviewPolicy, "AfterExamSubmission", StringComparison.OrdinalIgnoreCase) ||
+            (string.Equals(reviewPolicy, "AfterDeadline", StringComparison.OrdinalIgnoreCase) &&
+             attempt.Exam != null && attempt.Exam.TimeLimitMinutes > 0 &&
+             DateTime.UtcNow >= attempt.StartedAt.AddMinutes(attempt.Exam.TimeLimitMinutes))
+        );
+        if (string.Equals(reviewPolicy, "Never", StringComparison.OrdinalIgnoreCase))
+        {
+            canShowRationales = false;
+        }
 
         object? metadataSnapshotObj = null;
         if (!string.IsNullOrWhiteSpace(attempt.MetadataSnapshot))
@@ -646,8 +662,8 @@ public class ExamAttemptsController : ControllerBase
                     Subdomain = subdomain,
                     MediaUrl = mediaUrl,
                     Options = optionsList,
-                    CorrectAnswerIndices = isCompleted ? correctIndices : null,
-                    Rationale = isCompleted ? explanation : null
+                    CorrectAnswerIndices = canShowRationales ? correctIndices : null,
+                    Rationale = canShowRationales ? explanation : null
                 });
             }
         }
@@ -692,8 +708,8 @@ public class ExamAttemptsController : ControllerBase
                             Text = o.Content,
                             MediaUrl = o.MediaUrl
                         }).ToList(),
-                        CorrectAnswerIndices = isCompleted ? correctIndices : null,
-                        Rationale = isCompleted ? q.OverallRationale : null
+                        CorrectAnswerIndices = canShowRationales ? correctIndices : null,
+                        Rationale = canShowRationales ? q.OverallRationale : null
                     });
                 }
             }
@@ -1007,6 +1023,72 @@ public class ExamAttemptsController : ControllerBase
                     error = "ExamNotAvailable",
                     message = "Examination is not published for new attempts."
                 });
+            }
+
+            if (!foundExam.IsAvailable)
+            {
+                return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+                {
+                    success = false,
+                    errorCode = "EXAM_UNAVAILABLE",
+                    error = "This examination is currently disabled or unavailable."
+                });
+            }
+
+            var nowUtc = DateTime.UtcNow;
+            if (foundExam.AvailableFrom.HasValue && nowUtc < foundExam.AvailableFrom.Value)
+            {
+                return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+                {
+                    success = false,
+                    errorCode = "EXAM_NOT_YET_AVAILABLE",
+                    error = $"This examination is not scheduled to become available until {foundExam.AvailableFrom.Value:u}."
+                });
+            }
+
+            if (foundExam.AvailableTo.HasValue && nowUtc > foundExam.AvailableTo.Value)
+            {
+                return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+                {
+                    success = false,
+                    errorCode = "EXAM_AVAILABILITY_EXPIRED",
+                    error = $"The availability window for this examination expired at {foundExam.AvailableTo.Value:u}."
+                });
+            }
+
+            if (foundExam.MaxAttemptsAllowed.HasValue)
+            {
+                var completedCount = await _context.ExamAttempts
+                    .CountAsync(ea => ea.UserId == caller.userId && ea.ExamId == foundExam.Id && ea.Status == AttemptStatus.Completed, cancellationToken);
+                if (completedCount >= foundExam.MaxAttemptsAllowed.Value)
+                {
+                    return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+                    {
+                        success = false,
+                        errorCode = "MAX_ATTEMPTS_REACHED",
+                        error = $"Maximum permitted attempts ({foundExam.MaxAttemptsAllowed.Value}) reached for this examination."
+                    });
+                }
+            }
+
+            if (foundExam.RetakeCooldownHours > 0)
+            {
+                var lastCompleted = await _context.ExamAttempts
+                    .Where(ea => ea.UserId == caller.userId && ea.ExamId == foundExam.Id && ea.Status == AttemptStatus.Completed && ea.CompletedAt.HasValue)
+                    .OrderByDescending(ea => ea.CompletedAt)
+                    .Select(ea => ea.CompletedAt)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+                if (lastCompleted.HasValue && nowUtc < lastCompleted.Value.AddHours(foundExam.RetakeCooldownHours))
+                {
+                    var unlockTime = lastCompleted.Value.AddHours(foundExam.RetakeCooldownHours);
+                    return StatusCode(StatusCodes.Status422UnprocessableEntity, new
+                    {
+                        success = false,
+                        errorCode = "RETAKE_COOLDOWN_ACTIVE",
+                        error = $"Retake cooldown active. You can attempt this examination again after {unlockTime:u}."
+                    });
+                }
             }
 
             exam = foundExam;

@@ -144,6 +144,56 @@ public class ExaminationsController : ControllerBase
         });
     }
 
+    [HttpGet("revisions/{revisionId}/composition")]
+    public async Task<IActionResult> GetComposition(string revisionId, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var composition = await _lifecycleService.GetCompositionAsync(revisionId, User, ct);
+            return Ok(new { success = true, composition });
+        });
+    }
+
+    [HttpPut("revisions/{revisionId}/composition")]
+    public async Task<IActionResult> UpdateComposition(string revisionId, [FromBody] UpdateExamCompositionRequest request, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var composition = await _lifecycleService.UpdateCompositionAsync(revisionId, request, User, ct);
+            return Ok(new { success = true, composition });
+        });
+    }
+
+    [HttpGet("revisions/{revisionId}/pool-preview")]
+    public async Task<IActionResult> GetQuestionPoolPreview(string revisionId, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var preview = await _lifecycleService.GetQuestionPoolPreviewAsync(revisionId, User, ct);
+            return Ok(preview);
+        });
+    }
+
+    [HttpGet("revisions/{revisionId}/readiness")]
+    public async Task<IActionResult> GetReadinessReport(string revisionId, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var report = await _lifecycleService.GetReadinessReportAsync(revisionId, User, ct);
+            return Ok(report);
+        });
+    }
+
+    [HttpGet("revisions/{revisionId}/preview")]
+    public async Task<IActionResult> GetAdminPreview(string revisionId, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var preview = await _lifecycleService.GetAdminPreviewAsync(revisionId, User, ct);
+            return Ok(preview);
+        });
+    }
+
     [HttpDelete("revisions/{revisionId}")]
     public async Task<IActionResult> DiscardDraftRevision(string revisionId, [FromQuery] long concurrencyToken, CancellationToken ct)
     {

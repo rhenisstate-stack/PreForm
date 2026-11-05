@@ -717,6 +717,13 @@ public class ExamLifecycleService : IExamLifecycleService
             throw new InvalidOperationException($"Cannot publish revision in '{revision.LifecycleState}' state. Only Approved revisions can be published.");
         }
 
+        var readiness = await GetReadinessReportAsync(revision.Id, user, ct);
+        if (!readiness.CanPublish)
+        {
+            var blockMsgs = string.Join("; ", readiness.Checks.Where(c => c.Status == "BLOCK").Select(c => c.Message));
+            throw new InvalidOperationException($"Cannot publish examination with blocking readiness issues: {blockMsgs}");
+        }
+
         var now = DateTime.UtcNow;
 
         // Invariant: At most one revision may be Published per Examination family.
@@ -762,6 +769,34 @@ public class ExamLifecycleService : IExamLifecycleService
         revision.PublishedAt = now;
         revision.ConcurrencyToken++;
         revision.UpdatedAt = now;
+
+        revision.ConfigurationSnapshotJson = JsonSerializer.Serialize(new
+        {
+            examinationId = revision.ExaminationId,
+            examinationCode = revision.Examination?.Code,
+            revisionNumber = revision.RevisionNumber,
+            title = revision.Title,
+            description = revision.Description,
+            pathway = revision.Pathway,
+            examType = revision.ExamType.ToString(),
+            timeLimitMinutes = revision.TimeLimitMinutes,
+            passingScorePercent = revision.PassingScorePercent,
+            targetQuestionCount = revision.TargetQuestionCount,
+            selectionStrategy = revision.SelectionStrategy,
+            compositionRulesJson = revision.CompositionRulesJson,
+            isAvailable = revision.IsAvailable,
+            availableFrom = revision.AvailableFrom,
+            availableTo = revision.AvailableTo,
+            maxAttemptsAllowed = revision.MaxAttemptsAllowed,
+            retakeCooldownHours = revision.RetakeCooldownHours,
+            allowInterruptedResume = revision.AllowInterruptedResume,
+            reviewPolicy = revision.ReviewPolicy,
+            showRationales = revision.ShowRationales,
+            showScoreImmediately = revision.ShowScoreImmediately,
+            questionCount = revision.ExamQuestions.Count,
+            publishedAt = now,
+            publishedBy = actorId
+        });
 
         if (revision.Examination != null)
         {
@@ -1990,6 +2025,584 @@ public class ExamLifecycleService : IExamLifecycleService
             Status = q.Status.ToString(),
             OptionCount = q.Options.Count
         }).ToList();
+    }
+
+    // ── Phase 4: Composition, Blueprint, Readiness & Admin Preview ──────────
+
+    private static readonly HashSet<string> SupportedQuestionTypeKeys = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "single-choice",
+        "multiple-choice",
+        "sata",
+        "checkbox",
+        "image-based",
+        "multiple-image",
+        "true-false"
+    };
+
+    private static List<ClientNeedQuotaItem> BuildDefaultClientNeedQuotas(int targetCount)
+    {
+        var codes = ClientNeedCategory.All;
+        var list = new List<ClientNeedQuotaItem>();
+        var basePct = Math.Round(100.0m / codes.Length, 2);
+        var allocatedCount = 0;
+        for (int i = 0; i < codes.Length; i++)
+        {
+            var code = codes[i];
+            var count = (int)Math.Round((double)targetCount / codes.Length);
+            if (i == codes.Length - 1)
+            {
+                count = Math.Max(0, targetCount - allocatedCount);
+            }
+            else
+            {
+                allocatedCount += count;
+            }
+
+            list.Add(new ClientNeedQuotaItem
+            {
+                ClientNeedCode = code,
+                ClientNeedName = ClientNeedCategory.GetDisplayName(code),
+                TargetPercentage = basePct,
+                TargetCount = count,
+                AvailableCount = 0
+            });
+        }
+        return list;
+    }
+
+    public async Task<ExamCompositionDto> GetCompositionAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (_, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin, RoleHierarchy.RoleReviewer, RoleHierarchy.RoleInstructor }, "GetComposition");
+
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        ExamCompositionDto composition;
+        if (!string.IsNullOrWhiteSpace(revision.CompositionRulesJson))
+        {
+            try
+            {
+                composition = JsonSerializer.Deserialize<ExamCompositionDto>(revision.CompositionRulesJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                    ?? new ExamCompositionDto();
+            }
+            catch
+            {
+                composition = new ExamCompositionDto();
+            }
+        }
+        else
+        {
+            composition = new ExamCompositionDto();
+        }
+
+        composition.RevisionId = revision.Id;
+        composition.TargetQuestionCount = revision.TargetQuestionCount > 0 ? revision.TargetQuestionCount : 10;
+        composition.SelectionStrategy = !string.IsNullOrWhiteSpace(revision.SelectionStrategy) ? revision.SelectionStrategy : "Preset";
+        composition.ConcurrencyToken = revision.ConcurrencyToken;
+
+        if (composition.ClientNeedQuotas == null || composition.ClientNeedQuotas.Count == 0)
+        {
+            composition.ClientNeedQuotas = BuildDefaultClientNeedQuotas(composition.TargetQuestionCount);
+        }
+
+        if (composition.AllowedQuestionTypes == null || composition.AllowedQuestionTypes.Count == 0)
+        {
+            composition.AllowedQuestionTypes = SupportedQuestionTypeKeys.ToList();
+        }
+
+        var pathway = revision.Pathway?.ToLowerInvariant() ?? "rn";
+        var eligibleQuestionsQuery = _context.Questions
+            .Where(q => (q.Status == QuestionStatus.Approved || q.Status == QuestionStatus.Published)
+                     && q.IsActive
+                     && (q.Pathway.ToLower() == pathway || q.Pathway.ToLower() == "both")
+                     && SupportedQuestionTypeKeys.Contains(q.QuestionTypeKey));
+
+        var countsByClientNeed = await eligibleQuestionsQuery
+            .Where(q => q.ClientNeedId != null)
+            .GroupBy(q => q.ClientNeedId!)
+            .Select(g => new { Code = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.Code.ToUpperInvariant(), x => x.Count, ct);
+
+        foreach (var quota in composition.ClientNeedQuotas)
+        {
+            quota.ClientNeedName = ClientNeedCategory.GetDisplayName(quota.ClientNeedCode);
+            if (countsByClientNeed.TryGetValue(quota.ClientNeedCode.ToUpperInvariant(), out var count))
+            {
+                quota.AvailableCount = count;
+            }
+        }
+
+        return composition;
+    }
+
+    public async Task<ExamCompositionDto> UpdateCompositionAsync(string revisionId, UpdateExamCompositionRequest request, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (actorId, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin }, "UpdateComposition");
+
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        await EnforceConcurrencyAsync(revision, request.ConcurrencyToken, "ExamCompositionUpdated", actorId, ct);
+
+        if (revision.LifecycleState != ExamLifecycleState.Draft)
+        {
+            throw new InvalidOperationException($"Cannot edit composition for revision in '{revision.LifecycleState}' state. Only Draft revisions can be edited.");
+        }
+
+        if (request.TargetQuestionCount < 1 || request.TargetQuestionCount > 265)
+        {
+            throw new ArgumentException("Target question count must be between 1 and 265.");
+        }
+
+        if (request.AllowedQuestionTypes != null && request.AllowedQuestionTypes.Count > 0)
+        {
+            foreach (var typeKey in request.AllowedQuestionTypes)
+            {
+                if (!SupportedQuestionTypeKeys.Contains(typeKey))
+                {
+                    throw new InvalidOperationException($"Unsupported question type '{typeKey}' cannot be selected. Only supported grading question types can be included in examinations.");
+                }
+            }
+        }
+
+        var quotas = request.ClientNeedQuotas ?? new List<ClientNeedQuotaItem>();
+        if (quotas.Count > 0)
+        {
+            var totalCount = quotas.Sum(q => q.TargetCount);
+            if (string.Equals(request.SelectionStrategy, "DynamicBalanced", StringComparison.OrdinalIgnoreCase))
+            {
+                if (totalCount != request.TargetQuestionCount && totalCount > 0)
+                {
+                    var diff = request.TargetQuestionCount - totalCount;
+                    var largest = quotas.OrderByDescending(q => q.TargetCount).First();
+                    largest.TargetCount += diff;
+                }
+            }
+        }
+        else
+        {
+            quotas = BuildDefaultClientNeedQuotas(request.TargetQuestionCount);
+        }
+
+        var compositionDto = new ExamCompositionDto
+        {
+            RevisionId = revision.Id,
+            TargetQuestionCount = request.TargetQuestionCount,
+            SelectionStrategy = request.SelectionStrategy,
+            ClientNeedQuotas = quotas,
+            AllowedQuestionTypes = request.AllowedQuestionTypes ?? SupportedQuestionTypeKeys.ToList(),
+            SubjectIds = request.SubjectIds,
+            CategoryIds = request.CategoryIds,
+            Difficulty = request.Difficulty,
+            ConcurrencyToken = revision.ConcurrencyToken + 1
+        };
+
+        var now = DateTime.UtcNow;
+        revision.TargetQuestionCount = request.TargetQuestionCount;
+        revision.SelectionStrategy = request.SelectionStrategy;
+        revision.CompositionRulesJson = JsonSerializer.Serialize(compositionDto);
+        revision.ConcurrencyToken++;
+        revision.UpdatedAt = now;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorId,
+            Action = "ExamCompositionUpdated",
+            EntityType = "Exam",
+            EntityId = revision.Id,
+            Description = JsonSerializer.Serialize(new
+            {
+                examinationId = revision.ExaminationId,
+                revisionNumber = revision.RevisionNumber,
+                targetQuestionCount = revision.TargetQuestionCount,
+                selectionStrategy = revision.SelectionStrategy
+            }),
+            Outcome = "Success",
+            Timestamp = now
+        });
+
+        await _context.SaveChangesAsync(ct);
+        return await GetCompositionAsync(revisionId, user, ct);
+    }
+
+    public async Task<QuestionPoolPreviewResponse> GetQuestionPoolPreviewAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (_, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin, RoleHierarchy.RoleReviewer, RoleHierarchy.RoleInstructor }, "GetQuestionPoolPreview");
+
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.ExamQuestions)
+                .ThenInclude(eq => eq.Question)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        var pathway = revision.Pathway?.ToLowerInvariant() ?? "rn";
+        var issues = new List<string>();
+
+        var eligibleQuery = _context.Questions
+            .Include(q => q.Options)
+            .Where(q => (q.Status == QuestionStatus.Approved || q.Status == QuestionStatus.Published)
+                     && q.IsActive
+                     && (q.Pathway.ToLower() == pathway || q.Pathway.ToLower() == "both")
+                     && SupportedQuestionTypeKeys.Contains(q.QuestionTypeKey));
+
+        var allEligible = await eligibleQuery.ToListAsync(ct);
+        var totalEligible = allEligible.Count;
+
+        var composition = await GetCompositionAsync(revisionId, user, ct);
+        var targetCount = revision.TargetQuestionCount > 0 ? revision.TargetQuestionCount : 10;
+
+        var clientNeedBreakdown = new List<QuestionPoolPreviewItem>();
+        var questionTypeBreakdown = new List<QuestionPoolPreviewItem>();
+
+        foreach (var quota in composition.ClientNeedQuotas)
+        {
+            var available = allEligible.Count(q => string.Equals(q.ClientNeedId, quota.ClientNeedCode, StringComparison.OrdinalIgnoreCase));
+            var isSufficient = available >= quota.TargetCount;
+            if (!isSufficient && string.Equals(revision.SelectionStrategy, "DynamicBalanced", StringComparison.OrdinalIgnoreCase))
+            {
+                issues.Add($"Category '{quota.ClientNeedCode}' ({quota.ClientNeedName}) requires {quota.TargetCount} question(s), but only {available} available in published pool.");
+            }
+            clientNeedBreakdown.Add(new QuestionPoolPreviewItem
+            {
+                Category = "ClientNeed",
+                Code = quota.ClientNeedCode,
+                Name = quota.ClientNeedName,
+                RequestedCount = quota.TargetCount,
+                AvailableCount = available,
+                IsSufficient = isSufficient
+            });
+        }
+
+        foreach (var typeKey in SupportedQuestionTypeKeys)
+        {
+            var available = allEligible.Count(q => string.Equals(q.QuestionTypeKey, typeKey, StringComparison.OrdinalIgnoreCase));
+            questionTypeBreakdown.Add(new QuestionPoolPreviewItem
+            {
+                Category = "QuestionType",
+                Code = typeKey,
+                Name = typeKey,
+                RequestedCount = 0,
+                AvailableCount = available,
+                IsSufficient = available > 0
+            });
+        }
+
+        bool isPoolSufficient;
+        if (string.Equals(revision.SelectionStrategy, "Preset", StringComparison.OrdinalIgnoreCase))
+        {
+            isPoolSufficient = revision.ExamQuestions.Count > 0;
+            if (revision.ExamQuestions.Count == 0)
+            {
+                issues.Add("No questions currently assigned to this preset examination revision.");
+            }
+        }
+        else
+        {
+            isPoolSufficient = totalEligible >= targetCount && issues.Count == 0;
+            if (totalEligible < targetCount)
+            {
+                issues.Add($"Target question count is {targetCount}, but only {totalEligible} published question(s) exist for pathway '{pathway}'.");
+            }
+        }
+
+        return new QuestionPoolPreviewResponse
+        {
+            Success = true,
+            RevisionId = revision.Id,
+            Pathway = pathway,
+            TargetQuestionCount = targetCount,
+            TotalEligiblePublishedQuestions = totalEligible,
+            IsPoolSufficient = isPoolSufficient,
+            ClientNeedBreakdown = clientNeedBreakdown,
+            QuestionTypeBreakdown = questionTypeBreakdown,
+            Issues = issues
+        };
+    }
+
+    public async Task<ExamReadinessReportDto> GetReadinessReportAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.ExamQuestions)
+                .ThenInclude(eq => eq.Question)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        var checks = new List<ExamReadinessCheckItem>();
+
+        // 1. Metadata Checks
+        if (string.IsNullOrWhiteSpace(revision.Title))
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Metadata", Name = "Title", Status = "BLOCK", Message = "Title cannot be empty." });
+        }
+        else
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Metadata", Name = "Title", Status = "PASS", Message = $"Valid title: '{revision.Title}'." });
+        }
+
+        if (string.IsNullOrWhiteSpace(revision.Pathway))
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Metadata", Name = "Pathway", Status = "BLOCK", Message = "Pathway must be specified (rn, pn, or both)." });
+        }
+        else
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Metadata", Name = "Pathway", Status = "PASS", Message = $"Valid pathway '{revision.Pathway}'." });
+        }
+
+        if (revision.PassingScorePercent < 0.0m || revision.PassingScorePercent > 100.0m)
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Metadata", Name = "PassingScore", Status = "BLOCK", Message = "Passing score percent must be between 0.0 and 100.0." });
+        }
+        else
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Metadata", Name = "PassingScore", Status = "PASS", Message = $"Passing score configured at {revision.PassingScorePercent}%." });
+        }
+
+        if (revision.TimeLimitMinutes < 0 || revision.TimeLimitMinutes > 720)
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Metadata", Name = "Duration", Status = "BLOCK", Message = "Time limit must be between 0 (untimed) and 720 minutes." });
+        }
+        else if (revision.TimeLimitMinutes == 0 && (revision.ExamType == ExamType.DiagnosticReadiness || revision.ExamType == ExamType.CAT))
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Metadata", Name = "Duration", Status = "WARN", Message = "Untimed duration is not recommended for diagnostic readiness assessments." });
+        }
+        else
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Metadata", Name = "Duration", Status = "PASS", Message = revision.TimeLimitMinutes == 0 ? "Untimed practice mode." : $"Time limit configured to {revision.TimeLimitMinutes} minutes." });
+        }
+
+        // 2. Composition Checks
+        var targetCount = revision.TargetQuestionCount > 0 ? revision.TargetQuestionCount : 10;
+        checks.Add(new ExamReadinessCheckItem { Category = "Composition", Name = "TargetQuestionCount", Status = "PASS", Message = $"Target question count: {targetCount}." });
+
+        var strategy = !string.IsNullOrWhiteSpace(revision.SelectionStrategy) ? revision.SelectionStrategy : "Preset";
+        checks.Add(new ExamReadinessCheckItem { Category = "Composition", Name = "SelectionStrategy", Status = "PASS", Message = $"Selection strategy: {strategy}." });
+
+        // 3. Question Pool Checks
+        if (string.Equals(strategy, "Preset", StringComparison.OrdinalIgnoreCase))
+        {
+            if (revision.ExamQuestions.Count == 0)
+            {
+                checks.Add(new ExamReadinessCheckItem { Category = "QuestionPool", Name = "AssignedQuestions", Status = "BLOCK", Message = "Preset revision must contain at least one question before publication." });
+            }
+            else
+            {
+                checks.Add(new ExamReadinessCheckItem { Category = "QuestionPool", Name = "AssignedQuestions", Status = "PASS", Message = $"{revision.ExamQuestions.Count} question(s) assigned." });
+
+                var unapprovedCount = 0;
+                var pathwayMismatchCount = 0;
+                var unsupportedTypeCount = 0;
+                foreach (var eq in revision.ExamQuestions)
+                {
+                    if (eq.Question == null) continue;
+                    if (eq.Question.Status != QuestionStatus.Approved && eq.Question.Status != QuestionStatus.Published)
+                        unapprovedCount++;
+                    if (!string.Equals(eq.Question.Pathway, revision.Pathway, StringComparison.OrdinalIgnoreCase) && !string.Equals(eq.Question.Pathway, "both", StringComparison.OrdinalIgnoreCase))
+                        pathwayMismatchCount++;
+                    if (!SupportedQuestionTypeKeys.Contains(eq.Question.QuestionTypeKey))
+                        unsupportedTypeCount++;
+                }
+
+                if (unapprovedCount > 0)
+                    checks.Add(new ExamReadinessCheckItem { Category = "QuestionPool", Name = "QuestionStatus", Status = "BLOCK", Message = $"{unapprovedCount} assigned question(s) are not in Approved or Published status." });
+                else
+                    checks.Add(new ExamReadinessCheckItem { Category = "QuestionPool", Name = "QuestionStatus", Status = "PASS", Message = "All assigned questions are Approved or Published." });
+
+                if (pathwayMismatchCount > 0)
+                    checks.Add(new ExamReadinessCheckItem { Category = "QuestionPool", Name = "PathwayMatch", Status = "BLOCK", Message = $"{pathwayMismatchCount} assigned question(s) do not match revision pathway '{revision.Pathway}'." });
+                else
+                    checks.Add(new ExamReadinessCheckItem { Category = "QuestionPool", Name = "PathwayMatch", Status = "PASS", Message = "All assigned questions match revision pathway." });
+
+                if (unsupportedTypeCount > 0)
+                    checks.Add(new ExamReadinessCheckItem { Category = "QuestionPool", Name = "QuestionTypes", Status = "BLOCK", Message = $"{unsupportedTypeCount} question(s) have unsupported question types (e.g. catalogued NGN)." });
+                else
+                    checks.Add(new ExamReadinessCheckItem { Category = "QuestionPool", Name = "QuestionTypes", Status = "PASS", Message = "All assigned question types are supported for delivery." });
+            }
+        }
+        else
+        {
+            var poolPreview = await GetQuestionPoolPreviewAsync(revisionId, user, ct);
+            if (!poolPreview.IsPoolSufficient)
+            {
+                checks.Add(new ExamReadinessCheckItem { Category = "QuestionPool", Name = "PoolSufficiency", Status = "BLOCK", Message = $"Insufficient question pool: {string.Join("; ", poolPreview.Issues)}" });
+            }
+            else
+            {
+                checks.Add(new ExamReadinessCheckItem { Category = "QuestionPool", Name = "PoolSufficiency", Status = "PASS", Message = $"Question pool sufficient: {poolPreview.TotalEligiblePublishedQuestions} eligible published question(s) available." });
+            }
+        }
+
+        // 4. Policy Checks
+        if (revision.AvailableFrom.HasValue && revision.AvailableTo.HasValue && revision.AvailableFrom.Value > revision.AvailableTo.Value)
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Policies", Name = "AvailabilitySchedule", Status = "BLOCK", Message = "AvailableFrom date must be earlier than AvailableTo date." });
+        }
+        else if (revision.AvailableFrom.HasValue || revision.AvailableTo.HasValue)
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Policies", Name = "AvailabilitySchedule", Status = "PASS", Message = $"Scheduled availability window: {revision.AvailableFrom:u} to {revision.AvailableTo:u}." });
+        }
+        else
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Policies", Name = "AvailabilitySchedule", Status = "PASS", Message = "Continuous availability (no expiration window)." });
+        }
+
+        if (revision.MaxAttemptsAllowed.HasValue && revision.MaxAttemptsAllowed.Value <= 0)
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Policies", Name = "AttemptLimit", Status = "BLOCK", Message = "Max attempts must be greater than 0 if specified." });
+        }
+        else
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Policies", Name = "AttemptLimit", Status = "PASS", Message = revision.MaxAttemptsAllowed.HasValue ? $"Limited to {revision.MaxAttemptsAllowed.Value} attempt(s)." : "Unlimited attempts allowed." });
+        }
+
+        if (revision.RetakeCooldownHours < 0)
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Policies", Name = "RetakeCooldown", Status = "BLOCK", Message = "Retake cooldown hours cannot be negative." });
+        }
+        else
+        {
+            checks.Add(new ExamReadinessCheckItem { Category = "Policies", Name = "RetakeCooldown", Status = "PASS", Message = revision.RetakeCooldownHours > 0 ? $"{revision.RetakeCooldownHours} hour(s) cooldown between attempts." : "Immediate retake permitted." });
+        }
+
+        // 5. Security & Concurrency Checks
+        checks.Add(new ExamReadinessCheckItem { Category = "Security", Name = "ConcurrencyToken", Status = "PASS", Message = $"Concurrency token: {revision.ConcurrencyToken}." });
+        checks.Add(new ExamReadinessCheckItem { Category = "Security", Name = "FamilyBinding", Status = "PASS", Message = $"Bound to family '{revision.Examination?.Code ?? revision.ExaminationId}'." });
+
+        var overallStatus = checks.Any(c => c.Status == "BLOCK")
+            ? "BLOCK"
+            : (checks.Any(c => c.Status == "WARN") ? "WARN" : "PASS");
+
+        return new ExamReadinessReportDto
+        {
+            Success = true,
+            RevisionId = revision.Id,
+            OverallStatus = overallStatus,
+            CanPublish = overallStatus != "BLOCK",
+            ConcurrencyToken = revision.ConcurrencyToken,
+            LifecycleState = revision.LifecycleState.ToString(),
+            Checks = checks
+        };
+    }
+
+    public async Task<AdminExamPreviewDto> GetAdminPreviewAsync(string revisionId, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (_, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin, RoleHierarchy.RoleReviewer, RoleHierarchy.RoleInstructor }, "GetAdminPreview");
+
+        var revision = await _context.Exams
+            .Include(e => e.Examination)
+            .Include(e => e.ExamQuestions)
+                .ThenInclude(eq => eq.Question)
+                    .ThenInclude(q => q.Options)
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => e.Id == revisionId, ct);
+
+        if (revision == null)
+            throw new KeyNotFoundException($"Exam revision '{revisionId}' not found.");
+
+        var questions = new List<AdminExamPreviewQuestionDto>();
+
+        if (string.Equals(revision.SelectionStrategy, "Preset", StringComparison.OrdinalIgnoreCase) || revision.ExamQuestions.Count > 0)
+        {
+            var ordered = revision.ExamQuestions.OrderBy(eq => eq.DisplayOrder).ToList();
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                var eq = ordered[i];
+                if (eq.Question == null) continue;
+
+                questions.Add(new AdminExamPreviewQuestionDto
+                {
+                    Id = eq.Question.Id,
+                    DisplayOrder = i + 1,
+                    Stem = eq.Question.Stem,
+                    QuestionType = eq.Question.QuestionTypeKey,
+                    ClientNeed = eq.Question.ClientNeedId ?? "MOC",
+                    Difficulty = eq.Question.Difficulty.ToString(),
+                    Rationale = eq.Question.Rationale,
+                    Options = eq.Question.Options.OrderBy(o => o.OrderIndex).Select(o => new AdminExamPreviewOptionDto
+                    {
+                        Key = o.Key,
+                        Text = o.Text,
+                        IsCorrect = o.IsCorrect
+                    }).ToList(),
+                    CorrectOptionKeys = eq.Question.Options.Where(o => o.IsCorrect).Select(o => o.Key).ToList()
+                });
+            }
+        }
+        else
+        {
+            var pathway = revision.Pathway?.ToLowerInvariant() ?? "rn";
+            var targetCount = revision.TargetQuestionCount > 0 ? revision.TargetQuestionCount : 10;
+
+            var eligible = await _context.Questions
+                .Include(q => q.Options)
+                .Where(q => (q.Status == QuestionStatus.Approved || q.Status == QuestionStatus.Published)
+                         && q.IsActive
+                         && (q.Pathway.ToLower() == pathway || q.Pathway.ToLower() == "both")
+                         && SupportedQuestionTypeKeys.Contains(q.QuestionTypeKey))
+                .Take(targetCount)
+                .ToListAsync(ct);
+
+            for (int i = 0; i < eligible.Count; i++)
+            {
+                var q = eligible[i];
+                questions.Add(new AdminExamPreviewQuestionDto
+                {
+                    Id = q.Id,
+                    DisplayOrder = i + 1,
+                    Stem = q.Stem,
+                    QuestionType = q.QuestionTypeKey,
+                    ClientNeed = q.ClientNeedId ?? "MOC",
+                    Difficulty = q.Difficulty.ToString(),
+                    Rationale = q.Rationale,
+                    Options = q.Options.OrderBy(o => o.OrderIndex).Select(o => new AdminExamPreviewOptionDto
+                    {
+                        Key = o.Key,
+                        Text = o.Text,
+                        IsCorrect = o.IsCorrect
+                    }).ToList(),
+                    CorrectOptionKeys = q.Options.Where(o => o.IsCorrect).Select(o => o.Key).ToList()
+                });
+            }
+        }
+
+        return new AdminExamPreviewDto
+        {
+            Success = true,
+            RevisionId = revision.Id,
+            ExaminationCode = revision.Examination?.Code ?? string.Empty,
+            ExaminationTitle = revision.Examination?.Title ?? revision.Title,
+            RevisionTitle = revision.Title,
+            Pathway = revision.Pathway,
+            TimeLimitMinutes = revision.TimeLimitMinutes,
+            PassingScorePercent = revision.PassingScorePercent,
+            QuestionCount = questions.Count,
+            SelectionStrategy = revision.SelectionStrategy,
+            ReviewPolicy = revision.ReviewPolicy,
+            ShowRationales = revision.ShowRationales,
+            Questions = questions
+        };
     }
 
     private static ExaminationDto MapToExaminationDto(Examination examination, List<Exam> revisions, IReadOnlyDictionary<string, int>? questionCounts = null)
