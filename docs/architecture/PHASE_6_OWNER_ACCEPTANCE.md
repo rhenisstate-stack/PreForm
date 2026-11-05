@@ -113,9 +113,21 @@ Prior to granting authorization for public production launch, the engineering te
 - **Recovery Time Objective (RTO):** $\le 15$ minutes.
 - **Data Fidelity:** 100% record parity across core domain tables (`Users`, `Questions`, `Examinations`, `Exams`, `ExamQuestions`, `ExamAttempts`, `AttemptResponses`).
 - **Relational Integrity:** Zero foreign key constraint violations and zero unpopulated `AttemptMetadataSnapshot` entries.
-- **Application Health:** Restored staging API starts cleanly, passes readiness health probes (`/health/ready`), and serves authenticated learner read workflows.
+- **Application Health:** Restored staging API starts cleanly, passes readiness health probes (`/api/v1/health/ready`), and serves authenticated learner read workflows.
 
-**Operational Rule:** Any failure to satisfy the RPO or RTO targets requires root cause diagnosis, remediation, and re-execution of the drill.
+### Empirical Validation Outcome (Conducted November 5, 2026):
+**STATUS: CONDITION SATISFIED & EMPIRICALLY VALIDATED (PASS)**
+- **Drill Plan Artifact:** [`PHASE_6_RESTORE_DRILL_PLAN.md`](file:///c:/Users/gitau/Documents/PREform/docs/architecture/PHASE_6_RESTORE_DRILL_PLAN.md)
+- **Drill Report Artifact:** [`PHASE_6_RESTORE_DRILL_REPORT.md`](file:///c:/Users/gitau/Documents/PREform/docs/architecture/PHASE_6_RESTORE_DRILL_REPORT.md)
+- **Backup Archive Tested:** `prepford_backup_20261105_220425.dump` (SHA-256: `35321C2BB32DEBEE970BE990CBABC0E2B9A8F4ADEC811D5EBF6C35F0DD8C139A`)
+- **Restoration Target:** `prepford_staging_restore_drill` (Isolated loopback database)
+- **Empirical Measured RPO:** **51 seconds** ($\le 60\text{ min}$ threshold — **PASS**)
+- **Empirical Measured RTO:** **4 minutes 11 seconds** ($\le 15\text{ min}$ threshold — **PASS**)
+- **Database Restoration Command Duration:** **2.1 seconds**
+- **Schema & Record Parity:** 100.0% exact match across all 37 tables and 13 EF Core migrations
+- **Referential Integrity:** 0 orphaned records across all foreign keys
+- **Application Smoke Test:** ASP.NET Core API booted against restored DB, `/api/v1/health/ready` returned `{"status":"ready"}`, authenticated `GET /api/v1/questions` succeeded with HTTP 200 OK.
+- **Production Safety:** Zero production data altered. Target isolated cluster verified.
 
 ---
 
@@ -139,11 +151,11 @@ Prior to granting authorization for public production launch, the engineering te
 - [x] Verified clean working tree on `feature/dotnet-backend-migration` at commit `01f784c`.
 - [x] Reviewed and accepted documented operational limitations.
 - [x] Reviewed and accepted disaster recovery objectives (RPO $\le 1$h, RTO $\le 15$m).
-- [x] Noted the mandatory staging restore drill as a release condition for production.
+- [x] Staging restore drill completed and empirically verified (RPO = 51s, RTO = 4m 11s).
 
 ### Formal Status:
-**SUBMITTED FOR PRODUCT OWNER ACCEPTANCE**  
-*Phase 6 engineering baseline is verified, frozen, and accepted for Phase 7 launch preparation. Public production launch remains gated on the Staging Restore Drill and Phase 7 release gates.*
+**SUBMITTED FOR FINAL PRODUCT OWNER FORMAL ACCEPTANCE**  
+*Phase 6 engineering baseline is verified, frozen, and accepted. The mandatory staging restore drill condition is fully satisfied. The platform is cleared to proceed into Phase 7 Controlled Production Launch preparation.*
 
 ---
 *Signed on behalf of Engineering & Quality Assurance:*  
