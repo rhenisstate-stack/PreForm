@@ -20,6 +20,7 @@ namespace Preform.Api.Tests;
 /// limitation of the Phase 8 limiter while the owner-approved distributed replacement is pending.
 /// They assert the CURRENT behavior so any future change away from it is detected.
 /// </summary>
+[Collection("ReauthRateLimitTests")]
 public class ReauthRateLimiterObservationTests
 {
     private static AppDbContext CreateInMemoryContext(string dbName)

@@ -18,6 +18,7 @@ using Xunit;
 
 namespace Preform.Api.Tests;
 
+[Collection("ReauthRateLimitTests")]
 public class Phase8SecurityHardeningTests : IClassFixture<WebApplicationFactory<Program>>
 {
     private readonly WebApplicationFactory<Program> _factory;
