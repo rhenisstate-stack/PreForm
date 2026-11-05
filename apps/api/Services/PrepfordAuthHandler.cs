@@ -84,10 +84,6 @@ public class PrepfordAuthHandler : AuthenticationHandler<PrepfordAuthSchemeOptio
 
     private string? GetClientIpAddress()
     {
-        if (Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor) && !string.IsNullOrWhiteSpace(forwardedFor))
-        {
-            return forwardedFor.ToString().Split(',')[0].Trim();
-        }
         return Context.Connection.RemoteIpAddress?.ToString();
     }
 

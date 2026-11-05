@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Preform.Api.Data;
 using Preform.Api.Models;
 using Preform.Api.Services;
+using Preform.Api.Services.RateLimiting;
 
 namespace Preform.Api.Controllers;
 
@@ -216,6 +217,8 @@ public class ExamAttemptsController : ControllerBase
     {
     }
 
+    private readonly ISharedRateLimitingService? _rateLimitingService;
+
     [ActivatorUtilitiesConstructor]
     public ExamAttemptsController(
         AppDbContext context,
@@ -223,7 +226,8 @@ public class ExamAttemptsController : ControllerBase
         IResponseValidationService responseValidationService,
         IAttemptQuestionService attemptQuestionService,
         ISessionSecurityService? sessionSecurityService,
-        IPasswordHasher<User>? passwordHasher)
+        IPasswordHasher<User>? passwordHasher,
+        ISharedRateLimitingService? rateLimitingService = null)
     {
         _context = context;
         _logger = logger;
@@ -231,11 +235,23 @@ public class ExamAttemptsController : ControllerBase
         _attemptQuestionService = attemptQuestionService;
         _sessionSecurityService = sessionSecurityService;
         _passwordHasher = passwordHasher ?? new PasswordHasher<User>();
+        _rateLimitingService = rateLimitingService;
+    }
+
+    public ExamAttemptsController(
+        AppDbContext context,
+        ILogger<ExamAttemptsController> logger,
+        IResponseValidationService responseValidationService,
+        IAttemptQuestionService attemptQuestionService,
+        ISessionSecurityService? sessionSecurityService,
+        IPasswordHasher<User>? passwordHasher)
+        : this(context, logger, responseValidationService, attemptQuestionService, sessionSecurityService, passwordHasher, null)
+    {
     }
 
     private string? GetClientIpAddress()
     {
-        if (Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor) && !string.IsNullOrWhiteSpace(forwardedFor))
+        if (_rateLimitingService == null && Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor) && !string.IsNullOrWhiteSpace(forwardedFor))
         {
             return forwardedFor.ToString().Split(',')[0].Trim();
         }
@@ -485,7 +501,21 @@ public class ExamAttemptsController : ControllerBase
         var clientIp = GetClientIpAddress() ?? "unknown";
         var rateLimitKey = $"{clientIp}:{id}";
 
-        if (IsReauthRateLimited(rateLimitKey, out var retryAfterSeconds))
+        if (_rateLimitingService != null)
+        {
+            var limitCheck = await _rateLimitingService.CheckRateLimitAsync(rateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
+            if (limitCheck.IsRateLimited)
+            {
+                Response.Headers.Append("Retry-After", limitCheck.RetryAfterSeconds.ToString());
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    success = false,
+                    errorCode = "RATE_LIMIT_EXCEEDED",
+                    error = $"Too many failed reauthentication attempts. Please wait {limitCheck.RetryAfterSeconds} seconds before trying again."
+                });
+            }
+        }
+        else if (IsReauthRateLimited(rateLimitKey, out var retryAfterSeconds))
         {
             Response.Headers.Append("Retry-After", retryAfterSeconds.ToString());
             return StatusCode(StatusCodes.Status429TooManyRequests, new
@@ -592,7 +622,14 @@ public class ExamAttemptsController : ControllerBase
         var verifyResult = _passwordHasher.VerifyHashedPassword(attempt.User, attempt.User.PasswordHash, request.Password);
         if (verifyResult == PasswordVerificationResult.Failed)
         {
-            RecordFailedReauthAttempt(rateLimitKey);
+            if (_rateLimitingService != null)
+            {
+                await _rateLimitingService.RecordFailedAttemptAsync(rateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
+            }
+            else
+            {
+                RecordFailedReauthAttempt(rateLimitKey);
+            }
             return Unauthorized(new
             {
                 success = false,
@@ -602,7 +639,14 @@ public class ExamAttemptsController : ControllerBase
         }
 
         // On successful credential verification, clear rate limit
-        ClearFailedReauthAttempts(rateLimitKey);
+        if (_rateLimitingService != null)
+        {
+            await _rateLimitingService.ResetRateLimitAsync(rateLimitKey, cancellationToken);
+        }
+        else
+        {
+            ClearFailedReauthAttempts(rateLimitKey);
+        }
 
         // Create fresh replacement session via SessionSecurityService
         string? sessionId = null;

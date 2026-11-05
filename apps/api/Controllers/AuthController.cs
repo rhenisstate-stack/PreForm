@@ -7,6 +7,8 @@ using Preform.Api.Data;
 using Preform.Api.DTOs;
 using Preform.Api.Models;
 using Preform.Api.Services;
+using Preform.Api.Services.PasswordReset;
+using Preform.Api.Services.RateLimiting;
 
 namespace Preform.Api.Controllers;
 
@@ -19,27 +21,29 @@ public class AuthController : ControllerBase
     private readonly ISessionSecurityService _sessionSecurityService;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly ILogger<AuthController> _logger;
+    private readonly ISharedRateLimitingService? _rateLimitingService;
+    private readonly IPasswordResetService? _passwordResetService;
 
     public AuthController(
         AppDbContext context,
         ISessionService sessionService,
         ISessionSecurityService sessionSecurityService,
         IPasswordHasher<User> passwordHasher,
-        ILogger<AuthController> logger)
+        ILogger<AuthController> logger,
+        ISharedRateLimitingService? rateLimitingService = null,
+        IPasswordResetService? passwordResetService = null)
     {
         _context = context;
         _sessionService = sessionService;
         _sessionSecurityService = sessionSecurityService;
         _passwordHasher = passwordHasher;
         _logger = logger;
+        _rateLimitingService = rateLimitingService;
+        _passwordResetService = passwordResetService;
     }
 
     private string? GetClientIpAddress()
     {
-        if (Request.Headers.TryGetValue("X-Forwarded-For", out var forwardedFor) && !string.IsNullOrWhiteSpace(forwardedFor))
-        {
-            return forwardedFor.ToString().Split(',')[0].Trim();
-        }
         return HttpContext.Connection.RemoteIpAddress?.ToString();
     }
 
@@ -223,7 +227,22 @@ public class AuthController : ControllerBase
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
 
         var rateLimitKey = $"login-recovery:{normalizedEmail}";
-        if (IsLoginRecoveryRateLimited(rateLimitKey, out var retryAfterSeconds))
+        if (_rateLimitingService != null)
+        {
+            var limitCheck = await _rateLimitingService.CheckRateLimitAsync(rateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
+            if (limitCheck.IsRateLimited)
+            {
+                Response.Headers.Append("Retry-After", limitCheck.RetryAfterSeconds.ToString());
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    success = false,
+                    error = "Too many recovery attempts. Please wait before trying again.",
+                    errorCode = "RATE_LIMITED",
+                    retryAfterSeconds = limitCheck.RetryAfterSeconds
+                });
+            }
+        }
+        else if (IsLoginRecoveryRateLimited(rateLimitKey, out var retryAfterSeconds))
         {
             Response.Headers.Append("Retry-After", retryAfterSeconds.ToString());
             return StatusCode(StatusCodes.Status429TooManyRequests, new
@@ -241,7 +260,14 @@ public class AuthController : ControllerBase
         // nor reveal account status before credential verification succeeds.
         if (user == null || !user.IsActive)
         {
-            RecordFailedLoginRecoveryAttempt(rateLimitKey);
+            if (_rateLimitingService != null)
+            {
+                await _rateLimitingService.RecordFailedAttemptAsync(rateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
+            }
+            else
+            {
+                RecordFailedLoginRecoveryAttempt(rateLimitKey);
+            }
             return Unauthorized(new
             {
                 success = false,
@@ -253,7 +279,14 @@ public class AuthController : ControllerBase
         var verificationResult = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
         if (verificationResult == PasswordVerificationResult.Failed)
         {
-            RecordFailedLoginRecoveryAttempt(rateLimitKey);
+            if (_rateLimitingService != null)
+            {
+                await _rateLimitingService.RecordFailedAttemptAsync(rateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
+            }
+            else
+            {
+                RecordFailedLoginRecoveryAttempt(rateLimitKey);
+            }
             _context.AuditLogs.Add(new AuditLog
             {
                 ActorId = user.Id,
@@ -292,7 +325,14 @@ public class AuthController : ControllerBase
             });
         }
 
-        ClearFailedLoginRecoveryAttempts(rateLimitKey);
+        if (_rateLimitingService != null)
+        {
+            await _rateLimitingService.ResetRateLimitAsync(rateLimitKey, cancellationToken);
+        }
+        else
+        {
+            ClearFailedLoginRecoveryAttempts(rateLimitKey);
+        }
 
         // Deliberately returns no counts, session identifiers, or device details. The
         // service layer already persisted a LoginAccessRecovered audit event.
@@ -562,6 +602,105 @@ public class AuthController : ControllerBase
         {
             Authenticated = true,
             User = BuildUserSummary(user, role)
+        });
+    }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordRequest request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || string.IsNullOrWhiteSpace(request?.Email))
+        {
+            return BadRequest(new { success = false, error = "A valid email address is required." });
+        }
+
+        var clientIp = GetClientIpAddress() ?? "unknown";
+        var rateLimitKey = $"forgot-pw:{clientIp}";
+
+        if (_rateLimitingService != null)
+        {
+            var limit = await _rateLimitingService.CheckRateLimitAsync(rateLimitKey, 10, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
+            if (limit.IsRateLimited)
+            {
+                Response.Headers.Append("Retry-After", limit.RetryAfterSeconds.ToString());
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    success = false,
+                    error = "Too many password reset requests from this IP. Please try again later.",
+                    errorCode = "RATE_LIMIT_EXCEEDED",
+                    retryAfterSeconds = limit.RetryAfterSeconds
+                });
+            }
+            await _rateLimitingService.RecordFailedAttemptAsync(rateLimitKey, 10, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
+        }
+
+        if (_passwordResetService == null)
+        {
+            return Ok(new { success = true, message = "If an account exists with that email, password reset instructions have been sent." });
+        }
+
+        var ip = GetClientIpAddress();
+        var ua = Request.Headers.UserAgent.ToString();
+        var result = await _passwordResetService.RequestPasswordResetAsync(request.Email, ip, ua, cancellationToken);
+
+        return Ok(new { success = result.Success, message = result.Message });
+    }
+
+    [HttpPost("validate-reset-token")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ValidateResetToken([FromBody] ValidateResetTokenRequest request, CancellationToken cancellationToken)
+    {
+        if (request == null || string.IsNullOrWhiteSpace(request.Token))
+        {
+            return BadRequest(new { valid = false, error = "Reset token is required." });
+        }
+
+        if (_passwordResetService == null)
+        {
+            return Ok(new { valid = false, error = "Password reset service unavailable." });
+        }
+
+        var result = await _passwordResetService.ValidateResetTokenAsync(request.Token, cancellationToken);
+        if (!result.IsValid)
+        {
+            return Ok(new { valid = false, error = result.Error });
+        }
+
+        return Ok(new { valid = true, maskedEmail = result.MaskedEmail });
+    }
+
+    [HttpPost("reset-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid || request == null)
+        {
+            return BadRequest(new { success = false, error = "Invalid password reset request." });
+        }
+
+        if (_passwordResetService == null)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, new { success = false, error = "Password reset service unavailable." });
+        }
+
+        var ip = GetClientIpAddress();
+        var ua = Request.Headers.UserAgent.ToString();
+
+        var result = await _passwordResetService.ResetPasswordAsync(request.Token, request.NewPassword, ip, ua, cancellationToken);
+        if (!result.Success)
+        {
+            return BadRequest(new
+            {
+                success = false,
+                error = result.Error ?? "Password reset failed.",
+                errorCode = result.ErrorCode ?? "RESET_FAILED"
+            });
+        }
+
+        return Ok(new
+        {
+            success = true,
+            message = "Your password has been successfully reset. You may now sign in."
         });
     }
 }

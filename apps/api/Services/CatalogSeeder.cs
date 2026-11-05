@@ -43,11 +43,11 @@ public static class CatalogSeeder
             new Role { Name = "exam_manager", Description = "Examination & CAT Manager", IsSystem = true },
             new Role { Name = "reviewer", Description = "Clinical Content Reviewer", IsSystem = true },
             new Role { Name = "instructor", Description = "Faculty & Course Instructor", IsSystem = true },
+            new Role { Name = "support", Description = "Support & Learner Operations", IsSystem = true },
             new Role { Name = "candidate", Description = "Nursing Candidate / Learner", IsSystem = true }
         };
 
         var existingRoles = await context.Roles
-            .Where(r => canonicalRoles.Select(c => c.Name).Contains(r.Name))
             .ToDictionaryAsync(r => r.Name, StringComparer.OrdinalIgnoreCase, cancellationToken);
 
         var missingRoles = canonicalRoles
@@ -58,6 +58,77 @@ public static class CatalogSeeder
         {
             logger.LogInformation("Seeding missing RBAC roles: {MissingRoles}", string.Join(", ", missingRoles.Select(r => r.Name)));
             context.Roles.AddRange(missingRoles);
+            await context.SaveChangesAsync(cancellationToken);
+
+            // Refresh existing roles dictionary
+            existingRoles = await context.Roles
+                .ToDictionaryAsync(r => r.Name, StringComparer.OrdinalIgnoreCase, cancellationToken);
+        }
+
+        // 2b. Seed Permissions Catalog
+        var existingPerms = await context.Permissions
+            .ToDictionaryAsync(p => p.Key, StringComparer.OrdinalIgnoreCase, cancellationToken);
+
+        var missingPerms = Preform.Api.Security.PermissionsCatalog.All
+            .Where(p => !existingPerms.ContainsKey(p.Key))
+            .Select(p => new Permission
+            {
+                Id = Guid.NewGuid().ToString(),
+                Key = p.Key,
+                Name = p.Name,
+                Category = p.Category
+            })
+            .ToList();
+
+        if (missingPerms.Count > 0)
+        {
+            logger.LogInformation("Seeding {Count} missing RBAC permissions...", missingPerms.Count);
+            context.Permissions.AddRange(missingPerms);
+            await context.SaveChangesAsync(cancellationToken);
+
+            existingPerms = await context.Permissions
+                .ToDictionaryAsync(p => p.Key, StringComparer.OrdinalIgnoreCase, cancellationToken);
+        }
+
+        // 2c. Seed Default Role Permissions
+        var existingRolePerms = await context.RolePermissions
+            .Select(rp => new { rp.RoleId, rp.PermissionId })
+            .ToListAsync(cancellationToken);
+        var existingRpSet = new HashSet<(string, string)>(existingRolePerms.Select(rp => (rp.RoleId, rp.PermissionId)));
+
+        var newRolePermissions = new List<RolePermission>();
+
+        void Assign(string roleName, params string[] permPrefixesOrKeys)
+        {
+            if (!existingRoles.TryGetValue(roleName, out var role)) return;
+
+            foreach (var perm in existingPerms.Values)
+            {
+                bool matches = permPrefixesOrKeys.Any(p =>
+                    p == "*" ||
+                    p == perm.Key ||
+                    (p.EndsWith(".*") && perm.Key.StartsWith(p.Substring(0, p.Length - 1))));
+
+                if (matches && !existingRpSet.Contains((role.Id, perm.Id)))
+                {
+                    newRolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = perm.Id });
+                    existingRpSet.Add((role.Id, perm.Id));
+                }
+            }
+        }
+
+        Assign("superadmin", "*");
+        Assign("admin", "users.*", "roles.view", "roles.create", "roles.edit", "audit_logs.*", "security.*", "content.*", "exams.*", "subscriptions.*", "system.health");
+        Assign("content_manager", "content.*", "exams.view", "exams.create", "exams.edit", "exams.review");
+        Assign("exam_manager", "exams.*", "content.view");
+        Assign("reviewer", "content.view", "content.edit", "exams.view", "exams.review");
+        Assign("instructor", "content.view", "content.create", "content.edit", "exams.view");
+        Assign("support", "users.view", "users.sessions", "audit_logs.view", "security.sessions", "system.health");
+
+        if (newRolePermissions.Count > 0)
+        {
+            logger.LogInformation("Seeding {Count} default role permissions...", newRolePermissions.Count);
+            context.RolePermissions.AddRange(newRolePermissions);
             await context.SaveChangesAsync(cancellationToken);
         }
 

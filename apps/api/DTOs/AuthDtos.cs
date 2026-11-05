@@ -118,3 +118,32 @@ public class UserSessionDto
     public DateTime EffectiveExpiresAt { get; set; }
     public bool IsCurrentSession { get; set; }
 }
+
+public class ForgotPasswordRequest
+{
+    [Required]
+    [EmailAddress]
+    [MaxLength(256)]
+    public string Email { get; set; } = string.Empty;
+}
+
+public class ValidateResetTokenRequest
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
+}
+
+public class ResetPasswordRequest
+{
+    [Required]
+    public string Token { get; set; } = string.Empty;
+
+    [Required]
+    [MinLength(8, ErrorMessage = "Password must be at least 8 characters long.")]
+    [MaxLength(128)]
+    public string NewPassword { get; set; } = string.Empty;
+
+    [Required]
+    [Compare("NewPassword", ErrorMessage = "Passwords do not match.")]
+    public string ConfirmPassword { get; set; } = string.Empty;
+}
