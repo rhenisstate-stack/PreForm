@@ -243,12 +243,127 @@ describe("Phase 3 — BFF Session ID Synchronization & Client Device Identificat
       const res = await loginRoute(req);
       expect(res.status).toBe(409);
 
+      const spyRecovery = vi.spyOn(authService, "recoverSessions");
+
       const body = await res.json();
       expect(body.success).toBe(false);
       expect(body.errorCode).toBe("CONCURRENT_SESSION_LIMIT_EXCEEDED");
       expect(body.error).toContain("Maximum concurrent session limit");
 
+      // Recovery is strictly opt-in: no recovery call without the explicit flag
+      expect(spyRecovery).not.toHaveBeenCalled();
+
       // Verify no session cookie was created
+      expect(mockCookies.get("prepford_session")).toBeUndefined();
+    });
+
+    it("login route performs opt-in credential-verified recovery and retries login exactly once", async () => {
+      const limitRejected = {
+        success: false as const,
+        status: 409,
+        headers: new Headers(),
+        data: {
+          success: false,
+          errorCode: "CONCURRENT_SESSION_LIMIT_EXCEEDED",
+          error: "Maximum concurrent session limit of 2 reached. Please sign out from another device or manage your active sessions.",
+        },
+      };
+      const loginSucceeded = {
+        success: true as const,
+        status: 200,
+        headers: new Headers(),
+        data: {
+          success: true,
+          token: "prf_sess_recovered_token",
+          sessionId: authoritativeBackendSessionId,
+          user: {
+            id: testUserId,
+            email: testEmail,
+            role: "candidate",
+            pathway: "rn",
+            displayName: "Test Candidate",
+          },
+        },
+      };
+
+      const spyLogin = vi.spyOn(authService, "login")
+        .mockResolvedValueOnce(limitRejected)
+        .mockResolvedValueOnce(loginSucceeded);
+      const spyRecovery = vi.spyOn(authService, "recoverSessions").mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        headers: new Headers(),
+        data: { success: true },
+      } as never);
+
+      const req = new NextRequest("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email: testEmail,
+          password: "ValidPassword123!",
+          recoverSessions: true,
+        }),
+      });
+
+      const res = await loginRoute(req);
+      expect(res.status).toBe(200);
+
+      expect(spyRecovery).toHaveBeenCalledWith(
+        expect.objectContaining({
+          email: testEmail,
+          clearRemainingSessions: false,
+        })
+      );
+      expect(spyLogin).toHaveBeenCalledTimes(2);
+
+      // Session cookie issued from the retried authoritative login
+      const cookieVal = mockCookies.get("prepford_session");
+      expect(cookieVal).toBeDefined();
+      const tokenVerification = verifySignedSessionToken(cookieVal);
+      expect(tokenVerification.valid).toBe(true);
+      expect(tokenVerification.payload?.sid).toBe(authoritativeBackendSessionId);
+    });
+
+    it("login route surfaces rate-limited recovery without retrying login", async () => {
+      const spyLogin = vi.spyOn(authService, "login").mockResolvedValueOnce({
+        success: false as const,
+        status: 409,
+        headers: new Headers(),
+        data: {
+          success: false,
+          errorCode: "CONCURRENT_SESSION_LIMIT_EXCEEDED",
+          error: "Maximum concurrent session limit of 2 reached.",
+        },
+      });
+      vi.spyOn(authService, "recoverSessions").mockResolvedValueOnce({
+        success: false as const,
+        status: 429,
+        headers: new Headers(),
+        data: {
+          success: false,
+          errorCode: "RATE_LIMITED",
+          error: "Too many recovery attempts. Please wait before trying again.",
+        },
+      } as never);
+
+      const req = new NextRequest("http://localhost:3000/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email: testEmail,
+          password: "ValidPassword123!",
+          recoverSessions: true,
+        }),
+      });
+
+      const res = await loginRoute(req);
+      expect(res.status).toBe(429);
+
+      const body = await res.json();
+      expect(body.success).toBe(false);
+      expect(body.errorCode).toBe("RATE_LIMITED");
+
+      // No second login attempt after failed recovery
+      expect(spyLogin).toHaveBeenCalledTimes(1);
       expect(mockCookies.get("prepford_session")).toBeUndefined();
     });
 
