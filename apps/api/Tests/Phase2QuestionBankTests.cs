@@ -30,6 +30,17 @@ public class Phase2QuestionBankTests
     private static (CurriculumService curriculumService, QuestionBankService questionBankService, AppDbContext db) CreateServices(string dbName)
     {
         var db = CreateInMemoryContext(dbName);
+
+        // Seed base programme for courses
+        db.Programmes.Add(new Programme
+        {
+            Id = "prog-rn",
+            Code = ProgrammeCode.RN,
+            DisplayName = "NCLEX-RN Programme",
+            IsActive = true
+        });
+        db.SaveChanges();
+
         var currLogger = NullLogger<CurriculumService>.Instance;
         var qbLogger = NullLogger<QuestionBankService>.Instance;
         var currService = new CurriculumService(db, currLogger);
@@ -437,7 +448,8 @@ public class Phase2QuestionBankTests
                 TargetStatus = QuestionStatus.Published
             }, "publisher-1", false));
 
-        Assert.Contains("cannot be published until grading support is implemented", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cannot be published", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("grading support is implemented", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
