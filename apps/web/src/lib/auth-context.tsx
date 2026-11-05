@@ -21,7 +21,10 @@ export interface AuthContextType {
   user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (data: SignInInput) => Promise<{ success: boolean; error?: string }>;
+  login: (
+    data: SignInInput,
+    options?: { recoverSessions?: boolean }
+  ) => Promise<{ success: boolean; error?: string; errorCode?: string }>;
   registerUser: (data: SignUpInput) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
@@ -59,15 +62,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void fetchSession();
   }, [fetchSession]);
 
-  const login = async (data: SignInInput): Promise<{ success: boolean; error?: string }> => {
+  const login = async (
+    data: SignInInput,
+    options?: { recoverSessions?: boolean }
+  ): Promise<{ success: boolean; error?: string; errorCode?: string }> => {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          recoverSessions: options?.recoverSessions ?? data.recoverSessions,
+        }),
       });
 
-      let resData: { success?: boolean; user?: AuthUser; error?: string } | null = null;
+      let resData:
+        | { success?: boolean; user?: AuthUser; error?: string; errorCode?: string }
+        | null = null;
       try {
         resData = await res.json();
       } catch {
@@ -78,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const errorMsg =
           mapAuthHttpStatusToMessage(res.status, resData?.error) ||
           "The email or password is incorrect.";
-        return { success: false, error: errorMsg };
+        return { success: false, error: errorMsg, errorCode: resData?.errorCode };
       }
 
       setUser(resData.user || null);

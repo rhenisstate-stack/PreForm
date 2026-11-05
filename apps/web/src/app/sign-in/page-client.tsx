@@ -49,6 +49,11 @@ export function SignInPageClient() {
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [showForgotModal, setShowForgotModal] = React.useState(false);
+  // Concurrent-session lockout recovery: when the backend reports the concurrent session
+  // limit, offer an explicit, credential-verified recovery action instead of a dead end.
+  const [isSessionLimitError, setIsSessionLimitError] = React.useState(false);
+  const [isRecovering, setIsRecovering] = React.useState(false);
+  const lastSubmittedRef = React.useRef<SignInInput | null>(null);
 
   React.useEffect(() => {
     if (urlError) {
@@ -81,7 +86,9 @@ export function SignInPageClient() {
 
   const onSubmit = async (data: SignInInput) => {
     setErrorMessage(null);
+    setIsSessionLimitError(false);
     setIsLoading(true);
+    lastSubmittedRef.current = data;
 
     try {
       const result = await login(data);
@@ -94,6 +101,7 @@ export function SignInPageClient() {
       } else {
         const cleanMsg = sanitizeErrorMessage(result.error, "The email or password is incorrect.");
         setErrorMessage(cleanMsg);
+        setIsSessionLimitError(result.errorCode === "CONCURRENT_SESSION_LIMIT_EXCEEDED");
         notify.error(cleanMsg);
       }
     } catch {
@@ -102,6 +110,43 @@ export function SignInPageClient() {
       notify.error(netMsg);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleRecoverAccess = async () => {
+    const data = lastSubmittedRef.current;
+    if (!data || isRecovering) return;
+    setErrorMessage(null);
+    setIsRecovering(true);
+
+    try {
+      // Retries sign-in through the BFF's credential-verified recovery path: the backend
+      // verifies the password again, then removes only sessions that can no longer
+      // authenticate (expired, outdated, or migration-backfilled legacy sessions).
+      const result = await login(data, { recoverSessions: true });
+      if (result.success) {
+        setIsSessionLimitError(false);
+        notify.success("Old sessions were cleaned up. Welcome back!");
+        const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
+        const targetDestination = sanitizeReturnUrl(rawReturn, "/dashboard");
+        router.push(targetDestination);
+        router.refresh();
+      } else {
+        const cleanMsg =
+          sanitizeErrorMessage(
+            result.error,
+            "Recovery could not be completed. Please wait a few minutes and try again."
+          );
+        setErrorMessage(cleanMsg);
+        setIsSessionLimitError(false);
+        notify.error(cleanMsg);
+      }
+    } catch {
+      const netMsg = "We are temporarily unable to reach the authentication service. Please try again shortly.";
+      setErrorMessage(netMsg);
+      notify.error(netMsg);
+    } finally {
+      setIsRecovering(false);
     }
   };
 
