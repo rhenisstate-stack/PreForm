@@ -482,7 +482,6 @@ public class Phase3AssessmentTests
         var (controller, selectionService, db) = CreateController("P3_Membership_Reject");
 
         SeedQuestion(db, "q_mem_valid", "rn", QuestionStatus.Published);
-        SeedQuestion(db, "q_mem_alien", "rn", QuestionStatus.Published);
         await db.SaveChangesAsync();
 
         var startResult = await controller.StartAttempt(new StartAttemptRequest
@@ -493,6 +492,10 @@ public class Phase3AssessmentTests
         }, CancellationToken.None);
 
         var attemptId = ((CreatedAtActionResult)startResult).RouteValues?["id"]?.ToString()!;
+
+        // Seed an alien question that was NOT assigned to this attempt
+        SeedQuestion(db, "q_mem_alien", "rn", QuestionStatus.Published);
+        await db.SaveChangesAsync();
 
         // Attempt to submit an answer for a question not assigned to this attempt
         var result = await controller.SubmitResponse(attemptId, new SubmitAnswerRequest

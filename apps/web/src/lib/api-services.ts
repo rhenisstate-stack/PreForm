@@ -450,6 +450,27 @@ export interface BackendExamAttemptDto {
   correctCount?: number;
   performanceTier?: string;
   responses?: BackendAttemptResponseDto[];
+  questions?: CandidateQuestionDto[];
+}
+
+export interface CandidateQuestionOptionDto {
+  id: string;
+  index: number;
+  text: string;
+  mediaUrl?: string;
+}
+
+export interface CandidateQuestionDto {
+  id: string;
+  questionNumber: number;
+  stem: string;
+  questionType: string;
+  domain?: string;
+  subdomain?: string;
+  mediaUrl?: string;
+  options: CandidateQuestionOptionDto[];
+  correctAnswerIndices?: number[];
+  rationale?: string;
 }
 
 export interface BackendAttemptResponseDto {
@@ -500,6 +521,21 @@ export interface BackendReauthenticateAttemptResponse {
   errorCode?: string;
 }
 
+export interface AvailableAssessmentDto {
+  id: string;
+  title: string;
+  description: string;
+  pathway: string;
+  examType: string;
+  questionCount: number;
+  durationMinutes: number;
+  passingScorePercent: number;
+  hasActiveAttempt: boolean;
+  activeAttemptId?: string;
+  badge?: string;
+  isEligible: boolean;
+}
+
 export const attemptsService = {
   getAttempts: async (
     session: VerifiedSession
@@ -515,6 +551,48 @@ export const attemptsService = {
   ): Promise<ApiResponse<{ success: boolean; attempt: BackendExamAttemptDto }>> => {
     return apiClient.get<{ success: boolean; attempt: BackendExamAttemptDto }>(
       `/api/v1/attempts/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  startAttempt: async (
+    request: { examId?: string; pathway?: string; name?: string; testType?: string; questionCount?: number; clientNeedId?: string; topicId?: string },
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; attemptId: string; examId: string; startedAt: string; questionCount?: number; resumed?: boolean; message?: string }>> => {
+    return apiClient.post<{ success: boolean; attemptId: string; examId: string; startedAt: string; questionCount?: number; resumed?: boolean; message?: string }>("/api/v1/attempts", request, {
+      session,
+    });
+  },
+
+  submitResponse: async (
+    id: string,
+    response: { questionId: string; selectedOptionIndices: number[]; timeSpentSeconds?: number },
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; message: string; isCorrect?: boolean; scoreAwarded?: number }>> => {
+    return apiClient.post<{ success: boolean; message: string; isCorrect?: boolean; scoreAwarded?: number }>(
+      `/api/v1/attempts/${encodeURIComponent(id)}/responses`,
+      response,
+      { session }
+    );
+  },
+
+  submitAttempt: async (
+    id: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; attemptId: string; scorePercent: number; passed: boolean; performanceTier?: string; totalQuestions: number; correctCount: number; completedAt: string }>> => {
+    return apiClient.post<{ success: boolean; attemptId: string; scorePercent: number; passed: boolean; performanceTier?: string; totalQuestions: number; correctCount: number; completedAt: string }>(
+      `/api/v1/attempts/${encodeURIComponent(id)}/submit`,
+      {},
+      { session }
+    );
+  },
+
+  getAttemptQuestions: async (
+    id: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; questions: CandidateQuestionDto[] }>> => {
+    return apiClient.get<{ success: boolean; questions: CandidateQuestionDto[] }>(
+      `/api/v1/attempts/${encodeURIComponent(id)}/questions`,
       { session }
     );
   },
@@ -535,6 +613,29 @@ export const attemptsService = {
     return apiClient.post<BackendReauthenticateAttemptResponse>(
       `/api/v1/attempts/${encodeURIComponent(id)}/reauthenticate`,
       credentials
+    );
+  },
+};
+
+export const assessmentsService = {
+  getAvailableAssessments: async (
+    session?: VerifiedSession | null,
+    pathway?: string
+  ): Promise<ApiResponse<{ success: boolean; pathway: string; assessments: AvailableAssessmentDto[] }>> => {
+    const q = pathway ? `?pathway=${encodeURIComponent(pathway)}` : "";
+    return apiClient.get<{ success: boolean; pathway: string; assessments: AvailableAssessmentDto[] }>(
+      `/api/v1/assessments/available${q}`,
+      { session }
+    );
+  },
+
+  getAssessmentById: async (
+    id: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; assessment: AvailableAssessmentDto }>> => {
+    return apiClient.get<{ success: boolean; assessment: AvailableAssessmentDto }>(
+      `/api/v1/assessments/${encodeURIComponent(id)}`,
+      { session }
     );
   },
 };
