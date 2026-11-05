@@ -95,6 +95,14 @@ export interface AdminCapabilities {
   canPublishExaminations: boolean;
   /** Super Admin global session security policy and active session monitoring. */
   canManageSessionSecurity: boolean;
+  /** Administrative User management. */
+  canManageUsers: boolean;
+  /** Role and Granular Permission management. */
+  canManageRoles: boolean;
+  /** System & Administrative Audit Trail. */
+  canViewAuditLogs: boolean;
+  /** IP Blacklist / Whitelist rules. */
+  canManageIpRules: boolean;
 }
 
 const EXAM_AUTHOR_ROLES = new Set<AdminRole>([
@@ -127,5 +135,9 @@ export function getAdminCapabilities(rawRole?: string | null): AdminCapabilities
     canApproveExaminations: EXAM_APPROVER_ROLES.has(role),
     canPublishExaminations: EXAM_AUTHOR_ROLES.has(role),
     canManageSessionSecurity: role === "superadmin",
+    canManageUsers: role === "superadmin" || role === "admin",
+    canManageRoles: role === "superadmin" || role === "admin",
+    canViewAuditLogs: role === "superadmin" || role === "admin" || role === "support",
+    canManageIpRules: role === "superadmin" || role === "admin",
   };
 }

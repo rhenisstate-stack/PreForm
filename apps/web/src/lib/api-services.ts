@@ -244,6 +244,39 @@ export const authService = {
       clearRemainingSessions: input.clearRemainingSessions ?? false,
     });
   },
+
+  forgotPassword: async (
+    email: string,
+    correlationId?: string
+  ): Promise<ApiResponse<{ success: boolean; message: string }>> => {
+    return apiClient.post<{ success: boolean; message: string }>(
+      "/api/v1/auth/forgot-password",
+      { email },
+      { correlationId }
+    );
+  },
+
+  validateResetToken: async (
+    token: string,
+    correlationId?: string
+  ): Promise<ApiResponse<{ valid: boolean; maskedEmail?: string; error?: string }>> => {
+    return apiClient.post<{ valid: boolean; maskedEmail?: string; error?: string }>(
+      "/api/v1/auth/validate-reset-token",
+      { token },
+      { correlationId }
+    );
+  },
+
+  resetPassword: async (
+    input: { token: string; newPassword: string; confirmPassword: string },
+    correlationId?: string
+  ): Promise<ApiResponse<{ success: boolean; message?: string; error?: string }>> => {
+    return apiClient.post<{ success: boolean; message?: string; error?: string }>(
+      "/api/v1/auth/reset-password",
+      input,
+      { correlationId }
+    );
+  },
 };
 
 export const profileService = {
@@ -1211,6 +1244,264 @@ export const adminSecurityService = {
 
     const queryString = params.toString() ? `?${params.toString()}` : "";
     return apiClient.get<AdminPaginatedEventsResponse>(`/api/v1/admin/security/events${queryString}`, { session });
+  },
+};
+
+// ── Admin Users Service ───────────────────────────────────────────────
+export interface AdminUserListItem {
+  id: string;
+  email: string;
+  displayName: string;
+  pathway: string;
+  accountStatus: string;
+  isActive: boolean;
+  securityVersion: number;
+  createdAt: string;
+  updatedAt: string;
+  roles: string[];
+}
+
+export interface AdminPaginatedUsersResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  pageSize: number;
+  users: AdminUserListItem[];
+}
+
+export const adminUsersService = {
+  getUsers: async (
+    query: { search?: string; role?: string; status?: string; page?: number; pageSize?: number },
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<AdminPaginatedUsersResponse>> => {
+    const params = new URLSearchParams();
+    if (query.search) params.set("search", query.search);
+    if (query.role) params.set("role", query.role);
+    if (query.status) params.set("status", query.status);
+    if (query.page) params.set("page", String(query.page));
+    if (query.pageSize) params.set("pageSize", String(query.pageSize));
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get<AdminPaginatedUsersResponse>(`/api/v1/admin/users${qs}`, { session });
+  },
+
+  getUserById: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; user: any }>(`/api/v1/admin/users/${encodeURIComponent(id)}`, { session });
+  },
+
+  createUser: async (
+    data: { email: string; password: string; displayName: string; pathway?: string; roles?: string[] },
+    session?: VerifiedSession | null
+  ) => {
+    return apiClient.post<{ success: boolean; user: any; error?: string }>("/api/v1/admin/users", data, { session });
+  },
+
+  updateUser: async (id: string, data: any, session?: VerifiedSession | null) => {
+    return apiClient.put<{ success: boolean; user: any }>(`/api/v1/admin/users/${encodeURIComponent(id)}`, data, { session });
+  },
+
+  updateStatus: async (id: string, status: string, reason?: string, session?: VerifiedSession | null) => {
+    return apiClient.post<{ success: boolean; accountStatus: string; isActive: boolean; securityVersion: number; error?: string }>(
+      `/api/v1/admin/users/${encodeURIComponent(id)}/status`,
+      { status, reason },
+      { session }
+    );
+  },
+
+  assignRole: async (id: string, roleId: string, session?: VerifiedSession | null) => {
+    return apiClient.post<{ success: boolean; message: string; error?: string }>(
+      `/api/v1/admin/users/${encodeURIComponent(id)}/roles`,
+      { roleId },
+      { session }
+    );
+  },
+
+  removeRole: async (id: string, roleId: string, session?: VerifiedSession | null) => {
+    return apiClient.delete<{ success: boolean; message: string; error?: string }>(
+      `/api/v1/admin/users/${encodeURIComponent(id)}/roles/${encodeURIComponent(roleId)}`,
+      { session }
+    );
+  },
+
+  revokeAllSessions: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.post<{ success: boolean; revokedCount: number }>(
+      `/api/v1/admin/users/${encodeURIComponent(id)}/revoke-sessions`,
+      {},
+      { session }
+    );
+  },
+};
+
+// ── Admin Roles & Permissions Service ──────────────────────────────────
+export interface AdminRoleItem {
+  id: string;
+  name: string;
+  description: string;
+  isSystem: boolean;
+  createdAt: string;
+  permissionCount: number;
+  userCount: number;
+}
+
+export const adminRolesService = {
+  getRoles: async (session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; roles: AdminRoleItem[] }>("/api/v1/admin/roles", { session });
+  },
+
+  getRoleById: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; role: any }>(`/api/v1/admin/roles/${encodeURIComponent(id)}`, { session });
+  },
+
+  getPermissions: async (session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; permissions: any[]; grouped: Record<string, any[]> }>(
+      "/api/v1/admin/permissions",
+      { session }
+    );
+  },
+
+  createRole: async (data: { name: string; description: string }, session?: VerifiedSession | null) => {
+    return apiClient.post<{ success: boolean; role?: any; error?: string }>("/api/v1/admin/roles", data, { session });
+  },
+
+  updateRole: async (id: string, data: { description: string }, session?: VerifiedSession | null) => {
+    return apiClient.put<{ success: boolean; role?: any }>(`/api/v1/admin/roles/${encodeURIComponent(id)}`, data, { session });
+  },
+
+  deleteRole: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.delete<{ success: boolean; message?: string; error?: string }>(
+      `/api/v1/admin/roles/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  assignPermission: async (id: string, permissionId: string, session?: VerifiedSession | null) => {
+    return apiClient.post<{ success: boolean; message: string }>(
+      `/api/v1/admin/roles/${encodeURIComponent(id)}/permissions`,
+      { permissionId },
+      { session }
+    );
+  },
+
+  removePermission: async (id: string, permissionId: string, session?: VerifiedSession | null) => {
+    return apiClient.delete<{ success: boolean; message: string }>(
+      `/api/v1/admin/roles/${encodeURIComponent(id)}/permissions/${encodeURIComponent(permissionId)}`,
+      { session }
+    );
+  },
+};
+
+// ── Admin IP Rules Service ─────────────────────────────────────────────
+export interface AdminIpRuleItem {
+  id: string;
+  ipAddressOrCidr: string;
+  ruleType: string;
+  description: string;
+  createdAt: string;
+  createdBy?: string;
+  expiresAt?: string;
+  isActive: boolean;
+}
+
+export const adminIpRulesService = {
+  getRules: async (query?: { ruleType?: string; activeOnly?: boolean }, session?: VerifiedSession | null) => {
+    const params = new URLSearchParams();
+    if (query?.ruleType) params.set("ruleType", query.ruleType);
+    if (query?.activeOnly !== undefined) params.set("activeOnly", String(query.activeOnly));
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get<{ success: boolean; rules: AdminIpRuleItem[] }>(`/api/v1/admin/security/ip-rules${qs}`, { session });
+  },
+
+  createRule: async (
+    data: { ipAddressOrCidr: string; ruleType: string; description: string; expiresAt?: string },
+    session?: VerifiedSession | null
+  ) => {
+    return apiClient.post<{ success: boolean; rule: AdminIpRuleItem; error?: string }>(
+      "/api/v1/admin/security/ip-rules",
+      data,
+      { session }
+    );
+  },
+
+  updateRule: async (
+    id: string,
+    data: { description?: string; isActive?: boolean; expiresAt?: string },
+    session?: VerifiedSession | null
+  ) => {
+    return apiClient.put<{ success: boolean; rule: AdminIpRuleItem }>(
+      `/api/v1/admin/security/ip-rules/${encodeURIComponent(id)}`,
+      data,
+      { session }
+    );
+  },
+
+  deleteRule: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.delete<{ success: boolean; message: string }>(
+      `/api/v1/admin/security/ip-rules/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+};
+
+// ── Admin Audit Logs Service ───────────────────────────────────────────
+export interface AdminAuditLogItem {
+  id: string;
+  actorId?: string;
+  actorEmail?: string;
+  actorName?: string;
+  action: string;
+  entityType: string;
+  entityId?: string;
+  description: string;
+  outcome: string;
+  severity: string;
+  correlationId?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  timestamp: string;
+}
+
+export interface AdminPaginatedAuditLogsResponse {
+  success: boolean;
+  total: number;
+  page: number;
+  pageSize: number;
+  logs: AdminAuditLogItem[];
+}
+
+export const adminAuditLogsService = {
+  getAuditLogs: async (
+    query: {
+      actorId?: string;
+      action?: string;
+      entityType?: string;
+      entityId?: string;
+      correlationId?: string;
+      severity?: string;
+      from?: string;
+      to?: string;
+      page?: number;
+      pageSize?: number;
+    },
+    session?: VerifiedSession | null
+  ) => {
+    const params = new URLSearchParams();
+    if (query.actorId) params.set("actorId", query.actorId);
+    if (query.action) params.set("action", query.action);
+    if (query.entityType) params.set("entityType", query.entityType);
+    if (query.entityId) params.set("entityId", query.entityId);
+    if (query.correlationId) params.set("correlationId", query.correlationId);
+    if (query.severity) params.set("severity", query.severity);
+    if (query.from) params.set("from", query.from);
+    if (query.to) params.set("to", query.to);
+    if (query.page) params.set("page", String(query.page));
+    if (query.pageSize) params.set("pageSize", String(query.pageSize));
+
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get<AdminPaginatedAuditLogsResponse>(`/api/v1/admin/audit-logs${qs}`, { session });
+  },
+
+  getAuditLogById: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; log: any }>(`/api/v1/admin/audit-logs/${encodeURIComponent(id)}`, { session });
   },
 };
 

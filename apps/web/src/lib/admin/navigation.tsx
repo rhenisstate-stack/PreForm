@@ -2,9 +2,13 @@ import type { LucideIcon } from "lucide-react";
 import {
   CreditCard,
   FileText,
+  KeyRound,
   Layers,
   LayoutDashboard,
+  Network,
+  ScrollText,
   ShieldCheck,
+  Users,
 } from "lucide-react";
 import type { AdminCapabilities } from "@/lib/admin/authz";
 
@@ -92,6 +96,29 @@ const MONETIZATION_GROUP: NavGroup = {
   ],
 };
 
+const IDENTITY_GROUP: NavGroup = {
+  id: "identity",
+  label: "Identity & Access",
+  items: [
+    {
+      id: "users",
+      title: "Users & Accounts",
+      href: "/admin/users",
+      icon: Users,
+      capability: "canManageUsers",
+      description: "Search, inspect, manage learner and staff accounts and status",
+    },
+    {
+      id: "roles",
+      title: "Roles & Permissions",
+      href: "/admin/roles",
+      icon: KeyRound,
+      capability: "canManageRoles",
+      description: "Configure system and custom roles with granular permissions",
+    },
+  ],
+};
+
 const SECURITY_GROUP: NavGroup = {
   id: "security",
   label: "Security & Policy",
@@ -104,15 +131,40 @@ const SECURITY_GROUP: NavGroup = {
       capability: "canManageSessionSecurity",
       description: "Global session policies, live session monitoring, and administrative revocation",
     },
+    {
+      id: "ip-rules",
+      title: "IP Access Rules",
+      href: "/admin/security/ip-rules",
+      icon: Network,
+      capability: "canManageIpRules",
+      description: "Manage IP blacklists and whitelists with CIDR support",
+    },
   ],
 };
 
-/** Future phase groups are appended here as their backends land. */
+const GOVERNANCE_GROUP: NavGroup = {
+  id: "governance",
+  label: "Governance",
+  items: [
+    {
+      id: "audit-logs",
+      title: "Audit Trail",
+      href: "/admin/audit-logs",
+      icon: ScrollText,
+      capability: "canViewAuditLogs",
+      description: "Inspect administrative mutations, authentication events, and audit trail",
+    },
+  ],
+};
+
+/** All navigation groups. */
 const ALL_GROUPS: NavGroup[] = [
   OVERVIEW_GROUP,
+  IDENTITY_GROUP,
   EXAMINATION_GROUP,
   MONETIZATION_GROUP,
   SECURITY_GROUP,
+  GOVERNANCE_GROUP,
 ];
 
 /** Filters navigation items by the caller's verified capabilities. */
@@ -167,8 +219,13 @@ function humanizeSegment(segment: string): string {
 /** Page titles per route (falls back to the breadcrumb label). */
 const PAGE_TITLES: Record<string, string> = {
   "/admin": "Platform Governance Dashboard",
+  "/admin/users": "User & Account Governance",
+  "/admin/roles": "Roles & Permissions Directory",
   "/admin/subscriptions": "Subscription Plan Management",
   "/admin/question-types": "Question-Type Registry",
+  "/admin/audit-logs": "Administrative Audit Trail",
+  "/admin/security/ip-rules": "IP Access Rule Governance",
+  "/admin/security/sessions": "Session Security & Device Management",
 };
 
 export function getAdminPageTitle(pathname: string): string {
