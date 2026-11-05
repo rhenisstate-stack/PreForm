@@ -69,17 +69,27 @@ public class AdminSecurityController : ControllerBase
         var now = DateTime.UtcNow;
         var last24h = now.AddHours(-24);
 
+        // Authoritative active-session eligibility, identical to concurrent-slot accounting
+        // and learner listing: not revoked, within time windows, current security version
+        // (correlated subquery), and not a migration-backfilled legacy client identity.
         var totalActive = await _context.UserSessions
-            .CountAsync(s => !s.Revoked && s.IdleExpiresAt > now && s.AbsoluteExpiresAt > now, cancellationToken);
+            .CountAsync(s => !s.Revoked && s.IdleExpiresAt > now && s.AbsoluteExpiresAt > now &&
+                s.SecurityVersion == _context.Users.Where(u => u.Id == s.UserId).Select(u => u.SecurityVersion).FirstOrDefault() &&
+                !s.ClientId.StartsWith(SessionSecurityService.LegacyBackfilledClientPrefix), cancellationToken);
 
         var activeUsers = await _context.UserSessions
-            .Where(s => !s.Revoked && s.IdleExpiresAt > now && s.AbsoluteExpiresAt > now)
+            .Where(s => !s.Revoked && s.IdleExpiresAt > now && s.AbsoluteExpiresAt > now &&
+                s.SecurityVersion == _context.Users.Where(u => u.Id == s.UserId).Select(u => u.SecurityVersion).FirstOrDefault() &&
+                !s.ClientId.StartsWith(SessionSecurityService.LegacyBackfilledClientPrefix))
             .Select(s => s.UserId)
             .Distinct()
             .CountAsync(cancellationToken);
 
         var expiringSoon = await _context.UserSessions
-            .CountAsync(s => !s.Revoked && (s.IdleExpiresAt <= now.AddMinutes(30) || s.AbsoluteExpiresAt <= now.AddHours(2)), cancellationToken);
+            .CountAsync(s => !s.Revoked && (s.IdleExpiresAt <= now.AddMinutes(30) || s.AbsoluteExpiresAt <= now.AddHours(2)) &&
+                s.IdleExpiresAt > now && s.AbsoluteExpiresAt > now &&
+                s.SecurityVersion == _context.Users.Where(u => u.Id == s.UserId).Select(u => u.SecurityVersion).FirstOrDefault() &&
+                !s.ClientId.StartsWith(SessionSecurityService.LegacyBackfilledClientPrefix), cancellationToken);
 
         var revoked24h = await _context.UserSessions
             .CountAsync(s => s.Revoked && s.RevokedAt >= last24h, cancellationToken);
@@ -314,7 +324,9 @@ public class AdminSecurityController : ControllerBase
         var normalizedStatus = (status ?? "all").ToLowerInvariant();
         if (normalizedStatus == "active")
         {
-            query = query.Where(s => !s.Revoked && s.IdleExpiresAt > now && s.AbsoluteExpiresAt > now);
+            query = query.Where(s => !s.Revoked && s.IdleExpiresAt > now && s.AbsoluteExpiresAt > now &&
+                s.SecurityVersion == _context.Users.Where(u => u.Id == s.UserId).Select(u => u.SecurityVersion).FirstOrDefault() &&
+                !s.ClientId.StartsWith(SessionSecurityService.LegacyBackfilledClientPrefix));
         }
         else if (normalizedStatus == "revoked")
         {
