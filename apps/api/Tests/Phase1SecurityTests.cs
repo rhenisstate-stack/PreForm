@@ -315,7 +315,7 @@ public class Phase1SecurityTests
         // Assert 6: Verify all active sessions were revoked
         var sessions = await context.UserSessions.Where(s => s.UserId == testUser.Id).ToListAsync();
         Assert.All(sessions, s => Assert.True(s.Revoked));
-        Assert.All(sessions, s => Assert.Equal("PASSWORD_RESET", s.RevocationReason));
+        Assert.All(sessions, s => Assert.Equal("PasswordReset", s.RevocationReason));
 
         // Assert 7: Single-use invariant — reusing the token must fail
         var reuseResult = await resetService.ResetPasswordAsync(rawToken, "AnotherPassword44!", "127.0.0.1", "TestAgent/1.0");
@@ -523,7 +523,7 @@ public class Phase1SecurityTests
         var updatedSession = await context.UserSessions.FindAsync(editorSession.Id);
         Assert.NotNull(updatedSession);
         Assert.True(updatedSession.Revoked);
-        Assert.Contains("ROLE_PERMISSIONS_CHANGED", updatedSession.RevocationReason);
+        Assert.Contains("PermissionAdded", updatedSession.RevocationReason);
     }
 
     // ── 7. IP Blacklist & Whitelist Rules Tests ───────────────────────────────
