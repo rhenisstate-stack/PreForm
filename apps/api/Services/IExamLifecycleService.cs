@@ -29,8 +29,18 @@ public interface IExamLifecycleService
     Task<bool> RemoveQuestionFromRevisionAsync(string revisionId, string questionId, long concurrencyToken, ClaimsPrincipal user, CancellationToken ct = default);
     Task<List<ExamQuestionMembershipDto>> ReorderQuestionsAsync(string revisionId, ReorderExamQuestionsRequest request, ClaimsPrincipal user, CancellationToken ct = default);
     Task<ExaminationDto> UpdateExaminationFamilyAsync(string examinationId, UpdateExaminationFamilyRequest request, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<bool> DeleteExaminationAsync(string examinationId, ClaimsPrincipal user, CancellationToken ct = default);
     Task<bool> DiscardDraftRevisionAsync(string revisionId, long concurrencyToken, ClaimsPrincipal user, CancellationToken ct = default);
-    Task<List<ExamQuestionMembershipDto>> GetEligibleQuestionsAsync(string? pathway, string? search, ClaimsPrincipal user, CancellationToken ct = default);
+    Task<List<ExamQuestionMembershipDto>> GetEligibleQuestionsAsync(
+        string? pathway,
+        string? search,
+        ClaimsPrincipal user,
+        CancellationToken ct = default,
+        string? clientNeedId = null,
+        string? courseId = null,
+        string? subjectDomainId = null,
+        string? questionType = null,
+        string? difficulty = null);
 
     // ── P3.3 Examination Library Query & Discovery Operations ──
     Task<ExaminationLibraryResponseDto> QueryExaminationsAsync(ExaminationQueryParameters parameters, ClaimsPrincipal user, CancellationToken ct = default);

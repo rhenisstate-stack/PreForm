@@ -18,6 +18,36 @@ export async function GET(
       return NextResponse.json({ success: false, error: res.error || "Failed to fetch examination readiness" }, { status: res.status });
     }
 
+    const raw = res.data as any;
+    if (raw && !raw.readiness && Array.isArray(raw.checks)) {
+      const statusMap: Record<string, "READY" | "NEEDS_ATTENTION" | "BLOCKED"> = {
+        PASS: "READY",
+        READY: "READY",
+        WARN: "NEEDS_ATTENTION",
+        NEEDS_ATTENTION: "NEEDS_ATTENTION",
+        BLOCK: "BLOCKED",
+        BLOCKED: "BLOCKED",
+      };
+      return NextResponse.json({
+        success: true,
+        readiness: {
+          revisionId: raw.revisionId,
+          examinationCode: raw.examinationCode || "",
+          title: raw.title || "",
+          lifecycleState: raw.lifecycleState || "Draft",
+          overallStatus: statusMap[raw.overallStatus] || "NEEDS_ATTENTION",
+          canPublish: raw.overallStatus === "PASS" || raw.overallStatus === "READY",
+          evaluatedAtUtc: raw.evaluatedAtUtc || new Date().toISOString(),
+          checks: raw.checks.map((c: any, idx: number) => ({
+            code: c.code || `${c.category || "CHECK"}_${idx + 1}`,
+            area: c.area || c.category || "General",
+            severity: c.severity || c.status || "PASS",
+            message: c.message || c.name || "",
+          })),
+        },
+      });
+    }
+
     return NextResponse.json(res.data);
   } catch (error) {
     console.error("Admin revision readiness GET error:", error);

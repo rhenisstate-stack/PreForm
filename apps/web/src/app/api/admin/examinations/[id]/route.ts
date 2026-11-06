@@ -54,3 +54,29 @@ export async function PATCH(
     return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  request: Request,
+  props: { params: Promise<{ id: string }> }
+) {
+  const auth = await verifyAdminAuth(request);
+  if (!auth.authorized) {
+    return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+  }
+
+  try {
+    const { id } = await props.params;
+    const res = await examinationsService.deleteExamination(id, auth.session);
+    if (!res.success) {
+      return NextResponse.json(
+        { success: false, error: res.error || "Cannot delete examination with existing learner attempts or published revisions" },
+        { status: res.status }
+      );
+    }
+
+    return NextResponse.json(res.data || { success: true, deleted: true, examinationId: id });
+  } catch (error) {
+    console.error("Admin examination family DELETE error:", error);
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+  }
+}

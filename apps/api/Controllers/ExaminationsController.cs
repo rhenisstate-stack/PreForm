@@ -39,11 +39,28 @@ public class ExaminationsController : ControllerBase
     }
 
     [HttpGet("eligible-questions")]
-    public async Task<IActionResult> GetEligibleQuestions([FromQuery] string? pathway, [FromQuery] string? search, CancellationToken ct)
+    public async Task<IActionResult> GetEligibleQuestions(
+        [FromQuery] string? pathway,
+        [FromQuery] string? search,
+        [FromQuery] string? clientNeedId,
+        [FromQuery] string? courseId,
+        [FromQuery] string? subjectDomainId,
+        [FromQuery] string? questionType,
+        [FromQuery] string? difficulty,
+        CancellationToken ct)
     {
         return await ExecuteLifecycleActionAsync(async () =>
         {
-            var questions = await _lifecycleService.GetEligibleQuestionsAsync(pathway, search, User, ct);
+            var questions = await _lifecycleService.GetEligibleQuestionsAsync(
+                pathway,
+                search,
+                User,
+                ct,
+                clientNeedId,
+                courseId,
+                subjectDomainId,
+                questionType,
+                difficulty);
             return Ok(new { success = true, questions });
         });
     }
@@ -69,6 +86,20 @@ public class ExaminationsController : ControllerBase
         });
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteExamination(string id, CancellationToken ct)
+    {
+        return await ExecuteLifecycleActionAsync(async () =>
+        {
+            var deleted = await _lifecycleService.DeleteExaminationAsync(id, User, ct);
+            if (!deleted)
+            {
+                return NotFound(new { success = false, error = $"Examination '{id}' not found." });
+            }
+            return Ok(new { success = true, deleted = true, message = "Examination deleted successfully." });
+        });
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateExamination([FromBody] CreateExaminationRequest request, CancellationToken ct)
     {
@@ -89,6 +120,7 @@ public class ExaminationsController : ControllerBase
         try
         {
             var examination = await _codeService.CreateExaminationAsync(request, actorId, ct);
+            var initialRev = examination.Revisions.OrderByDescending(r => r.RevisionNumber).FirstOrDefault();
             return CreatedAtAction(nameof(GetExamination), new { id = examination.Id }, new
             {
                 success = true,
@@ -99,7 +131,19 @@ public class ExaminationsController : ControllerBase
                     examination.Code,
                     examination.Title,
                     examination.CreatedAt,
-                    examination.CreatedBy
+                    examination.CreatedBy,
+                    initialRevisionId = initialRev?.Id,
+                    revisions = examination.Revisions.Select(r => new
+                    {
+                        r.Id,
+                        r.RevisionNumber,
+                        lifecycleState = r.LifecycleState.ToString(),
+                        r.Title,
+                        r.ExamType,
+                        r.TimeLimitMinutes,
+                        r.PassingScorePercent,
+                        r.ConcurrencyToken
+                    }).ToList()
                 }
             });
         }

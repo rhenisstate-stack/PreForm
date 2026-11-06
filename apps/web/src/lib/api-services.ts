@@ -760,6 +760,8 @@ export interface ExaminationQueryParams {
   search?: string;
   pathway?: string;
   revisionStatus?: string;
+  examType?: number;
+  module?: string;
   sortBy?: string;
   sortDirection?: "asc" | "desc";
   page?: number;
@@ -770,6 +772,7 @@ export interface BackendExamQuestionMembershipDto {
   id: string;
   examId: string;
   questionId: string;
+  code?: string | null;
   displayOrder: number;
   stem: string;
   questionTypeKey: string;
@@ -777,6 +780,16 @@ export interface BackendExamQuestionMembershipDto {
   difficulty: string;
   status: string;
   optionCount: number;
+  clientNeedId?: string | null;
+  clientNeedCode?: string | null;
+  clientNeedName?: string | null;
+  courseId?: string | null;
+  courseTitle?: string | null;
+  subjectDomainId?: string | null;
+  subjectDomainTitle?: string | null;
+  topicId?: string | null;
+  topicTitle?: string | null;
+  overallRationale?: string | null;
 }
 
 export interface BackendRevisionValidationDto {
@@ -796,6 +809,19 @@ export interface CreateExaminationInput {
   examType?: number;
   timeLimitMinutes?: number;
   passingScorePercent?: number;
+  targetQuestionCount?: number;
+  selectionStrategy?: string;
+  compositionRulesJson?: string | null;
+  questionIds?: string[];
+  isAvailable?: boolean;
+  availableFrom?: string | null;
+  availableTo?: string | null;
+  maxAttemptsAllowed?: number | null;
+  retakeCooldownHours?: number;
+  allowInterruptedResume?: boolean;
+  reviewPolicy?: string;
+  showRationales?: boolean;
+  showScoreImmediately?: boolean;
 }
 
 export interface UpdateExaminationFamilyInput {
@@ -841,12 +867,36 @@ export interface ClientNeedQuotaItem {
   availableCount: number;
 }
 
+export interface DifficultyDistributionDto {
+  easyPercent: number;
+  moderatePercent: number;
+  hardPercent: number;
+}
+
+export interface ReadinessThresholdsDto {
+  lowMinPercent: number;
+  lowMaxPercent: number;
+  borderlineMinPercent: number;
+  borderlineMaxPercent: number;
+  highMinPercent: number;
+  highMaxPercent: number;
+  veryHighMinPercent: number;
+  veryHighMaxPercent: number;
+}
+
 export interface BackendExamCompositionDto {
   revisionId: string;
   targetQuestionCount: number;
   selectionStrategy: string;
   allowedQuestionTypes: string[];
   clientNeedQuotas: ClientNeedQuotaItem[];
+  courseIds?: string[];
+  subjectIds?: string[];
+  difficultyDistribution?: DifficultyDistributionDto | null;
+  readinessThresholds?: ReadinessThresholdsDto | null;
+  assessmentObjectives?: string[];
+  randomizeQuestions?: boolean;
+  questionFormatFilter?: string;
   concurrencyToken: number;
 }
 
@@ -856,9 +906,17 @@ export interface UpdateExamCompositionInput {
   allowedQuestionTypes: string[];
   clientNeedQuotas: Array<{
     clientNeedId: string;
+    clientNeedCode?: string;
     targetCount: number;
     targetPercentage: number;
   }>;
+  courseIds?: string[];
+  subjectIds?: string[];
+  difficultyDistribution?: DifficultyDistributionDto | null;
+  readinessThresholds?: ReadinessThresholdsDto | null;
+  assessmentObjectives?: string[];
+  randomizeQuestions?: boolean;
+  questionFormatFilter?: string;
   concurrencyToken: number;
 }
 
@@ -978,6 +1036,8 @@ export const examinationsService = {
     if (params?.search) searchParams.set("search", params.search);
     if (params?.pathway && params.pathway !== "all") searchParams.set("pathway", params.pathway);
     if (params?.revisionStatus && params.revisionStatus !== "all") searchParams.set("revisionStatus", params.revisionStatus);
+    if (params?.examType !== undefined) searchParams.set("examType", params.examType.toString());
+    if (params?.module && params.module !== "all") searchParams.set("module", params.module);
     if (params?.sortBy) searchParams.set("sortBy", params.sortBy);
     if (params?.sortDirection) searchParams.set("sortDirection", params.sortDirection);
     if (params?.page) searchParams.set("page", params.page.toString());
@@ -1014,11 +1074,25 @@ export const examinationsService = {
   getEligibleQuestions: async (
     pathway?: string,
     search?: string,
-    session?: VerifiedSession | null
+    session?: VerifiedSession | null,
+    filters?: {
+      clientNeedId?: string;
+      courseId?: string;
+      subjectDomainId?: string;
+      questionType?: string;
+      difficulty?: number | string;
+    }
   ): Promise<ApiResponse<{ success: boolean; questions: BackendExamQuestionMembershipDto[] }>> => {
     const params = new URLSearchParams();
     if (pathway) params.set("pathway", pathway);
     if (search) params.set("search", search);
+    if (filters?.clientNeedId) params.set("clientNeedId", filters.clientNeedId);
+    if (filters?.courseId) params.set("courseId", filters.courseId);
+    if (filters?.subjectDomainId) params.set("subjectDomainId", filters.subjectDomainId);
+    if (filters?.questionType) params.set("questionType", filters.questionType);
+    if (filters?.difficulty !== undefined && filters.difficulty !== "") {
+      params.set("difficulty", String(filters.difficulty));
+    }
     const qs = params.toString() ? `?${params.toString()}` : "";
     return apiClient.get<{ success: boolean; questions: BackendExamQuestionMembershipDto[] }>(
       `/api/v1/examinations/eligible-questions${qs}`,
@@ -1048,11 +1122,21 @@ export const examinationsService = {
     );
   },
 
+  deleteExamination: async (
+    id: string,
+    session?: VerifiedSession | null
+  ): Promise<ApiResponse<{ success: boolean; deleted: boolean; examinationId: string }>> => {
+    return apiClient.delete<{ success: boolean; deleted: boolean; examinationId: string }>(
+      `/api/v1/examinations/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
   createExamination: async (
     input: CreateExaminationInput,
     session?: VerifiedSession | null
-  ): Promise<ApiResponse<{ success: boolean; examination: { id: string; pathway: string; code: string; title: string; createdAt: string; createdBy: string } }>> => {
-    return apiClient.post<{ success: boolean; examination: { id: string; pathway: string; code: string; title: string; createdAt: string; createdBy: string } }>(
+  ): Promise<ApiResponse<{ success: boolean; examination: { id: string; pathway: string; code: string; title: string; createdAt: string; createdBy: string; initialRevisionId?: string | null; revisions?: BackendExamRevisionDto[] } }>> => {
+    return apiClient.post<{ success: boolean; examination: { id: string; pathway: string; code: string; title: string; createdAt: string; createdBy: string; initialRevisionId?: string | null; revisions?: BackendExamRevisionDto[] } }>(
       "/api/v1/examinations",
       input,
       { session }
@@ -1883,6 +1967,39 @@ export interface AdminClientNeed {
   updatedAt: string;
 }
 
+export interface AdminCourseItem {
+  id: string;
+  programmeId: string;
+  programmeName?: string | null;
+  code: string;
+  pathway: string;
+  title: string;
+  description: string;
+  displayOrder: number;
+  isPublished: boolean;
+  isActive: boolean;
+  subjectDomainCount: number;
+  questionCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminSubjectDomainItem {
+  id: string;
+  courseId: string;
+  courseTitle?: string | null;
+  code: string;
+  pathway: string;
+  title: string;
+  description: string;
+  displayOrder: number;
+  isActive: boolean;
+  categoryCount: number;
+  questionCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const adminQuestionsService = {
   getQuestions: async (
     query: {
@@ -1981,13 +2098,208 @@ export const adminCurriculumService = {
     );
   },
 
-  getClientNeeds: async (pathway?: string, activeOnly = false, session?: VerifiedSession | null) => {
+  getCourses: async (
+    params?: { activeOnly?: boolean; pathway?: string; search?: string },
+    session?: VerifiedSession | null
+  ) => {
+    const sp = new URLSearchParams();
+    if (params?.activeOnly) sp.set("activeOnly", "true");
+    if (params?.pathway && params.pathway !== "all") sp.set("pathway", params.pathway);
+    if (params?.search) sp.set("search", params.search);
+    const qs = sp.toString() ? `?${sp.toString()}` : "";
+    return apiClient.get<{ success: boolean; courses: AdminCourseItem[] }>(
+      `/api/v1/curriculum/courses${qs}`,
+      { session }
+    );
+  },
+
+  getCourseById: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; course: AdminCourseItem }>(
+      `/api/v1/curriculum/courses/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  createCourse: async (
+    data: {
+      programmeId?: string;
+      code?: string;
+      pathway?: string;
+      title: string;
+      description?: string;
+      displayOrder?: number;
+      isPublished?: boolean;
+      isActive?: boolean;
+    },
+    session?: VerifiedSession | null
+  ) => {
+    return apiClient.post<{ success: boolean; course: AdminCourseItem; error?: string }>(
+      "/api/v1/curriculum/courses",
+      data,
+      { session }
+    );
+  },
+
+  updateCourse: async (
+    id: string,
+    data: {
+      code?: string;
+      pathway?: string;
+      title: string;
+      description?: string;
+      displayOrder?: number;
+      isPublished?: boolean;
+      isActive?: boolean;
+    },
+    session?: VerifiedSession | null
+  ) => {
+    return apiClient.put<{ success: boolean; course: AdminCourseItem; error?: string }>(
+      `/api/v1/curriculum/courses/${encodeURIComponent(id)}`,
+      data,
+      { session }
+    );
+  },
+
+  deleteCourse: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.delete<{ success: boolean; message?: string; error?: string }>(
+      `/api/v1/curriculum/courses/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  getSubjectDomains: async (
+    params?: { courseId?: string; activeOnly?: boolean; pathway?: string; search?: string },
+    session?: VerifiedSession | null
+  ) => {
+    const sp = new URLSearchParams();
+    if (params?.courseId) sp.set("courseId", params.courseId);
+    if (params?.activeOnly) sp.set("activeOnly", "true");
+    if (params?.pathway && params.pathway !== "all") sp.set("pathway", params.pathway);
+    if (params?.search) sp.set("search", params.search);
+    const qs = sp.toString() ? `?${sp.toString()}` : "";
+    return apiClient.get<{ success: boolean; subjectDomains: AdminSubjectDomainItem[] }>(
+      `/api/v1/curriculum/subject-domains${qs}`,
+      { session }
+    );
+  },
+
+  getSubjectDomainById: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; subjectDomain: AdminSubjectDomainItem }>(
+      `/api/v1/curriculum/subject-domains/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  createSubjectDomain: async (
+    data: {
+      courseId: string;
+      code?: string;
+      pathway?: string;
+      title: string;
+      description?: string;
+      displayOrder?: number;
+      isActive?: boolean;
+    },
+    session?: VerifiedSession | null
+  ) => {
+    return apiClient.post<{ success: boolean; subjectDomain: AdminSubjectDomainItem; error?: string }>(
+      "/api/v1/curriculum/subject-domains",
+      data,
+      { session }
+    );
+  },
+
+  updateSubjectDomain: async (
+    id: string,
+    data: {
+      courseId?: string;
+      code?: string;
+      pathway?: string;
+      title: string;
+      description?: string;
+      displayOrder?: number;
+      isActive?: boolean;
+    },
+    session?: VerifiedSession | null
+  ) => {
+    return apiClient.put<{ success: boolean; subjectDomain: AdminSubjectDomainItem; error?: string }>(
+      `/api/v1/curriculum/subject-domains/${encodeURIComponent(id)}`,
+      data,
+      { session }
+    );
+  },
+
+  deleteSubjectDomain: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.delete<{ success: boolean; message?: string; error?: string }>(
+      `/api/v1/curriculum/subject-domains/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  getClientNeeds: async (
+    pathway?: string,
+    activeOnly = false,
+    session?: VerifiedSession | null,
+    search?: string
+  ) => {
     const params = new URLSearchParams();
-    if (pathway) params.set("pathway", pathway);
+    if (pathway && pathway !== "all") params.set("pathway", pathway);
     if (activeOnly) params.set("activeOnly", "true");
+    if (search) params.set("search", search);
     const qs = params.toString() ? `?${params.toString()}` : "";
     return apiClient.get<{ success: boolean; clientNeeds: AdminClientNeed[] }>(
       `/api/v1/client-needs${qs}`,
+      { session }
+    );
+  },
+
+  getClientNeedById: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; clientNeed: AdminClientNeed }>(
+      `/api/v1/client-needs/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  createClientNeed: async (
+    data: {
+      code: string;
+      name: string;
+      description?: string;
+      displayOrder?: number;
+      isActive?: boolean;
+      pathway?: string;
+    },
+    session?: VerifiedSession | null
+  ) => {
+    return apiClient.post<{ success: boolean; clientNeed: AdminClientNeed; error?: string }>(
+      "/api/v1/client-needs",
+      data,
+      { session }
+    );
+  },
+
+  updateClientNeed: async (
+    id: string,
+    data: {
+      code?: string;
+      name: string;
+      description?: string;
+      displayOrder?: number;
+      isActive?: boolean;
+      pathway?: string;
+    },
+    session?: VerifiedSession | null
+  ) => {
+    return apiClient.put<{ success: boolean; clientNeed: AdminClientNeed; error?: string }>(
+      `/api/v1/client-needs/${encodeURIComponent(id)}`,
+      data,
+      { session }
+    );
+  },
+
+  deleteClientNeed: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.delete<{ success: boolean; message?: string; error?: string }>(
+      `/api/v1/client-needs/${encodeURIComponent(id)}`,
       { session }
     );
   },

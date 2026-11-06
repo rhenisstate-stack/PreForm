@@ -1201,6 +1201,32 @@ public class ExamLifecycleService : IExamLifecycleService
             }
         }
 
+        // 3b. ExamType / Module filter
+        ExamType? targetExamType = null;
+        if (parameters.ExamType.HasValue && parameters.ExamType.Value > 0 && Enum.IsDefined(typeof(ExamType), parameters.ExamType.Value))
+        {
+            targetExamType = (ExamType)parameters.ExamType.Value;
+        }
+        else if (!string.IsNullOrWhiteSpace(parameters.Module) && !string.Equals(parameters.Module.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            var mod = parameters.Module.Trim().ToLowerInvariant();
+            targetExamType = mod switch
+            {
+                "standalone" or "custom" => ExamType.Standalone,
+                "rats" or "rat" or "diagnostic" or "diagnosticreadiness" => ExamType.DiagnosticReadiness,
+                "practice" => ExamType.Practice,
+                "cat" => ExamType.CAT,
+                "mock" or "mocksimulation" => ExamType.MockSimulation,
+                _ => null
+            };
+        }
+
+        if (targetExamType.HasValue)
+        {
+            var et = targetExamType.Value;
+            query = query.Where(e => e.Revisions.Any(r => r.ExamType == et));
+        }
+
         // 4. Text Search
         if (!string.IsNullOrWhiteSpace(parameters.Search))
         {
@@ -1909,6 +1935,79 @@ public class ExamLifecycleService : IExamLifecycleService
         return MapToExaminationDto(examination, examination.Revisions.ToList());
     }
 
+    public async Task<bool> DeleteExaminationAsync(string examinationId, ClaimsPrincipal user, CancellationToken ct = default)
+    {
+        var (actorId, role) = ResolveActor(user);
+        EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin }, "DeleteExamination");
+
+        var examination = await _context.Examinations
+            .Include(e => e.Revisions)
+                .ThenInclude(r => r.ExamQuestions)
+            .Include(e => e.Revisions)
+                .ThenInclude(r => r.Attempts)
+            .FirstOrDefaultAsync(e => e.Id == examinationId, ct);
+
+        if (examination == null)
+        {
+            return false;
+        }
+
+        var hasAttempts = examination.Revisions.Any(r => r.Attempts != null && r.Attempts.Count > 0)
+            || await _context.ExamAttempts.AnyAsync(a => examination.Revisions.Select(r => r.Id).Contains(a.ExamId), ct);
+
+        if (hasAttempts)
+        {
+            throw new InvalidOperationException($"Cannot delete examination '{examination.Code}' because learner attempts exist. Archive or retire the examination instead to preserve historical attempt integrity.");
+        }
+
+        var hasNonDraftOrHistory = examination.Revisions.Any(r =>
+            r.LifecycleState != ExamLifecycleState.Draft ||
+            r.SubmittedAt != null ||
+            r.ApprovedAt != null ||
+            r.PublishedAt != null);
+
+        if (hasNonDraftOrHistory)
+        {
+            throw new InvalidOperationException($"Cannot delete examination '{examination.Code}' because it has lifecycle review or publication history. Archive or retire the examination instead.");
+        }
+
+        foreach (var rev in examination.Revisions)
+        {
+            if (rev.ExamQuestions != null && rev.ExamQuestions.Count > 0)
+            {
+                _context.ExamQuestions.RemoveRange(rev.ExamQuestions);
+            }
+        }
+
+        if (examination.Revisions.Count > 0)
+        {
+            _context.Exams.RemoveRange(examination.Revisions);
+        }
+
+        _context.Examinations.Remove(examination);
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorId,
+            Action = "ExamDeleted",
+            EntityType = "Examination",
+            EntityId = examination.Id,
+            Description = JsonSerializer.Serialize(new
+            {
+                code = examination.Code,
+                pathway = examination.Pathway,
+                title = examination.Title,
+                deletedBy = actorId
+            }),
+            Outcome = "Success",
+            Timestamp = DateTime.UtcNow
+        });
+
+        await _context.SaveChangesAsync(ct);
+        return true;
+    }
+
     public async Task<bool> DiscardDraftRevisionAsync(string revisionId, long concurrencyToken, ClaimsPrincipal user, CancellationToken ct = default)
     {
         var (actorId, role) = ResolveActor(user);
@@ -1985,45 +2084,140 @@ public class ExamLifecycleService : IExamLifecycleService
         return true;
     }
 
-    public async Task<List<ExamQuestionMembershipDto>> GetEligibleQuestionsAsync(string? pathway, string? search, ClaimsPrincipal user, CancellationToken ct = default)
+    public async Task<List<ExamQuestionMembershipDto>> GetEligibleQuestionsAsync(
+        string? pathway,
+        string? search,
+        ClaimsPrincipal user,
+        CancellationToken ct = default,
+        string? clientNeedId = null,
+        string? courseId = null,
+        string? subjectDomainId = null,
+        string? questionType = null,
+        string? difficulty = null)
     {
         var (_, role) = ResolveActor(user);
         EnforceRole(role, new[] { RoleHierarchy.RoleExamManager, RoleHierarchy.RoleAdmin, RoleHierarchy.RoleSuperAdmin, RoleHierarchy.RoleReviewer }, "GetEligibleQuestions");
 
         var query = _context.Questions
             .Include(q => q.Options)
+            .Include(q => q.ClientNeed)
+            .Include(q => q.Topic)
+                .ThenInclude(t => t!.Subcategory)
+                    .ThenInclude(s => s!.Category)
+                        .ThenInclude(c => c!.SubjectDomain)
+                            .ThenInclude(sd => sd!.Course)
             .Where(q => q.Status == QuestionStatus.Approved || q.Status == QuestionStatus.Published)
             .AsNoTracking();
 
-        if (!string.IsNullOrWhiteSpace(pathway))
+        if (!string.IsNullOrWhiteSpace(pathway) && !string.Equals(pathway.Trim(), "all", StringComparison.OrdinalIgnoreCase))
         {
             var normalizedPathway = pathway.Trim().ToLowerInvariant();
-            query = query.Where(q => q.Pathway.ToLower() == normalizedPathway);
+            query = query.Where(q => q.Pathway.ToLower() == normalizedPathway || q.Pathway.ToLower() == "both");
+        }
+
+        if (!string.IsNullOrWhiteSpace(clientNeedId) && !string.Equals(clientNeedId.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            var cn = clientNeedId.Trim();
+            var cnUpper = cn.ToUpperInvariant();
+            query = query.Where(q =>
+                q.ClientNeedId == cn ||
+                (q.ClientNeedId != null && q.ClientNeedId.ToUpper() == cnUpper) ||
+                (q.ClientNeed != null && q.ClientNeed.Code.ToUpper() == cnUpper));
+        }
+
+        if (!string.IsNullOrWhiteSpace(courseId) && !string.Equals(courseId.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            var cid = courseId.Trim();
+            query = query.Where(q =>
+                q.Topic != null &&
+                q.Topic.Subcategory != null &&
+                q.Topic.Subcategory.Category != null &&
+                q.Topic.Subcategory.Category.SubjectDomain != null &&
+                q.Topic.Subcategory.Category.SubjectDomain.CourseId == cid);
+        }
+
+        if (!string.IsNullOrWhiteSpace(subjectDomainId) && !string.Equals(subjectDomainId.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            var sdid = subjectDomainId.Trim();
+            query = query.Where(q =>
+                q.Topic != null &&
+                q.Topic.Subcategory != null &&
+                q.Topic.Subcategory.Category != null &&
+                q.Topic.Subcategory.Category.SubjectDomainId == sdid);
+        }
+
+        if (!string.IsNullOrWhiteSpace(questionType) && !string.Equals(questionType.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            var qt = questionType.Trim().ToLowerInvariant();
+            if (qt == "traditional")
+            {
+                query = query.Where(q => SupportedQuestionTypeKeys.Contains(q.QuestionTypeKey));
+            }
+            else if (qt == "ngn")
+            {
+                query = query.Where(q => !SupportedQuestionTypeKeys.Contains(q.QuestionTypeKey) || q.QuestionTypeKey == "sata");
+            }
+            else
+            {
+                query = query.Where(q => q.QuestionTypeKey.ToLower() == qt);
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(difficulty) && !string.Equals(difficulty.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            if (Enum.TryParse<QuestionDifficulty>(difficulty.Trim(), true, out var parsedDiff))
+            {
+                query = query.Where(q => q.Difficulty == parsedDiff);
+            }
+            else if (int.TryParse(difficulty.Trim(), out var diffInt) && Enum.IsDefined(typeof(QuestionDifficulty), diffInt))
+            {
+                var enumDiff = (QuestionDifficulty)diffInt;
+                query = query.Where(q => q.Difficulty == enumDiff);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
             var term = search.Trim().ToLowerInvariant();
-            query = query.Where(q => q.Stem.ToLower().Contains(term) || q.QuestionTypeKey.ToLower().Contains(term));
+            query = query.Where(q =>
+                q.Stem.ToLower().Contains(term) ||
+                q.QuestionTypeKey.ToLower().Contains(term) ||
+                (q.Code != null && q.Code.ToLower().Contains(term)));
         }
 
         var questions = await query
             .OrderByDescending(q => q.UpdatedAt)
-            .Take(50)
+            .Take(100)
             .ToListAsync(ct);
 
-        return questions.Select(q => new ExamQuestionMembershipDto
+        return questions.Select(q =>
         {
-            Id = q.Id,
-            ExamId = string.Empty,
-            QuestionId = q.Id,
-            DisplayOrder = 0,
-            Stem = q.Stem,
-            QuestionTypeKey = q.QuestionTypeKey,
-            Pathway = q.Pathway,
-            Difficulty = q.Difficulty.ToString(),
-            Status = q.Status.ToString(),
-            OptionCount = q.Options.Count
+            var sd = q.Topic?.Subcategory?.Category?.SubjectDomain;
+            var course = sd?.Course;
+            return new ExamQuestionMembershipDto
+            {
+                Id = q.Id,
+                ExamId = string.Empty,
+                QuestionId = q.Id,
+                Code = q.Code,
+                DisplayOrder = 0,
+                Stem = q.Stem,
+                QuestionTypeKey = q.QuestionTypeKey,
+                Pathway = q.Pathway,
+                Difficulty = q.Difficulty.ToString(),
+                Status = q.Status.ToString(),
+                OptionCount = q.Options.Count,
+                ClientNeedId = q.ClientNeedId,
+                ClientNeedCode = q.ClientNeed?.Code ?? q.ClientNeedId,
+                ClientNeedName = q.ClientNeed?.Name ?? (q.ClientNeedId != null ? ClientNeedCategory.GetDisplayName(q.ClientNeedId) : null),
+                CourseId = course?.Id,
+                CourseTitle = course?.Title,
+                SubjectDomainId = sd?.Id,
+                SubjectDomainTitle = sd?.Title,
+                TopicId = q.TopicId,
+                TopicTitle = q.Topic?.Title,
+                OverallRationale = q.OverallRationale
+            };
         }).ToList();
     }
 
@@ -2117,6 +2311,11 @@ public class ExamLifecycleService : IExamLifecycleService
             composition.AllowedQuestionTypes = SupportedQuestionTypeKeys.ToList();
         }
 
+        if (revision.ExamType == ExamType.DiagnosticReadiness && composition.ReadinessThresholds == null)
+        {
+            composition.ReadinessThresholds = new ReadinessThresholdsDto();
+        }
+
         var pathway = revision.Pathway?.ToLowerInvariant() ?? "rn";
         var eligibleQuestionsQuery = _context.Questions
             .Where(q => (q.Status == QuestionStatus.Approved || q.Status == QuestionStatus.Published)
@@ -2129,13 +2328,26 @@ public class ExamLifecycleService : IExamLifecycleService
             .Select(g => new { Code = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.Code.ToUpperInvariant(), x => x.Count, ct);
 
+        var dbClientNeeds = await _context.ClientNeeds
+            .AsNoTracking()
+            .ToListAsync(ct);
+        var idByCode = dbClientNeeds.ToDictionary(c => c.Code.ToUpperInvariant(), c => c.Id.ToUpperInvariant());
+
         foreach (var quota in composition.ClientNeedQuotas)
         {
-            quota.ClientNeedName = ClientNeedCategory.GetDisplayName(quota.ClientNeedCode);
-            if (countsByClientNeed.TryGetValue(quota.ClientNeedCode.ToUpperInvariant(), out var count))
-            {
-                quota.AvailableCount = count;
-            }
+            var codeUpper = quota.ClientNeedCode.ToUpperInvariant();
+            var dbMatch = dbClientNeeds.FirstOrDefault(c =>
+                string.Equals(c.Code, quota.ClientNeedCode, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(c.Id, quota.ClientNeedCode, StringComparison.OrdinalIgnoreCase));
+            quota.ClientNeedName = dbMatch?.Name ?? ClientNeedCategory.GetDisplayName(quota.ClientNeedCode);
+
+            var count = 0;
+            if (countsByClientNeed.TryGetValue(codeUpper, out var c1))
+                count += c1;
+            if (idByCode.TryGetValue(codeUpper, out var mappedId) && mappedId != codeUpper && countsByClientNeed.TryGetValue(mappedId, out var c2))
+                count += c2;
+
+            quota.AvailableCount = count;
         }
 
         return composition;
@@ -2176,6 +2388,32 @@ public class ExamLifecycleService : IExamLifecycleService
             }
         }
 
+        if (request.ReadinessThresholds != null)
+        {
+            var rt = request.ReadinessThresholds;
+            if (rt.LowMin < 0m || rt.VeryHighMax > 100m ||
+                rt.LowMin > rt.LowMax ||
+                rt.LowMax >= rt.BorderlineMin ||
+                rt.BorderlineMin > rt.BorderlineMax ||
+                rt.BorderlineMax >= rt.HighMin ||
+                rt.HighMin > rt.HighMax ||
+                rt.HighMax >= rt.VeryHighMin ||
+                rt.VeryHighMin > rt.VeryHighMax)
+            {
+                throw new ArgumentException("Readiness classification thresholds must be non-overlapping and strictly ordered between 0% and 100% (Low < Borderline < High < Very High).");
+            }
+        }
+
+        if (request.DifficultyDistribution != null)
+        {
+            var dd = request.DifficultyDistribution;
+            if (dd.EasyPercent < 0 || dd.ModeratePercent < 0 || dd.HardPercent < 0 ||
+                (dd.EasyPercent + dd.ModeratePercent + dd.HardPercent) != 100)
+            {
+                throw new ArgumentException("Difficulty distribution percentages must be non-negative and sum to 100%.");
+            }
+        }
+
         var quotas = request.ClientNeedQuotas ?? new List<ClientNeedQuotaItem>();
         if (quotas.Count > 0)
         {
@@ -2202,9 +2440,15 @@ public class ExamLifecycleService : IExamLifecycleService
             SelectionStrategy = request.SelectionStrategy,
             ClientNeedQuotas = quotas,
             AllowedQuestionTypes = request.AllowedQuestionTypes ?? SupportedQuestionTypeKeys.ToList(),
+            CourseIds = request.CourseIds,
             SubjectIds = request.SubjectIds,
             CategoryIds = request.CategoryIds,
             Difficulty = request.Difficulty,
+            DifficultyDistribution = request.DifficultyDistribution,
+            ReadinessThresholds = request.ReadinessThresholds,
+            AssessmentObjectives = request.AssessmentObjectives,
+            RandomizeQuestions = request.RandomizeQuestions ?? true,
+            QuestionFormatFilter = request.QuestionFormatFilter,
             ConcurrencyToken = revision.ConcurrencyToken + 1
         };
 
@@ -2257,6 +2501,7 @@ public class ExamLifecycleService : IExamLifecycleService
 
         var eligibleQuery = _context.Questions
             .Include(q => q.Options)
+            .Include(q => q.ClientNeed)
             .Where(q => (q.Status == QuestionStatus.Approved || q.Status == QuestionStatus.Published)
                      && (q.Pathway.ToLower() == pathway || q.Pathway.ToLower() == "both")
                      && SupportedQuestionTypeKeys.Contains(q.QuestionTypeKey));
@@ -2272,7 +2517,9 @@ public class ExamLifecycleService : IExamLifecycleService
 
         foreach (var quota in composition.ClientNeedQuotas)
         {
-            var available = allEligible.Count(q => string.Equals(q.ClientNeedId, quota.ClientNeedCode, StringComparison.OrdinalIgnoreCase));
+            var available = allEligible.Count(q =>
+                string.Equals(q.ClientNeedId, quota.ClientNeedCode, StringComparison.OrdinalIgnoreCase) ||
+                (q.ClientNeed != null && string.Equals(q.ClientNeed.Code, quota.ClientNeedCode, StringComparison.OrdinalIgnoreCase)));
             var isSufficient = available >= quota.TargetCount;
             if (!isSufficient && string.Equals(revision.SelectionStrategy, "DynamicBalanced", StringComparison.OrdinalIgnoreCase))
             {

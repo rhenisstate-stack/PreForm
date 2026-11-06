@@ -18,6 +18,28 @@ export async function GET(
       return NextResponse.json({ success: false, error: res.error || "Failed to fetch question pool preview" }, { status: res.status });
     }
 
+    const raw = res.data as any;
+    if (raw && !raw.preview && Array.isArray(raw.quotas)) {
+      return NextResponse.json({
+        success: true,
+        preview: {
+          revisionId: raw.revisionId,
+          pathway: raw.pathway || "rn",
+          selectionStrategy: raw.selectionStrategy,
+          totalRequiredQuestions: raw.targetQuestionCount ?? 0,
+          totalAvailableApprovedQuestions: raw.totalEligibleInPool ?? 0,
+          isOverallPoolSufficient: Boolean(raw.allQuotasSatisfied),
+          items: raw.quotas.map((q: any) => ({
+            clientNeedId: q.clientNeedId || q.clientNeedCode,
+            clientNeedName: q.clientNeedName,
+            requiredCount: q.targetCount ?? 0,
+            availableApprovedQuestions: q.availablePoolCount ?? 0,
+            isSufficient: Boolean(q.isSatisfied),
+          })),
+        },
+      });
+    }
+
     return NextResponse.json(res.data);
   } catch (error) {
     console.error("Admin revision pool-preview GET error:", error);

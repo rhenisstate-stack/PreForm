@@ -363,7 +363,6 @@ public class CurriculumService : ICurriculumService
             Id = newProgId,
             Code = targetCode,
             DisplayName = targetCode == ProgrammeCode.PN ? "NCLEX-PN" : "NCLEX-RN",
-            Description = $"Auto-seeded {targetCode} programme",
             IsActive = true,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow
