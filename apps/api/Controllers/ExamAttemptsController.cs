@@ -813,6 +813,8 @@ public class ExamAttemptsController : ControllerBase
         // Keyed on attempt ID and user ID to prevent IP-rotation circumvention.
         var attemptRateLimitKey = $"reauth_attempt:{id}";
         var userRateLimitKey = $"reauth_user:{attempt.UserId}";
+        var clientIp = GetClientIpAddress();
+        var inMemoryKey = $"reauth:{id}:{clientIp ?? "unknown"}";
 
         if (_rateLimitingService != null)
         {
@@ -837,6 +839,19 @@ public class ExamAttemptsController : ControllerBase
                     success = false,
                     errorCode = "RATE_LIMIT_EXCEEDED",
                     error = $"Too many failed reauthentication attempts. Please wait {userCheck.RetryAfterSeconds} seconds before trying again."
+                });
+            }
+        }
+        else
+        {
+            if (IsReauthRateLimited(inMemoryKey, out var retryAfter))
+            {
+                Response.Headers.Append("Retry-After", retryAfter.ToString());
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    success = false,
+                    errorCode = "RATE_LIMIT_EXCEEDED",
+                    error = $"Too many failed reauthentication attempts. Please wait {retryAfter} seconds before trying again."
                 });
             }
         }
@@ -990,6 +1005,10 @@ public class ExamAttemptsController : ControllerBase
                 await _rateLimitingService.RecordFailedAttemptAsync(attemptRateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
                 await _rateLimitingService.RecordFailedAttemptAsync(userRateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
             }
+            else
+            {
+                RecordFailedReauthAttempt(inMemoryKey);
+            }
             return Unauthorized(new
             {
                 success = false,
@@ -1003,6 +1022,10 @@ public class ExamAttemptsController : ControllerBase
         {
             await _rateLimitingService.ResetRateLimitAsync(attemptRateLimitKey, cancellationToken);
             await _rateLimitingService.ResetRateLimitAsync(userRateLimitKey, cancellationToken);
+        }
+        else
+        {
+            ClearFailedReauthAttempts(inMemoryKey);
         }
 
         // Create fresh replacement session via SessionSecurityService

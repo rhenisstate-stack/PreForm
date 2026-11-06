@@ -61,6 +61,32 @@ public class CandidateDataContractTests : IClassFixture<CandidateDataContractTes
                 UpdatedAt = DateTime.UtcNow,
             });
 
+            if (!db.SubscriptionPlans.Any(p => p.Id == "plan_pilot_rn"))
+            {
+                db.SubscriptionPlans.Add(new SubscriptionPlan
+                {
+                    Id = "plan_pilot_rn",
+                    Name = "Pilot RN Plan",
+                    Slug = "pilot-rn",
+                    Pathway = "RN",
+                    PlanType = "pilot_grant",
+                    PriceCents = 0,
+                    IsActive = true
+                });
+            }
+
+            db.UserSubscriptions.Add(new UserSubscription
+            {
+                Id = $"sub_c4_{attemptId}",
+                UserId = userId,
+                PlanId = "plan_pilot_rn",
+                OrderId = "pilot_grant_test",
+                Pathway = "rn",
+                Status = SubscriptionStatus.Active,
+                StartsAt = DateTime.UtcNow.AddDays(-1),
+                ExpiresAt = DateTime.UtcNow.AddDays(30)
+            });
+
             var exam = new Exam
             {
                 Id = $"exam_c4_{attemptId}",

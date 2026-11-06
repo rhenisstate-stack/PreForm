@@ -1012,12 +1012,43 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
         });
     }
 
+    private static async Task SeedCandidateWithSubscriptionAsync(WebApplicationFactory<Program> factory, string candidateId, string email, string pathway = "rn")
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        if (!await db.Users.AnyAsync(u => u.Id == candidateId))
+        {
+            db.Users.Add(new User
+            {
+                Id = candidateId,
+                Email = email,
+                DisplayName = "Test Candidate",
+                IsActive = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+            db.UserSubscriptions.Add(new UserSubscription
+            {
+                Id = $"sub_{candidateId}",
+                UserId = candidateId,
+                PlanId = $"plan_pilot_{pathway}",
+                OrderId = "pilot_grant_test",
+                Pathway = pathway,
+                Status = SubscriptionStatus.Active,
+                StartsAt = DateTime.UtcNow.AddDays(-1),
+                ExpiresAt = DateTime.UtcNow.AddDays(30)
+            });
+            await db.SaveChangesAsync();
+        }
+    }
+
     [Fact]
     public async Task ExamAttempts_StartAttempt_PersistsInProgressAttempt()
     {
         var client = _factory.CreateClient();
         var candidateId = "cand_attempt_001";
         var candidateEmail = "attempt.cand@prepford.com";
+        await SeedCandidateWithSubscriptionAsync(_factory, candidateId, candidateEmail, "rn");
 
         GatewayHmacAndReplaySecurityTests.AddCanonicalHeaders(
             client, "POST", "/api/v1/attempts", candidateId, candidateEmail, "candidate");
@@ -1209,6 +1240,9 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
     [Fact]
     public async Task ExamAttempts_CandidateCannotViewAnotherCandidatesAttempt_ReturnsForbidden403()
     {
+        await SeedCandidateWithSubscriptionAsync(_factory, "cand_alice_1", "alice@prepford.com", "rn");
+        await SeedCandidateWithSubscriptionAsync(_factory, "cand_bob_2", "bob@prepford.com", "rn");
+
         var client = _factory.CreateClient();
 
         // 1. Candidate Alice syncs an attempt
