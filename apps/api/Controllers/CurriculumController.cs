@@ -30,9 +30,26 @@ public class CurriculumController : ControllerBase
 
     [HttpGet("courses")]
     [Authorize(Policy = "Permission:content.view")]
-    public async Task<IActionResult> GetCourses([FromQuery] bool activeOnly = false, CancellationToken ct = default)
+    public async Task<IActionResult> GetCourses(
+        [FromQuery] bool activeOnly = false,
+        [FromQuery] string? pathway = null,
+        [FromQuery] string? search = null,
+        CancellationToken ct = default)
     {
         var courses = await _curriculumService.GetCoursesAsync(activeOnly, ct);
+        if (!string.IsNullOrWhiteSpace(pathway) && !string.Equals(pathway, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            var p = pathway.Trim().ToLowerInvariant();
+            courses = courses.Where(c => c.Pathway == p || c.Pathway == "both").ToList();
+        }
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim();
+            courses = courses.Where(c =>
+                c.Title.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                c.Code.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                c.Description.Contains(s, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
         return Ok(new { success = true, courses });
     }
 
@@ -64,9 +81,16 @@ public class CurriculumController : ControllerBase
     [Authorize(Policy = "Permission:content.edit")]
     public async Task<IActionResult> UpdateCourse(string id, [FromBody] UpdateCourseRequest request, CancellationToken ct = default)
     {
-        var updated = await _curriculumService.UpdateCourseAsync(id, request, ct);
-        if (updated == null) return NotFound(new ProblemDetails { Status = 404, Title = "Course Not Found", Detail = $"Course '{id}' was not found." });
-        return Ok(new { success = true, course = updated });
+        try
+        {
+            var updated = await _curriculumService.UpdateCourseAsync(id, request, ct);
+            if (updated == null) return NotFound(new ProblemDetails { Status = 404, Title = "Course Not Found", Detail = $"Course '{id}' was not found." });
+            return Ok(new { success = true, course = updated });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails { Status = 400, Title = "Invalid Course", Detail = ex.Message });
+        }
     }
 
     [HttpDelete("courses/{id}")]
@@ -91,9 +115,28 @@ public class CurriculumController : ControllerBase
 
     [HttpGet("subject-domains")]
     [Authorize(Policy = "Permission:content.view")]
-    public async Task<IActionResult> GetSubjectDomains([FromQuery] string? courseId = null, [FromQuery] bool activeOnly = false, CancellationToken ct = default)
+    public async Task<IActionResult> GetSubjectDomains(
+        [FromQuery] string? courseId = null,
+        [FromQuery] bool activeOnly = false,
+        [FromQuery] string? pathway = null,
+        [FromQuery] string? search = null,
+        CancellationToken ct = default)
     {
         var domains = await _curriculumService.GetSubjectDomainsAsync(courseId, activeOnly, ct);
+        if (!string.IsNullOrWhiteSpace(pathway) && !string.Equals(pathway, "all", StringComparison.OrdinalIgnoreCase))
+        {
+            var p = pathway.Trim().ToLowerInvariant();
+            domains = domains.Where(d => d.Pathway == p || d.Pathway == "both").ToList();
+        }
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim();
+            domains = domains.Where(d =>
+                d.Title.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                d.Code.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                d.CourseTitle.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                d.Description.Contains(s, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
         return Ok(new { success = true, domains });
     }
 
@@ -125,9 +168,16 @@ public class CurriculumController : ControllerBase
     [Authorize(Policy = "Permission:content.edit")]
     public async Task<IActionResult> UpdateSubjectDomain(string id, [FromBody] UpdateSubjectDomainRequest request, CancellationToken ct = default)
     {
-        var updated = await _curriculumService.UpdateSubjectDomainAsync(id, request, ct);
-        if (updated == null) return NotFound(new ProblemDetails { Status = 404, Title = "Subject Domain Not Found", Detail = $"Subject domain '{id}' was not found." });
-        return Ok(new { success = true, domain = updated });
+        try
+        {
+            var updated = await _curriculumService.UpdateSubjectDomainAsync(id, request, ct);
+            if (updated == null) return NotFound(new ProblemDetails { Status = 404, Title = "Subject Domain Not Found", Detail = $"Subject domain '{id}' was not found." });
+            return Ok(new { success = true, domain = updated });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new ProblemDetails { Status = 400, Title = "Invalid Subject Domain", Detail = ex.Message });
+        }
     }
 
     [HttpDelete("subject-domains/{id}")]

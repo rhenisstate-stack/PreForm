@@ -5,8 +5,10 @@ namespace Preform.Api.DTOs;
 public class CourseDto
 {
     public string Id { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
     public string ProgrammeId { get; set; } = string.Empty;
     public string ProgrammeName { get; set; } = string.Empty;
+    public string Pathway { get; set; } = "rn";
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public int DisplayOrder { get; set; }
@@ -20,8 +22,13 @@ public class CourseDto
 
 public class CreateCourseRequest
 {
-    [Required]
     public string ProgrammeId { get; set; } = string.Empty;
+
+    [MaxLength(16)]
+    public string? Pathway { get; set; }
+
+    [MaxLength(32)]
+    public string? Code { get; set; }
 
     [Required]
     [MaxLength(128)]
@@ -40,6 +47,14 @@ public class UpdateCourseRequest
     [MaxLength(128)]
     public string? Title { get; set; }
 
+    [MaxLength(32)]
+    public string? Code { get; set; }
+
+    public string? ProgrammeId { get; set; }
+
+    [MaxLength(16)]
+    public string? Pathway { get; set; }
+
     [MaxLength(1024)]
     public string? Description { get; set; }
 
@@ -51,8 +66,10 @@ public class UpdateCourseRequest
 public class SubjectDomainDto
 {
     public string Id { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
     public string CourseId { get; set; } = string.Empty;
     public string CourseTitle { get; set; } = string.Empty;
+    public string Pathway { get; set; } = "rn";
     public string Title { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public int DisplayOrder { get; set; }
@@ -67,6 +84,9 @@ public class CreateSubjectDomainRequest
 {
     [Required]
     public string CourseId { get; set; } = string.Empty;
+
+    [MaxLength(32)]
+    public string? Code { get; set; }
 
     [Required]
     [MaxLength(128)]
@@ -83,6 +103,11 @@ public class UpdateSubjectDomainRequest
 {
     [MaxLength(128)]
     public string? Title { get; set; }
+
+    [MaxLength(32)]
+    public string? Code { get; set; }
+
+    public string? CourseId { get; set; }
 
     [MaxLength(1024)]
     public string? Description { get; set; }

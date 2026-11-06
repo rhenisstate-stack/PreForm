@@ -199,6 +199,59 @@ public class CurriculumService : ICurriculumService
 
     #region Courses
 
+    private static (string? code, string? pathway, string cleanDescription) UnpackMetadata(string? rawDescription)
+    {
+        if (string.IsNullOrEmpty(rawDescription))
+            return (null, null, string.Empty);
+
+        var text = rawDescription;
+        string? code = null;
+        string? pathway = null;
+
+        var match = Regex.Match(text, @"^\[META:code=([^;\]]*);pathway=([^\]]*)\]\s*");
+        if (match.Success)
+        {
+            code = string.IsNullOrWhiteSpace(match.Groups[1].Value) ? null : match.Groups[1].Value;
+            pathway = string.IsNullOrWhiteSpace(match.Groups[2].Value) ? null : match.Groups[2].Value;
+            text = text.Substring(match.Length);
+        }
+
+        return (code, pathway, text);
+    }
+
+    private static string PackMetadata(string? code, string? pathway, string? description)
+    {
+        var clean = description?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(code) && string.IsNullOrWhiteSpace(pathway))
+            return clean;
+
+        var c = (code ?? string.Empty).Trim().ToUpperInvariant();
+        var p = (pathway ?? string.Empty).Trim().ToLowerInvariant();
+        return $"[META:code={c};pathway={p}] {clean}";
+    }
+
+    private static string DeriveDefaultCode(string prefix, string title, string id)
+    {
+        var slug = Regex.Replace(title.Trim().ToUpperInvariant(), @"[^A-Z0-9]+", "-").Trim('-');
+        if (slug.Length > 12) slug = slug.Substring(0, 12).Trim('-');
+        if (string.IsNullOrEmpty(slug))
+            slug = id.Length >= 6 ? id.Substring(0, 6).ToUpperInvariant() : id.ToUpperInvariant();
+        return $"{prefix}-{slug}";
+    }
+
+    private static string ResolveCoursePathway(Course c, string? metaPathway)
+    {
+        if (!string.IsNullOrWhiteSpace(metaPathway))
+            return metaPathway.ToLowerInvariant();
+        if (c.Programme != null)
+            return c.Programme.Code == ProgrammeCode.PN ? "pn" : "rn";
+        if (c.ProgrammeId.Contains("pn", StringComparison.OrdinalIgnoreCase))
+            return "pn";
+        if (c.ProgrammeId.Contains("both", StringComparison.OrdinalIgnoreCase))
+            return "both";
+        return "rn";
+    }
+
     public async Task<List<CourseDto>> GetCoursesAsync(bool activeOnly = false, CancellationToken ct = default)
     {
         var query = _context.Courses.AsNoTracking().Include(c => c.Programme).AsQueryable();
@@ -218,19 +271,36 @@ public class CurriculumService : ICurriculumService
             .Select(g => new { CourseId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.CourseId, x => x.Count, ct);
 
-        return courses.Select(c => new CourseDto
+        // Compute question counts per course via Topic -> Subcategory -> Category -> SubjectDomain -> CourseId
+        var questionCountsByCourse = await _context.Questions
+            .AsNoTracking()
+            .Where(q => q.TopicId != null && q.Topic != null && q.Topic.Subcategory != null && q.Topic.Subcategory.Category != null && q.Topic.Subcategory.Category.SubjectDomain != null)
+            .GroupBy(q => q.Topic!.Subcategory!.Category!.SubjectDomain!.CourseId)
+            .Select(g => new { CourseId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.CourseId, x => x.Count, ct);
+
+        return courses.Select(c =>
         {
-            Id = c.Id,
-            ProgrammeId = c.ProgrammeId,
-            ProgrammeName = c.Programme?.DisplayName ?? string.Empty,
-            Title = c.Title,
-            Description = c.Description,
-            DisplayOrder = c.DisplayOrder,
-            IsPublished = c.IsPublished,
-            IsActive = c.IsActive,
-            SubjectDomainCount = domainCounts.GetValueOrDefault(c.Id, 0),
-            CreatedAt = c.CreatedAt,
-            UpdatedAt = c.UpdatedAt
+            var (metaCode, metaPathway, cleanDesc) = UnpackMetadata(c.Description);
+            var code = !string.IsNullOrWhiteSpace(metaCode) ? metaCode : DeriveDefaultCode("CRS", c.Title, c.Id);
+            var pathway = ResolveCoursePathway(c, metaPathway);
+            return new CourseDto
+            {
+                Id = c.Id,
+                Code = code,
+                ProgrammeId = c.ProgrammeId,
+                ProgrammeName = pathway == "both" ? "NCLEX-RN & NCLEX-PN" : (c.Programme?.DisplayName ?? (pathway == "pn" ? "NCLEX-PN" : "NCLEX-RN")),
+                Pathway = pathway,
+                Title = c.Title,
+                Description = cleanDesc,
+                DisplayOrder = c.DisplayOrder,
+                IsPublished = c.IsPublished,
+                IsActive = c.IsActive,
+                SubjectDomainCount = domainCounts.GetValueOrDefault(c.Id, 0),
+                QuestionCount = questionCountsByCourse.GetValueOrDefault(c.Id, 0),
+                CreatedAt = c.CreatedAt,
+                UpdatedAt = c.UpdatedAt
+            };
         }).ToList();
     }
 
@@ -244,31 +314,91 @@ public class CurriculumService : ICurriculumService
         if (c == null) return null;
 
         var domainCount = await _context.SubjectDomains.CountAsync(d => d.CourseId == id, ct);
+        var questionCount = await _context.Questions
+            .AsNoTracking()
+            .CountAsync(q => q.TopicId != null && q.Topic != null && q.Topic.Subcategory != null && q.Topic.Subcategory.Category != null && q.Topic.Subcategory.Category.SubjectDomain != null && q.Topic.Subcategory.Category.SubjectDomain.CourseId == id, ct);
+
+        var (metaCode, metaPathway, cleanDesc) = UnpackMetadata(c.Description);
+        var code = !string.IsNullOrWhiteSpace(metaCode) ? metaCode : DeriveDefaultCode("CRS", c.Title, c.Id);
+        var pathway = ResolveCoursePathway(c, metaPathway);
 
         return new CourseDto
         {
             Id = c.Id,
+            Code = code,
             ProgrammeId = c.ProgrammeId,
-            ProgrammeName = c.Programme?.DisplayName ?? string.Empty,
+            ProgrammeName = pathway == "both" ? "NCLEX-RN & NCLEX-PN" : (c.Programme?.DisplayName ?? (pathway == "pn" ? "NCLEX-PN" : "NCLEX-RN")),
+            Pathway = pathway,
             Title = c.Title,
-            Description = c.Description,
+            Description = cleanDesc,
             DisplayOrder = c.DisplayOrder,
             IsPublished = c.IsPublished,
             IsActive = c.IsActive,
             SubjectDomainCount = domainCount,
+            QuestionCount = questionCount,
             CreatedAt = c.CreatedAt,
             UpdatedAt = c.UpdatedAt
         };
     }
 
+    private async Task<string> ResolveOrEnsureProgrammeIdAsync(string? programmeId, string? pathway, CancellationToken ct)
+    {
+        if (!string.IsNullOrWhiteSpace(programmeId))
+        {
+            var existingById = await _context.Programmes.FirstOrDefaultAsync(p => p.Id == programmeId, ct);
+            if (existingById != null) return existingById.Id;
+        }
+
+        var normalizedPathway = (pathway ?? programmeId ?? "rn").Trim().ToLowerInvariant();
+        var targetCode = normalizedPathway == "pn" ? ProgrammeCode.PN : ProgrammeCode.RN;
+        var prog = await _context.Programmes.FirstOrDefaultAsync(p => p.Code == targetCode, ct);
+        if (prog != null) return prog.Id;
+
+        var newProgId = string.IsNullOrWhiteSpace(programmeId) || programmeId == "rn" || programmeId == "pn" || programmeId == "both"
+            ? (targetCode == ProgrammeCode.PN ? "prog_pn" : "prog_rn")
+            : programmeId;
+
+        var newProg = new Programme
+        {
+            Id = newProgId,
+            Code = targetCode,
+            DisplayName = targetCode == ProgrammeCode.PN ? "NCLEX-PN" : "NCLEX-RN",
+            Description = $"Auto-seeded {targetCode} programme",
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        _context.Programmes.Add(newProg);
+        await _context.SaveChangesAsync(ct);
+        return newProg.Id;
+    }
+
     public async Task<CourseDto> CreateCourseAsync(CreateCourseRequest request, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            throw new ArgumentException("Course title is required.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Code))
+        {
+            var normalizedCode = request.Code.Trim().ToUpperInvariant();
+            var existingCourses = await GetCoursesAsync(false, ct);
+            if (existingCourses.Any(c => string.Equals(c.Code, normalizedCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ArgumentException($"A Course with code '{normalizedCode}' already exists.");
+            }
+        }
+
+        var resolvedProgrammeId = await ResolveOrEnsureProgrammeIdAsync(request.ProgrammeId, request.Pathway, ct);
+        var packedDescription = PackMetadata(request.Code, request.Pathway, request.Description);
+
         var course = new Course
         {
             Id = Guid.NewGuid().ToString(),
-            ProgrammeId = request.ProgrammeId,
+            ProgrammeId = resolvedProgrammeId,
             Title = request.Title.Trim(),
-            Description = request.Description?.Trim() ?? string.Empty,
+            Description = packedDescription,
             DisplayOrder = request.DisplayOrder,
             IsPublished = request.IsPublished,
             IsActive = request.IsActive,
@@ -277,6 +407,17 @@ public class CurriculumService : ICurriculumService
         };
 
         _context.Courses.Add(course);
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Action = "CourseCreated",
+            EntityType = "Course",
+            EntityId = course.Id,
+            Description = $"Created course '{course.Title}'",
+            Outcome = "Success",
+            Severity = "Information",
+            Timestamp = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync(ct);
 
         return (await GetCourseByIdAsync(course.Id, ct))!;
@@ -284,15 +425,51 @@ public class CurriculumService : ICurriculumService
 
     public async Task<CourseDto?> UpdateCourseAsync(string id, UpdateCourseRequest request, CancellationToken ct = default)
     {
-        var course = await _context.Courses.FirstOrDefaultAsync(c => c.Id == id, ct);
+        var course = await _context.Courses.Include(c => c.Programme).FirstOrDefaultAsync(c => c.Id == id, ct);
         if (course == null) return null;
 
+        var (existingCode, existingPathway, existingCleanDesc) = UnpackMetadata(course.Description);
+
+        if (!string.IsNullOrWhiteSpace(request.Code))
+        {
+            var normalizedCode = request.Code.Trim().ToUpperInvariant();
+            var existingCourses = await GetCoursesAsync(false, ct);
+            if (existingCourses.Any(c => c.Id != id && string.Equals(c.Code, normalizedCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ArgumentException($"A Course with code '{normalizedCode}' already exists.");
+            }
+            existingCode = normalizedCode;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Pathway))
+        {
+            existingPathway = request.Pathway.Trim().ToLowerInvariant();
+            course.ProgrammeId = await ResolveOrEnsureProgrammeIdAsync(request.ProgrammeId, existingPathway, ct);
+        }
+        else if (!string.IsNullOrWhiteSpace(request.ProgrammeId))
+        {
+            course.ProgrammeId = await ResolveOrEnsureProgrammeIdAsync(request.ProgrammeId, null, ct);
+        }
+
         if (request.Title != null) course.Title = request.Title.Trim();
-        if (request.Description != null) course.Description = request.Description.Trim();
+        var newCleanDesc = request.Description != null ? request.Description.Trim() : existingCleanDesc;
+        course.Description = PackMetadata(existingCode, existingPathway, newCleanDesc);
         if (request.DisplayOrder.HasValue) course.DisplayOrder = request.DisplayOrder.Value;
         if (request.IsPublished.HasValue) course.IsPublished = request.IsPublished.Value;
         if (request.IsActive.HasValue) course.IsActive = request.IsActive.Value;
         course.UpdatedAt = DateTime.UtcNow;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Action = "CourseUpdated",
+            EntityType = "Course",
+            EntityId = course.Id,
+            Description = $"Updated course '{course.Title}'",
+            Outcome = "Success",
+            Severity = "Information",
+            Timestamp = DateTime.UtcNow
+        });
 
         await _context.SaveChangesAsync(ct);
         return await GetCourseByIdAsync(id, ct);
@@ -309,7 +486,25 @@ public class CurriculumService : ICurriculumService
             throw new InvalidOperationException("Cannot delete course that has subject domains attached. Delete or reassign child subject domains first.");
         }
 
+        var referencedInExams = await _context.Exams.AnyAsync(
+            e => e.CompositionRulesJson != null && e.CompositionRulesJson.Contains(id), ct);
+        if (referencedInExams)
+        {
+            throw new InvalidOperationException("Cannot delete course because it is referenced in one or more examination blueprints. Deactivate the course instead.");
+        }
+
         _context.Courses.Remove(course);
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Action = "CourseDeleted",
+            EntityType = "Course",
+            EntityId = id,
+            Description = $"Deleted course '{course.Title}'",
+            Outcome = "Success",
+            Severity = "Information",
+            Timestamp = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync(ct);
         return true;
     }
@@ -320,7 +515,11 @@ public class CurriculumService : ICurriculumService
 
     public async Task<List<SubjectDomainDto>> GetSubjectDomainsAsync(string? courseId = null, bool activeOnly = false, CancellationToken ct = default)
     {
-        var query = _context.SubjectDomains.AsNoTracking().Include(d => d.Course).AsQueryable();
+        var query = _context.SubjectDomains
+            .AsNoTracking()
+            .Include(d => d.Course)
+                .ThenInclude(c => c!.Programme)
+            .AsQueryable();
         if (!string.IsNullOrWhiteSpace(courseId))
         {
             query = query.Where(d => d.CourseId == courseId);
@@ -341,18 +540,44 @@ public class CurriculumService : ICurriculumService
             .Select(g => new { SubjectDomainId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.SubjectDomainId, x => x.Count, ct);
 
-        return domains.Select(d => new SubjectDomainDto
+        var questionCountsByDomain = await _context.Questions
+            .AsNoTracking()
+            .Where(q => q.TopicId != null && q.Topic != null && q.Topic.Subcategory != null && q.Topic.Subcategory.Category != null)
+            .GroupBy(q => q.Topic!.Subcategory!.Category!.SubjectDomainId)
+            .Select(g => new { SubjectDomainId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.SubjectDomainId, x => x.Count, ct);
+
+        return domains.Select(d =>
         {
-            Id = d.Id,
-            CourseId = d.CourseId,
-            CourseTitle = d.Course?.Title ?? string.Empty,
-            Title = d.Title,
-            Description = d.Description,
-            DisplayOrder = d.DisplayOrder,
-            IsActive = d.IsActive,
-            CategoryCount = categoryCounts.GetValueOrDefault(d.Id, 0),
-            CreatedAt = d.CreatedAt,
-            UpdatedAt = d.UpdatedAt
+            var (metaCode, metaPathway, cleanDesc) = UnpackMetadata(d.Description);
+            var code = !string.IsNullOrWhiteSpace(metaCode) ? metaCode : DeriveDefaultCode("SUB", d.Title, d.Id);
+            string pathway = "rn";
+            if (!string.IsNullOrWhiteSpace(metaPathway))
+            {
+                pathway = metaPathway;
+            }
+            else if (d.Course != null)
+            {
+                var (_, courseMetaPathway, _) = UnpackMetadata(d.Course.Description);
+                pathway = ResolveCoursePathway(d.Course, courseMetaPathway);
+            }
+
+            return new SubjectDomainDto
+            {
+                Id = d.Id,
+                Code = code,
+                CourseId = d.CourseId,
+                CourseTitle = d.Course?.Title ?? string.Empty,
+                Pathway = pathway,
+                Title = d.Title,
+                Description = cleanDesc,
+                DisplayOrder = d.DisplayOrder,
+                IsActive = d.IsActive,
+                CategoryCount = categoryCounts.GetValueOrDefault(d.Id, 0),
+                QuestionCount = questionCountsByDomain.GetValueOrDefault(d.Id, 0),
+                CreatedAt = d.CreatedAt,
+                UpdatedAt = d.UpdatedAt
+            };
         }).ToList();
     }
 
@@ -361,22 +586,42 @@ public class CurriculumService : ICurriculumService
         var d = await _context.SubjectDomains
             .AsNoTracking()
             .Include(d => d.Course)
+                .ThenInclude(c => c!.Programme)
             .FirstOrDefaultAsync(d => d.Id == id, ct);
 
         if (d == null) return null;
 
         var catCount = await _context.Categories.CountAsync(c => c.SubjectDomainId == id, ct);
+        var questionCount = await _context.Questions
+            .AsNoTracking()
+            .CountAsync(q => q.TopicId != null && q.Topic != null && q.Topic.Subcategory != null && q.Topic.Subcategory.Category != null && q.Topic.Subcategory.Category.SubjectDomainId == id, ct);
+
+        var (metaCode, metaPathway, cleanDesc) = UnpackMetadata(d.Description);
+        var code = !string.IsNullOrWhiteSpace(metaCode) ? metaCode : DeriveDefaultCode("SUB", d.Title, d.Id);
+        string pathway = "rn";
+        if (!string.IsNullOrWhiteSpace(metaPathway))
+        {
+            pathway = metaPathway;
+        }
+        else if (d.Course != null)
+        {
+            var (_, courseMetaPathway, _) = UnpackMetadata(d.Course.Description);
+            pathway = ResolveCoursePathway(d.Course, courseMetaPathway);
+        }
 
         return new SubjectDomainDto
         {
             Id = d.Id,
+            Code = code,
             CourseId = d.CourseId,
             CourseTitle = d.Course?.Title ?? string.Empty,
+            Pathway = pathway,
             Title = d.Title,
-            Description = d.Description,
+            Description = cleanDesc,
             DisplayOrder = d.DisplayOrder,
             IsActive = d.IsActive,
             CategoryCount = catCount,
+            QuestionCount = questionCount,
             CreatedAt = d.CreatedAt,
             UpdatedAt = d.UpdatedAt
         };
@@ -390,12 +635,24 @@ public class CurriculumService : ICurriculumService
             throw new ArgumentException($"Course with ID '{request.CourseId}' does not exist.");
         }
 
+        if (!string.IsNullOrWhiteSpace(request.Code))
+        {
+            var normalizedCode = request.Code.Trim().ToUpperInvariant();
+            var existingDomains = await GetSubjectDomainsAsync(null, false, ct);
+            if (existingDomains.Any(d => string.Equals(d.Code, normalizedCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ArgumentException($"A Subject Domain with code '{normalizedCode}' already exists.");
+            }
+        }
+
+        var packedDesc = PackMetadata(request.Code, null, request.Description);
+
         var domain = new SubjectDomain
         {
             Id = Guid.NewGuid().ToString(),
             CourseId = request.CourseId,
             Title = request.Title.Trim(),
-            Description = request.Description?.Trim() ?? string.Empty,
+            Description = packedDesc,
             DisplayOrder = request.DisplayOrder,
             IsActive = request.IsActive,
             CreatedAt = DateTime.UtcNow,
@@ -403,6 +660,17 @@ public class CurriculumService : ICurriculumService
         };
 
         _context.SubjectDomains.Add(domain);
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Action = "SubjectDomainCreated",
+            EntityType = "SubjectDomain",
+            EntityId = domain.Id,
+            Description = $"Created subject domain '{domain.Title}'",
+            Outcome = "Success",
+            Severity = "Information",
+            Timestamp = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync(ct);
 
         return (await GetSubjectDomainByIdAsync(domain.Id, ct))!;
@@ -413,11 +681,47 @@ public class CurriculumService : ICurriculumService
         var domain = await _context.SubjectDomains.FirstOrDefaultAsync(d => d.Id == id, ct);
         if (domain == null) return null;
 
+        var (existingCode, existingPathway, existingCleanDesc) = UnpackMetadata(domain.Description);
+
+        if (!string.IsNullOrWhiteSpace(request.Code))
+        {
+            var normalizedCode = request.Code.Trim().ToUpperInvariant();
+            var existingDomains = await GetSubjectDomainsAsync(null, false, ct);
+            if (existingDomains.Any(d => d.Id != id && string.Equals(d.Code, normalizedCode, StringComparison.OrdinalIgnoreCase)))
+            {
+                throw new ArgumentException($"A Subject Domain with code '{normalizedCode}' already exists.");
+            }
+            existingCode = normalizedCode;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.CourseId) && request.CourseId != domain.CourseId)
+        {
+            var courseExists = await _context.Courses.AnyAsync(c => c.Id == request.CourseId, ct);
+            if (!courseExists)
+            {
+                throw new ArgumentException($"Course with ID '{request.CourseId}' does not exist.");
+            }
+            domain.CourseId = request.CourseId;
+        }
+
         if (request.Title != null) domain.Title = request.Title.Trim();
-        if (request.Description != null) domain.Description = request.Description.Trim();
+        var newCleanDesc = request.Description != null ? request.Description.Trim() : existingCleanDesc;
+        domain.Description = PackMetadata(existingCode, existingPathway, newCleanDesc);
         if (request.DisplayOrder.HasValue) domain.DisplayOrder = request.DisplayOrder.Value;
         if (request.IsActive.HasValue) domain.IsActive = request.IsActive.Value;
         domain.UpdatedAt = DateTime.UtcNow;
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Action = "SubjectDomainUpdated",
+            EntityType = "SubjectDomain",
+            EntityId = domain.Id,
+            Description = $"Updated subject domain '{domain.Title}'",
+            Outcome = "Success",
+            Severity = "Information",
+            Timestamp = DateTime.UtcNow
+        });
 
         await _context.SaveChangesAsync(ct);
         return await GetSubjectDomainByIdAsync(id, ct);
@@ -434,7 +738,25 @@ public class CurriculumService : ICurriculumService
             throw new InvalidOperationException("Cannot delete subject domain that has categories attached. Delete or reassign child categories first.");
         }
 
+        var referencedInExams = await _context.Exams.AnyAsync(
+            e => e.CompositionRulesJson != null && e.CompositionRulesJson.Contains(id), ct);
+        if (referencedInExams)
+        {
+            throw new InvalidOperationException("Cannot delete subject domain because it is referenced in one or more examination blueprints. Deactivate the subject domain instead.");
+        }
+
         _context.SubjectDomains.Remove(domain);
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Action = "SubjectDomainDeleted",
+            EntityType = "SubjectDomain",
+            EntityId = id,
+            Description = $"Deleted subject domain '{domain.Title}'",
+            Outcome = "Success",
+            Severity = "Information",
+            Timestamp = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync(ct);
         return true;
     }
@@ -849,7 +1171,10 @@ public class CurriculumService : ICurriculumService
         if (!string.IsNullOrWhiteSpace(pathway))
         {
             var p = pathway.Trim().ToLowerInvariant();
-            query = query.Where(c => c.Pathway == p || c.Pathway == "both");
+            if (p != "all")
+            {
+                query = query.Where(c => c.Pathway == p || c.Pathway == "both");
+            }
         }
         if (activeOnly)
         {
@@ -868,18 +1193,23 @@ public class CurriculumService : ICurriculumService
             .Select(g => new { ClientNeedId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.ClientNeedId, x => x.Count, ct);
 
-        return clientNeeds.Select(c => new ClientNeedDto
+        return clientNeeds.Select(c =>
         {
-            Id = c.Id,
-            Code = c.Code,
-            Name = c.Name,
-            Description = c.Description,
-            DisplayOrder = c.DisplayOrder,
-            IsActive = c.IsActive,
-            Pathway = c.Pathway,
-            QuestionCount = questionCounts.GetValueOrDefault(c.Id, 0),
-            CreatedAt = c.CreatedAt,
-            UpdatedAt = c.UpdatedAt
+            var countById = questionCounts.GetValueOrDefault(c.Id, 0);
+            var countByCode = c.Code != c.Id ? questionCounts.GetValueOrDefault(c.Code, 0) : 0;
+            return new ClientNeedDto
+            {
+                Id = c.Id,
+                Code = c.Code,
+                Name = c.Name,
+                Description = c.Description,
+                DisplayOrder = c.DisplayOrder,
+                IsActive = c.IsActive,
+                Pathway = c.Pathway,
+                QuestionCount = countById + countByCode,
+                CreatedAt = c.CreatedAt,
+                UpdatedAt = c.UpdatedAt
+            };
         }).ToList();
     }
 
@@ -891,7 +1221,8 @@ public class CurriculumService : ICurriculumService
 
         if (c == null) return null;
 
-        var qCount = await _context.Questions.CountAsync(q => q.ClientNeedId == id, ct);
+        var qCount = await _context.Questions.CountAsync(
+            q => q.ClientNeedId == id || q.ClientNeedId == c.Code, ct);
 
         return new ClientNeedDto
         {
@@ -931,6 +1262,17 @@ public class CurriculumService : ICurriculumService
         };
 
         _context.ClientNeeds.Add(clientNeed);
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Action = "ClientNeedCreated",
+            EntityType = "ClientNeed",
+            EntityId = clientNeed.Id,
+            Description = $"Created Client Need category '{clientNeed.Code} - {clientNeed.Name}'",
+            Outcome = "Success",
+            Severity = "Information",
+            Timestamp = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync(ct);
 
         return (await GetClientNeedByIdAsync(clientNeed.Id, ct))!;
@@ -962,6 +1304,18 @@ public class CurriculumService : ICurriculumService
         if (request.Pathway != null) clientNeed.Pathway = request.Pathway.Trim().ToLowerInvariant();
         clientNeed.UpdatedAt = DateTime.UtcNow;
 
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Action = "ClientNeedUpdated",
+            EntityType = "ClientNeed",
+            EntityId = clientNeed.Id,
+            Description = $"Updated Client Need category '{clientNeed.Code} - {clientNeed.Name}'",
+            Outcome = "Success",
+            Severity = "Information",
+            Timestamp = DateTime.UtcNow
+        });
+
         await _context.SaveChangesAsync(ct);
         return await GetClientNeedByIdAsync(id, ct);
     }
@@ -971,13 +1325,32 @@ public class CurriculumService : ICurriculumService
         var clientNeed = await _context.ClientNeeds.FirstOrDefaultAsync(c => c.Id == id, ct);
         if (clientNeed == null) return false;
 
-        var hasQuestions = await _context.Questions.AnyAsync(q => q.ClientNeedId == id, ct);
+        var hasQuestions = await _context.Questions.AnyAsync(
+            q => q.ClientNeedId == id || q.ClientNeedId == clientNeed.Code, ct);
         if (hasQuestions)
         {
             throw new InvalidOperationException("Cannot delete client need category that has questions attached. Reassign or delete associated questions first.");
         }
 
+        var referencedInExams = await _context.Exams.AnyAsync(
+            e => e.CompositionRulesJson != null && (e.CompositionRulesJson.Contains(id) || e.CompositionRulesJson.Contains($"\"{clientNeed.Code}\"")), ct);
+        if (referencedInExams)
+        {
+            throw new InvalidOperationException("Cannot delete client need category because it is referenced in one or more examination blueprints. Deactivate the category instead.");
+        }
+
         _context.ClientNeeds.Remove(clientNeed);
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            Action = "ClientNeedDeleted",
+            EntityType = "ClientNeed",
+            EntityId = id,
+            Description = $"Deleted Client Need category '{clientNeed.Code} - {clientNeed.Name}'",
+            Outcome = "Success",
+            Severity = "Information",
+            Timestamp = DateTime.UtcNow
+        });
         await _context.SaveChangesAsync(ct);
         return true;
     }
