@@ -315,8 +315,8 @@ function CreateDeckModal({ onClose, onCreated }: { onClose: () => void; onCreate
   };
 
   return (
-    <div data-testid="study-flashcards-create-modal" className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-card border border-border p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-6">
+    <div data-testid="study-flashcards-create-modal" className="fixed inset-0 z-50 flex flex-col bg-background text-foreground overflow-y-auto">
+      <div className="relative w-full max-w-5xl mx-auto p-6 sm:p-10 space-y-6">
         <div className="flex items-center justify-between border-b border-border pb-4">
           <div>
             <h3 className="font-serif font-bold text-lg text-foreground">Create New Flashcard Deck</h3>

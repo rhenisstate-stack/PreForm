@@ -71,12 +71,25 @@ import {
 } from "@/lib/assessment-store";
 import type {
   AvailableAssessmentDto,
+  BackendExamAttemptDto,
   CandidateQuestionDto,
   ClientNeedMastery,
   StudyRecommendation,
   LearnerAnalyticsSummary,
   ReadinessTrend,
+  TopicMastery,
 } from "@/lib/api-services";
+
+const OFFICIAL_NCSBN_CLIENT_NEEDS: Array<{ code: string; name: string; keywords: string[] }> = [
+  { code: "MOC", name: "Safe and Effective Care Environment: Management of Care", keywords: ["management of care", "delegation", "prioritization"] },
+  { code: "SIC", name: "Safe and Effective Care Environment: Safety and Infection Control", keywords: ["safety", "infection control"] },
+  { code: "HPM", name: "Health Promotion and Maintenance", keywords: ["health promotion", "maternal", "pediatric"] },
+  { code: "PSI", name: "Psychosocial Integrity", keywords: ["psychosocial", "mental health", "psychiatric"] },
+  { code: "BCC", name: "Physiological Integrity: Basic Care and Comfort", keywords: ["basic care", "comfort", "nutrition", "mobility"] },
+  { code: "PHA", name: "Physiological Integrity: Pharmacological and Parenteral Therapies", keywords: ["pharmacology", "pharmacological", "parenteral", "medication"] },
+  { code: "RRP", name: "Physiological Integrity: Reduction of Risk Potential", keywords: ["reduction of risk", "risk potential", "diagnostic", "lab"] },
+  { code: "PPT", name: "Physiological Integrity: Physiological Adaptation", keywords: ["physiological adaptation", "hemodynamic", "acute", "medical-surgical"] },
+];
 
 export const RECENT_ACTIVITY_STORAGE_KEY = "prepford_recent_study_activity";
 
@@ -206,17 +219,34 @@ export function DashboardClient() {
     }
   }, [userId, userEmail, userName, userDisplayName, userRole, userPathway]);
 
-  // Authoritative Learner Analytics from PostgreSQL
+  // Authoritative Learner Analytics & Lifecycle Attempts from PostgreSQL
   const [analyticsSummary, setAnalyticsSummary] = React.useState<LearnerAnalyticsSummary | null>(null);
   const [readinessTrend, setReadinessTrend] = React.useState<ReadinessTrend | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = React.useState<boolean>(false);
+  const [analyticsError, setAnalyticsError] = React.useState<string | null>(null);
   const [clientNeeds, setClientNeeds] = React.useState<ClientNeedMastery[]>([]);
+  const [curriculumTopics, setCurriculumTopics] = React.useState<TopicMastery[]>([]);
   const [recommendations, setRecommendations] = React.useState<StudyRecommendation[]>([]);
+  const [authoritativeAttempts, setAuthoritativeAttempts] = React.useState<BackendExamAttemptDto[]>([]);
+  const [chartTimeRange, setChartTimeRange] = React.useState<"all" | "30d" | "7d">("all");
+  const [selectedDomainFilter, setSelectedDomainFilter] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!userId) return;
     let cancelled = false;
     setAnalyticsLoading(true);
+    setAnalyticsError(null);
+
+    fetch("/api/attempts")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        const list = data?.attempts || (Array.isArray(data) ? data : null);
+        if (Array.isArray(list)) {
+          setAuthoritativeAttempts(list);
+        }
+      })
+      .catch(() => {});
 
     fetch("/api/learner/analytics/summary")
       .then((res) => (res.ok ? res.json() : null))
@@ -228,7 +258,11 @@ export function DashboardClient() {
           setAnalyticsSummary(data);
         }
       })
-      .catch(() => {});
+      .catch(() => {
+        if (!cancelled) {
+          setAnalyticsError("Live server analytics unavailable; displaying verified account telemetry.");
+        }
+      });
 
     fetch("/api/learner/analytics/readiness-trend")
       .then((res) => (res.ok ? res.json() : null))
@@ -250,6 +284,18 @@ export function DashboardClient() {
           setClientNeeds(data.data);
         } else if (Array.isArray(data)) {
           setClientNeeds(data);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/learner/analytics/curriculum")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        if (data && data.success && Array.isArray(data.data)) {
+          setCurriculumTopics(data.data);
+        } else if (Array.isArray(data)) {
+          setCurriculumTopics(data);
         }
       })
       .catch(() => {});
@@ -286,13 +332,64 @@ export function DashboardClient() {
   const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
 
   // Dedicated launcher for Create Test Now and Take Readiness Assessment
-  const handleOpenCreateTest = React.useCallback((type: "tutored_cat" | "rat" = "tutored_cat") => {
-    setCreateTestType(type);
-    setSelectedAssessmentId(null);
-    setTestQuestionCount(type === "rat" ? 65 : 5);
-    setTestInProgress(false);
-    setCreateModalOpen(true);
-  }, []);
+  const handleOpenCreateTest = React.useCallback(
+    (type: "tutored_cat" | "rat" = "tutored_cat", domainCode?: string | null) => {
+      setCreateTestType(type);
+      setSelectedAssessmentId(null);
+      setSelectedDomainFilter(domainCode ?? null);
+      setTestQuestionCount(type === "rat" ? 65 : 5);
+      setTestInProgress(false);
+      setCreateModalOpen(true);
+    },
+    []
+  );
+
+  // Resumes an authoritative InProgress attempt (strictly refuses Completed/Abandoned attempts)
+  const handleResumeAttempt = React.useCallback(
+    (attemptId: string, testType: "tutored_cat" | "rat" = "tutored_cat", status: string = "InProgress") => {
+      if (status !== "InProgress") return;
+      setActiveAttemptId(attemptId);
+      setCreateTestType(testType);
+      setCurrentTestAnswers({});
+      setActiveQuestionIndex(0);
+      setTestInProgress(true);
+      setCreateModalOpen(true);
+
+      if (typeof window !== "undefined") {
+        fetch(`/api/attempts/${encodeURIComponent(attemptId)}/questions`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((qData) => {
+            if (qData?.success && Array.isArray(qData.questions) && qData.questions.length > 0) {
+              setLiveQuestions(qData.questions);
+              setTestQuestionCount(qData.questions.length);
+            }
+          })
+          .catch(() => {});
+      }
+    },
+    []
+  );
+
+  // Support direct links and bookmarked assessment routes (?action=rat, ?action=create-test, ?tab=rat, ?clientNeed=...)
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const action = params.get("action");
+    const tab = params.get("tab");
+    const clientNeed = params.get("clientNeed");
+
+    if (tab === "rat" || tab === "tutored_cat" || tab === "all") {
+      setActiveTab(tab);
+    }
+    if (action === "rat") {
+      setActiveTab("rat");
+      handleOpenCreateTest("rat");
+    } else if (action === "create-test") {
+      handleOpenCreateTest("tutored_cat", clientNeed);
+    } else if (clientNeed) {
+      handleOpenCreateTest("tutored_cat", clientNeed);
+    }
+  }, [handleOpenCreateTest]);
 
   // Examination continuity: active attempt tracking and in-exam reauthentication modal
   const [activeAttemptId, setActiveAttemptId] = React.useState<string | null>(null);
@@ -622,8 +719,16 @@ export function DashboardClient() {
 
   const learnerName = user.displayName || user.name || "Candidate";
 
-  // Chart coordinate calculations (width 760, height 260)
-  const chartAttempts = filteredAttempts.slice().reverse(); // Chronological left-to-right
+  // Chart coordinate calculations (width 760, height 260) with time-range filter
+  const baseChronologicalAttempts = filteredAttempts.slice().reverse(); // Chronological left-to-right
+  const chartAttempts = baseChronologicalAttempts.filter((attempt) => {
+    if (chartTimeRange === "all" || attempt.isSampleData) return true;
+    const cutoffMs =
+      chartTimeRange === "7d"
+        ? Date.now() - 7 * 24 * 60 * 60 * 1000
+        : Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return attempt.timestamp >= cutoffMs;
+  });
   const chartWidth = 760;
   const chartHeight = 240;
   const paddingX = 60;
@@ -656,7 +761,7 @@ export function DashboardClient() {
 
   const benchmarkY = getYCoord(65); // 65% PrepFord practice benchmark reference line
 
-  // Computed Authoritative Metrics for KPI Cards
+  // Computed Authoritative Metrics for KPI Cards & Activity Analytics
   const displayTotalCompleted = analyticsSummary?.totalCompletedAttempts ?? storedAttempts.length;
   const displayTotalQuestions =
     analyticsSummary?.totalPracticeQuestions ??
@@ -690,8 +795,99 @@ export function DashboardClient() {
       ? { badgeBg: "bg-muted text-muted-foreground", badgeBorder: "border-border", accentHex: "#94a3b8" }
       : getTierStyles(displayReadinessTier);
 
-  const ratCompletedCount = storedAttempts.filter((a) => a.type === "rat").length;
-  const catCompletedCount = storedAttempts.filter((a) => a.type === "tutored_cat").length;
+  const ratCompletedCount =
+    readinessTrend?.totalDiagnosticAttempts ??
+    storedAttempts.filter((a) => a.type === "rat").length;
+  const catCompletedCount = Math.max(
+    0,
+    displayTotalCompleted - ratCompletedCount || storedAttempts.filter((a) => a.type === "tutored_cat").length
+  );
+
+  // Authoritative Lifecycle Counts (Completed vs InProgress vs Abandoned)
+  // Interrupted or abandoned attempts are strictly excluded from completed totals.
+  const inProgressAttempts = authoritativeAttempts.filter((a) => a.status === "InProgress");
+  const abandonedAttempts = authoritativeAttempts.filter((a) => a.status === "Abandoned");
+  const activeAvailableResumables = availableAssessments.filter(
+    (asm) => asm.hasActiveAttempt && asm.activeAttemptId && !inProgressAttempts.some((ip) => ip.id === asm.activeAttemptId)
+  );
+  const inProgressAttemptsCount = inProgressAttempts.length + activeAvailableResumables.length;
+  const abandonedAttemptsCount = abandonedAttempts.length;
+  const totalLifecycleAttemptsCount = displayTotalCompleted + inProgressAttemptsCount + abandonedAttemptsCount;
+  const completionRatePercent =
+    totalLifecycleAttemptsCount > 0
+      ? Math.round((displayTotalCompleted / totalLifecycleAttemptsCount) * 100)
+      : displayTotalCompleted > 0
+      ? 100
+      : 0;
+
+  const totalDurationMinutes =
+    analyticsSummary?.totalDurationMinutes ??
+    storedAttempts.reduce((acc, a) => acc + (a.durationMinutes || 0), 0);
+  const avgDurationMinutes =
+    displayTotalCompleted > 0 ? Math.max(1, Math.round(totalDurationMinutes / displayTotalCompleted)) : 0;
+
+  // Question-Performance Analytics (Correct, Incorrect, Unanswered)
+  const activeQuestionSource =
+    storedAttempts.length > 0 ? storedAttempts : showSamplePreview ? SAMPLE_BENCHMARK_ATTEMPTS : [];
+  const localTotalQuestions = activeQuestionSource.reduce((acc, a) => acc + (a.totalQuestions || 0), 0);
+  const localCorrectQuestions = activeQuestionSource.reduce((acc, a) => acc + (a.correctCount || 0), 0);
+  const localUnansweredQuestions = activeQuestionSource.reduce(
+    (acc, a) => acc + (a.questions ? a.questions.filter((q) => q.isUnanswered).length : 0),
+    0
+  );
+  const clientNeedsTotalAssessed = clientNeeds.reduce((acc, cn) => acc + (cn.totalAssessedQuestions || 0), 0);
+  const clientNeedsTotalCorrect = clientNeeds.reduce((acc, cn) => acc + (cn.correctCount || 0), 0);
+
+  const effectiveTotalQuestions =
+    displayTotalQuestions > 0 ? displayTotalQuestions : localTotalQuestions;
+  const totalCorrectQuestions =
+    clientNeedsTotalAssessed > 0
+      ? clientNeedsTotalCorrect
+      : storedAttempts.length > 0 || showSamplePreview
+      ? localCorrectQuestions
+      : Math.round((effectiveTotalQuestions * displayAccuracy) / 100);
+  const totalUnansweredQuestions = localUnansweredQuestions;
+  const totalIncorrectQuestions = Math.max(
+    0,
+    effectiveTotalQuestions - totalCorrectQuestions - totalUnansweredQuestions
+  );
+
+  // Effective 8-Category NCSBN Client Needs Mastery (merges authoritative API data with verified attempt domains)
+  const effectiveClientNeeds: ClientNeedMastery[] =
+    clientNeeds.length > 0
+      ? clientNeeds
+      : OFFICIAL_NCSBN_CLIENT_NEEDS.map((cat) => {
+          let totalQ = 0;
+          let correctQ = 0;
+          for (const attempt of activeQuestionSource) {
+            for (const dom of attempt.domains || []) {
+              const lowerDom = dom.domain.toLowerCase();
+              if (cat.keywords.some((kw) => lowerDom.includes(kw))) {
+                totalQ += dom.totalQuestions || 0;
+                correctQ += dom.correctCount || 0;
+              }
+            }
+          }
+          const acc = totalQ > 0 ? Math.round((correctQ / totalQ) * 100) : 0;
+          const isLow = totalQ > 0 && totalQ < 5;
+          const tier =
+            totalQ === 0
+              ? "Unassessed"
+              : acc >= 75
+              ? "Strong"
+              : acc >= 65
+              ? "Proficient"
+              : "Needs Review";
+          return {
+            categoryCode: cat.code,
+            categoryName: cat.name,
+            totalAssessedQuestions: totalQ,
+            correctCount: correctQ,
+            accuracyPercent: acc,
+            isLowSample: isLow,
+            performanceTier: tier,
+          };
+        });
 
   return (
     <div
@@ -777,8 +973,8 @@ export function DashboardClient() {
 
         {/* Sidebar Nav Links */}
         <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6 scrollbar-thin">
-          {/* Action: Create Test Now */}
-          <div className="px-1">
+          {/* Actions: Create Test Now & Take Readiness Assessment */}
+          <div className="px-1 space-y-2">
             <button
               type="button"
               data-testid="sidebar-create-test-btn"
@@ -790,6 +986,18 @@ export function DashboardClient() {
             >
               <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" />
               {!sidebarCollapsed && <span>+ Create Test Now</span>}
+            </button>
+            <button
+              type="button"
+              data-testid="sidebar-take-rat-btn"
+              onClick={() => handleOpenCreateTest("rat")}
+              className={`w-full flex items-center justify-center gap-2 rounded-xl border border-teal-500/40 bg-teal-500/10 hover:bg-teal-500/20 text-teal-700 dark:text-teal-200 font-semibold text-xs transition-all py-2 px-3 ${
+                sidebarCollapsed ? "px-2" : ""
+              }`}
+              title="Take Readiness Assessment (RAT)"
+            >
+              <ShieldCheck className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+              {!sidebarCollapsed && <span>Take Readiness Test</span>}
             </button>
           </div>
 
@@ -1161,7 +1369,7 @@ export function DashboardClient() {
         </header>
 
         {/* Dashboard Main Workspace */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-[1600px] w-full mx-auto">
           {/* =====================================================================
               SECTION 1: WELCOME & STUDY FOCUS BANNER
              ===================================================================== */}
@@ -1322,9 +1530,16 @@ export function DashboardClient() {
                   </div>
                 </div>
                 <div>
-                  <p className="text-2xl sm:text-3xl font-serif font-bold text-foreground">
-                    {displayTotalCompleted}
-                  </p>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="text-2xl sm:text-3xl font-serif font-bold text-foreground">
+                      {displayTotalCompleted}
+                    </p>
+                    {totalLifecycleAttemptsCount > 0 && (
+                      <span className="text-[11px] font-mono font-semibold text-teal-700 dark:text-teal-300 bg-teal-500/10 px-2 py-0.5 rounded-full">
+                        {completionRatePercent}% Completion
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {ratCompletedCount} Readiness (RAT) • {catCompletedCount} Practice CAT
                   </p>
@@ -1346,7 +1561,9 @@ export function DashboardClient() {
                     {displayTotalQuestions.toLocaleString()}
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Across 8 NCSBN Client Need Domains
+                    {effectiveTotalQuestions > 0
+                      ? `${totalCorrectQuestions} Correct • ${totalIncorrectQuestions} Incorrect`
+                      : "Across 8 NCSBN Client Need Domains"}
                   </p>
                 </div>
               </div>
@@ -1377,12 +1594,12 @@ export function DashboardClient() {
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    PrepFord Practice Benchmark: 65%
+                    PrepFord Benchmark: 65%{avgDurationMinutes > 0 ? ` • Avg ~${avgDurationMinutes}m/test` : ""}
                   </p>
                 </div>
               </div>
 
-              {/* Card 4: Clinical Readiness Level */}
+              {/* Card 4: Clinical Readiness Indicator */}
               <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs flex flex-col justify-between space-y-3 hover:border-teal-500/40 transition-colors">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
@@ -1398,11 +1615,16 @@ export function DashboardClient() {
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: displayReadinessStyle.accentHex }} />
                       {displayReadinessTier === "Unassessed" ? "Not Assessed" : displayReadinessTier}
                     </span>
+                    {readinessTrend?.latestScorePercent !== null && readinessTrend?.latestScorePercent !== undefined && (
+                      <span className="text-xs font-mono font-semibold text-muted-foreground">
+                        ({Math.round(readinessTrend.latestScorePercent)}% RAT)
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {displayReadinessTier === "Unassessed"
                       ? "Complete an assessment to evaluate tier"
-                      : "Validated from candidate attempts"}
+                      : "Empirical indicator (not an official pass prediction)"}
                   </p>
                 </div>
               </div>

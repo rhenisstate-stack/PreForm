@@ -259,7 +259,7 @@ export function LearnerDashboardShell({
               </div>
             )}
             <Link
-              href="/dashboard"
+              href="/dashboard?tab=tutored_cat"
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Tutored CATs"
             >
@@ -267,7 +267,7 @@ export function LearnerDashboardShell({
               {!sidebarCollapsed && <span>Tutored CATs</span>}
             </Link>
             <Link
-              href="/dashboard"
+              href="/dashboard?tab=rat"
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Readiness Assessment Tests (RAT)"
             >
@@ -521,7 +521,7 @@ export function LearnerDashboardShell({
         </header>
 
         {/* Main Workspace */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-[1600px] w-full mx-auto">
           {children}
         </main>
       </div>

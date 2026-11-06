@@ -97,16 +97,16 @@ export function StudyStudioShell({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      {/* Persistent dark teal sidebar (desktop) */}
+      {/* Persistent theme-aware sidebar (desktop) */}
       <aside
         data-testid="study-studio-sidebar"
         aria-label="Study Studio Navigation"
-        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-[#0C232C] dark:bg-[#07161C] text-slate-100 border-r border-[#153441] transition-transform duration-200 ease-in-out ${
+        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col w-64 bg-card dark:bg-[#07161C] text-foreground dark:text-slate-100 border-r border-border dark:border-[#153441] transition-transform duration-200 ease-in-out ${
           mobileDrawerOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         {/* Brand header — returns to the full learner dashboard */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-[#153441]">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-border dark:border-[#153441]">
           <Link
             href="/dashboard"
             className="flex items-center gap-3 transition-opacity hover:opacity-90"
@@ -118,19 +118,19 @@ export function StudyStudioShell({ children }: { children: React.ReactNode }) {
               alt={BRAND.logo.alt}
               width={40}
               height={40}
-              className="h-10 w-10 rounded-xl object-contain shrink-0 bg-white/10 p-1"
+              className="h-10 w-10 rounded-xl object-contain shrink-0 bg-slate-100 dark:bg-white/10 p-1"
             />
             <span className="flex flex-col leading-none">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-teal-300/70">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-teal-700 dark:text-teal-300/70">
                 {BRAND.name}
               </span>
-              <span className="text-sm font-serif font-bold text-white mt-0.5">AI Study Studio</span>
+              <span className="text-sm font-serif font-bold text-foreground dark:text-white mt-0.5">AI Study Studio</span>
             </span>
           </Link>
           <button
             type="button"
             onClick={() => setMobileDrawerOpen(false)}
-            className="lg:hidden flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+            className="lg:hidden flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10"
             aria-label="Close navigation drawer"
           >
             <X className="h-5 w-5" />
@@ -142,16 +142,16 @@ export function StudyStudioShell({ children }: { children: React.ReactNode }) {
           <div className="space-y-1">
             <Link
               href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-teal-200 hover:text-white hover:bg-white/5 transition-colors border-b border-[#153441] pb-3"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-teal-700 dark:text-teal-200 hover:text-teal-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors border-b border-border dark:border-[#153441] pb-3"
             >
-              <ArrowLeft className="h-4 w-4 shrink-0 text-teal-400" />
+              <ArrowLeft className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
               <span>Learner Dashboard</span>
             </Link>
           </div>
 
           {/* Study Studio navigation */}
           <div className="space-y-1">
-            <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+            <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-teal-300/60 font-mono">
               AI Study Studio
             </div>
             {STUDY_NAV_ITEMS.map((item) => {
@@ -166,11 +166,11 @@ export function StudyStudioShell({ children }: { children: React.ReactNode }) {
                   aria-current={isActive ? "page" : undefined}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                     isActive
-                      ? "text-teal-300 bg-white/10"
-                      : "text-slate-300 hover:text-white hover:bg-white/5"
+                      ? "text-teal-700 bg-teal-50 dark:text-teal-300 dark:bg-white/10"
+                      : "text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5"
                   }`}
                 >
-                  <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-teal-400" : "text-slate-400"}`} />
+                  <item.icon className={`h-4 w-4 shrink-0 ${isActive ? "text-teal-600 dark:text-teal-400" : "text-slate-500 dark:text-slate-400"}`} />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -179,25 +179,25 @@ export function StudyStudioShell({ children }: { children: React.ReactNode }) {
 
           {/* Curated companion resources */}
           <div className="space-y-1">
-            <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+            <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-slate-600 dark:text-teal-300/60 font-mono">
               Reference Materials
             </div>
             <Link
               href="/study-guide"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
             >
-              <BookOpen className="h-4 w-4 shrink-0 text-slate-400" />
+              <BookOpen className="h-4 w-4 shrink-0 text-slate-500 dark:text-slate-400" />
               <span>Curated Study Guides</span>
             </Link>
           </div>
 
           {/* Phase transparency note */}
           <div className="mx-1 rounded-xl border border-teal-500/25 bg-teal-500/10 p-3 space-y-1.5">
-            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-teal-300 font-mono">
+            <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300 font-mono">
               <ShieldCheck className="h-3.5 w-3.5" />
               Phase 1 Scope
             </div>
-            <p className="text-[11px] text-teal-100/80 leading-relaxed">
+            <p className="text-[11px] text-slate-700 dark:text-teal-100/80 leading-relaxed">
               Personal flashcards with server-side spaced-repetition scheduling, curated-guide card
               generation and quick topic drills. The context-aware AI tutor and AI auto-generation
               from uploaded documents are planned for a later phase.
@@ -206,17 +206,17 @@ export function StudyStudioShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Sidebar footer identity */}
-        <div className="p-3 border-t border-[#153441] bg-[#0A1D25]">
+        <div className="p-3 border-t border-border dark:border-[#153441] bg-muted/40 dark:bg-[#0A1D25]">
           <div className="flex items-center gap-3">
             <LearnerAvatar
               picture={user.picture}
               name={learnerName}
               sizeClassName="h-9 w-9"
-              fallbackClassName="bg-teal-600/30 text-teal-300 border-teal-500/40"
+              fallbackClassName="bg-teal-600/20 text-teal-700 dark:bg-teal-600/30 dark:text-teal-300 border-teal-500/40"
             />
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-slate-200 truncate">{learnerName}</p>
-              <p className="text-[11px] text-teal-400/80 truncate font-mono uppercase">
+              <p className="text-xs font-semibold text-foreground dark:text-slate-200 truncate">{learnerName}</p>
+              <p className="text-[11px] text-teal-600 dark:text-teal-400/80 truncate font-mono uppercase">
                 {user.pathway === "pn" ? "NCLEX-PN" : "NCLEX-RN"}
               </p>
             </div>
@@ -269,7 +269,7 @@ export function StudyStudioShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-6xl w-full mx-auto">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-[1600px] w-full mx-auto">{children}</main>
       </div>
     </div>
   );

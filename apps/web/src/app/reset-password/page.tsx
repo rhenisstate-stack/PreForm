@@ -3,9 +3,10 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle2, KeyRound, Loader2, Lock, ShieldAlert } from "lucide-react";
+import { ArrowLeft, CheckCircle2, KeyRound, Loader2, Lock, ShieldAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 
 function ResetPasswordContent() {
   const searchParams = useSearchParams();
@@ -212,21 +213,30 @@ function ResetPasswordContent() {
 
 export default function ResetPasswordPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30 px-4 py-12">
-      <div className="w-full max-w-md bg-card border rounded-2xl shadow-sm p-8 space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-2">
-            <KeyRound className="h-6 w-6" />
+    <div className="min-h-screen flex flex-col bg-background text-foreground">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border/60 bg-card/80 backdrop-blur-xs">
+        <Link href="/sign-in" className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
+          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>Back to Sign In</span>
+        </Link>
+        <ThemeSwitcher />
+      </div>
+      <div className="flex-1 flex items-center justify-center bg-muted/30 px-4 py-12">
+        <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-sm p-8 space-y-6">
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-2">
+              <KeyRound className="h-6 w-6" />
+            </div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">Set new password</h1>
+            <p className="text-sm text-muted-foreground">
+              Please enter and confirm your new secure password.
+            </p>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Set new password</h1>
-          <p className="text-sm text-muted-foreground">
-            Please enter and confirm your new secure password.
-          </p>
-        </div>
 
-        <React.Suspense fallback={<div className="py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>}>
-          <ResetPasswordContent />
-        </React.Suspense>
+          <React.Suspense fallback={<div className="py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>}>
+            <ResetPasswordContent />
+          </React.Suspense>
+        </div>
       </div>
     </div>
   );

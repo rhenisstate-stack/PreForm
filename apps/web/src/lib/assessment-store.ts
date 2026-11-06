@@ -761,7 +761,10 @@ export async function fetchAuthoritativeAttempts(
   try {
     const res = await attemptsService.getAttempts(session);
     if (res.success && res.data?.attempts) {
-      const mapped: CompletedAssessmentAttempt[] = res.data.attempts.map((dto) => {
+      const completedDtos = res.data.attempts.filter(
+        (dto) => !dto.status || dto.status === "Completed"
+      );
+      const mapped: CompletedAssessmentAttempt[] = completedDtos.map((dto) => {
         const tier = (dto.performanceTier || getPerformanceTier(dto.scorePercent)) as PerformanceTier;
         return {
           id: dto.id,
