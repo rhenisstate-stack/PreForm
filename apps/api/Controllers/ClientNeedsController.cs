@@ -20,9 +20,21 @@ public class ClientNeedsController : ControllerBase
 
     [HttpGet]
     [Authorize(Policy = "Permission:content.view")]
-    public async Task<IActionResult> GetClientNeeds([FromQuery] string? pathway = null, [FromQuery] bool activeOnly = false, CancellationToken ct = default)
+    public async Task<IActionResult> GetClientNeeds(
+        [FromQuery] string? pathway = null,
+        [FromQuery] bool activeOnly = false,
+        [FromQuery] string? search = null,
+        CancellationToken ct = default)
     {
         var clientNeeds = await _curriculumService.GetClientNeedsAsync(pathway, activeOnly, ct);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim();
+            clientNeeds = clientNeeds.Where(c =>
+                c.Name.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                c.Code.Contains(s, StringComparison.OrdinalIgnoreCase) ||
+                c.Description.Contains(s, StringComparison.OrdinalIgnoreCase)).ToList();
+        }
         return Ok(new { success = true, clientNeeds });
     }
 
