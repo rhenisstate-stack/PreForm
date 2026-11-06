@@ -477,4 +477,150 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
     expect(screen.getByTestId("modal-review-test")).toBeInTheDocument();
     expect(screen.getByText(/Review: Tutored CAT 1/i)).toBeInTheDocument();
   });
+
+  describe("Learner Dashboard Redesign, RAT Relocation & Full-Page Experience", () => {
+    it("renders dedicated RAT entry button immediately beside Create Test Now in welcome header", () => {
+      mockAuthState = {
+        user: {
+          id: "candidate-123",
+          email: "alex.rn@prepford.com",
+          name: "Alex",
+          displayName: "Alex",
+          role: "candidate",
+          pathway: "rn",
+        },
+        isAuthenticated: true,
+        isLoading: false,
+      };
+
+      render(<DashboardClient />);
+
+      const createTestBtn = screen.getByTestId("dashboard-create-test-btn");
+      const takeRatBtn = screen.getByTestId("dashboard-take-rat-btn");
+
+      expect(createTestBtn).toBeInTheDocument();
+      expect(takeRatBtn).toBeInTheDocument();
+      expect(within(createTestBtn).getByText(/\+ Create Test Now/i)).toBeInTheDocument();
+      expect(within(takeRatBtn).getByText(/Take Readiness Assessment/i)).toBeInTheDocument();
+    });
+
+    it("launches RAT workflow directly from Take Readiness Assessment button and renders full-page RAT configuration", async () => {
+      const user = userEvent.setup();
+      mockAuthState = {
+        user: {
+          id: "candidate-123",
+          email: "alex.rn@prepford.com",
+          name: "Alex",
+          displayName: "Alex",
+          role: "candidate",
+          pathway: "rn",
+        },
+        isAuthenticated: true,
+        isLoading: false,
+      };
+
+      render(<DashboardClient />);
+
+      const takeRatBtn = screen.getByTestId("dashboard-take-rat-btn");
+      await user.click(takeRatBtn);
+
+      const workspace = screen.getByTestId("modal-create-test");
+      expect(workspace).toBeInTheDocument();
+      expect(workspace.className).toContain("fixed inset-0");
+      expect(workspace.className).not.toContain("max-h-[90vh]");
+
+      // Verifies RAT-specific heading and structure
+      expect(within(workspace).getByText(/NCLEX Comprehensive Readiness Assessment/i)).toBeInTheDocument();
+      expect(within(workspace).getByText(/85 Questions/i)).toBeInTheDocument();
+      expect(within(workspace).getByText(/150 Minutes/i)).toBeInTheDocument();
+      expect(within(workspace).getByRole("button", { name: /Begin Readiness Assessment/i })).toBeInTheDocument();
+
+      // RAT mode does NOT render CAT mode options
+      expect(within(workspace).queryByText(/Tutored CAT Mode/i)).not.toBeInTheDocument();
+    });
+
+    it("launches Create Test Now and ensures RAT option is completely removed from CAT configuration", async () => {
+      const user = userEvent.setup();
+      mockAuthState = {
+        user: {
+          id: "candidate-123",
+          email: "alex.rn@prepford.com",
+          name: "Alex",
+          displayName: "Alex",
+          role: "candidate",
+          pathway: "rn",
+        },
+        isAuthenticated: true,
+        isLoading: false,
+      };
+
+      render(<DashboardClient />);
+
+      const createTestBtn = screen.getByTestId("dashboard-create-test-btn");
+      await user.click(createTestBtn);
+
+      const workspace = screen.getByTestId("modal-create-test");
+      expect(workspace).toBeInTheDocument();
+      expect(workspace.className).toContain("fixed inset-0");
+
+      // Verifies CAT-specific heading
+      expect(within(workspace).getByText(/Configure Practice Assessment/i)).toBeInTheDocument();
+      expect(within(workspace).getByRole("button", { name: /Start Test Session/i })).toBeInTheDocument();
+
+      // Confirms RAT button is NOT inside Create Test Now controls
+      expect(within(workspace).queryByRole("button", { name: /Readiness Assessment \(RAT\)/i })).not.toBeInTheDocument();
+      expect(within(workspace).queryByText(/Readiness Assessment \(RAT\)/i)).not.toBeInTheDocument();
+    });
+
+    it("renders authoritative KPI summary cards with 4 metrics", () => {
+      mockAuthState = {
+        user: {
+          id: "candidate-123",
+          email: "alex.rn@prepford.com",
+          name: "Alex",
+          displayName: "Alex",
+          role: "candidate",
+          pathway: "rn",
+        },
+        isAuthenticated: true,
+        isLoading: false,
+      };
+
+      render(<DashboardClient />);
+
+      const kpiSection = screen.getByTestId("dashboard-kpi-summary");
+      expect(kpiSection).toBeInTheDocument();
+
+      // Check the 4 metric cards
+      expect(within(kpiSection).getByText("Completed Assessments")).toBeInTheDocument();
+      expect(within(kpiSection).getByText("Questions Answered")).toBeInTheDocument();
+      expect(within(kpiSection).getByText("Overall Accuracy")).toBeInTheDocument();
+      expect(within(kpiSection).getByText("Readiness Level")).toBeInTheDocument();
+      expect(within(kpiSection).getByText("Not Assessed")).toBeInTheDocument();
+    });
+
+    it("supports light-mode and theme-aware classes across learner sidebar", () => {
+      mockAuthState = {
+        user: {
+          id: "candidate-123",
+          email: "alex.rn@prepford.com",
+          name: "Alex",
+          displayName: "Alex",
+          role: "candidate",
+          pathway: "rn",
+        },
+        isAuthenticated: true,
+        isLoading: false,
+      };
+
+      render(<DashboardClient />);
+
+      const sidebar = screen.getByTestId("learner-sidebar");
+      expect(sidebar).toBeInTheDocument();
+      expect(sidebar.className).toContain("bg-card");
+      expect(sidebar.className).toContain("border-border");
+      expect(sidebar.className).toContain("text-foreground");
+      expect(sidebar.className).toContain("dark:bg-[#07161C]");
+    });
+  });
 });

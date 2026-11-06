@@ -1396,7 +1396,7 @@ export function DashboardClient() {
                   <div className="flex items-center gap-2">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${displayReadinessStyle.badgeBg} ${displayReadinessStyle.badgeBorder}`}>
                       <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: displayReadinessStyle.accentHex }} />
-                      {displayReadinessTier}
+                      {displayReadinessTier === "Unassessed" ? "Not Assessed" : displayReadinessTier}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -2882,15 +2882,6 @@ export function DashboardClient() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setReviewModalAttempt(null)}
-                className="rounded-xl text-xs font-semibold"
-              >
-                Close Review
-              </Button>
               <button
                 type="button"
                 onClick={() => setReviewModalAttempt(null)}
@@ -3099,14 +3090,6 @@ export function DashboardClient() {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setReportModalAttempt(null)}
-                className="bg-primary text-primary-foreground rounded-xl text-xs font-semibold"
-              >
-                Done
-              </Button>
               <button
                 type="button"
                 onClick={() => setReportModalAttempt(null)}
