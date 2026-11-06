@@ -164,48 +164,48 @@ export function LearnerDashboardShell({
           {/* Group 1: LEARN */}
           <div className="space-y-1">
             {!sidebarCollapsed && (
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-teal-300/60 font-mono">
                 Learn
               </div>
             )}
             <Link
               href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Dashboard"
             >
-              <Compass className="h-4 w-4 shrink-0 text-slate-400" />
+              <Compass className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Dashboard</span>}
             </Link>
             <Link
               href="/nclex-rn"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="NCLEX-RN"
             >
-              <GraduationCap className="h-4 w-4 shrink-0 text-slate-400" />
+              <GraduationCap className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>NCLEX-RN</span>}
             </Link>
             <Link
               href="/nclex-pn"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="NCLEX-PN"
             >
-              <Stethoscope className="h-4 w-4 shrink-0 text-slate-400" />
+              <Stethoscope className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>NCLEX-PN</span>}
             </Link>
             <Link
               href="/study-guide"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Study Guides"
             >
-              <BookOpen className="h-4 w-4 shrink-0 text-slate-400" />
+              <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Study Guides</span>}
             </Link>
             <Link
               href="/courses"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Practice Activities"
             >
-              <FileQuestion className="h-4 w-4 shrink-0 text-slate-400" />
+              <FileQuestion className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Practice Activities</span>}
             </Link>
           </div>
@@ -213,40 +213,40 @@ export function LearnerDashboardShell({
           {/* Group 1b: AI STUDY STUDIO */}
           <div className="space-y-1">
             {!sidebarCollapsed && (
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-teal-300/60 font-mono">
                 AI Study Studio
               </div>
             )}
             <Link
               href="/dashboard/study"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="AI Study Studio Overview"
             >
-              <Sparkles className="h-4 w-4 shrink-0 text-teal-400" />
+              <Sparkles className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
               {!sidebarCollapsed && <span>Study Studio</span>}
             </Link>
             <Link
               href="/dashboard/study/review"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Flashcard review session"
             >
-              <RotateCcw className="h-4 w-4 shrink-0 text-slate-400" />
+              <RotateCcw className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Review Flashcards</span>}
             </Link>
             <Link
               href="/dashboard/study/flashcards"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Flashcard decks"
             >
-              <Layers className="h-4 w-4 shrink-0 text-slate-400" />
+              <Layers className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Flashcard Decks</span>}
             </Link>
             <Link
               href="/dashboard/study/quizzes"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Quick topic drills"
             >
-              <FileQuestion className="h-4 w-4 shrink-0 text-slate-400" />
+              <FileQuestion className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Topic Quizzes</span>}
             </Link>
           </div>
@@ -254,32 +254,32 @@ export function LearnerDashboardShell({
           {/* Group 2: TEST BANK & ASSESSMENTS */}
           <div className="space-y-1">
             {!sidebarCollapsed && (
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-teal-300/60 font-mono">
                 Test Bank & Assessments
               </div>
             )}
             <Link
               href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Tutored CATs"
             >
-              <ClipboardCheck className="h-4 w-4 shrink-0 text-teal-400" />
+              <ClipboardCheck className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
               {!sidebarCollapsed && <span>Tutored CATs</span>}
             </Link>
             <Link
               href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Readiness Assessment Tests (RAT)"
             >
-              <HeartPulse className="h-4 w-4 shrink-0 text-slate-400" />
+              <HeartPulse className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Readiness Tests (RAT)</span>}
             </Link>
             <Link
               href="/study-guide"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Test-Taking Strategies"
             >
-              <Layers className="h-4 w-4 shrink-0 text-slate-400" />
+              <Layers className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Test-Taking Strategies</span>}
             </Link>
           </div>
@@ -287,24 +287,24 @@ export function LearnerDashboardShell({
           {/* Group 3: REPORTS */}
           <div className="space-y-1">
             {!sidebarCollapsed && (
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-teal-300/60 font-mono">
                 Reports
               </div>
             )}
             <Link
               href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Previous Tests"
             >
-              <History className="h-4 w-4 shrink-0 text-slate-400" />
+              <History className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Previous Tests</span>}
             </Link>
             <Link
               href="/profile"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Statistics"
             >
-              <BarChart2 className="h-4 w-4 shrink-0 text-slate-400" />
+              <BarChart2 className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Statistics</span>}
             </Link>
           </div>
@@ -312,16 +312,16 @@ export function LearnerDashboardShell({
           {/* Group 4: ACCOUNT & SETTINGS */}
           <div className="space-y-1">
             {!sidebarCollapsed && (
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-teal-300/60 font-mono">
                 Account
               </div>
             )}
             <Link
               href="/profile"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Profile & Settings"
             >
-              <UserCheck className="h-4 w-4 shrink-0 text-slate-400" />
+              <UserCheck className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Profile & Settings</span>}
             </Link>
             <Link
@@ -330,19 +330,19 @@ export function LearnerDashboardShell({
               aria-current={isSecurityActive ? "page" : undefined}
               className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isSecurityActive
-                  ? "text-teal-300 bg-white/10 shadow-xs"
-                  : "text-slate-300 hover:text-white hover:bg-white/5"
+                  ? "text-teal-700 bg-teal-500/10 font-semibold shadow-2xs dark:text-teal-300 dark:bg-white/10"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5"
               }`}
               title="Security & Devices"
             >
               <ShieldCheck
-                className={`h-4 w-4 shrink-0 ${isSecurityActive ? "text-teal-400" : "text-slate-400"}`}
+                className={`h-4 w-4 shrink-0 ${isSecurityActive ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground dark:text-slate-400"}`}
               />
               {!sidebarCollapsed && (
                 <div className="flex-1 flex items-center justify-between">
                   <span>Security & Devices</span>
                   {isSecurityActive && (
-                    <span className="text-[10px] bg-teal-500/20 text-teal-300 font-mono px-1.5 py-0.5 rounded">
+                    <span className="text-[10px] bg-teal-500/20 text-teal-700 dark:text-teal-300 font-mono px-1.5 py-0.5 rounded">
                       Active
                     </span>
                   )}
@@ -351,10 +351,10 @@ export function LearnerDashboardShell({
             </Link>
             <Link
               href="/cart"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Cart"
             >
-              <ShoppingCart className="h-4 w-4 shrink-0 text-slate-400" />
+              <ShoppingCart className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && (
                 <div className="flex-1 flex items-center justify-between">
                   <span>Cart</span>
@@ -368,28 +368,28 @@ export function LearnerDashboardShell({
             </Link>
             <Link
               href="/study-guide"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Learning Notes"
             >
-              <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+              <FileText className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Learning Notes</span>}
             </Link>
           </div>
         </div>
 
         {/* Sidebar Footer User Info */}
-        <div className="p-3 border-t border-[#153441] bg-[#0A1D25]">
+        <div className="p-3 border-t border-border dark:border-[#153441] bg-muted/40 dark:bg-[#0A1D25]">
           <div className="flex items-center gap-3">
             <LearnerAvatar
               picture={user?.picture}
               name={learnerName}
               sizeClassName="h-9 w-9"
-              fallbackClassName="bg-teal-600/30 text-teal-300 border-teal-500/40"
+              fallbackClassName="bg-teal-600/30 text-teal-700 dark:text-teal-300 border-teal-500/40"
             />
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-200 truncate">{learnerName}</p>
-                <p className="text-[11px] text-teal-400/80 truncate font-mono uppercase">
+                <p className="text-xs font-semibold text-foreground dark:text-slate-200 truncate">{learnerName}</p>
+                <p className="text-[11px] text-teal-600 dark:text-teal-400/80 truncate font-mono uppercase">
                   {pathwayLabel}
                 </p>
               </div>
