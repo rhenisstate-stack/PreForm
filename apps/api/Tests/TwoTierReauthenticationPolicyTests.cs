@@ -34,8 +34,8 @@ public class TwoTierReauthenticationPolicyTests
         IUserEntitlementService entitlementService,
         string callerUserId = "usr_reauth_test")
     {
-        var responseValidation = new ResponseValidationService(context);
-        var attemptQuestionService = new AttemptQuestionService(context, responseValidation);
+        var responseValidation = new ResponseValidationService(context, new QuestionGraderResolver(QuestionTypeRegistry.Instance));
+        var attemptQuestionService = new AttemptQuestionService(context);
         var passwordHasher = new PasswordHasher<User>();
         var sessionSecurity = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
 
@@ -118,7 +118,7 @@ public class TwoTierReauthenticationPolicyTests
         {
             Id = "sess_inv",
             UserId = user.Id,
-            SessionTokenHash = "hash1",
+            TokenHash = "hash1",
             Revoked = true,
             RevokedAt = DateTime.UtcNow.AddMinutes(-2),
             RevocationReason = "HeartbeatExpiry" // Involuntary Tier 1 trigger
@@ -200,7 +200,7 @@ public class TwoTierReauthenticationPolicyTests
         {
             Id = "sess_adm",
             UserId = user.Id,
-            SessionTokenHash = "hash2",
+            TokenHash = "hash2",
             Revoked = true,
             RevokedAt = DateTime.UtcNow.AddMinutes(-2),
             RevocationReason = "AdminRevoked: Security Violation Detected" // Tier 2 trigger

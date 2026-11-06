@@ -34,8 +34,8 @@ public class DistributedReauthRateLimitingTests
         IUserEntitlementService entitlementService,
         string callerUserId = "usr_ratelimit_test")
     {
-        var responseValidation = new ResponseValidationService(context);
-        var attemptQuestionService = new AttemptQuestionService(context, responseValidation);
+        var responseValidation = new ResponseValidationService(context, new QuestionGraderResolver(QuestionTypeRegistry.Instance));
+        var attemptQuestionService = new AttemptQuestionService(context);
         var passwordHasher = new PasswordHasher<User>();
         var sessionSecurity = new SessionSecurityService(context, NullLogger<SessionSecurityService>.Instance);
 

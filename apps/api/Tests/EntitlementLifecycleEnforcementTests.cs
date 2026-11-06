@@ -33,8 +33,8 @@ public class EntitlementLifecycleEnforcementTests
         string callerUserId = "usr_candidate_01",
         string callerRole = "candidate")
     {
-        var responseValidation = new ResponseValidationService(context);
-        var attemptQuestionService = new AttemptQuestionService(context, responseValidation);
+        var responseValidation = new ResponseValidationService(context, new QuestionGraderResolver(QuestionTypeRegistry.Instance));
+        var attemptQuestionService = new AttemptQuestionService(context);
         var passwordHasher = new PasswordHasher<User>();
 
         var controller = new ExamAttemptsController(
