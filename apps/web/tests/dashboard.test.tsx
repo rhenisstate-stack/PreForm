@@ -530,13 +530,13 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
       expect(workspace.className).not.toContain("max-h-[90vh]");
 
       // Verifies RAT-specific heading and structure
-      expect(within(workspace).getByText(/NCLEX Comprehensive Readiness Assessment/i)).toBeInTheDocument();
-      expect(within(workspace).getByText(/85 Questions/i)).toBeInTheDocument();
-      expect(within(workspace).getByText(/150 Minutes/i)).toBeInTheDocument();
-      expect(within(workspace).getByRole("button", { name: /Begin Readiness Assessment/i })).toBeInTheDocument();
+      expect(within(workspace).getByText(/Take Readiness Assessment \(RAT\)/i)).toBeInTheDocument();
+      expect(within(workspace).getByText(/Standardized Readiness Assessment Test \(RAT\)/i)).toBeInTheDocument();
+      expect(within(workspace).getByText(/Standardized multi-domain clinical examination/i)).toBeInTheDocument();
+      expect(within(workspace).getByRole("button", { name: /Start Test Session/i })).toBeInTheDocument();
 
       // RAT mode does NOT render CAT mode options
-      expect(within(workspace).queryByText(/Tutored CAT Mode/i)).not.toBeInTheDocument();
+      expect(within(workspace).queryByText(/Tutored Computer Adaptive Test \(CAT\)/i)).not.toBeInTheDocument();
     });
 
     it("launches Create Test Now and ensures RAT option is completely removed from CAT configuration", async () => {
@@ -564,12 +564,13 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
       expect(workspace.className).toContain("fixed inset-0");
 
       // Verifies CAT-specific heading
-      expect(within(workspace).getByText(/Configure Practice Assessment/i)).toBeInTheDocument();
+      expect(within(workspace).getByText(/Create New Assessment Test/i)).toBeInTheDocument();
+      expect(within(workspace).getByText(/Tutored Computer Adaptive Test \(CAT\)/i)).toBeInTheDocument();
       expect(within(workspace).getByRole("button", { name: /Start Test Session/i })).toBeInTheDocument();
 
       // Confirms RAT button is NOT inside Create Test Now controls
       expect(within(workspace).queryByRole("button", { name: /Readiness Assessment \(RAT\)/i })).not.toBeInTheDocument();
-      expect(within(workspace).queryByText(/Readiness Assessment \(RAT\)/i)).not.toBeInTheDocument();
+      expect(within(workspace).queryByText(/Standardized Readiness Assessment Test \(RAT\)/i)).not.toBeInTheDocument();
     });
 
     it("renders authoritative KPI summary cards with 4 metrics", () => {

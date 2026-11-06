@@ -278,6 +278,12 @@ export function DashboardClient() {
   const [createTestType, setCreateTestType] = React.useState<"tutored_cat" | "rat">("tutored_cat");
   const [testQuestionCount, setTestQuestionCount] = React.useState<number>(5);
   const [testInProgress, setTestInProgress] = React.useState<boolean>(false);
+  const [availableAssessments, setAvailableAssessments] = React.useState<AvailableAssessmentDto[]>([]);
+  const [selectedAssessmentId, setSelectedAssessmentId] = React.useState<string | null>(null);
+  const [liveQuestions, setLiveQuestions] = React.useState<CandidateQuestionDto[]>([]);
+  const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number | number[]>>({});
+  const [activeQuestionIndex, setActiveQuestionIndex] = React.useState<number>(0);
+  const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
 
   // Dedicated launcher for Create Test Now and Take Readiness Assessment
   const handleOpenCreateTest = React.useCallback((type: "tutored_cat" | "rat" = "tutored_cat") => {
@@ -287,12 +293,6 @@ export function DashboardClient() {
     setTestInProgress(false);
     setCreateModalOpen(true);
   }, []);
-  const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number | number[]>>({});
-  const [activeQuestionIndex, setActiveQuestionIndex] = React.useState<number>(0);
-  const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
-  const [availableAssessments, setAvailableAssessments] = React.useState<AvailableAssessmentDto[]>([]);
-  const [selectedAssessmentId, setSelectedAssessmentId] = React.useState<string | null>(null);
-  const [liveQuestions, setLiveQuestions] = React.useState<CandidateQuestionDto[]>([]);
 
   // Examination continuity: active attempt tracking and in-exam reauthentication modal
   const [activeAttemptId, setActiveAttemptId] = React.useState<string | null>(null);
