@@ -24,6 +24,27 @@ public sealed class CreateExaminationRequest
     public int TimeLimitMinutes { get; set; } = 0;
 
     public decimal PassingScorePercent { get; set; } = 75.0m;
+
+    public int? TargetQuestionCount { get; set; }
+
+    [MaxLength(32)]
+    public string? SelectionStrategy { get; set; }
+
+    public string? CompositionRulesJson { get; set; }
+
+    public List<string>? QuestionIds { get; set; }
+
+    public bool? IsAvailable { get; set; }
+    public DateTime? AvailableFrom { get; set; }
+    public DateTime? AvailableTo { get; set; }
+    public int? MaxAttemptsAllowed { get; set; }
+    public int? RetakeCooldownHours { get; set; }
+    public bool? AllowInterruptedResume { get; set; }
+
+    [MaxLength(32)]
+    public string? ReviewPolicy { get; set; }
+    public bool? ShowRationales { get; set; }
+    public bool? ShowScoreImmediately { get; set; }
 }
 
 public sealed class ExaminationDto
@@ -228,6 +249,7 @@ public sealed class ExamQuestionMembershipDto
     public string Id { get; set; } = string.Empty;
     public string ExamId { get; set; } = string.Empty;
     public string QuestionId { get; set; } = string.Empty;
+    public string? Code { get; set; }
     public int DisplayOrder { get; set; }
     public string Stem { get; set; } = string.Empty;
     public string QuestionTypeKey { get; set; } = string.Empty;
@@ -235,6 +257,16 @@ public sealed class ExamQuestionMembershipDto
     public string Difficulty { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
     public int OptionCount { get; set; }
+    public string? ClientNeedId { get; set; }
+    public string? ClientNeedCode { get; set; }
+    public string? ClientNeedName { get; set; }
+    public string? CourseId { get; set; }
+    public string? CourseTitle { get; set; }
+    public string? SubjectDomainId { get; set; }
+    public string? SubjectDomainTitle { get; set; }
+    public string? TopicId { get; set; }
+    public string? TopicTitle { get; set; }
+    public string? OverallRationale { get; set; }
 }
 
 public sealed class UpdateExaminationFamilyRequest
@@ -262,6 +294,11 @@ public sealed class ExaminationQueryParameters
 
     [MaxLength(32)]
     public string? RevisionStatus { get; set; } // "Draft", "InReview", "Approved", "Published", "Archived", "Retired"
+
+    public int? ExamType { get; set; } // 1=Practice, 2=CAT, 3=MockSimulation, 4=DiagnosticReadiness (RAT), 5=Standalone
+
+    [MaxLength(32)]
+    public string? Module { get; set; } // "standalone", "rats", "practice", or null
 
     [MaxLength(32)]
     public string? SortBy { get; set; } = "code"; // "title", "code", "pathway", "createdAt", "updatedAt", "revisions", "latestRevisionNumber"
@@ -386,9 +423,18 @@ public sealed class DuplicateExaminationResponseDto
 
 public sealed class ClientNeedQuotaItem
 {
-    [Required]
-    [MaxLength(16)]
+    [MaxLength(64)]
     public string ClientNeedCode { get; set; } = string.Empty;
+
+    public string ClientNeedId
+    {
+        get => ClientNeedCode;
+        set
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+                ClientNeedCode = value;
+        }
+    }
 
     public string ClientNeedName { get; set; } = string.Empty;
 
@@ -401,6 +447,45 @@ public sealed class ClientNeedQuotaItem
     public int AvailableCount { get; set; }
 }
 
+public sealed class DifficultyDistributionDto
+{
+    [Range(0, 100)]
+    public int EasyPercent { get; set; } = 20;
+
+    [Range(0, 100)]
+    public int ModeratePercent { get; set; } = 50;
+
+    [Range(0, 100)]
+    public int HardPercent { get; set; } = 30;
+}
+
+public sealed class ReadinessThresholdsDto
+{
+    [Range(0, 100)]
+    public decimal LowMin { get; set; } = 0m;
+
+    [Range(0, 100)]
+    public decimal LowMax { get; set; } = 54m;
+
+    [Range(0, 100)]
+    public decimal BorderlineMin { get; set; } = 55m;
+
+    [Range(0, 100)]
+    public decimal BorderlineMax { get; set; } = 64m;
+
+    [Range(0, 100)]
+    public decimal HighMin { get; set; } = 65m;
+
+    [Range(0, 100)]
+    public decimal HighMax { get; set; } = 79m;
+
+    [Range(0, 100)]
+    public decimal VeryHighMin { get; set; } = 80m;
+
+    [Range(0, 100)]
+    public decimal VeryHighMax { get; set; } = 100m;
+}
+
 public sealed class ExamCompositionDto
 {
     public string RevisionId { get; set; } = string.Empty;
@@ -408,9 +493,15 @@ public sealed class ExamCompositionDto
     public string SelectionStrategy { get; set; } = "Preset";
     public List<ClientNeedQuotaItem> ClientNeedQuotas { get; set; } = new();
     public List<string> AllowedQuestionTypes { get; set; } = new();
+    public List<string>? CourseIds { get; set; }
     public List<string>? SubjectIds { get; set; }
     public List<string>? CategoryIds { get; set; }
     public string? Difficulty { get; set; }
+    public DifficultyDistributionDto? DifficultyDistribution { get; set; }
+    public ReadinessThresholdsDto? ReadinessThresholds { get; set; }
+    public string? AssessmentObjectives { get; set; }
+    public bool RandomizeQuestions { get; set; } = true;
+    public string? QuestionFormatFilter { get; set; }
     public long ConcurrencyToken { get; set; }
 }
 
@@ -425,9 +516,15 @@ public sealed class UpdateExamCompositionRequest
 
     public List<ClientNeedQuotaItem> ClientNeedQuotas { get; set; } = new();
     public List<string>? AllowedQuestionTypes { get; set; }
+    public List<string>? CourseIds { get; set; }
     public List<string>? SubjectIds { get; set; }
     public List<string>? CategoryIds { get; set; }
     public string? Difficulty { get; set; }
+    public DifficultyDistributionDto? DifficultyDistribution { get; set; }
+    public ReadinessThresholdsDto? ReadinessThresholds { get; set; }
+    public string? AssessmentObjectives { get; set; }
+    public bool? RandomizeQuestions { get; set; }
+    public string? QuestionFormatFilter { get; set; }
 
     [Required]
     public long ConcurrencyToken { get; set; }

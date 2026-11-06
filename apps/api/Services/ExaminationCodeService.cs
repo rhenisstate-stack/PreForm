@@ -104,9 +104,19 @@ public class ExaminationCodeService : IExaminationCodeService
 
         _context.Examinations.Add(examination);
 
-        // If an initial revision title is requested, create revision 1 in Draft
-        if (!string.IsNullOrWhiteSpace(request.InitialRevisionTitle))
+        // If an initial revision is requested (via InitialRevisionTitle or initial configuration), create revision 1 in Draft
+        var shouldCreateInitialRevision =
+            !string.IsNullOrWhiteSpace(request.InitialRevisionTitle) ||
+            (request.QuestionIds != null && request.QuestionIds.Count > 0) ||
+            !string.IsNullOrWhiteSpace(request.CompositionRulesJson) ||
+            request.TargetQuestionCount.HasValue;
+
+        if (shouldCreateInitialRevision)
         {
+            var revTitle = !string.IsNullOrWhiteSpace(request.InitialRevisionTitle)
+                ? request.InitialRevisionTitle.Trim()
+                : request.Title.Trim();
+
             var initialRevision = new Exam
             {
                 Id = Guid.NewGuid().ToString(),
@@ -114,12 +124,24 @@ public class ExaminationCodeService : IExaminationCodeService
                 RevisionNumber = 1,
                 LifecycleState = ExamLifecycleState.Draft,
                 ConcurrencyToken = 1,
-                Title = request.InitialRevisionTitle.Trim(),
+                Title = revTitle,
                 Description = request.Description?.Trim() ?? string.Empty,
                 Pathway = normalizedPathway,
                 ExamType = request.ExamType,
                 TimeLimitMinutes = request.TimeLimitMinutes,
                 PassingScorePercent = request.PassingScorePercent,
+                TargetQuestionCount = request.TargetQuestionCount ?? (request.QuestionIds?.Count > 0 ? request.QuestionIds.Count : 10),
+                SelectionStrategy = !string.IsNullOrWhiteSpace(request.SelectionStrategy) ? request.SelectionStrategy.Trim() : "Preset",
+                CompositionRulesJson = request.CompositionRulesJson,
+                IsAvailable = request.IsAvailable ?? true,
+                AvailableFrom = request.AvailableFrom,
+                AvailableTo = request.AvailableTo,
+                MaxAttemptsAllowed = request.MaxAttemptsAllowed,
+                RetakeCooldownHours = request.RetakeCooldownHours ?? 0,
+                AllowInterruptedResume = request.AllowInterruptedResume ?? true,
+                ReviewPolicy = !string.IsNullOrWhiteSpace(request.ReviewPolicy) ? request.ReviewPolicy.Trim() : "AfterExamSubmission",
+                ShowRationales = request.ShowRationales ?? true,
+                ShowScoreImmediately = request.ShowScoreImmediately ?? true,
                 IsPublished = false,
                 CreatedBy = actorId,
                 CreatedAt = now,
@@ -127,6 +149,24 @@ public class ExaminationCodeService : IExaminationCodeService
             };
 
             _context.Exams.Add(initialRevision);
+
+            if (request.QuestionIds != null && request.QuestionIds.Count > 0)
+            {
+                var distinctQIds = request.QuestionIds.Where(q => !string.IsNullOrWhiteSpace(q)).Distinct().ToList();
+                var order = 1;
+                foreach (var qId in distinctQIds)
+                {
+                    var eq = new ExamQuestion
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        ExamId = initialRevision.Id,
+                        QuestionId = qId,
+                        DisplayOrder = order++
+                    };
+                    _context.ExamQuestions.Add(eq);
+                    initialRevision.ExamQuestions.Add(eq);
+                }
+            }
 
             _context.AuditLogs.Add(new AuditLog
             {
@@ -140,6 +180,7 @@ public class ExaminationCodeService : IExaminationCodeService
                     examinationId = examination.Id,
                     examinationCode = examination.Code,
                     revisionNumber = 1,
+                     examType = initialRevision.ExamType.ToString(),
                     lifecycleState = ExamLifecycleState.Draft.ToString(),
                     title = initialRevision.Title
                 }),
