@@ -144,10 +144,12 @@ All 9 core objectives have been implemented and verified:
 
 ## 11. AUTOMATED TESTS ADDED OR UPDATED
 
-In `apps/web/tests/dashboard.test.tsx`:
+In `apps/web/tests/dashboard.test.tsx` (20 tests passing):
 - `renders dedicated RAT entry button immediately beside Create Test Now in welcome header`
 - `launches RAT workflow directly from Take Readiness Assessment button and renders full-page RAT configuration`
 - `launches Create Test Now and ensures RAT option is completely removed from CAT configuration`
+- `supports direct URL query parameters (?action=rat and ?clientNeed=PHA) to launch full-page assessment workflows`
+- `allows resuming an authoritative InProgress attempt while strictly refusing to resume Abandoned attempts`
 - `renders authoritative KPI summary cards with 4 metrics`
 - `supports light-mode and theme-aware classes across learner sidebar`
 - `renders Assessment Activity & Lifecycle Overview and Question-Performance Analytics sections`
@@ -158,11 +160,11 @@ In `apps/web/tests/dashboard.test.tsx`:
 
 ## 12. REGRESSION GATES EXECUTED
 
-1. **Frontend TypeScript Typecheck (`npm run typecheck --workspace @prepford/web`):** Passed (0 errors).
-2. **Frontend ESLint (`npm run lint --workspace @prepford/web`):** Passed (0 errors).
-3. **Frontend Unit & Integration Tests (`npm run test --workspace @prepford/web`):** All 63 test files passed.
-4. **Frontend Production Build (`npm run build --workspace @prepford/web`):** Passed cleanly.
-5. **Backend .NET Build & Tests (`dotnet test apps/api/Tests/Preform.Api.Tests.csproj`):** Passed cleanly.
+1. **Frontend TypeScript Typecheck (`npm run typecheck --workspace @prepford/web`):** Passed (Exit code 0, 0 errors).
+2. **Frontend ESLint (`npm run lint --workspace @prepford/web`):** Passed (Exit code 0, 0 errors).
+3. **Frontend Unit & Integration Tests (`npm run test --workspace @prepford/web`):** Passed (63 test files, 522 tests passed, 0 failed).
+4. **Frontend Production Build (`npm run build --workspace @prepford/web`):** Passed (Exit code 0; `/dashboard`, `/sign-in`, `/sign-up`, `/forgot-password`, `/reset-password`, and `/dashboard/study/*` statically prerendered).
+5. **Backend .NET Build & Unit/Controller Tests (`dotnet test apps/api/Tests/Preform.Api.Tests.csproj -c Release --filter "FullyQualifiedName!~Postgres"`):** Passed (Exit code 0; 442 passed, 0 failed).
 
 ---
 

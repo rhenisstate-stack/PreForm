@@ -330,7 +330,7 @@ export function DashboardClient() {
   const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number | number[]>>({});
   const [activeQuestionIndex, setActiveQuestionIndex] = React.useState<number>(0);
   const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
-  const [referenceNowMs] = React.useState<number>(() => Date.now());
+  const [referenceNowMs, setReferenceNowMs] = React.useState<number | null>(null);
 
   // Examination continuity: active attempt tracking and in-exam reauthentication modal
   const [activeAttemptId, setActiveAttemptId] = React.useState<string | null>(null);
@@ -722,12 +722,17 @@ export function DashboardClient() {
 
   // Chart coordinate calculations (width 760, height 260) with time-range filter
   const baseChronologicalAttempts = filteredAttempts.slice().reverse(); // Chronological left-to-right
+  const latestAttemptTimestampMs =
+    baseChronologicalAttempts.length > 0
+      ? Math.max(...baseChronologicalAttempts.map((a) => a.timestamp))
+      : 0;
+  const activeReferenceNowMs = referenceNowMs ?? latestAttemptTimestampMs;
   const chartAttempts = baseChronologicalAttempts.filter((attempt) => {
     if (chartTimeRange === "all" || attempt.isSampleData) return true;
     const cutoffMs =
       chartTimeRange === "7d"
-        ? referenceNowMs - 7 * 24 * 60 * 60 * 1000
-        : referenceNowMs - 30 * 24 * 60 * 60 * 1000;
+        ? activeReferenceNowMs - 7 * 24 * 60 * 60 * 1000
+        : activeReferenceNowMs - 30 * 24 * 60 * 60 * 1000;
     return attempt.timestamp >= cutoffMs;
   });
   const chartWidth = 760;
@@ -1877,7 +1882,10 @@ export function DashboardClient() {
                           key={range.key}
                           type="button"
                           data-testid={`chart-range-${range.key}`}
-                          onClick={() => setChartTimeRange(range.key as "all" | "30d" | "7d")}
+                          onClick={() => {
+                            setReferenceNowMs(Date.now());
+                            setChartTimeRange(range.key as "all" | "30d" | "7d");
+                          }}
                           className={`px-2.5 py-1 rounded-lg transition-all ${
                             chartTimeRange === range.key
                               ? "bg-card text-foreground font-semibold shadow-2xs"
