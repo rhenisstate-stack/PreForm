@@ -330,6 +330,12 @@ export function DashboardClient() {
   const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number | number[]>>({});
   const [activeQuestionIndex, setActiveQuestionIndex] = React.useState<number>(0);
   const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
+  const [referenceNowMs] = React.useState<number>(() => Date.now());
+
+  // Examination continuity: active attempt tracking and in-exam reauthentication modal
+  const [activeAttemptId, setActiveAttemptId] = React.useState<string | null>(null);
+  const [inExamReauthOpen, setInExamReauthOpen] = React.useState<boolean>(false);
+  const [inExamReauthReason, setInExamReauthReason] = React.useState<string>("SESSION_EXPIRED");
 
   // Dedicated launcher for Create Test Now and Take Readiness Assessment
   const handleOpenCreateTest = React.useCallback(
@@ -390,11 +396,6 @@ export function DashboardClient() {
       handleOpenCreateTest("tutored_cat", clientNeed);
     }
   }, [handleOpenCreateTest]);
-
-  // Examination continuity: active attempt tracking and in-exam reauthentication modal
-  const [activeAttemptId, setActiveAttemptId] = React.useState<string | null>(null);
-  const [inExamReauthOpen, setInExamReauthOpen] = React.useState<boolean>(false);
-  const [inExamReauthReason, setInExamReauthReason] = React.useState<string>("SESSION_EXPIRED");
 
   const handleExamReauthenticated = (result: ExamReauthResult) => {
     setInExamReauthOpen(false);
@@ -725,8 +726,8 @@ export function DashboardClient() {
     if (chartTimeRange === "all" || attempt.isSampleData) return true;
     const cutoffMs =
       chartTimeRange === "7d"
-        ? Date.now() - 7 * 24 * 60 * 60 * 1000
-        : Date.now() - 30 * 24 * 60 * 60 * 1000;
+        ? referenceNowMs - 7 * 24 * 60 * 60 * 1000
+        : referenceNowMs - 30 * 24 * 60 * 60 * 1000;
     return attempt.timestamp >= cutoffMs;
   });
   const chartWidth = 760;
