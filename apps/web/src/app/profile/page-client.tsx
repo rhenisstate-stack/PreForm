@@ -53,6 +53,7 @@ export function ProfilePageClient() {
   const [imageUploading, setImageUploading] = React.useState(false);
   const [imageRemoving, setImageRemoving] = React.useState(false);
   const [imageStatus, setImageStatus] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [avatarImageFailed, setAvatarImageFailed] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Security / Password state
@@ -377,7 +378,6 @@ export function ProfilePageClient() {
   }
 
   const userInitial = (displayName || user.name || "C").charAt(0).toUpperCase();
-  const [avatarImageFailed, setAvatarImageFailed] = React.useState(false);
   // When the persisted image cannot load, fall back to the initials badge
   // instead of ever rendering a broken-image icon.
   const activeAvatarSrc = !avatarImageFailed ? previewUrl || savedPictureUrl || null : null;

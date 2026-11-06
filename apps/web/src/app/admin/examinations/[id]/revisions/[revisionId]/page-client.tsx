@@ -1309,7 +1309,7 @@ export function AdminRevisionStudioClient({
               <AlertTriangle className="h-5 w-5" /> Remove question from examination?
             </DialogTitle>
             <DialogDescription>
-              Are you sure you want to remove Question {questionToRemove?.position} from this examination revision? This changes the revision's question membership and may affect the displayed question order. This action cannot be assumed to be reversible.
+              Are you sure you want to remove Question {questionToRemove?.position} from this examination revision? This changes the revision&apos;s question membership and may affect the displayed question order. This action cannot be assumed to be reversible.
             </DialogDescription>
           </DialogHeader>
 

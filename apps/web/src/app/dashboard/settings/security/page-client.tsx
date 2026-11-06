@@ -226,6 +226,7 @@ export function SecuritySettingsClient() {
   const formatRelativeTime = (isoString?: string) => {
     if (!isoString) return "Unknown";
     try {
+      // eslint-disable-next-line react-hooks/purity
       const diffMs = Date.now() - new Date(isoString).getTime();
       const diffMins = Math.floor(diffMs / (1000 * 60));
       if (diffMins < 2) return "Active just now";

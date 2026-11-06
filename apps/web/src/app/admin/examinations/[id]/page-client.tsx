@@ -387,7 +387,7 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
                 No revisions found for this family
               </p>
               <p className="text-xs text-slate-500 mt-1">
-                Use "Create New Revision" to initialize the foundational revision.
+                Use &quot;Create New Revision&quot; to initialize the foundational revision.
               </p>
             </div>
           ) : (

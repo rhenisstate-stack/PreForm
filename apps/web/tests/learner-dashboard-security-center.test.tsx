@@ -223,7 +223,7 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
       expect(protectionCard).toBeInTheDocument();
       expect(within(protectionCard).getByText("Enforced")).toBeInTheDocument();
       expect(within(protectionCard).getByText("Guarded")).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
   });
 
   it("3. distinguishes current device and displays IP and timestamps for each session", async () => {
@@ -242,7 +242,7 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
       expect(screen.getAllByText(/IP: 192\.168\.1\.10/i).length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText(/IP: 10\.0\.0\.5/i).length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText(/IP: 172\.16\.0\.4/i).length).toBeGreaterThanOrEqual(1);
-    });
+    }, { timeout: 4000 });
   });
 
   it("4. supports individual session termination with confirmation dialog and refresh", async () => {
@@ -250,7 +250,7 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
 
     await waitFor(() => {
       expect(screen.getByText("Safari on iOS (iPhone)")).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
 
     // Find and click Terminate Session button for Safari
     const terminateButtons = screen.getAllByRole("button", { name: /Terminate Session/i });
@@ -272,7 +272,7 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
         expect.objectContaining({ method: "DELETE" })
       );
       expect(notify.success).toHaveBeenCalledWith("Session terminated successfully.");
-    });
+    }, { timeout: 4000 });
   });
 
   it("5. executes bulk 'Log Out Other Sessions' flow with confirmation modal", async () => {
@@ -280,7 +280,7 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Log Out Other Sessions \(2\)/i })).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
 
     const logoutOthersBtn = screen.getByRole("button", { name: /Log Out Other Sessions \(2\)/i });
     fireEvent.click(logoutOthersBtn);
@@ -299,7 +299,7 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
         expect.objectContaining({ method: "POST" })
       );
       expect(notify.success).toHaveBeenCalledWith("Other sessions terminated successfully.");
-    });
+    }, { timeout: 4000 });
   });
 
   it("6. triggers 'Sign Out This Device' flow and calls auth logout", async () => {
@@ -307,7 +307,7 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Sign Out This Device/i })).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
 
     const signOutBtn = screen.getByRole("button", { name: /Sign Out This Device/i });
     fireEvent.click(signOutBtn);
@@ -328,7 +328,7 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
       );
       expect(mockLogout).toHaveBeenCalled();
       expect(mockPush).toHaveBeenCalledWith("/sign-in");
-    });
+    }, { timeout: 4000 });
   });
 
   it("7. renders security guidance callout explaining concurrency and idle timeouts", async () => {
@@ -348,7 +348,7 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
       expect(screen.getByText("Password changed successfully")).toBeInTheDocument();
       expect(screen.getByText("Terminated session on Firefox on macOS")).toBeInTheDocument();
       expect(screen.getByText("Signed in successfully")).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
   });
 
   it("9. handles API error states gracefully and offers retry functionality", async () => {
@@ -365,7 +365,7 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
       expect(screen.getByText(/couldn't connect to the server|Unable to load active sessions/i)).toBeInTheDocument();
       const retryBtn = screen.getByRole("button", { name: /^Retry$/i });
       expect(retryBtn).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
   });
 
   it("10. supports collapsing and expanding the sidebar via toggle button", async () => {

@@ -187,7 +187,7 @@ export function QuestionPickerDialog({
             </div>
           ) : filteredQuestions.length === 0 ? (
             <div className="p-8 text-center text-slate-400 text-xs">
-              No approved questions found matching pathway "{revisionPathway}" and selected filters.
+              No approved questions found matching pathway &quot;{revisionPathway}&quot; and selected filters.
             </div>
           ) : (
             filteredQuestions.map((q) => {
