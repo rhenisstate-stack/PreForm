@@ -1814,13 +1814,39 @@ export function DashboardClient() {
               </div>
             )}
 
+            {/* Analytics Loading / Error Status Banner */}
+            {analyticsLoading && (
+              <div
+                data-testid="dashboard-analytics-loading"
+                className="rounded-xl border border-border/80 bg-muted/30 px-4 py-2.5 text-xs text-muted-foreground flex items-center gap-2"
+              >
+                <Clock className="h-3.5 w-3.5 animate-spin text-teal-600 dark:text-teal-400" />
+                <span>Synchronizing latest assessment analytics from server…</span>
+              </div>
+            )}
+            {analyticsError && !analyticsLoading && (
+              <div
+                data-testid="dashboard-analytics-error"
+                className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between gap-2"
+              >
+                <span>{analyticsError}</span>
+                <button
+                  type="button"
+                  onClick={() => setAttemptRefreshKey((k) => k + 1)}
+                  className="font-semibold underline hover:no-underline"
+                >
+                  Retry Sync
+                </button>
+              </div>
+            )}
+
             {/* Assessment Performance Chart Card */}
             {filteredAttempts.length > 0 ? (
               <div
                 data-testid="assessment-performance-chart"
                 className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-4"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                   <div>
                     <h2
                       id="assessment-section-heading"
@@ -1830,43 +1856,72 @@ export function DashboardClient() {
                       <span>Assessment Performance Trend</span>
                     </h2>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Sequential CAT performance versus the PrepFord 65% benchmark
+                      Sequential CAT and RAT performance versus the PrepFord 65% practice benchmark
                     </p>
                   </div>
 
-                  {/* Chart Legend & Tiers Key (Matching Reference Screenshot) */}
-                  <div className="flex flex-wrap items-center gap-2.5 text-xs">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Time-Range Selector */}
                     <div
-                      data-testid="performance-key-vh"
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-medium"
+                      role="group"
+                      aria-label="Chart time range"
+                      className="inline-flex items-center rounded-xl bg-muted p-1 text-xs font-medium"
                     >
-                      <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                      <span className="font-mono font-bold">VH</span>
-                      <span className="text-[11px] text-muted-foreground">&ge; 75%</span>
+                      {[
+                        { key: "all", label: "All Time" },
+                        { key: "30d", label: "30 Days" },
+                        { key: "7d", label: "7 Days" },
+                      ].map((range) => (
+                        <button
+                          key={range.key}
+                          type="button"
+                          data-testid={`chart-range-${range.key}`}
+                          onClick={() => setChartTimeRange(range.key as "all" | "30d" | "7d")}
+                          className={`px-2.5 py-1 rounded-lg transition-all ${
+                            chartTimeRange === range.key
+                              ? "bg-card text-foreground font-semibold shadow-2xs"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          {range.label}
+                        </button>
+                      ))}
                     </div>
-                    <div
-                      data-testid="performance-key-h"
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300 font-medium"
-                    >
-                      <span className="h-2 w-2 rounded-full bg-teal-500" />
-                      <span className="font-mono font-bold">H</span>
-                      <span className="text-[11px] text-muted-foreground">65–74%</span>
-                    </div>
-                    <div
-                      data-testid="performance-key-b"
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-medium"
-                    >
-                      <span className="h-2 w-2 rounded-full bg-amber-500" />
-                      <span className="font-mono font-bold">B</span>
-                      <span className="text-[11px] text-muted-foreground">55–64%</span>
-                    </div>
-                    <div
-                      data-testid="performance-key-l"
-                      className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 font-medium"
-                    >
-                      <span className="h-2 w-2 rounded-full bg-rose-500" />
-                      <span className="font-mono font-bold">L</span>
-                      <span className="text-[11px] text-muted-foreground">&lt; 55%</span>
+
+                    {/* Chart Legend & Tiers Key */}
+                    <div className="flex flex-wrap items-center gap-2 text-xs">
+                      <div
+                        data-testid="performance-key-vh"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-medium"
+                      >
+                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="font-mono font-bold">VH</span>
+                        <span className="text-[11px] text-muted-foreground">&ge; 75%</span>
+                      </div>
+                      <div
+                        data-testid="performance-key-h"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-teal-500/10 border border-teal-500/20 text-teal-700 dark:text-teal-300 font-medium"
+                      >
+                        <span className="h-2 w-2 rounded-full bg-teal-500" />
+                        <span className="font-mono font-bold">H</span>
+                        <span className="text-[11px] text-muted-foreground">65–74%</span>
+                      </div>
+                      <div
+                        data-testid="performance-key-b"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-300 font-medium"
+                      >
+                        <span className="h-2 w-2 rounded-full bg-amber-500" />
+                        <span className="font-mono font-bold">B</span>
+                        <span className="text-[11px] text-muted-foreground">55–64%</span>
+                      </div>
+                      <div
+                        data-testid="performance-key-l"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 font-medium"
+                      >
+                        <span className="h-2 w-2 rounded-full bg-rose-500" />
+                        <span className="font-mono font-bold">L</span>
+                        <span className="text-[11px] text-muted-foreground">&lt; 55%</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -1998,7 +2053,7 @@ export function DashboardClient() {
                             fill="currentColor"
                             opacity={isHovered ? "1" : "0.75"}
                           >
-                            {pt.attempt.name.replace("Tutored CAT", "T_CAT")}
+                            {pt.attempt.name.replace("Tutored CAT", "T_CAT").replace("Readiness Test", "RAT")}
                           </text>
                         </g>
                       );
@@ -2008,23 +2063,28 @@ export function DashboardClient() {
                   {/* Tooltip on Hover */}
                   {hoveredAttemptIndex !== null && chartPoints[hoveredAttemptIndex] && (
                     <div
-                      className="absolute z-10 pointer-events-none rounded-xl bg-card border border-border text-foreground text-xs p-3 shadow-xl min-w-[150px]"
+                      className="absolute z-10 pointer-events-none rounded-xl bg-card border border-border text-foreground text-xs p-3 shadow-xl min-w-[180px]"
                       style={{
                         left: `${(chartPoints[hoveredAttemptIndex].x / chartWidth) * 100}%`,
                         top: `${(chartPoints[hoveredAttemptIndex].y / chartHeight) * 100}%`,
                         transform: "translate(-50%, -125%)",
                       }}
                     >
-                      <p className="font-bold text-teal-600 dark:text-teal-300">
-                        {chartPoints[hoveredAttemptIndex].attempt.name}
-                      </p>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-bold text-teal-600 dark:text-teal-300">
+                          {chartPoints[hoveredAttemptIndex].attempt.name}
+                        </p>
+                        <span className="font-mono text-[10px] uppercase px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+                          {chartPoints[hoveredAttemptIndex].attempt.type === "rat" ? "RAT" : "CAT"}
+                        </span>
+                      </div>
                       <p className="text-[11px] text-muted-foreground">
                         {chartPoints[hoveredAttemptIndex].attempt.date}
                       </p>
                       <div className="mt-1.5 flex items-center justify-between border-t border-border pt-1.5 text-[11px]">
                         <span className="text-muted-foreground">Score:</span>
                         <span className="font-mono font-bold text-foreground">
-                          {chartPoints[hoveredAttemptIndex].attempt.scorePercent}%
+                          {chartPoints[hoveredAttemptIndex].attempt.scorePercent}% ({chartPoints[hoveredAttemptIndex].attempt.correctCount}/{chartPoints[hoveredAttemptIndex].attempt.totalQuestions})
                         </span>
                       </div>
                       <div className="flex items-center justify-between text-[11px] mt-0.5">
@@ -2055,20 +2115,26 @@ export function DashboardClient() {
                     No Assessment Attempts Recorded Yet
                   </h3>
                   <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                    Begin a tutored CAT session to evaluate your clinical readiness across all 8 NCLEX Client Needs categories. Your trend curve will populate here automatically.
+                    Begin a tutored CAT session or take a Readiness Assessment Test (RAT) to evaluate your clinical readiness across all 8 NCLEX Client Needs categories. Your trend curve will populate here automatically.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
                   <Button
                     type="button"
-                    onClick={() => {
-                      setCreateModalOpen(true);
-                      setTestInProgress(false);
-                    }}
+                    onClick={() => handleOpenCreateTest("tutored_cat")}
                     className="bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-xl"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     <span>Start Your First Practice Test</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleOpenCreateTest("rat")}
+                    className="rounded-xl border-teal-600/40 text-teal-700 dark:text-teal-300 hover:bg-teal-500/10 font-semibold"
+                  >
+                    <ShieldCheck className="mr-2 h-4 w-4 text-teal-600 dark:text-teal-400" />
+                    <span>Take Readiness Assessment</span>
                   </Button>
                   <Button
                     type="button"
@@ -2082,6 +2148,164 @@ export function DashboardClient() {
               </div>
             )}
 
+            {/* =====================================================================
+                SECTION 2.1: ASSESSMENT ACTIVITY & LIFECYCLE OVERVIEW
+               ===================================================================== */}
+            <div
+              data-testid="dashboard-assessment-activity"
+              className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-4"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base sm:text-lg font-serif font-bold text-foreground flex items-center gap-2">
+                    <History className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    <span>Assessment Activity & Lifecycle Overview</span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Authoritative attempt status across Completed, In-Progress, and Interrupted sessions. Interrupted attempts are never counted as completed.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+                  <span>Completion Rate: <strong className="text-foreground">{completionRatePercent}%</strong></span>
+                  {avgDurationMinutes > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>Avg Duration: <strong className="text-foreground">~{avgDurationMinutes} mins</strong></span>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-muted-foreground">Completed Attempts</span>
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                  </div>
+                  <p className="text-2xl font-serif font-bold text-foreground">{displayTotalCompleted}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {catCompletedCount} Tutored CAT • {ratCompletedCount} Readiness (RAT)
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-muted-foreground">In-Progress Sessions</span>
+                    <span className="h-2 w-2 rounded-full bg-amber-500" />
+                  </div>
+                  <p className="text-2xl font-serif font-bold text-foreground">{inProgressAttemptsCount}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {inProgressAttemptsCount > 0
+                      ? "Active session eligible to resume"
+                      : "No active unfinished session"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-muted-foreground">Interrupted / Abandoned</span>
+                    <span className="h-2 w-2 rounded-full bg-slate-400" />
+                  </div>
+                  <p className="text-2xl font-serif font-bold text-foreground">{abandonedAttemptsCount}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Excluded from completed score metrics
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-muted-foreground">Cumulative Study Time</span>
+                    <Clock className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400" />
+                  </div>
+                  <p className="text-2xl font-serif font-bold text-foreground">
+                    {totalDurationMinutes > 0 ? `${totalDurationMinutes}m` : "0m"}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {avgDurationMinutes > 0 ? `Avg ~${avgDurationMinutes} mins per completed test` : "Recorded across timed sessions"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Resumable In-Progress Attempts Banner */}
+              {(inProgressAttempts.length > 0 || activeAvailableResumables.length > 0) && (
+                <div
+                  data-testid="resumable-attempts-banner"
+                  className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 space-y-2.5"
+                >
+                  <p className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 font-mono flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Active In-Progress Assessments Ready to Resume</span>
+                  </p>
+                  <div className="space-y-2">
+                    {inProgressAttempts.map((ip) => (
+                      <div
+                        key={ip.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg bg-card/90 border border-border p-3 text-xs"
+                      >
+                        <div>
+                          <span className="font-bold text-foreground">{ip.name || "In-Progress Assessment"}</span>
+                          <span className="ml-2 font-mono text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-semibold">
+                            In Progress
+                          </span>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">
+                            Started {new Date(ip.startedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          data-testid={`btn-resume-attempt-${ip.id}`}
+                          onClick={() =>
+                            handleResumeAttempt(
+                              ip.id,
+                              ip.type === "rat" ? "rat" : "tutored_cat",
+                              ip.status
+                            )
+                          }
+                          className="bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-lg text-xs"
+                        >
+                          <span>Resume Assessment</span>
+                          <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                    {activeAvailableResumables.map((asm) => (
+                      <div
+                        key={asm.id}
+                        className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg bg-card/90 border border-border p-3 text-xs"
+                      >
+                        <div>
+                          <span className="font-bold text-foreground">{asm.title}</span>
+                          <span className="ml-2 font-mono text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 font-semibold">
+                            In Progress
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          data-testid={`btn-resume-attempt-${asm.activeAttemptId}`}
+                          onClick={() =>
+                            asm.activeAttemptId &&
+                            handleResumeAttempt(
+                              asm.activeAttemptId,
+                              asm.examType?.toLowerCase().includes("rat") || asm.examType?.toLowerCase().includes("readiness")
+                                ? "rat"
+                                : "tutored_cat",
+                              "InProgress"
+                            )
+                          }
+                          className="bg-teal-600 hover:bg-teal-500 text-white font-semibold rounded-lg text-xs"
+                        >
+                          <span>Resume Assessment</span>
+                          <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {/* Historical Assessment Table */}
             {filteredAttempts.length > 0 && (
               <div
@@ -2089,9 +2313,14 @@ export function DashboardClient() {
                 className="rounded-2xl border border-border/80 bg-card overflow-hidden shadow-xs"
               >
                 <div className="p-4 sm:p-5 border-b border-border flex items-center justify-between">
-                  <h3 className="text-base font-serif font-bold text-foreground">
-                    Assessment History & Detailed Reports
-                  </h3>
+                  <div>
+                    <h3 className="text-base font-serif font-bold text-foreground">
+                      Assessment History & Detailed Reports
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Review item-level rationales or inspect full domain performance reports for completed assessments
+                    </p>
+                  </div>
                   <span className="text-xs text-muted-foreground font-mono">
                     {filteredAttempts.length} Total {filteredAttempts.length === 1 ? "Test" : "Tests"}
                   </span>
@@ -2104,9 +2333,11 @@ export function DashboardClient() {
                       <tr>
                         <th className="py-3 px-4 w-12 text-center">#</th>
                         <th className="py-3 px-4">Name</th>
+                        <th className="py-3 px-4">Type</th>
+                        <th className="py-3 px-4">Status</th>
                         <th className="py-3 px-4">Performance</th>
                         <th className="py-3 px-4">Date</th>
-                        <th className="py-3 px-4">Total Questions</th>
+                        <th className="py-3 px-4">Questions / Duration</th>
                         <th className="py-3 px-4 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -2143,6 +2374,23 @@ export function DashboardClient() {
                             </td>
                             <td className="py-3.5 px-4">
                               <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-semibold ${
+                                  attempt.type === "rat"
+                                    ? "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20"
+                                    : "bg-teal-500/10 text-teal-700 dark:text-teal-300 border border-teal-500/20"
+                                }`}
+                              >
+                                {attempt.type === "rat" ? "Readiness (RAT)" : "Tutored CAT"}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20">
+                                <CheckCircle2 className="h-3 w-3" />
+                                <span>Completed</span>
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <span
                                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border ${tierStyle.badgeBg} ${tierStyle.badgeBorder}`}
                               >
                                 <span
@@ -2156,7 +2404,7 @@ export function DashboardClient() {
                               {attempt.date}
                             </td>
                             <td className="py-3.5 px-4 text-muted-foreground text-xs">
-                              {attempt.totalQuestions} questions
+                              {attempt.totalQuestions} questions • ~{attempt.durationMinutes}m
                             </td>
                             <td className="py-3.5 px-4 text-right">
                               <div className="inline-flex items-center gap-2">
@@ -2201,8 +2449,9 @@ export function DashboardClient() {
                             {attempt.performanceTier}
                           </span>
                         </div>
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                           <span>{attempt.date}</span>
+                          <span>{attempt.type === "rat" ? "Readiness (RAT)" : "Tutored CAT"} • Completed</span>
                           <span>{attempt.totalQuestions} Questions</span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -2241,6 +2490,112 @@ export function DashboardClient() {
                 </div>
               </div>
             )}
+
+            {/* =====================================================================
+                SECTION 2.2: QUESTION-PERFORMANCE & TOPIC MASTERY ANALYTICS
+               ===================================================================== */}
+            <div
+              data-testid="dashboard-question-analytics"
+              className="rounded-2xl border border-border/80 bg-card p-5 sm:p-6 shadow-xs space-y-4"
+            >
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-base sm:text-lg font-serif font-bold text-foreground flex items-center gap-2">
+                    <FileQuestion className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                    <span>Question-Performance & Item Response Analytics</span>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Empirical breakdown of Correct, Incorrect, and Unanswered responses across your completed assessments
+                  </p>
+                </div>
+                {effectiveTotalQuestions > 0 && (
+                  <span className="text-xs font-mono text-muted-foreground">
+                    {effectiveTotalQuestions} Total Assessed Items
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-emerald-800 dark:text-emerald-300">Correct Responses</span>
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <p className="text-2xl font-serif font-bold text-foreground">{totalCorrectQuestions}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {effectiveTotalQuestions > 0
+                      ? `${Math.round((totalCorrectQuestions / effectiveTotalQuestions) * 100)}% of answered items`
+                      : "Complete a test to track item accuracy"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-rose-500/25 bg-rose-500/5 p-4 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-rose-800 dark:text-rose-300">Incorrect (Remediation Queue)</span>
+                    <XCircle className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                  </div>
+                  <p className="text-2xl font-serif font-bold text-foreground">{totalIncorrectQuestions}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {totalIncorrectQuestions > 0
+                      ? "Review rationales in Assessment History to close gaps"
+                      : "No missed items recorded yet"}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 space-y-1">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-amber-800 dark:text-amber-300">Unanswered / Skipped</span>
+                    <Info className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <p className="text-2xl font-serif font-bold text-foreground">{totalUnansweredQuestions}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Unanswered items receive 0 credit under NCLEX scoring rules
+                  </p>
+                </div>
+              </div>
+
+              {/* Curriculum Topic Mastery Breakdown if available */}
+              {curriculumTopics.length > 0 && (
+                <div className="pt-2 space-y-2.5 border-t border-border/60">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                    Curriculum Topic Performance & Deficiency Identification
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {curriculumTopics.slice(0, 6).map((topic) => (
+                      <div
+                        key={topic.topicId}
+                        className="rounded-xl border border-border/80 bg-muted/20 p-3 space-y-1.5 flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-xs font-bold text-foreground line-clamp-1">{topic.topicName}</span>
+                            <span
+                              className={`text-xs font-mono font-bold ${
+                                topic.isDeficiencyArea
+                                  ? "text-rose-600 dark:text-rose-400"
+                                  : topic.accuracyPercent >= 75
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : "text-teal-600 dark:text-teal-400"
+                              }`}
+                            >
+                              {topic.accuracyPercent}%
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-muted-foreground line-clamp-1">
+                            {topic.categoryName} • {topic.correctCount}/{topic.totalQuestions} correct
+                          </p>
+                        </div>
+                        {topic.isDeficiencyArea && (
+                          <span className="inline-block text-[10px] font-semibold px-2 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 w-fit">
+                            Needs Review (&lt; 65%)
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </section>
 
           {/* =====================================================================
@@ -2255,67 +2610,90 @@ export function DashboardClient() {
                     <span>NCSBN Client Needs Category Mastery</span>
                   </h2>
                   <p className="text-xs sm:text-sm text-muted-foreground">
-                    Authoritative empirical performance across the 8 official NCSBN NCLEX examination domains.
+                    Authoritative empirical performance across the 8 official NCSBN NCLEX examination domains (Strong &ge; 75%, Proficient 65–74%, Needs Review &lt; 65%).
                   </p>
                 </div>
               </div>
 
-              {clientNeeds.length === 0 ? (
-                <div className="py-6 text-center text-xs text-muted-foreground border border-dashed border-border rounded-xl">
-                  Complete an assessment attempt to populate your Client Needs mastery profile.
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
-                  {clientNeeds.map((cn) => (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 pt-1">
+                {effectiveClientNeeds.map((cn) => {
+                  const statusLabel =
+                    cn.totalAssessedQuestions === 0
+                      ? "Insufficient Data"
+                      : cn.accuracyPercent >= 75
+                      ? "Strong"
+                      : cn.accuracyPercent >= 65
+                      ? "Proficient"
+                      : "Needs Review";
+
+                  return (
                     <div
                       key={cn.categoryCode}
-                      className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-2"
+                      data-testid={`client-need-card-${cn.categoryCode}`}
+                      className="rounded-xl border border-border/80 bg-muted/20 p-3.5 space-y-2.5 flex flex-col justify-between"
                     >
-                      <div className="flex items-center justify-between">
-                        <span className="font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                          {cn.categoryCode}
-                        </span>
-                        <span
-                          className={`text-xs font-bold ${
-                            cn.accuracyPercent >= 75
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : cn.accuracyPercent >= 65
-                              ? "text-teal-600 dark:text-teal-400"
-                              : cn.totalAssessedQuestions === 0
-                              ? "text-muted-foreground"
-                              : "text-amber-600 dark:text-amber-400"
-                          }`}
-                        >
-                          {cn.totalAssessedQuestions > 0 ? `${cn.accuracyPercent}%` : "Unassessed"}
-                        </span>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-xs font-bold px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                            {cn.categoryCode}
+                          </span>
+                          <span
+                            className={`text-xs font-bold ${
+                              cn.totalAssessedQuestions === 0
+                                ? "text-muted-foreground"
+                                : cn.accuracyPercent >= 75
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : cn.accuracyPercent >= 65
+                                ? "text-teal-600 dark:text-teal-400"
+                                : "text-amber-600 dark:text-amber-400"
+                            }`}
+                          >
+                            {cn.totalAssessedQuestions > 0 ? `${cn.accuracyPercent}%` : "Unassessed"}
+                          </span>
+                        </div>
+                        <p className="text-xs font-medium text-foreground line-clamp-1" title={cn.categoryName}>
+                          {cn.categoryName}
+                        </p>
+                        <div className="w-full bg-muted/60 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className={`h-full rounded-full transition-all duration-300 ${
+                              cn.accuracyPercent >= 75
+                                ? "bg-emerald-600"
+                                : cn.accuracyPercent >= 65
+                                ? "bg-teal-600"
+                                : "bg-amber-500"
+                            }`}
+                            style={{ width: `${cn.totalAssessedQuestions > 0 ? cn.accuracyPercent : 0}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
+                          <span>{cn.correctCount} / {cn.totalAssessedQuestions} correct</span>
+                          <span className="font-mono text-[10px]">{statusLabel}</span>
+                        </div>
                       </div>
-                      <p className="text-xs font-medium text-foreground line-clamp-1" title={cn.categoryName}>
-                        {cn.categoryName}
-                      </p>
-                      <div className="w-full bg-muted/60 h-1.5 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-300 ${
-                            cn.accuracyPercent >= 75
-                              ? "bg-emerald-600"
-                              : cn.accuracyPercent >= 65
-                              ? "bg-teal-600"
-                              : "bg-amber-500"
-                          }`}
-                          style={{ width: `${cn.totalAssessedQuestions > 0 ? cn.accuracyPercent : 0}%` }}
-                        />
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-0.5">
-                        <span>{cn.correctCount} / {cn.totalAssessedQuestions} correct</span>
-                        {cn.isLowSample && (
+
+                      <div className="pt-1 border-t border-border/50 flex items-center justify-between">
+                        {cn.isLowSample ? (
                           <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">
                             &lt; 5 items
                           </span>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground">NCSBN Domain</span>
                         )}
+                        <button
+                          type="button"
+                          data-testid={`practice-client-need-${cn.categoryCode}`}
+                          onClick={() => handleOpenCreateTest("tutored_cat", cn.categoryCode)}
+                          className="text-[11px] font-semibold text-teal-600 dark:text-teal-400 hover:underline inline-flex items-center gap-1"
+                        >
+                          <span>Practice</span>
+                          <ArrowRight className="h-3 w-3" />
+                        </button>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
             </div>
 
             {/* Recommendations Section */}
@@ -2707,63 +3085,97 @@ export function DashboardClient() {
           </header>
 
           {/* Full Workspace Scrollable Body */}
-          <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-6">
+          <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-6">
             {!testInProgress ? (
               /* Configuration Step */
               <div className="space-y-6">
-                {/* Standardized Published Assessments if available */}
-                {availableAssessments.length > 0 && (
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
-                      Standardized Published Assessments
-                    </label>
+                {selectedDomainFilter && createTestType === "tutored_cat" && (
+                  <div
+                    data-testid="active-domain-filter-banner"
+                    className="rounded-xl border border-teal-500/40 bg-teal-500/10 p-3.5 flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Target className="h-4 w-4 text-teal-600 dark:text-teal-400 shrink-0" />
+                      <span className="font-semibold text-foreground">
+                        Targeted NCSBN Client Need Focus:{" "}
+                        <span className="font-mono font-bold text-teal-700 dark:text-teal-300">
+                          {selectedDomainFilter}
+                        </span>
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedDomainFilter(null)}
+                      className="text-xs font-semibold text-teal-700 dark:text-teal-300 hover:underline"
+                    >
+                      Clear Domain Filter
+                    </button>
+                  </div>
+                )}
+
+                {/* Standardized Published Assessments if available (filtered so RAT never appears in Create Test Now) */}
+                {(() => {
+                  const modeFilteredAssessments = availableAssessments.filter((asm) => {
+                    const isRatExam =
+                      asm.examType?.toLowerCase().includes("rat") ||
+                      asm.examType?.toLowerCase().includes("readiness") ||
+                      asm.title?.toLowerCase().includes("readiness assessment");
+                    return createTestType === "rat" ? isRatExam : !isRatExam;
+                  });
+                  if (modeFilteredAssessments.length === 0) return null;
+                  return (
                     <div className="space-y-2">
-                      {availableAssessments.map((asm) => (
-                        <div
-                          key={asm.id}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => {
-                            setSelectedAssessmentId(asm.id);
-                            if (asm.questionCount) {
-                              setTestQuestionCount(asm.questionCount);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" || e.key === " ") {
+                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
+                        Standardized Published Assessments
+                      </label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {modeFilteredAssessments.map((asm) => (
+                          <div
+                            key={asm.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
                               setSelectedAssessmentId(asm.id);
                               if (asm.questionCount) {
                                 setTestQuestionCount(asm.questionCount);
                               }
-                            }
-                          }}
-                          className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                            selectedAssessmentId === asm.id
-                              ? "border-teal-500 bg-teal-500/10 text-foreground shadow-2xs"
-                              : "border-border hover:border-border/80 text-muted-foreground"
-                          }`}
-                        >
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <p className="font-bold text-sm text-foreground">{asm.title}</p>
-                              {asm.hasActiveAttempt && (
-                                <Badge variant="secondary" className="bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px]">
-                                  In-Progress Attempt Active
-                                </Badge>
-                              )}
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                setSelectedAssessmentId(asm.id);
+                                if (asm.questionCount) {
+                                  setTestQuestionCount(asm.questionCount);
+                                }
+                              }
+                            }}
+                            className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                              selectedAssessmentId === asm.id
+                                ? "border-teal-500 bg-teal-500/10 text-foreground shadow-2xs"
+                                : "border-border hover:border-border/80 text-muted-foreground"
+                            }`}
+                          >
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-sm text-foreground">{asm.title}</p>
+                                {asm.hasActiveAttempt && (
+                                  <Badge variant="secondary" className="bg-amber-500/20 text-amber-600 dark:text-amber-400 text-[10px]">
+                                    In-Progress Attempt Active
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-xs mt-0.5 text-muted-foreground">
+                                {asm.description || `${asm.questionCount} Questions • Multi-Domain Distribution`}
+                              </p>
                             </div>
-                            <p className="text-xs mt-0.5 text-muted-foreground">
-                              {asm.description || `${asm.questionCount} Questions • Multi-Domain Distribution`}
-                            </p>
+                            <Badge variant="outline" className="text-xs font-mono shrink-0 ml-2">
+                              {asm.questionCount} Qs
+                            </Badge>
                           </div>
-                          <Badge variant="outline" className="text-xs font-mono shrink-0 ml-2">
-                            {asm.questionCount} Qs
-                          </Badge>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 {/* Assessment Mode Description (RAT option removed from Create Test Now) */}
                 <div className="space-y-2">
@@ -2942,8 +3354,8 @@ export function DashboardClient() {
                         </div>
                       )}
 
-                      {/* Question Stem (Calm typography, generous line-height 1.6-1.75, max-w-3xl) */}
-                      <div className="max-w-3xl py-1">
+                      {/* Question Stem (Calm typography, generous line-height 1.6-1.75, full workspace width) */}
+                      <div className="w-full py-1">
                         <p className="text-sm sm:text-base md:text-[17px] font-sans font-medium text-foreground leading-relaxed sm:leading-7 tracking-normal">
                           {activeQ.stem}
                         </p>
@@ -3115,7 +3527,7 @@ export function DashboardClient() {
             </div>
           </header>
 
-          <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-6">
+          <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-6">
 
             {/* Questions List */}
             <div className="space-y-6">
@@ -3323,7 +3735,7 @@ export function DashboardClient() {
             </div>
           </header>
 
-          <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-6">
+          <div className="flex-1 w-full max-w-[1600px] mx-auto px-4 sm:px-8 lg:px-12 py-8 space-y-6">
 
             {/* Score & Tier Banner */}
             <div className="rounded-xl border border-border bg-muted/30 p-5 flex items-center justify-between">

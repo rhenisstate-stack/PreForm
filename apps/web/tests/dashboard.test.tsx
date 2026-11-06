@@ -623,5 +623,104 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
       expect(sidebar.className).toContain("text-foreground");
       expect(sidebar.className).toContain("dark:bg-[#07161C]");
     });
+
+    it("renders Assessment Activity & Lifecycle Overview and Question-Performance Analytics sections", () => {
+      mockAuthState = {
+        user: {
+          id: "candidate-123",
+          email: "alex.rn@prepford.com",
+          name: "Alex",
+          displayName: "Alex",
+          role: "candidate",
+          pathway: "rn",
+        },
+        isAuthenticated: true,
+        isLoading: false,
+      };
+
+      render(<DashboardClient />);
+
+      const activitySection = screen.getByTestId("dashboard-assessment-activity");
+      expect(activitySection).toBeInTheDocument();
+      expect(within(activitySection).getByText("Assessment Activity & Lifecycle Overview")).toBeInTheDocument();
+      expect(within(activitySection).getByText("Completed Attempts")).toBeInTheDocument();
+      expect(within(activitySection).getByText("In-Progress Sessions")).toBeInTheDocument();
+      expect(within(activitySection).getByText("Interrupted / Abandoned")).toBeInTheDocument();
+
+      const questionAnalytics = screen.getByTestId("dashboard-question-analytics");
+      expect(questionAnalytics).toBeInTheDocument();
+      expect(within(questionAnalytics).getByText("Question-Performance & Item Response Analytics")).toBeInTheDocument();
+      expect(within(questionAnalytics).getByText("Correct Responses")).toBeInTheDocument();
+      expect(within(questionAnalytics).getByText("Incorrect (Remediation Queue)")).toBeInTheDocument();
+      expect(within(questionAnalytics).getByText("Unanswered / Skipped")).toBeInTheDocument();
+    });
+
+    it("renders all 8 NCSBN Client Needs categories and supports domain drill-down practice", async () => {
+      const user = userEvent.setup();
+      mockAuthState = {
+        user: {
+          id: "candidate-123",
+          email: "alex.rn@prepford.com",
+          name: "Alex",
+          displayName: "Alex",
+          role: "candidate",
+          pathway: "rn",
+        },
+        isAuthenticated: true,
+        isLoading: false,
+      };
+
+      render(<DashboardClient />);
+
+      const cnSection = screen.getByTestId("client-needs-mastery-section");
+      expect(cnSection).toBeInTheDocument();
+      for (const code of ["MOC", "SIC", "HPM", "PSI", "BCC", "PHA", "RRP", "PPT"]) {
+        expect(within(cnSection).getByTestId(`client-need-card-${code}`)).toBeInTheDocument();
+      }
+
+      await user.click(within(cnSection).getByTestId("practice-client-need-MOC"));
+      const workspace = screen.getByTestId("modal-create-test");
+      expect(workspace).toBeInTheDocument();
+      expect(within(workspace).getByTestId("active-domain-filter-banner")).toHaveTextContent("MOC");
+    });
+
+    it("executes a full RAT session from Take Readiness Assessment through completion and records it in RAT history", async () => {
+      const user = userEvent.setup();
+      mockAuthState = {
+        user: {
+          id: "candidate-rat-99",
+          email: "rat.rn@prepford.com",
+          name: "Morgan",
+          displayName: "Morgan",
+          role: "candidate",
+          pathway: "rn",
+        },
+        isAuthenticated: true,
+        isLoading: false,
+      };
+
+      render(<DashboardClient />);
+
+      await user.click(screen.getByTestId("dashboard-take-rat-btn"));
+      const createModal = screen.getByTestId("modal-create-test");
+      await user.click(within(createModal).getByRole("button", { name: /1 Question \(Quick Test\)/i }));
+      await user.click(within(createModal).getByRole("button", { name: /Start Test Session/i }));
+
+      const optionsGroup = within(createModal).getByLabelText("Question options");
+      const firstOption = within(optionsGroup).getAllByRole("radio")[0];
+      await user.click(firstOption);
+
+      await user.click(within(createModal).getByRole("button", { name: /Submit & Complete Test/i }));
+
+      const reviewModal = screen.getByTestId("modal-review-test");
+      expect(reviewModal).toBeInTheDocument();
+      expect(within(reviewModal).getByText(/Readiness Test 1/i)).toBeInTheDocument();
+      await user.click(within(reviewModal).getByRole("button", { name: /Close Review/i }));
+
+      await user.click(screen.getByTestId("tab-rat"));
+      const historyTable = screen.getByTestId("assessment-history-table");
+      expect(within(historyTable).getAllByText(/Readiness Test 1/i).length).toBeGreaterThan(0);
+      expect(within(historyTable).getAllByText(/Readiness \(RAT\)/i).length).toBeGreaterThan(0);
+    });
   });
 });
