@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -10,34 +10,15 @@ namespace Preform.Api.Migrations._0013_AddEntitlementAndPaymentIndexes
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.RenameIndex(
-                name: "IX_PaymentTransactions_ProviderEventId",
-                schema: "public",
-                table: "PaymentTransactions",
-                newName: "idx_payment_transactions_provider_event_id");
-
-            migrationBuilder.CreateIndex(
-                name: "idx_user_subscriptions_active_unique",
-                schema: "public",
-                table: "UserSubscriptions",
-                columns: new[] { "UserId", "PlanId" },
-                unique: true,
-                filter: "\"Status\" = 1");
+            migrationBuilder.Sql("ALTER INDEX IF EXISTS public.\"IX_PaymentTransactions_ProviderEventId\" RENAME TO idx_payment_transactions_provider_event_id;");
+            migrationBuilder.Sql("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_subscriptions_active_unique ON public.\"UserSubscriptions\" (\"UserId\", \"PlanId\") WHERE \"Status\" = 1;");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropIndex(
-                name: "idx_user_subscriptions_active_unique",
-                schema: "public",
-                table: "UserSubscriptions");
-
-            migrationBuilder.RenameIndex(
-                name: "idx_payment_transactions_provider_event_id",
-                schema: "public",
-                table: "PaymentTransactions",
-                newName: "IX_PaymentTransactions_ProviderEventId");
+            migrationBuilder.Sql("DROP INDEX IF EXISTS public.idx_user_subscriptions_active_unique;");
+            migrationBuilder.Sql("ALTER INDEX IF EXISTS public.idx_payment_transactions_provider_event_id RENAME TO \"IX_PaymentTransactions_ProviderEventId\";");
         }
     }
 }
