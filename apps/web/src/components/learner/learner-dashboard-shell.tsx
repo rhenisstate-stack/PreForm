@@ -89,12 +89,12 @@ export function LearnerDashboardShell({
       <aside
         data-testid="learner-sidebar"
         aria-label="Learner Workspace Navigation"
-        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-[#0C232C] dark:bg-[#07161C] text-slate-100 border-r border-[#153441] transition-all duration-200 ease-in-out ${
+        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-card border-r border-border text-foreground dark:bg-[#07161C] dark:border-[#153441] dark:text-slate-100 transition-all duration-200 ease-in-out ${
           sidebarCollapsed ? "w-20" : "w-64"
         } ${mobileDrawerOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"}`}
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-[#153441]">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-border dark:border-[#153441]">
           <Link
             href="/dashboard"
             className="flex items-center gap-3 transition-opacity hover:opacity-90"
@@ -106,14 +106,14 @@ export function LearnerDashboardShell({
               alt={BRAND.logo.alt}
               width={40}
               height={40}
-              className="h-10 w-10 rounded-xl object-contain shrink-0 bg-white/10 p-1"
+              className="h-10 w-10 rounded-xl object-contain shrink-0 bg-muted/60 dark:bg-white/10 p-1 border border-border/60 dark:border-white/10"
             />
             {!sidebarCollapsed && (
               <span className="flex flex-col leading-none">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-teal-300/70">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-teal-600 dark:text-teal-300/70">
                   {BRAND.name}
                 </span>
-                <span className="text-base font-serif font-bold text-white mt-0.5">
+                <span className="text-base font-serif font-bold text-foreground dark:text-white mt-0.5">
                   NCLEX Portal
                 </span>
               </span>
@@ -125,7 +125,7 @@ export function LearnerDashboardShell({
             type="button"
             data-testid="sidebar-collapse-toggle"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="hidden lg:flex items-center justify-center h-7 w-7 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="hidden lg:flex items-center justify-center h-7 w-7 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10 transition-colors"
             aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <ChevronRight
@@ -137,7 +137,7 @@ export function LearnerDashboardShell({
           <button
             type="button"
             onClick={() => setMobileDrawerOpen(false)}
-            className="lg:hidden flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+            className="lg:hidden flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10"
             aria-label="Close navigation drawer"
           >
             <X className="h-5 w-5" />
