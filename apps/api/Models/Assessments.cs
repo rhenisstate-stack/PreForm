@@ -8,7 +8,8 @@ public enum ExamType
     Practice = 1,
     CAT = 2,
     MockSimulation = 3,
-    DiagnosticReadiness = 4
+    DiagnosticReadiness = 4,
+    Standalone = 5
 }
 
 public enum AttemptStatus
