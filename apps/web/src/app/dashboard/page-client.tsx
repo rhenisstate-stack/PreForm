@@ -656,6 +656,43 @@ export function DashboardClient() {
 
   const benchmarkY = getYCoord(65); // 65% PrepFord practice benchmark reference line
 
+  // Computed Authoritative Metrics for KPI Cards
+  const displayTotalCompleted = analyticsSummary?.totalCompletedAttempts ?? storedAttempts.length;
+  const displayTotalQuestions =
+    analyticsSummary?.totalPracticeQuestions ??
+    storedAttempts.reduce((acc, a) => acc + (a.totalQuestions || 0), 0);
+  const displayAccuracy = analyticsSummary?.averageScorePercent
+    ? Math.round(analyticsSummary.averageScorePercent)
+    : storedAttempts.length > 0
+    ? Math.round(storedAttempts.reduce((acc, a) => acc + a.scorePercent, 0) / storedAttempts.length)
+    : 0;
+
+  const rawReadinessTier =
+    analyticsSummary?.currentReadinessTier && analyticsSummary.currentReadinessTier !== "Unassessed"
+      ? analyticsSummary.currentReadinessTier
+      : storedAttempts.length > 0
+      ? storedAttempts[0].performanceTier
+      : "Unassessed";
+
+  const displayReadinessTier: PerformanceTier | "Unassessed" =
+    rawReadinessTier === "HighReadiness" || rawReadinessTier === "Very High"
+      ? "Very High"
+      : rawReadinessTier === "ProbableReadiness" || rawReadinessTier === "High"
+      ? "High"
+      : rawReadinessTier === "MarginalReadiness" || rawReadinessTier === "Borderline"
+      ? "Borderline"
+      : rawReadinessTier === "RemediationRequired" || rawReadinessTier === "Low"
+      ? "Low"
+      : "Unassessed";
+
+  const displayReadinessStyle =
+    displayReadinessTier === "Unassessed"
+      ? { badgeBg: "bg-muted text-muted-foreground", badgeBorder: "border-border", accentHex: "#94a3b8" }
+      : getTierStyles(displayReadinessTier);
+
+  const ratCompletedCount = storedAttempts.filter((a) => a.type === "rat").length;
+  const catCompletedCount = storedAttempts.filter((a) => a.type === "tutored_cat").length;
+
   return (
     <div
       data-testid="learner-dashboard"
