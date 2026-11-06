@@ -51,7 +51,7 @@ export async function GET(request?: Request) {
       });
     }
 
-    if (apiRes.status === 401) {
+    if (apiRes.status === 401 || apiRes.status === 403) {
       // Backend rejected session as revoked, expired, or invalid
       try {
         const cookieStore = await cookies();
@@ -62,18 +62,31 @@ export async function GET(request?: Request) {
       return NextResponse.json({ authenticated: false, user: null });
     }
 
-    // Resilient fallback to verified signed session claims if backend is temporarily unreachable
-    const user = mapSessionUser(null, session);
-
-    return NextResponse.json({
-      authenticated: true,
-      user,
-    });
+    // Fail-Closed Boundary (Phase 7.9.2 Work Package E):
+    // When backend is unavailable, unreachable, or returns a 5xx error, do NOT fall back to authenticated: true.
+    // Return 503 Service Unavailable, preserving the session cookie so the user does not lose session state on transient outages.
+    return NextResponse.json(
+      {
+        authenticated: false,
+        user: null,
+        unavailable: true,
+        error: "Backend authentication service is temporarily unavailable. Please retry.",
+      },
+      { status: 503 }
+    );
   } catch (err) {
     if (err && typeof err === "object" && "digest" in err) {
       throw err;
     }
     console.error("[Session API] Error retrieving session:", err);
-    return NextResponse.json({ authenticated: false, user: null }, { status: 500 });
+    return NextResponse.json(
+      {
+        authenticated: false,
+        user: null,
+        unavailable: true,
+        error: "Backend authentication service encountered an error.",
+      },
+      { status: 503 }
+    );
   }
 }

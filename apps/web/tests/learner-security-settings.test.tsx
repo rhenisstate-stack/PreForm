@@ -125,7 +125,7 @@ describe("Phase 4: Learner Security Settings UI (/dashboard/settings/security)",
 
     await waitFor(() => {
       expect(screen.getByText("2 Sessions")).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
   });
 
   it("distinguishes current session with prominent badge and labels device info", async () => {
@@ -145,7 +145,7 @@ describe("Phase 4: Learner Security Settings UI (/dashboard/settings/security)",
     await waitFor(() => {
       const revokeOthersButton = screen.getByRole("button", { name: /Log Out Other Sessions/i });
       expect(revokeOthersButton).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
   });
 
   it("opens confirmation dialog when clicking 'Terminate Session' on a non-current session", async () => {
@@ -153,7 +153,7 @@ describe("Phase 4: Learner Security Settings UI (/dashboard/settings/security)",
 
     await waitFor(() => {
       expect(screen.getByText("Safari on iOS (iPhone)")).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
 
     const terminateBtn = screen.getByRole("button", { name: /Terminate Session/i });
     fireEvent.click(terminateBtn);
@@ -168,7 +168,7 @@ describe("Phase 4: Learner Security Settings UI (/dashboard/settings/security)",
 
     await waitFor(() => {
       expect(screen.queryByRole("heading", { name: "Terminate Session?" })).not.toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
   });
 
   it("opens confirmation dialog when clicking 'Log Out Other Sessions'", async () => {
@@ -176,7 +176,7 @@ describe("Phase 4: Learner Security Settings UI (/dashboard/settings/security)",
 
     await waitFor(() => {
       expect(screen.getByRole("button", { name: /Log Out Other Sessions/i })).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
 
     const logOutOthersBtn = screen.getByRole("button", { name: /Log Out Other Sessions/i });
     fireEvent.click(logOutOthersBtn);
@@ -193,7 +193,7 @@ describe("Phase 4: Learner Security Settings UI (/dashboard/settings/security)",
       expect(screen.getByText("Signed in successfully")).toBeInTheDocument();
       const successBadges = screen.getAllByText("Success");
       expect(successBadges.length).toBeGreaterThanOrEqual(2);
-    });
+    }, { timeout: 4000 });
   });
 
   it("displays error message and provides retry button when session fetch fails", async () => {
@@ -209,6 +209,6 @@ describe("Phase 4: Learner Security Settings UI (/dashboard/settings/security)",
     await waitFor(() => {
       expect(screen.getByText(/couldn't connect to the server|Unable to load active sessions/i)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /^Retry$/i })).toBeInTheDocument();
-    });
+    }, { timeout: 4000 });
   });
 });

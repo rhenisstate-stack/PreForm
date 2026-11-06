@@ -244,12 +244,13 @@ public class ExamAttemptsController : ControllerBase
         ILogger<ExamAttemptsController> logger,
         IResponseValidationService responseValidationService,
         IAttemptQuestionService attemptQuestionService)
-        : this(context, logger, responseValidationService, attemptQuestionService, null, null, null, null)
+        : this(context, logger, responseValidationService, attemptQuestionService, null, null, null, null, null)
     {
     }
 
     private readonly ISharedRateLimitingService? _rateLimitingService;
     private readonly IAssessmentSelectionService? _assessmentSelectionService;
+    private readonly IUserEntitlementService? _entitlementService;
 
     [ActivatorUtilitiesConstructor]
     public ExamAttemptsController(
@@ -260,7 +261,8 @@ public class ExamAttemptsController : ControllerBase
         ISessionSecurityService? sessionSecurityService,
         IPasswordHasher<User>? passwordHasher,
         ISharedRateLimitingService? rateLimitingService = null,
-        IAssessmentSelectionService? assessmentSelectionService = null)
+        IAssessmentSelectionService? assessmentSelectionService = null,
+        IUserEntitlementService? entitlementService = null)
     {
         _context = context;
         _logger = logger;
@@ -270,6 +272,7 @@ public class ExamAttemptsController : ControllerBase
         _passwordHasher = passwordHasher ?? new PasswordHasher<User>();
         _rateLimitingService = rateLimitingService;
         _assessmentSelectionService = assessmentSelectionService;
+        _entitlementService = entitlementService;
     }
 
     public ExamAttemptsController(
@@ -279,7 +282,7 @@ public class ExamAttemptsController : ControllerBase
         IAttemptQuestionService attemptQuestionService,
         ISessionSecurityService? sessionSecurityService,
         IPasswordHasher<User>? passwordHasher)
-        : this(context, logger, responseValidationService, attemptQuestionService, sessionSecurityService, passwordHasher, null, null)
+        : this(context, logger, responseValidationService, attemptQuestionService, sessionSecurityService, passwordHasher, null, null, null)
     {
     }
 
@@ -291,7 +294,7 @@ public class ExamAttemptsController : ControllerBase
         ISessionSecurityService? sessionSecurityService,
         IPasswordHasher<User>? passwordHasher,
         ISharedRateLimitingService? rateLimitingService)
-        : this(context, logger, responseValidationService, attemptQuestionService, sessionSecurityService, passwordHasher, rateLimitingService, null)
+        : this(context, logger, responseValidationService, attemptQuestionService, sessionSecurityService, passwordHasher, rateLimitingService, null, null)
     {
     }
 
@@ -505,6 +508,31 @@ public class ExamAttemptsController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot view another candidate's assessment attempt." });
         }
 
+        // Hard Pilot Entitlement Enforcement Boundary (Phase 7.9.2 Work Package B)
+        // If attempt is InProgress and entitlement has expired since start, return 403 Forbidden with ENTITLEMENT_EXPIRED.
+        // Attempt is NOT deleted; candidate work is preserved.
+        if (attempt.Status == AttemptStatus.InProgress && _entitlementService != null)
+        {
+            var entitlement = await _entitlementService.EvaluateExamAccessAsync(
+                caller.userId,
+                attempt.Exam?.Pathway,
+                attempt.ExamId,
+                GetClientIpAddress(),
+                HttpContext.TraceIdentifier,
+                cancellationToken);
+
+            if (!entitlement.IsEntitled)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = entitlement.ErrorCode,
+                    error = entitlement.Reason,
+                    entitlementStatus = entitlement.Status
+                });
+            }
+        }
+
         // Candidate-facing DTO contract: full EF entities are never serialized.
         // Correctness/scores are disclosed only after authoritative finalization and subject to ReviewPolicy.
         var isCompleted = attempt.Status == AttemptStatus.Completed;
@@ -528,6 +556,22 @@ public class ExamAttemptsController : ControllerBase
         if (string.Equals(reviewPolicy, "Never", StringComparison.OrdinalIgnoreCase))
         {
             canShowRationales = false;
+        }
+
+        if (isCompleted && canShowRationales && _entitlementService != null)
+        {
+            var entitlement = await _entitlementService.EvaluateExamAccessAsync(
+                caller.userId,
+                attempt.Exam?.Pathway,
+                attempt.ExamId,
+                GetClientIpAddress(),
+                HttpContext.TraceIdentifier,
+                cancellationToken);
+
+            if (!entitlement.IsEntitled)
+            {
+                canShowRationales = false;
+            }
         }
 
         object? metadataSnapshotObj = null;
@@ -737,34 +781,6 @@ public class ExamAttemptsController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> ReauthenticateAttempt(string id, [FromBody] ReauthenticateAttemptRequest request, CancellationToken cancellationToken)
     {
-        var clientIp = GetClientIpAddress() ?? "unknown";
-        var rateLimitKey = $"{clientIp}:{id}";
-
-        if (_rateLimitingService != null)
-        {
-            var limitCheck = await _rateLimitingService.CheckRateLimitAsync(rateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
-            if (limitCheck.IsRateLimited)
-            {
-                Response.Headers.Append("Retry-After", limitCheck.RetryAfterSeconds.ToString());
-                return StatusCode(StatusCodes.Status429TooManyRequests, new
-                {
-                    success = false,
-                    errorCode = "RATE_LIMIT_EXCEEDED",
-                    error = $"Too many failed reauthentication attempts. Please wait {limitCheck.RetryAfterSeconds} seconds before trying again."
-                });
-            }
-        }
-        else if (IsReauthRateLimited(rateLimitKey, out var retryAfterSeconds))
-        {
-            Response.Headers.Append("Retry-After", retryAfterSeconds.ToString());
-            return StatusCode(StatusCodes.Status429TooManyRequests, new
-            {
-                success = false,
-                errorCode = "RATE_LIMIT_EXCEEDED",
-                error = $"Too many failed reauthentication attempts. Please wait {retryAfterSeconds} seconds before trying again."
-            });
-        }
-
         if (request == null || string.IsNullOrWhiteSpace(request.Password))
         {
             return BadRequest(new
@@ -791,6 +807,38 @@ public class ExamAttemptsController : ControllerBase
                 errorCode = "ATTEMPT_NOT_FOUND",
                 error = "Assessment attempt not found."
             });
+        }
+
+        // Shared Server-Side Rate Limiting (Phase 7.9.2 Work Package D)
+        // Keyed on attempt ID and user ID to prevent IP-rotation circumvention.
+        var attemptRateLimitKey = $"reauth_attempt:{id}";
+        var userRateLimitKey = $"reauth_user:{attempt.UserId}";
+
+        if (_rateLimitingService != null)
+        {
+            var attemptCheck = await _rateLimitingService.CheckRateLimitAsync(attemptRateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
+            if (attemptCheck.IsRateLimited)
+            {
+                Response.Headers.Append("Retry-After", attemptCheck.RetryAfterSeconds.ToString());
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    success = false,
+                    errorCode = "RATE_LIMIT_EXCEEDED",
+                    error = $"Too many failed reauthentication attempts. Please wait {attemptCheck.RetryAfterSeconds} seconds before trying again."
+                });
+            }
+
+            var userCheck = await _rateLimitingService.CheckRateLimitAsync(userRateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
+            if (userCheck.IsRateLimited)
+            {
+                Response.Headers.Append("Retry-After", userCheck.RetryAfterSeconds.ToString());
+                return StatusCode(StatusCodes.Status429TooManyRequests, new
+                {
+                    success = false,
+                    errorCode = "RATE_LIMIT_EXCEEDED",
+                    error = $"Too many failed reauthentication attempts. Please wait {userCheck.RetryAfterSeconds} seconds before trying again."
+                });
+            }
         }
 
         // Ownership enforcement: candidate must be the owner of the attempt
@@ -857,17 +905,90 @@ public class ExamAttemptsController : ControllerBase
             });
         }
 
+        if (string.Equals(attempt.User.AccountStatus, "Suspended", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new
+            {
+                success = false,
+                errorCode = "ACCOUNT_SUSPENDED",
+                error = $"Account is suspended: {attempt.User.SuspensionReason ?? "Administrative suspension"}.",
+                requiresAdminIntervention = true
+            });
+        }
+
+        // Two-Tier Reauthentication Policy (Phase 7.9.2 Work Package C)
+        // Tier 1: Involuntary/Transient Session Interruption (idle timeout, heartbeat expiry, multi-tab lock) -> recoverable via password.
+        // Tier 2: Deliberate Administrative Revocation or Account Suspension -> strictly blocked with ADMIN_REVOCATION_HOLD.
+        var latestRevokedSession = await _context.UserSessions
+            .Where(s => s.UserId == attempt.UserId && s.Revoked)
+            .OrderByDescending(s => s.RevokedAt ?? s.CreatedAt)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (latestRevokedSession != null && !string.IsNullOrWhiteSpace(latestRevokedSession.RevocationReason))
+        {
+            var reason = latestRevokedSession.RevocationReason.Trim();
+            bool isAdminRevocation = reason.StartsWith("Admin", StringComparison.OrdinalIgnoreCase) ||
+                                     reason.StartsWith("SecurityViolation", StringComparison.OrdinalIgnoreCase) ||
+                                     reason.StartsWith("PolicyEnforcement", StringComparison.OrdinalIgnoreCase) ||
+                                     string.Equals(reason, "AdminRevoked", StringComparison.OrdinalIgnoreCase) ||
+                                     string.Equals(reason, "AdminRevokeAll", StringComparison.OrdinalIgnoreCase);
+
+            if (isAdminRevocation)
+            {
+                _context.AuditLogs.Add(new AuditLog
+                {
+                    ActorId = attempt.UserId,
+                    Action = "ReauthenticationBlockedAdminHold",
+                    EntityType = "ExamAttempt",
+                    EntityId = attempt.Id,
+                    Description = $"Reauthentication blocked for user {attempt.UserId}: Session was administratively revoked ({reason}).",
+                    Outcome = "Forbidden",
+                    Severity = "Warning",
+                    Timestamp = DateTime.UtcNow
+                });
+                await _context.SaveChangesAsync(cancellationToken);
+
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = "ADMIN_REVOCATION_HOLD",
+                    error = "Session was administratively revoked. Reauthentication requires administrative intervention.",
+                    requiresAdminIntervention = true
+                });
+            }
+        }
+
+        // Hard Pilot Entitlement Enforcement on Resumption (Work Package B)
+        if (_entitlementService != null)
+        {
+            var entitlement = await _entitlementService.EvaluateExamAccessAsync(
+                attempt.UserId,
+                attempt.Exam?.Pathway,
+                attempt.ExamId,
+                GetClientIpAddress(),
+                HttpContext.TraceIdentifier,
+                cancellationToken);
+
+            if (!entitlement.IsEntitled)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = entitlement.ErrorCode,
+                    error = entitlement.Reason,
+                    entitlementStatus = entitlement.Status
+                });
+            }
+        }
+
         // Authoritative credential verification
         var verifyResult = _passwordHasher.VerifyHashedPassword(attempt.User, attempt.User.PasswordHash, request.Password);
         if (verifyResult == PasswordVerificationResult.Failed)
         {
             if (_rateLimitingService != null)
             {
-                await _rateLimitingService.RecordFailedAttemptAsync(rateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
-            }
-            else
-            {
-                RecordFailedReauthAttempt(rateLimitKey);
+                await _rateLimitingService.RecordFailedAttemptAsync(attemptRateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
+                await _rateLimitingService.RecordFailedAttemptAsync(userRateLimitKey, 5, TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(15), cancellationToken);
             }
             return Unauthorized(new
             {
@@ -877,14 +998,11 @@ public class ExamAttemptsController : ControllerBase
             });
         }
 
-        // On successful credential verification, clear rate limit
+        // On successful credential verification, clear shared rate limits
         if (_rateLimitingService != null)
         {
-            await _rateLimitingService.ResetRateLimitAsync(rateLimitKey, cancellationToken);
-        }
-        else
-        {
-            ClearFailedReauthAttempts(rateLimitKey);
+            await _rateLimitingService.ResetRateLimitAsync(attemptRateLimitKey, cancellationToken);
+            await _rateLimitingService.ResetRateLimitAsync(userRateLimitKey, cancellationToken);
         }
 
         // Create fresh replacement session via SessionSecurityService
@@ -999,6 +1117,29 @@ public class ExamAttemptsController : ControllerBase
         var normalizedPathway = !string.IsNullOrWhiteSpace(request?.Pathway)
             ? (string.Equals(request.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn")
             : (string.Equals(user?.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn");
+
+        // Hard Pilot Entitlement Enforcement Boundary (Phase 7.9.2 Work Package B)
+        if (_entitlementService != null)
+        {
+            var entitlement = await _entitlementService.EvaluateExamAccessAsync(
+                caller.userId,
+                normalizedPathway,
+                request?.ExamId,
+                GetClientIpAddress(),
+                HttpContext.TraceIdentifier,
+                cancellationToken);
+
+            if (!entitlement.IsEntitled)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = entitlement.ErrorCode,
+                    error = entitlement.Reason,
+                    entitlementStatus = entitlement.Status
+                });
+            }
+        }
 
         Exam exam;
         if (!string.IsNullOrWhiteSpace(request?.ExamId))
@@ -1389,6 +1530,29 @@ public class ExamAttemptsController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot record response for another candidate's attempt." });
         }
 
+        // Hard Pilot Entitlement Enforcement Boundary (Phase 7.9.2 Work Package B)
+        if (_entitlementService != null)
+        {
+            var entitlement = await _entitlementService.EvaluateExamAccessAsync(
+                caller.userId,
+                attempt.Exam?.Pathway,
+                attempt.ExamId,
+                GetClientIpAddress(),
+                HttpContext.TraceIdentifier,
+                cancellationToken);
+
+            if (!entitlement.IsEntitled)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = entitlement.ErrorCode,
+                    error = entitlement.Reason,
+                    entitlementStatus = entitlement.Status
+                });
+            }
+        }
+
         if (attempt.Status != AttemptStatus.InProgress)
         {
             return BadRequest(new { success = false, error = "Cannot add responses to a completed or abandoned attempt." });
@@ -1535,6 +1699,53 @@ public class ExamAttemptsController : ControllerBase
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot submit another candidate's attempt." });
         }
 
+        // Hard Pilot Entitlement Enforcement Boundary (Phase 7.9.2 Work Package B)
+        if (_entitlementService != null)
+        {
+            var entitlement = await _entitlementService.EvaluateExamAccessAsync(
+                caller.userId,
+                attempt.Exam?.Pathway,
+                attempt.ExamId,
+                GetClientIpAddress(),
+                HttpContext.TraceIdentifier,
+                cancellationToken);
+
+            if (!entitlement.IsEntitled)
+            {
+                // Graceful In-Window Completion Policy: If started while entitled and completed within exam time limit, allow submission
+                bool withinTimeLimit = false;
+                if (attempt.Exam != null && attempt.Exam.TimeLimitMinutes > 0)
+                {
+                    var deadline = attempt.StartedAt.AddMinutes(attempt.Exam.TimeLimitMinutes);
+                    withinTimeLimit = DateTime.UtcNow <= deadline;
+                }
+
+                if (!withinTimeLimit || entitlement.ErrorCode == "ACCOUNT_SUSPENDED" || entitlement.ErrorCode == "ACCOUNT_INACTIVE")
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new
+                    {
+                        success = false,
+                        errorCode = entitlement.ErrorCode,
+                        error = entitlement.Reason,
+                        entitlementStatus = entitlement.Status
+                    });
+                }
+
+                _context.AuditLogs.Add(new AuditLog
+                {
+                    ActorId = caller.userId,
+                    Action = "EntitlementGracePeriodApplied",
+                    EntityType = "ExamAttempt",
+                    EntityId = attempt.Id,
+                    Description = "Attempt submitted during entitlement expiration grace period within valid exam time window.",
+                    Outcome = "Success",
+                    Severity = "Warning",
+                    Timestamp = DateTime.UtcNow
+                });
+                await _context.SaveChangesAsync(cancellationToken);
+            }
+        }
+
         if (attempt.Status != AttemptStatus.InProgress)
         {
             return BadRequest(new { success = false, error = "Attempt has already been completed." });
@@ -1641,6 +1852,30 @@ public class ExamAttemptsController : ControllerBase
             .Include(ea => ea.Responses)
             .Include(ea => ea.Exam)
             .FirstOrDefaultAsync(ea => ea.Id == attemptId, cancellationToken);
+
+        // Hard Pilot Entitlement Enforcement Boundary (Phase 7.9.2 Work Package B)
+        // Offline / delayed batch response synchronization requires valid pilot entitlement.
+        if (_entitlementService != null)
+        {
+            var entitlement = await _entitlementService.EvaluateExamAccessAsync(
+                caller.userId,
+                existingAttempt?.Exam?.Pathway,
+                attemptId,
+                GetClientIpAddress(),
+                HttpContext.TraceIdentifier,
+                cancellationToken);
+
+            if (!entitlement.IsEntitled)
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = entitlement.ErrorCode,
+                    error = entitlement.Reason,
+                    entitlementStatus = entitlement.Status
+                });
+            }
+        }
 
         if (existingAttempt != null)
         {

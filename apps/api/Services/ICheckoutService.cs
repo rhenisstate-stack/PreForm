@@ -351,32 +351,33 @@ public class CheckoutService : ICheckoutService
             return false;
         }
 
-        // 1. Signature Verification with Timing-Safe Comparison & Fail-Closed Enforcement
-        var env = GetAppEnvironment();
-        var isProd = env == "production" || env == "prod";
-
-        if (isProd && string.IsNullOrWhiteSpace(signatureHeader))
+        // 1. Signature Verification with Timing-Safe Comparison & Fail-Closed Enforcement (Phase 7.9.2 Work Package I)
+        // Hard fail-closed requirement: Signatures are required in all environments.
+        if (string.IsNullOrWhiteSpace(signatureHeader))
         {
-            _logger.LogWarning("Webhook rejected in production: Missing required signature header.");
+            _logger.LogWarning("Webhook rejected: Missing required signature header across all environments.");
             return false;
         }
 
-        var webhookSecret = _configuration["WEBHOOK_SIGNING_SECRET"] ?? "prepford-default-test-webhook-secret-32-chars!";
-        if (!string.IsNullOrWhiteSpace(signatureHeader))
+        var webhookSecret = _configuration["WEBHOOK_SIGNING_SECRET"];
+        if (string.IsNullOrWhiteSpace(webhookSecret))
         {
-            var raw = webhook.RawPayload ?? $"{webhook.EventId}|{webhook.EventType}";
-            var expectedSignature = Convert.ToHexString(
-                HMACSHA256.HashData(Encoding.UTF8.GetBytes(webhookSecret), Encoding.UTF8.GetBytes(raw))
-            ).ToLowerInvariant();
+            _logger.LogError("Webhook rejected: WEBHOOK_SIGNING_SECRET configuration is missing or empty. Failing closed.");
+            return false;
+        }
 
-            var sigBytes = Encoding.UTF8.GetBytes(signatureHeader.Trim().ToLowerInvariant());
-            var expectedBytes = Encoding.UTF8.GetBytes(expectedSignature);
+        var raw = webhook.RawPayload ?? $"{webhook.EventId}|{webhook.EventType}";
+        var expectedSignature = Convert.ToHexString(
+            HMACSHA256.HashData(Encoding.UTF8.GetBytes(webhookSecret), Encoding.UTF8.GetBytes(raw))
+        ).ToLowerInvariant();
 
-            if (sigBytes.Length != expectedBytes.Length || !CryptographicOperations.FixedTimeEquals(sigBytes, expectedBytes))
-            {
-                _logger.LogWarning("Webhook signature mismatch for event {EventId}", webhook.EventId);
-                return false;
-            }
+        var sigBytes = Encoding.UTF8.GetBytes(signatureHeader.Trim().ToLowerInvariant());
+        var expectedBytes = Encoding.UTF8.GetBytes(expectedSignature);
+
+        if (sigBytes.Length != expectedBytes.Length || !CryptographicOperations.FixedTimeEquals(sigBytes, expectedBytes))
+        {
+            _logger.LogWarning("Webhook signature mismatch for event {EventId}", webhook.EventId);
+            return false;
         }
 
         // 2. Idempotency Check: Reject duplicate event delivery

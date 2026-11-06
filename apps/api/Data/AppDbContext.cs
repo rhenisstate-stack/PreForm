@@ -526,5 +526,24 @@ public class AppDbContext : DbContext
                   .HasForeignKey(fr => fr.FlashcardId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
+
+        // ── Subscriptions & Commercial Integrity (Phase 7.9.2) ──
+        modelBuilder.Entity<UserSubscription>(entity =>
+        {
+            entity.HasIndex(s => new { s.UserId, s.PlanId })
+                  .HasDatabaseName("idx_user_subscriptions_active_unique")
+                  .HasFilter("\"Status\" = 1")
+                  .IsUnique();
+            entity.HasIndex(s => s.UserId);
+            entity.HasIndex(s => s.Status);
+        });
+
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.HasIndex(pt => pt.ProviderEventId)
+                  .HasDatabaseName("idx_payment_transactions_provider_event_id")
+                  .IsUnique();
+            entity.HasIndex(pt => pt.OrderId);
+        });
     }
 }

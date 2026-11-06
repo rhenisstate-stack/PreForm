@@ -474,6 +474,36 @@ describe("Phase 3 — BFF Session ID Synchronization & Client Device Identificat
       expect(afterCookie === "" || afterCookie === undefined).toBe(true);
     });
 
+    it("fails closed with 503 and preserves session cookie when backend authentication is unavailable", async () => {
+      const serverSession = createServerSession({
+        userId: testUserId,
+        email: testEmail,
+        sessionId: authoritativeBackendSessionId,
+      });
+
+      mockCookies.set("prepford_session", serverSession.token);
+
+      // Mock backend returning 503 / network failure
+      vi.spyOn(authService, "getSession").mockResolvedValueOnce({
+        success: false,
+        status: 503,
+        headers: new Headers(),
+        error: "Backend temporarily unavailable.",
+      });
+
+      const res = await sessionRoute();
+      expect(res.status).toBe(503);
+
+      const body = await res.json();
+      expect(body.authenticated).toBe(false);
+      expect(body.user).toBeNull();
+      expect(body.unavailable).toBe(true);
+
+      // Cookie MUST NOT be cleared on transient backend failure
+      const afterCookie = mockCookies.get("prepford_session");
+      expect(afterCookie).toBe(serverSession.token);
+    });
+
     it("tampered session cookies are strictly rejected", async () => {
       const validSession = createServerSession({
         userId: testUserId,
