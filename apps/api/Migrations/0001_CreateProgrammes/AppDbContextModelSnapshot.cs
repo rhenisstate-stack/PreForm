@@ -969,7 +969,8 @@ namespace Preform.Api.Migrations
                     b.HasIndex("OrderId");
 
                     b.HasIndex("ProviderEventId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("idx_payment_transactions_provider_event_id");
 
                     b.ToTable("PaymentTransactions", "public");
                 });
@@ -2004,6 +2005,11 @@ namespace Preform.Api.Migrations
                     b.HasIndex("Status");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "PlanId")
+                        .IsUnique()
+                        .HasDatabaseName("idx_user_subscriptions_active_unique")
+                        .HasFilter("\"Status\" = 1");
 
                     b.ToTable("UserSubscriptions", "public");
                 });
