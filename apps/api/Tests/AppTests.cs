@@ -1027,11 +1027,26 @@ public class ExamAttemptsPersistenceTests : IClassFixture<WebApplicationFactory<
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             });
+            var planId = $"plan_pilot_{pathway}";
+            if (!await db.SubscriptionPlans.AnyAsync(p => p.Id == planId))
+            {
+                db.SubscriptionPlans.Add(new SubscriptionPlan
+                {
+                    Id = planId,
+                    Name = $"Pilot {pathway.ToUpper()} Plan",
+                    Slug = $"pilot-{pathway.ToLower()}",
+                    Pathway = pathway.ToUpper(),
+                    PlanType = "pilot_grant",
+                    PriceCents = 0,
+                    IsActive = true
+                });
+            }
+
             db.UserSubscriptions.Add(new UserSubscription
             {
                 Id = $"sub_{candidateId}",
                 UserId = candidateId,
-                PlanId = $"plan_pilot_{pathway}",
+                PlanId = planId,
                 OrderId = "pilot_grant_test",
                 Pathway = pathway,
                 Status = SubscriptionStatus.Active,
