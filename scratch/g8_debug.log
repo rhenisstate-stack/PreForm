@@ -1,0 +1,225 @@
+﻿
+> @prepford/web@0.1.0 build
+> next build --debug-prerender
+
+node.exe : ΓÜá You are using a non-standard "NODE_ENV" value in your environment. This creates inconsistencies in the 
+project and is strongly advised against. Read more: https://nextjs.org/docs/messages/non-standard-node-env
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (ΓÜá You are usi...andard-node-env:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+ΓÜá Prerendering is running in debug mode with NODE_ENV='development'. This will affect performance and should not be 
+used for production.
+Γû▓ Next.js 16.4.3 (Turbopack)
+- Environments: .env.local
+ΓÜá `experimental.turbopackPluginRuntimeStrategy = 'forceWorkerThreads'` is enabled, bypassing protection against a 
+known potential crash in Node.js >=24.13.1.
+A Node.js worker-thread teardown bug can abort the process when a native addon, such as fsevents, has a live Node-API 
+threadsafe function as a worker exits.
+See https://github.com/nodejs/node/issues/65100.
+Γ£ô Running next.config.ts took 141ms
+- Cache Components enabled
+- Partial Prefetching enabled
+- Experiments (use with caution):
+  Γ£ô allowDevelopmentBuild (enabled by `--debug-prerender`)
+  ┬╖ cpus: 1
+  Γ¿» prerenderEarlyExit (disabled by `--debug-prerender`)
+  Γ£ô serverSourceMaps (enabled by `--debug-prerender`)
+  ┬╖ staticGenerationMaxConcurrency: 1
+  ┬╖ staticGenerationMinPagesPerWorker: 100
+  ┬╖ staticGenerationRetryCount: 5
+  Γ¿» turbopackMinify (disabled by `--debug-prerender`)
+  ┬╖ turbopackPluginRuntimeStrategy: "forceWorkerThreads"
+
+  Creating an optimized production build ...
+Γ£ô Compiled successfully in 35.3s
+  Running TypeScript ...
+Γ£ô Finished filesystem cache database compaction in 32.7s
+  Finished TypeScript in 97s ...
+  Collecting page data using 1 worker ...
+  Generating static pages using 1 worker (0/139) ...
+  Generating static pages using 1 worker (34/139) 
+Entitlements GET error: Error: Route /api/entitlements needs to bail out of prerendering at this point because it used 
+request.headers.
+    at resolveSession (src\lib\session.ts:342:34)
+    at async GET (src\app\api\entitlements\route.ts:7:21)
+  340 |
+  341 |   if (!cookieValue && request) {
+> 342 |     const cookieHeader = request.headers.get("cookie");
+      |                                  ^
+  343 |     if (cookieHeader) {
+  344 |       const match = cookieHeader.match(/(?:prepford_session|preform_session)=([^;]+)/);
+  345 |       if (match) { {
+  digest: 'NEXT_PRERENDER_INTERRUPTED'
+}
+  Generating static pages using 1 worker (69/139) 
+  Generating static pages using 1 worker (104/139) 
+Γ£ô Generating static pages using 1 worker (139/139) in 116s
+  Finalizing page optimization ...
+
+Route (app)
+Γöî Γùï /
+Γö£ Γùï /_not-found
+Γö£ Γùï /about
+Γö£ Γùï /admin
+Γö£ Γùï /admin/audit-logs
+Γö£ Γùï /admin/examinations
+Γö£   /admin/examinations/[id]
+Γöé Γöö ΓùÉ /admin/examinations/[id]
+Γö£   /admin/examinations/[id]/revisions/[revisionId]
+Γöé Γöö ΓùÉ /admin/examinations/[id]/revisions/[revisionId]
+Γö£ Γùï /admin/monitoring
+Γö£ Γùï /admin/question-types
+Γö£ Γùï /admin/questions
+Γö£ Γùï /admin/reports
+Γö£ Γùï /admin/roles
+Γö£ Γùï /admin/security/ip-rules
+Γö£ Γùï /admin/security/sessions
+Γö£ Γùï /admin/subscriptions
+Γö£ Γùï /admin/users
+Γö£ ╞Æ /api/admin/audit-logs
+Γö£ ╞Æ /api/admin/audit-logs/[id]
+Γö£ ╞Æ /api/admin/client-needs
+Γö£ ╞Æ /api/admin/curriculum/tree
+Γö£ ╞Æ /api/admin/examinations
+Γö£ ╞Æ /api/admin/examinations/[id]
+Γö£ ╞Æ /api/admin/examinations/[id]/duplicate
+Γö£ ╞Æ /api/admin/examinations/[id]/revisions
+Γö£ ╞Æ /api/admin/examinations/eligible-questions
+Γö£ ╞Æ /api/admin/examinations/revisions/[revisionId]
+Γö£ ╞Æ /api/admin/examinations/revisions/[revisionId]/[action]
+Γö£ ╞Æ /api/admin/examinations/revisions/[revisionId]/composition
+Γö£ ╞Æ /api/admin/examinations/revisions/[revisionId]/pool-preview
+Γö£ ╞Æ /api/admin/examinations/revisions/[revisionId]/preview
+Γö£ ╞Æ /api/admin/examinations/revisions/[revisionId]/questions
+Γö£ ╞Æ /api/admin/examinations/revisions/[revisionId]/questions/[questionId]
+Γö£ ╞Æ /api/admin/examinations/revisions/[revisionId]/questions/order
+Γö£ ╞Æ /api/admin/examinations/revisions/[revisionId]/readiness
+Γö£ ╞Æ /api/admin/examinations/revisions/[revisionId]/validate
+Γö£ ╞Æ /api/admin/monitoring/health
+Γö£ ╞Æ /api/admin/permissions
+Γö£ ╞Æ /api/admin/questions
+Γö£ ╞Æ /api/admin/questions/[id]
+Γö£ ╞Æ /api/admin/questions/[id]/status
+Γö£ ╞Æ /api/admin/questions/[id]/versions
+Γö£ ╞Æ /api/admin/reports/assessments
+Γö£ ╞Æ /api/admin/reports/assessments/export
+Γö£ ╞Æ /api/admin/reports/examinations/[id]/revisions
+Γö£ ╞Æ /api/admin/reports/overview
+Γö£ ╞Æ /api/admin/reports/questions
+Γö£ ╞Æ /api/admin/reports/questions/[id]
+Γö£ ╞Æ /api/admin/reports/questions/export
+Γö£ ╞Æ /api/admin/roles
+Γö£ ╞Æ /api/admin/roles/[id]
+Γö£ ╞Æ /api/admin/roles/[id]/permissions
+Γö£ ╞Æ /api/admin/roles/[id]/permissions/[permissionId]
+Γö£ ╞Æ /api/admin/security/events
+Γö£ ╞Æ /api/admin/security/ip-rules
+Γö£ ╞Æ /api/admin/security/ip-rules/[id]
+Γö£ ╞Æ /api/admin/security/metrics
+Γö£ ╞Æ /api/admin/security/session-policy
+Γö£ ╞Æ /api/admin/security/session-policy/reset
+Γö£ ╞Æ /api/admin/security/sessions
+Γö£ ╞Æ /api/admin/security/sessions/[sessionId]/revoke
+Γö£ ╞Æ /api/admin/security/users/[userId]/revoke-sessions
+Γö£ ╞Æ /api/admin/subscriptions
+Γö£ ╞Æ /api/admin/subscriptions/[id]
+Γö£ ╞Æ /api/admin/users
+Γö£ ╞Æ /api/admin/users/[id]
+Γö£ ╞Æ /api/admin/users/[id]/roles
+Γö£ ╞Æ /api/admin/users/[id]/roles/[roleId]
+Γö£ ╞Æ /api/admin/users/[id]/status
+Γö£ ╞Æ /api/assessments/[id]
+Γö£ ╞Æ /api/assessments/available
+Γö£ ╞Æ /api/attempts
+Γö£ ╞Æ /api/attempts/[id]
+Γö£ ╞Æ /api/attempts/[id]/questions
+Γö£ ╞Æ /api/attempts/[id]/reauthenticate
+Γö£ ╞Æ /api/attempts/[id]/responses
+Γö£ ╞Æ /api/attempts/[id]/submit
+Γö£ ╞Æ /api/attempts/sync
+Γö£ ╞Æ /api/auth/forgot-password
+Γö£ ╞Æ /api/auth/google
+Γö£ ╞Æ /api/auth/google/callback
+Γö£ ╞Æ /api/auth/login
+Γö£ ╞Æ /api/auth/logout
+Γö£ ╞Æ /api/auth/register
+Γö£ ╞Æ /api/auth/reset-password
+Γö£ ╞Æ /api/auth/session
+Γö£ ╞Æ /api/auth/validate-reset-token
+Γö£ ╞Æ /api/checkout
+Γö£ ╞Æ /api/contact
+Γö£ ╞Æ /api/entitlements
+Γö£ ╞Æ /api/exam-attempts/[id]/reauthenticate
+Γö£ ╞Æ /api/learner/analytics/client-needs
+Γö£ ╞Æ /api/learner/analytics/curriculum
+Γö£ ╞Æ /api/learner/analytics/readiness-trend
+Γö£ ╞Æ /api/learner/analytics/recommendations
+Γö£ ╞Æ /api/learner/analytics/summary
+Γö£ ╞Æ /api/profile
+Γö£ ╞Æ /api/profile/change-password
+Γö£ ╞Æ /api/profile/image
+Γö£ ╞Æ /api/questions/[id]/flag
+Γö£ ╞Æ /api/security/events
+Γö£ ╞Æ /api/security/sessions
+Γö£ ╞Æ /api/security/sessions/[sessionId]
+Γö£ ╞Æ /api/security/sessions/revoke-all
+Γö£ ╞Æ /api/security/sessions/revoke-others
+Γö£ ╞Æ /api/study/[[...path]]
+Γö£ ╞Æ /api/subscriptions
+Γö£ ╞Æ /api/testimonials
+Γö£ Γùï /blog
+Γö£   /blog/[slug]
+Γöé Γö£ ΓùÉ /blog/[slug]
+Γöé Γö£ Γùï /blog/understanding-the-next-generation-nclex
+Γöé Γö£ Γùï /blog/mastering-ngn-clinical-judgment-measurement-model
+Γöé Γöö ΓùÉ [+9 more paths]
+Γö£ Γùï /cart
+Γö£ Γùï /contact
+Γö£ Γùï /courses
+Γö£ Γùï /dashboard
+Γö£ Γùï /dashboard/settings/security
+Γö£ Γùï /dashboard/study
+Γö£ Γùï /dashboard/study/flashcards
+Γö£ Γùï /dashboard/study/quizzes
+Γö£ Γùï /dashboard/study/review
+Γö£ Γùï /educators
+Γö£ Γùï /faq
+Γö£ Γùï /features
+Γö£ Γùï /forgot-password
+Γö£ Γùï /manifest.webmanifest
+Γö£ Γùï /nclex-pn
+Γö£ Γùï /nclex-rn
+Γö£ Γùï /privacy-policy
+Γö£ Γùï /profile
+Γö£   /programmes/[programme]
+Γöé Γö£ ΓùÉ /programmes/[programme]
+Γöé Γö£ Γùï /programmes/rn
+Γöé Γöö Γùï /programmes/pn
+Γö£ Γùï /reset-password
+Γö£ Γùï /robots.txt
+Γö£ Γùï /sign-in
+Γö£ Γùï /sign-up
+Γö£ ╞Æ /sitemap.xml
+Γö£ Γùï /study-guide
+Γö£   /study-guide/[category]
+Γöé Γö£ ΓùÉ /study-guide/[category]
+Γöé Γö£ Γùï /study-guide/medical-surgical
+Γöé Γö£ Γùï /study-guide/pharmacology
+Γöé Γöö ΓùÉ [+5 more paths]
+Γö£   /study-guide/[category]/[subject]
+Γöé Γö£ ΓùÉ /study-guide/[category]/[subject]
+Γöé Γö£ ΓùÉ /study-guide/medical-surgical/[subject]
+Γöé Γö£ Γùï /study-guide/medical-surgical/cardiovascular-disorders
+Γöé Γöö ΓùÉ [+15 more paths]
+Γö£ Γùï /subscriptions
+Γö£ Γùï /terms-and-conditions
+Γöö Γùï /testimonials
+
+
+Γùï  (Static)             prerendered as static content
+ΓùÉ  (Partial Prerender)  prerendered as static HTML with dynamic server-streamed content
+╞Æ  (Dynamic)            server-rendered on demand
+
