@@ -69,7 +69,14 @@ import {
   QuestionType,
   getPerformanceTier,
 } from "@/lib/assessment-store";
-import type { AvailableAssessmentDto, CandidateQuestionDto, ClientNeedMastery, StudyRecommendation } from "@/lib/api-services";
+import type {
+  AvailableAssessmentDto,
+  CandidateQuestionDto,
+  ClientNeedMastery,
+  StudyRecommendation,
+  LearnerAnalyticsSummary,
+  ReadinessTrend,
+} from "@/lib/api-services";
 
 export const RECENT_ACTIVITY_STORAGE_KEY = "prepford_recent_study_activity";
 
@@ -199,13 +206,41 @@ export function DashboardClient() {
     }
   }, [userId, userEmail, userName, userDisplayName, userRole, userPathway]);
 
-  // Phase 5 Learner Analytics: Live Client Needs & Recommendations
+  // Authoritative Learner Analytics from PostgreSQL
+  const [analyticsSummary, setAnalyticsSummary] = React.useState<LearnerAnalyticsSummary | null>(null);
+  const [readinessTrend, setReadinessTrend] = React.useState<ReadinessTrend | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = React.useState<boolean>(false);
   const [clientNeeds, setClientNeeds] = React.useState<ClientNeedMastery[]>([]);
   const [recommendations, setRecommendations] = React.useState<StudyRecommendation[]>([]);
 
   React.useEffect(() => {
     if (!userId) return;
     let cancelled = false;
+    setAnalyticsLoading(true);
+
+    fetch("/api/learner/analytics/summary")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        if (data && data.success && data.data) {
+          setAnalyticsSummary(data.data);
+        } else if (data && typeof data.totalCompletedAttempts === "number") {
+          setAnalyticsSummary(data);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/learner/analytics/readiness-trend")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled) return;
+        if (data && data.success && data.data) {
+          setReadinessTrend(data.data);
+        } else if (data && data.attempts) {
+          setReadinessTrend(data);
+        }
+      })
+      .catch(() => {});
 
     fetch("/api/learner/analytics/client-needs")
       .then((res) => (res.ok ? res.json() : null))
@@ -229,7 +264,10 @@ export function DashboardClient() {
           setRecommendations(data);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setAnalyticsLoading(false);
+      });
 
     return () => {
       cancelled = true;
@@ -240,6 +278,15 @@ export function DashboardClient() {
   const [createTestType, setCreateTestType] = React.useState<"tutored_cat" | "rat">("tutored_cat");
   const [testQuestionCount, setTestQuestionCount] = React.useState<number>(5);
   const [testInProgress, setTestInProgress] = React.useState<boolean>(false);
+
+  // Dedicated launcher for Create Test Now and Take Readiness Assessment
+  const handleOpenCreateTest = React.useCallback((type: "tutored_cat" | "rat" = "tutored_cat") => {
+    setCreateTestType(type);
+    setSelectedAssessmentId(null);
+    setTestQuestionCount(type === "rat" ? 65 : 5);
+    setTestInProgress(false);
+    setCreateModalOpen(true);
+  }, []);
   const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number | number[]>>({});
   const [activeQuestionIndex, setActiveQuestionIndex] = React.useState<number>(0);
   const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
@@ -631,7 +678,7 @@ export function DashboardClient() {
       <aside
         data-testid="learner-sidebar"
         aria-label="Learner Workspace Navigation"
-        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-[#0C232C] dark:bg-[#07161C] text-slate-100 border-r border-[#153441] transition-all duration-200 ease-in-out ${
+        className={`fixed top-0 bottom-0 left-0 z-50 flex flex-col bg-card border-r border-border text-foreground dark:bg-[#07161C] dark:border-[#153441] dark:text-slate-100 transition-all duration-200 ease-in-out ${
           sidebarCollapsed ? "w-20" : "w-64"
         } ${
           mobileDrawerOpen
@@ -640,7 +687,7 @@ export function DashboardClient() {
         }`}
       >
         {/* Brand Header */}
-        <div className="flex items-center justify-between px-4 py-4 border-b border-[#153441]">
+        <div className="flex items-center justify-between px-4 py-4 border-b border-border dark:border-[#153441]">
           <Link
             href="/"
             className="flex items-center gap-3 transition-opacity hover:opacity-90"
@@ -650,7 +697,7 @@ export function DashboardClient() {
             <img
               src={BRAND.logo.assetPath}
               alt={BRAND.logo.alt}
-              className="h-10 w-10 rounded-xl object-contain shrink-0 bg-white/10 p-1"
+              className="h-10 w-10 rounded-xl object-contain shrink-0 bg-muted/60 dark:bg-white/10 p-1 border border-border/60 dark:border-white/10"
               width={40}
               height={40}
             />
@@ -659,8 +706,8 @@ export function DashboardClient() {
                 data-testid="brand-wordmark-stacked"
                 className="flex flex-col font-serif tracking-tight font-bold leading-none text-left -space-y-0.5 justify-center"
               >
-                <span className="text-base sm:text-lg leading-none text-teal-300">Prep</span>
-                <span className="text-base sm:text-lg leading-none text-white">Ford</span>
+                <span className="text-base sm:text-lg leading-none text-teal-600 dark:text-teal-300">Prep</span>
+                <span className="text-base sm:text-lg leading-none text-foreground dark:text-white">Ford</span>
               </span>
             )}
           </Link>
@@ -670,7 +717,7 @@ export function DashboardClient() {
             type="button"
             data-testid="sidebar-collapse-toggle"
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="hidden lg:flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="hidden lg:flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10 transition-colors"
             aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             {sidebarCollapsed ? (
@@ -684,7 +731,7 @@ export function DashboardClient() {
           <button
             type="button"
             onClick={() => setMobileDrawerOpen(false)}
-            className="lg:hidden flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
+            className="lg:hidden flex items-center justify-center h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-400 dark:hover:text-white dark:hover:bg-white/10"
             aria-label="Close navigation drawer"
           >
             <X className="h-5 w-5" />
@@ -698,10 +745,7 @@ export function DashboardClient() {
             <button
               type="button"
               data-testid="sidebar-create-test-btn"
-              onClick={() => {
-                setCreateModalOpen(true);
-                setTestInProgress(false);
-              }}
+              onClick={() => handleOpenCreateTest("tutored_cat")}
               className={`w-full flex items-center justify-center gap-2 rounded-xl bg-teal-500 hover:bg-teal-400 active:scale-98 text-slate-950 font-semibold text-sm transition-all shadow-md py-2.5 px-3 ${
                 sidebarCollapsed ? "px-2" : ""
               }`}
@@ -715,48 +759,48 @@ export function DashboardClient() {
           {/* Group 1: LEARN */}
           <div className="space-y-1">
             {!sidebarCollapsed && (
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-teal-300/60 font-mono">
                 Learn
               </div>
             )}
             <Link
               href="/dashboard"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-teal-300 bg-white/10 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-teal-700 bg-teal-500/10 font-semibold shadow-2xs dark:text-teal-300 dark:bg-white/10 border-l-2 border-teal-600 dark:border-teal-400 transition-colors"
               title="Dashboard"
             >
-              <Compass className="h-4 w-4 shrink-0 text-teal-400" />
+              <Compass className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
               {!sidebarCollapsed && <span>Dashboard</span>}
             </Link>
             <Link
               href="/nclex-rn"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="NCLEX-RN"
             >
-              <GraduationCap className="h-4 w-4 shrink-0 text-slate-400" />
+              <GraduationCap className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>NCLEX-RN</span>}
             </Link>
             <Link
               href="/nclex-pn"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="NCLEX-PN"
             >
-              <Stethoscope className="h-4 w-4 shrink-0 text-slate-400" />
+              <Stethoscope className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>NCLEX-PN</span>}
             </Link>
             <Link
               href="/study-guide"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Study Guides"
             >
-              <BookOpen className="h-4 w-4 shrink-0 text-slate-400" />
+              <BookOpen className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Study Guides</span>}
             </Link>
             <Link
               href="/courses"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Practice Activities"
             >
-              <FileQuestion className="h-4 w-4 shrink-0 text-slate-400" />
+              <FileQuestion className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Practice Activities</span>}
             </Link>
           </div>
@@ -764,16 +808,16 @@ export function DashboardClient() {
           {/* Group 1b: AI STUDY STUDIO (Phase 1 active-recall tools) */}
           <div className="space-y-1">
             {!sidebarCollapsed && (
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-teal-300/60 font-mono">
                 AI Study Studio
               </div>
             )}
             <Link
               href="/dashboard/study"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="AI Study Studio Overview"
             >
-              <Sparkles className="h-4 w-4 shrink-0 text-teal-400" />
+              <Sparkles className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
               {!sidebarCollapsed ? (
                 <div className="flex-1 flex items-center justify-between">
                   <span>Study Studio</span>
@@ -794,26 +838,26 @@ export function DashboardClient() {
             </Link>
             <Link
               href="/dashboard/study/review"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Flashcard review session"
             >
-              <RotateCcw className="h-4 w-4 shrink-0 text-slate-400" />
+              <RotateCcw className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Review Flashcards</span>}
             </Link>
             <Link
               href="/dashboard/study/flashcards"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Flashcard decks"
             >
-              <Layers className="h-4 w-4 shrink-0 text-slate-400" />
+              <Layers className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Flashcard Decks</span>}
             </Link>
             <Link
               href="/dashboard/study/quizzes"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Quick topic drills"
             >
-              <FileQuestion className="h-4 w-4 shrink-0 text-slate-400" />
+              <FileQuestion className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Topic Quizzes</span>}
             </Link>
           </div>
@@ -821,7 +865,7 @@ export function DashboardClient() {
           {/* Group 2: TEST BANK & ASSESSMENTS */}
           <div className="space-y-1">
             {!sidebarCollapsed && (
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-teal-300/60 font-mono">
                 Test Bank & Assessments
               </div>
             )}
@@ -830,12 +874,12 @@ export function DashboardClient() {
               onClick={() => setActiveTab("tutored_cat")}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
                 activeTab === "tutored_cat"
-                  ? "text-teal-300 bg-white/10"
-                  : "text-slate-300 hover:text-white hover:bg-white/5"
+                  ? "text-teal-700 bg-teal-500/10 dark:text-teal-300 dark:bg-white/10 font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5"
               }`}
               title="Tutored CATs"
             >
-              <ClipboardCheck className="h-4 w-4 shrink-0 text-teal-400" />
+              <ClipboardCheck className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
               {!sidebarCollapsed && <span>Tutored CATs</span>}
             </button>
             <button
@@ -843,20 +887,20 @@ export function DashboardClient() {
               onClick={() => setActiveTab("rat")}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-left ${
                 activeTab === "rat"
-                  ? "text-teal-300 bg-white/10"
-                  : "text-slate-300 hover:text-white hover:bg-white/5"
+                  ? "text-teal-700 bg-teal-500/10 dark:text-teal-300 dark:bg-white/10 font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5"
               }`}
               title="Readiness Assessment Tests (RAT)"
             >
-              <HeartPulse className="h-4 w-4 shrink-0 text-slate-400" />
+              <HeartPulse className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Readiness Tests (RAT)</span>}
             </button>
             <Link
               href="/study-guide"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Test-Taking Strategies"
             >
-              <Layers className="h-4 w-4 shrink-0 text-slate-400" />
+              <Layers className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Test-Taking Strategies</span>}
             </Link>
           </div>
@@ -864,19 +908,19 @@ export function DashboardClient() {
           {/* Group 3: REPORTS */}
           <div className="space-y-1">
             {!sidebarCollapsed && (
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-teal-300/60 font-mono">
                 Reports
               </div>
             )}
             <div
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-teal-300 bg-teal-500/15 border border-teal-500/30"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-teal-700 bg-teal-500/10 border border-teal-500/30 dark:text-teal-300 dark:bg-teal-500/15"
               title="Previous Tests"
             >
-              <History className="h-4 w-4 shrink-0 text-teal-400" />
+              <History className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
               {!sidebarCollapsed && (
                 <div className="flex-1 flex items-center justify-between">
                   <span>Previous Tests</span>
-                  <span className="text-[10px] bg-teal-500/20 text-teal-300 font-mono px-1.5 py-0.5 rounded">
+                  <span className="text-[10px] bg-teal-500/20 text-teal-700 dark:text-teal-300 font-mono px-1.5 py-0.5 rounded">
                     Active
                   </span>
                 </div>
@@ -884,10 +928,10 @@ export function DashboardClient() {
             </div>
             <Link
               href="/profile"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Statistics"
             >
-              <BarChart2 className="h-4 w-4 shrink-0 text-slate-400" />
+              <BarChart2 className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Statistics</span>}
             </Link>
           </div>
@@ -895,33 +939,33 @@ export function DashboardClient() {
           {/* Group 4: ACCOUNT */}
           <div className="space-y-1">
             {!sidebarCollapsed && (
-              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-teal-300/60 font-mono">
+              <div className="px-3 text-[11px] font-bold uppercase tracking-wider text-muted-foreground/80 dark:text-teal-300/60 font-mono">
                 Account
               </div>
             )}
             <Link
               href="/profile"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Profile"
             >
-              <UserCheck className="h-4 w-4 shrink-0 text-slate-400" />
+              <UserCheck className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Profile & Settings</span>}
             </Link>
             <Link
               href="/dashboard/settings/security"
               data-testid="sidebar-nav-security"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Security & Devices"
             >
-              <ShieldCheck className="h-4 w-4 shrink-0 text-slate-400" />
+              <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Security & Devices</span>}
             </Link>
             <Link
               href="/cart"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Cart"
             >
-              <ShoppingCart className="h-4 w-4 shrink-0 text-slate-400" />
+              <ShoppingCart className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && (
                 <div className="flex-1 flex items-center justify-between">
                   <span>Cart</span>
@@ -935,28 +979,28 @@ export function DashboardClient() {
             </Link>
             <Link
               href="/study-guide"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-300 hover:text-white hover:bg-white/5 transition-colors"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Learning Notes"
             >
-              <FileText className="h-4 w-4 shrink-0 text-slate-400" />
+              <FileText className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Learning Notes</span>}
             </Link>
           </div>
         </div>
 
         {/* Sidebar Footer User Info */}
-        <div className="p-3 border-t border-[#153441] bg-[#0A1D25]">
+        <div className="p-3 border-t border-border dark:border-[#153441] bg-muted/40 dark:bg-[#0A1D25]">
           <div className="flex items-center gap-3">
             <LearnerAvatar
               picture={user?.picture}
               name={learnerName}
               sizeClassName="h-9 w-9"
-              fallbackClassName="bg-teal-600/30 text-teal-300 border-teal-500/40"
+              fallbackClassName="bg-teal-600/30 text-teal-700 dark:text-teal-300 border-teal-500/40"
             />
             {!sidebarCollapsed && (
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-slate-200 truncate">{learnerName}</p>
-                <p className="text-[11px] text-teal-400/80 truncate font-mono uppercase">
+                <p className="text-xs font-semibold text-foreground dark:text-slate-200 truncate">{learnerName}</p>
+                <p className="text-[11px] text-teal-600 dark:text-teal-400/80 truncate font-mono uppercase">
                   {pathwayLabel}
                 </p>
               </div>
@@ -1159,17 +1203,28 @@ export function DashboardClient() {
                     </Button>
                   )}
 
+                  {/* Primary Action 1: Create Test Now */}
                   <Button
                     type="button"
+                    data-testid="dashboard-create-test-btn"
+                    onClick={() => handleOpenCreateTest("tutored_cat")}
                     variant="outline"
-                    onClick={() => {
-                      setCreateModalOpen(true);
-                      setTestInProgress(false);
-                    }}
-                    className="font-semibold rounded-xl border-border hover:bg-muted"
+                    className="font-semibold rounded-xl border-border hover:bg-muted text-foreground"
                   >
                     <Plus className="mr-2 h-4 w-4" />
                     <span>+ Create Test Now</span>
+                  </Button>
+
+                  {/* Primary Action 2: Take Readiness Assessment (RAT) — Dedicated action positioned immediately beside Create Test Now */}
+                  <Button
+                    type="button"
+                    data-testid="dashboard-take-rat-btn"
+                    onClick={() => handleOpenCreateTest("rat")}
+                    variant="outline"
+                    className="font-semibold rounded-xl border-teal-600/40 text-teal-700 dark:text-teal-300 hover:bg-teal-500/10 dark:hover:bg-teal-500/20"
+                  >
+                    <ShieldCheck className="mr-2 h-4 w-4 text-teal-600 dark:text-teal-400" />
+                    <span>Take Readiness Assessment</span>
                   </Button>
                 </div>
               </div>
@@ -1192,6 +1247,128 @@ export function DashboardClient() {
                   </p>
                 </div>
               )}
+            </div>
+          </section>
+
+          {/* =====================================================================
+              SECTION 1.5: AUTHORITATIVE DASHBOARD KPI SUMMARY
+             ===================================================================== */}
+          <section
+            data-testid="dashboard-kpi-summary"
+            aria-labelledby="dashboard-kpi-heading"
+            className="space-y-3"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <h2
+                id="dashboard-kpi-heading"
+                className="text-sm font-bold uppercase tracking-wider text-muted-foreground font-mono flex items-center gap-2"
+              >
+                <BarChart2 className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                <span>Learner Performance & Operational Overview</span>
+              </h2>
+              {analyticsSummary?.lastAssessmentDate && (
+                <span className="text-xs text-muted-foreground font-mono">
+                  Last activity: {new Date(analyticsSummary.lastAssessmentDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Card 1: Total Completed Assessments */}
+              <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs flex flex-col justify-between space-y-3 hover:border-teal-500/40 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Completed Assessments
+                  </span>
+                  <div className="h-8 w-8 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+                    <ClipboardCheck className="h-4 w-4" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-2xl sm:text-3xl font-serif font-bold text-foreground">
+                    {displayTotalCompleted}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {ratCompletedCount} Readiness (RAT) • {catCompletedCount} Practice CAT
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 2: Practice Questions Answered */}
+              <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs flex flex-col justify-between space-y-3 hover:border-teal-500/40 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Questions Answered
+                  </span>
+                  <div className="h-8 w-8 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+                    <FileQuestion className="h-4 w-4" />
+                  </div>
+                </div>
+                <div>
+                  <p className="text-2xl sm:text-3xl font-serif font-bold text-foreground">
+                    {displayTotalQuestions.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Across 8 NCSBN Client Need Domains
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 3: Overall Accuracy & Benchmark */}
+              <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs flex flex-col justify-between space-y-3 hover:border-teal-500/40 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Overall Accuracy
+                  </span>
+                  <div className="h-8 w-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <TrendingUp className="h-4 w-4" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <p className="text-2xl sm:text-3xl font-serif font-bold text-foreground">
+                      {displayAccuracy > 0 ? `${displayAccuracy}%` : "—"}
+                    </p>
+                    {displayAccuracy > 0 && (
+                      <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                        displayAccuracy >= 65
+                          ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                          : "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                      }`}>
+                        {displayAccuracy >= 65 ? ">= 65% Benchmark" : "< 65% Benchmark"}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    PrepFord Practice Benchmark: 65%
+                  </p>
+                </div>
+              </div>
+
+              {/* Card 4: Clinical Readiness Level */}
+              <div className="rounded-2xl border border-border/80 bg-card p-5 shadow-xs flex flex-col justify-between space-y-3 hover:border-teal-500/40 transition-colors">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                    Readiness Level
+                  </span>
+                  <div className="h-8 w-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                    <Target className="h-4 w-4" />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${displayReadinessStyle.badgeBg} ${displayReadinessStyle.badgeBorder}`}>
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: displayReadinessStyle.accentHex }} />
+                      {displayReadinessTier}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {displayReadinessTier === "Unassessed"
+                      ? "Complete an assessment to evaluate tier"
+                      : "Validated from candidate attempts"}
+                  </p>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -1572,28 +1749,28 @@ export function DashboardClient() {
                   {/* Tooltip on Hover */}
                   {hoveredAttemptIndex !== null && chartPoints[hoveredAttemptIndex] && (
                     <div
-                      className="absolute z-10 pointer-events-none rounded-lg bg-slate-900 text-white text-xs p-2.5 shadow-xl border border-slate-700 min-w-[140px]"
+                      className="absolute z-10 pointer-events-none rounded-xl bg-card border border-border text-foreground text-xs p-3 shadow-xl min-w-[150px]"
                       style={{
                         left: `${(chartPoints[hoveredAttemptIndex].x / chartWidth) * 100}%`,
                         top: `${(chartPoints[hoveredAttemptIndex].y / chartHeight) * 100}%`,
                         transform: "translate(-50%, -125%)",
                       }}
                     >
-                      <p className="font-bold text-teal-300">
+                      <p className="font-bold text-teal-600 dark:text-teal-300">
                         {chartPoints[hoveredAttemptIndex].attempt.name}
                       </p>
-                      <p className="text-[11px] text-slate-300">
+                      <p className="text-[11px] text-muted-foreground">
                         {chartPoints[hoveredAttemptIndex].attempt.date}
                       </p>
-                      <div className="mt-1 flex items-center justify-between border-t border-slate-800 pt-1 text-[11px]">
-                        <span>Score:</span>
-                        <span className="font-mono font-bold text-white">
+                      <div className="mt-1.5 flex items-center justify-between border-t border-border pt-1.5 text-[11px]">
+                        <span className="text-muted-foreground">Score:</span>
+                        <span className="font-mono font-bold text-foreground">
                           {chartPoints[hoveredAttemptIndex].attempt.scorePercent}%
                         </span>
                       </div>
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span>Rating:</span>
-                        <span className="font-semibold text-teal-400">
+                      <div className="flex items-center justify-between text-[11px] mt-0.5">
+                        <span className="text-muted-foreground">Rating:</span>
+                        <span className="font-semibold text-teal-600 dark:text-teal-400">
                           {chartPoints[hoveredAttemptIndex].attempt.performanceTier}
                         </span>
                       </div>
@@ -2197,67 +2374,84 @@ export function DashboardClient() {
       </div>
 
       {/* =====================================================================
-          3. INTERACTIVE MODALS
+          3. FULL-PAGE ASSESSMENT WORKSPACES & INTERACTIVE SIMULATOR
          ===================================================================== */}
-      {/* MODAL 1: Create Test Now / Interactive Simulator */}
+      {/* WORKSPACE 1: Create Test Now / RAT / Interactive Simulator */}
       {createModalOpen && (
         <div
           data-testid="modal-create-test"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex flex-col bg-background text-foreground overflow-y-auto"
         >
-          <div className="relative w-full max-w-3xl rounded-2xl bg-card border border-border p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-6">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div className="flex items-center gap-3">
-                <div className="h-8 w-8 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+          {/* Workspace Sticky Header */}
+          <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-8 bg-card/95 backdrop-blur-md border-b border-border shadow-xs shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0 border border-teal-500/20">
+                {testInProgress ? (
+                  <HeartPulse className="h-5 w-5 text-teal-600 dark:text-teal-400 animate-pulse" />
+                ) : createTestType === "rat" ? (
+                  <ShieldCheck className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+                ) : (
                   <Plus className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-serif font-bold text-lg text-foreground">
-                    {testInProgress ? "NCLEX Practice Test in Progress" : "Create New Assessment Test"}
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    {testInProgress
-                      ? `Question ${activeQuestionIndex + 1} of ${testQuestionCount}`
-                      : "Configure test parameters and begin your adaptive session"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                {testInProgress && (
-                  <button
-                    type="button"
-                    onClick={() => setIsTimerVisible(!isTimerVisible)}
-                    className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-muted/60 hover:bg-muted text-xs font-mono text-muted-foreground hover:text-foreground transition-colors border border-border/60"
-                    aria-label={isTimerVisible ? "Hide session timer" : "Show session timer"}
-                    title={isTimerVisible ? "Click to minimize timer" : "Click to display timer"}
-                  >
-                    <Clock className="h-3.5 w-3.5 text-secondary" aria-hidden="true" />
-                    <span>{isTimerVisible ? formatTimerDisplay(sessionSeconds) : "Timer Hidden"}</span>
-                    {isTimerVisible ? (
-                      <EyeOff className="h-3 w-3 text-muted-foreground ml-0.5" />
-                    ) : (
-                      <Eye className="h-3 w-3 text-muted-foreground ml-0.5" />
-                    )}
-                  </button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCreateModalOpen(false);
-                    setTestInProgress(false);
-                  }}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-                  aria-label="Close modal"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-base sm:text-lg text-foreground">
+                  {testInProgress
+                    ? createTestType === "rat"
+                      ? "NCLEX Readiness Assessment Test (RAT) in Progress"
+                      : "NCLEX Practice Test in Progress"
+                    : createTestType === "rat"
+                    ? "Take Readiness Assessment (RAT)"
+                    : "Create New Assessment Test"}
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  {testInProgress
+                    ? `Question ${activeQuestionIndex + 1} of ${testQuestionCount}`
+                    : createTestType === "rat"
+                    ? "Standardized multi-domain clinical examination to measure exam preparedness"
+                    : "Configure test parameters and begin your adaptive session"}
+                </p>
               </div>
             </div>
 
+            <div className="flex items-center gap-3">
+              {testInProgress && (
+                <button
+                  type="button"
+                  onClick={() => setIsTimerVisible(!isTimerVisible)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted hover:bg-muted/80 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors border border-border"
+                  aria-label={isTimerVisible ? "Hide session timer" : "Show session timer"}
+                  title={isTimerVisible ? "Click to minimize timer" : "Click to display timer"}
+                >
+                  <Clock className="h-3.5 w-3.5 text-secondary" aria-hidden="true" />
+                  <span>{isTimerVisible ? formatTimerDisplay(sessionSeconds) : "Timer Hidden"}</span>
+                  {isTimerVisible ? (
+                    <EyeOff className="h-3 w-3 text-muted-foreground ml-0.5" />
+                  ) : (
+                    <Eye className="h-3 w-3 text-muted-foreground ml-0.5" />
+                  )}
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateModalOpen(false);
+                  setTestInProgress(false);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-muted border border-border/60 transition-colors"
+                aria-label="Close modal"
+              >
+                <X className="h-4 w-4" />
+                <span className="hidden sm:inline">Exit</span>
+              </button>
+            </div>
+          </header>
+
+          {/* Full Workspace Scrollable Body */}
+          <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-6">
             {!testInProgress ? (
               /* Configuration Step */
-              <div className="space-y-5">
+              <div className="space-y-6">
                 {/* Standardized Published Assessments if available */}
                 {availableAssessments.length > 0 && (
                   <div className="space-y-2">
@@ -2272,7 +2466,6 @@ export function DashboardClient() {
                           tabIndex={0}
                           onClick={() => {
                             setSelectedAssessmentId(asm.id);
-                            setCreateTestType(asm.examType === "DiagnosticReadiness" ? "rat" : "tutored_cat");
                             if (asm.questionCount) {
                               setTestQuestionCount(asm.questionCount);
                             }
@@ -2280,13 +2473,12 @@ export function DashboardClient() {
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               setSelectedAssessmentId(asm.id);
-                              setCreateTestType(asm.examType === "DiagnosticReadiness" ? "rat" : "tutored_cat");
                               if (asm.questionCount) {
                                 setTestQuestionCount(asm.questionCount);
                               }
                             }
                           }}
-                          className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                          className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
                             selectedAssessmentId === asm.id
                               ? "border-teal-500 bg-teal-500/10 text-foreground shadow-2xs"
                               : "border-border hover:border-border/80 text-muted-foreground"
@@ -2314,7 +2506,7 @@ export function DashboardClient() {
                   </div>
                 )}
 
-                {/* Test Type Selection */}
+                {/* Assessment Mode Description (RAT option removed from Create Test Now) */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground font-mono">
@@ -2330,36 +2522,27 @@ export function DashboardClient() {
                       </button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setCreateTestType("tutored_cat")}
-                      className={`p-3.5 rounded-xl border text-left transition-all ${
-                        createTestType === "tutored_cat"
-                          ? "border-teal-500 bg-teal-500/10 text-foreground shadow-2xs"
-                          : "border-border hover:border-border/80 text-muted-foreground"
-                      }`}
-                    >
-                      <p className="font-bold text-sm text-foreground">Tutored CAT</p>
-                      <p className="text-xs mt-1 leading-snug">
-                        Computer Adaptive Test with immediate clinical rationales and explanations.
+                  {createTestType === "rat" ? (
+                    <div className="p-4 rounded-xl border border-teal-500/40 bg-teal-500/5 text-foreground space-y-1">
+                      <div className="flex items-center gap-2 font-bold text-sm text-foreground">
+                        <ShieldCheck className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                        <span>Standardized Readiness Assessment Test (RAT)</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        High-fidelity diagnostic exam simulating official NCLEX test-plan distribution across all 8 NCSBN Client Needs. Produces an authoritative readiness determination and performance tier.
                       </p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCreateTestType("rat")}
-                      className={`p-3.5 rounded-xl border text-left transition-all ${
-                        createTestType === "rat"
-                          ? "border-teal-500 bg-teal-500/10 text-foreground shadow-2xs"
-                          : "border-border hover:border-border/80 text-muted-foreground"
-                      }`}
-                    >
-                      <p className="font-bold text-sm text-foreground">Readiness Test (RAT)</p>
-                      <p className="text-xs mt-1 leading-snug">
-                        Standardized exam format testing multi-domain clinical readiness.
+                    </div>
+                  ) : (
+                    <div className="p-4 rounded-xl border border-teal-500/40 bg-teal-500/5 text-foreground space-y-1">
+                      <div className="flex items-center gap-2 font-bold text-sm text-foreground">
+                        <ClipboardCheck className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+                        <span>Tutored Computer Adaptive Test (CAT)</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Computer Adaptive Test with immediate clinical rationales, case analyses, and multi-domain candidate feedback.
                       </p>
-                    </button>
-                  </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Question Count Selection */}
@@ -2368,7 +2551,7 @@ export function DashboardClient() {
                     Question Count
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {[1, 5, 20, 40, 65, 85].map((cnt) => (
+                    {(createTestType === "rat" ? [1, 5, 65, 85, 100, 150] : [1, 5, 20, 40, 65, 85]).map((cnt) => (
                       <button
                         key={cnt}
                         type="button"
@@ -2386,14 +2569,14 @@ export function DashboardClient() {
                 </div>
 
                 {/* Info Note */}
-                <div className="rounded-xl bg-muted/40 p-3 text-xs text-muted-foreground flex items-start gap-2.5">
+                <div className="rounded-xl bg-muted/40 p-3.5 text-xs text-muted-foreground flex items-start gap-2.5">
                   <Info className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400 mt-0.5" />
                   <p>
                     Completing this session will immediately save an authentic result to your learner account history, updating your performance trend and domain reports.
                   </p>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-2">
+                <div className="flex justify-end gap-3 pt-4 border-t border-border">
                   <Button
                     type="button"
                     variant="outline"
@@ -2635,32 +2818,42 @@ export function DashboardClient() {
         </div>
       )}
 
-      {/* MODAL 2: Review Test Modal */}
+      {/* WORKSPACE 2: Review Test Workspace */}
       {reviewModalAttempt && (
         <div
           data-testid="modal-review-test"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex flex-col bg-background text-foreground overflow-y-auto"
         >
-          <div className="relative w-full max-w-3xl rounded-2xl bg-card border border-border p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-6">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-serif font-bold text-lg text-foreground">
-                    Review: {reviewModalAttempt.name}
-                  </h3>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      getTierStyles(reviewModalAttempt.performanceTier).badgeBg
-                    }`}
-                  >
-                    {reviewModalAttempt.performanceTier} ({reviewModalAttempt.scorePercent}%)
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Completed on {reviewModalAttempt.date} • {reviewModalAttempt.correctCount} of{" "}
-                  {reviewModalAttempt.totalQuestions} questions correct
-                </p>
+          {/* Workspace Sticky Header */}
+          <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-8 bg-card/95 backdrop-blur-md border-b border-border shadow-xs shrink-0">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h3 className="font-serif font-bold text-base sm:text-lg text-foreground">
+                  Review: {reviewModalAttempt.name}
+                </h3>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                    getTierStyles(reviewModalAttempt.performanceTier).badgeBg
+                  } ${getTierStyles(reviewModalAttempt.performanceTier).badgeBorder}`}
+                >
+                  {reviewModalAttempt.performanceTier} ({reviewModalAttempt.scorePercent}%)
+                </span>
               </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Completed on {reviewModalAttempt.date} • {reviewModalAttempt.correctCount} of{" "}
+                {reviewModalAttempt.totalQuestions} questions correct
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setReviewModalAttempt(null)}
+                className="rounded-xl text-xs font-semibold"
+              >
+                Close Review
+              </Button>
               <button
                 type="button"
                 onClick={() => setReviewModalAttempt(null)}
@@ -2670,6 +2863,9 @@ export function DashboardClient() {
                 <X className="h-5 w-5" />
               </button>
             </div>
+          </header>
+
+          <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-6">
 
             {/* Questions List */}
             <div className="space-y-6">
@@ -2827,11 +3023,11 @@ export function DashboardClient() {
               })}
             </div>
 
-            <div className="flex justify-end pt-2 border-t border-border">
+            <div className="flex justify-end pt-4 border-t border-border">
               <Button
                 type="button"
                 onClick={() => setReviewModalAttempt(null)}
-                className="rounded-xl"
+                className="rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-semibold"
               >
                 Close Review
               </Button>
@@ -2840,22 +3036,40 @@ export function DashboardClient() {
         </div>
       )}
 
-      {/* MODAL 3: View Report Modal */}
+      {/* WORKSPACE 3: View Report Workspace */}
       {reportModalAttempt && (
         <div
           data-testid="modal-view-report"
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs"
+          className="fixed inset-0 z-50 flex flex-col bg-background text-foreground overflow-y-auto"
         >
-          <div className="relative w-full max-w-2xl rounded-2xl bg-card border border-border p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-6">
-            <div className="flex items-center justify-between border-b border-border pb-4">
-              <div>
-                <h3 className="font-serif font-bold text-lg text-foreground">
+          {/* Workspace Sticky Header */}
+          <header className="sticky top-0 z-30 flex items-center justify-between h-16 px-4 sm:px-8 bg-card/95 backdrop-blur-md border-b border-border shadow-xs shrink-0">
+            <div>
+              <div className="flex items-center gap-2.5">
+                <h3 className="font-serif font-bold text-base sm:text-lg text-foreground">
                   Performance Report: {reportModalAttempt.name}
                 </h3>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Completed on {reportModalAttempt.date} • Duration ~{reportModalAttempt.durationMinutes} mins
-                </p>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                    getTierStyles(reportModalAttempt.performanceTier).badgeBg
+                  } ${getTierStyles(reportModalAttempt.performanceTier).badgeBorder}`}
+                >
+                  {reportModalAttempt.performanceTier} ({reportModalAttempt.scorePercent}%)
+                </span>
               </div>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Completed on {reportModalAttempt.date} • Duration ~{reportModalAttempt.durationMinutes} mins
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setReportModalAttempt(null)}
+                className="bg-primary text-primary-foreground rounded-xl text-xs font-semibold"
+              >
+                Done
+              </Button>
               <button
                 type="button"
                 onClick={() => setReportModalAttempt(null)}
@@ -2865,6 +3079,9 @@ export function DashboardClient() {
                 <X className="h-5 w-5" />
               </button>
             </div>
+          </header>
+
+          <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 py-8 space-y-6">
 
             {/* Score & Tier Banner */}
             <div className="rounded-xl border border-border bg-muted/30 p-5 flex items-center justify-between">
