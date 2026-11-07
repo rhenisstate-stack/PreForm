@@ -100,7 +100,9 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
         var response = await client.GetAsync("/api/v1/question-types");
 
         response.EnsureSuccessStatusCode();
-        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        var payload = await response.Content.ReadAsStringAsync();
+        Console.WriteLine(payload);
+        using var document = JsonDocument.Parse(payload);
         var json = document.RootElement;
         var sata = json.GetProperty("items").EnumerateArray()
             .Single(item => item.GetProperty("key").GetString() == "sata");
