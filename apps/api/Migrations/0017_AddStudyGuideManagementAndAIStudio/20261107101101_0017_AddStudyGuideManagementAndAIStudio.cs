@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -11,184 +11,7 @@ namespace Preform.Api.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "IsArchived",
-                schema: "public",
-                table: "Categories");
-
-            migrationBuilder.DropColumn(
-                name: "IsSystemDefined",
-                schema: "public",
-                table: "Categories");
-
-            migrationBuilder.AddColumn<string>(
-                name: "CancelledBy",
-                schema: "public",
-                table: "UserSubscriptions",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "ExtendedAt",
-                schema: "public",
-                table: "UserSubscriptions",
-                type: "timestamp with time zone",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "ExtendedBy",
-                schema: "public",
-                table: "UserSubscriptions",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IsManual",
-                schema: "public",
-                table: "UserSubscriptions",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<string>(
-                name: "ManualAuthorizationId",
-                schema: "public",
-                table: "UserSubscriptions",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "Notes",
-                schema: "public",
-                table: "UserSubscriptions",
-                type: "character varying(1024)",
-                maxLength: 1024,
-                nullable: true);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "SuspendedAt",
-                schema: "public",
-                table: "UserSubscriptions",
-                type: "timestamp with time zone",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "SuspensionReason",
-                schema: "public",
-                table: "UserSubscriptions",
-                type: "character varying(512)",
-                maxLength: 512,
-                nullable: true);
-
-            migrationBuilder.AddColumn<int>(
-                name: "PublicationStatus",
-                schema: "public",
-                table: "SubscriptionPlans",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
-
-            migrationBuilder.AddColumn<int>(
-                name: "Version",
-                schema: "public",
-                table: "SubscriptionPlans",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IsArchived",
-                schema: "public",
-                table: "QuestionTypeDefinitions",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IsSystemDefined",
-                schema: "public",
-                table: "QuestionTypeDefinitions",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AlterColumn<string>(
-                name: "CreatedById",
-                schema: "public",
-                table: "QuestionMedia",
-                type: "text",
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "character varying(128)",
-                oldMaxLength: 128,
-                oldNullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "ManualAuthorizationId",
-                schema: "public",
-                table: "Orders",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "Notes",
-                schema: "public",
-                table: "Orders",
-                type: "character varying(2048)",
-                maxLength: 2048,
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "PaymentEvidenceUrl",
-                schema: "public",
-                table: "Orders",
-                type: "character varying(1024)",
-                maxLength: 1024,
-                nullable: true);
-
-            migrationBuilder.AddColumn<int>(
-                name: "PaymentMethod",
-                schema: "public",
-                table: "Orders",
-                type: "integer",
-                nullable: false,
-                defaultValue: 0);
-
-            migrationBuilder.AddColumn<string>(
-                name: "ReceiptNumber",
-                schema: "public",
-                table: "Orders",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "TransactionReference",
-                schema: "public",
-                table: "Orders",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "VerifiedAt",
-                schema: "public",
-                table: "Orders",
-                type: "timestamp with time zone",
-                nullable: true);
-
-            migrationBuilder.AddColumn<string>(
-                name: "VerifiedBy",
-                schema: "public",
-                table: "Orders",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true);
-
+            // ── 1. Flashcards and FlashcardDecks Enhancements ──
             migrationBuilder.AddColumn<string>(
                 name: "CardStyle",
                 schema: "public",
@@ -196,7 +19,7 @@ namespace Preform.Api.Migrations
                 type: "character varying(32)",
                 maxLength: 32,
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "qa");
 
             migrationBuilder.AddColumn<string>(
                 name: "ClientNeedId",
@@ -260,7 +83,7 @@ namespace Preform.Api.Migrations
                 table: "Flashcards",
                 type: "text",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "[]");
 
             migrationBuilder.AddColumn<string>(
                 name: "TopicSlug",
@@ -300,8 +123,9 @@ namespace Preform.Api.Migrations
                 table: "FlashcardDecks",
                 type: "text",
                 nullable: false,
-                defaultValue: "");
+                defaultValue: "[]");
 
+            // ── 2. AI Content Reviews ──
             migrationBuilder.CreateTable(
                 name: "AIContentReviews",
                 schema: "public",
@@ -322,6 +146,7 @@ namespace Preform.Api.Migrations
                     table.PrimaryKey("PK_AIContentReviews", x => x.Id);
                 });
 
+            // ── 3. AI Provider Configurations ──
             migrationBuilder.CreateTable(
                 name: "AIProviderConfigurations",
                 schema: "public",
@@ -343,6 +168,7 @@ namespace Preform.Api.Migrations
                     table.PrimaryKey("PK_AIProviderConfigurations", x => x.Id);
                 });
 
+            // ── 4. AI Requests ──
             migrationBuilder.CreateTable(
                 name: "AIRequests",
                 schema: "public",
@@ -372,6 +198,7 @@ namespace Preform.Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // ── 5. AI Study Plans ──
             migrationBuilder.CreateTable(
                 name: "AIStudyPlans",
                 schema: "public",
@@ -400,6 +227,7 @@ namespace Preform.Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // ── 6. AI Tutor Conversations ──
             migrationBuilder.CreateTable(
                 name: "AITutorConversations",
                 schema: "public",
@@ -426,6 +254,7 @@ namespace Preform.Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // ── 7. AI Usage Records ──
             migrationBuilder.CreateTable(
                 name: "AIUsageRecords",
                 schema: "public",
@@ -444,83 +273,7 @@ namespace Preform.Api.Migrations
                     table.PrimaryKey("PK_AIUsageRecords", x => x.Id);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "EntitlementDefinitions",
-                schema: "public",
-                columns: table => new
-                {
-                    Code = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    Name = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Category = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    Description = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
-                    CoursePathway = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_EntitlementDefinitions", x => x.Code);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ManualSubscriptionAuthorizations",
-                schema: "public",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    UserId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    PlanId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Pathway = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    PaymentMethod = table.Column<int>(type: "integer", nullable: false),
-                    AmountCents = table.Column<int>(type: "integer", nullable: false),
-                    Currency = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
-                    TransactionReference = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    ReceiptNumber = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    PaymentDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    EvidenceUrl = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    Notes = table.Column<string>(type: "character varying(2048)", maxLength: 2048, nullable: true),
-                    Status = table.Column<int>(type: "integer", nullable: false),
-                    RequestedByAdminId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    VerifiedByAdminId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    RejectionReason = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: true),
-                    SubscriptionId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    OrderId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    VerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ManualSubscriptionAuthorizations", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ManualSubscriptionAuthorizations_Orders_OrderId",
-                        column: x => x.OrderId,
-                        principalSchema: "public",
-                        principalTable: "Orders",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_ManualSubscriptionAuthorizations_SubscriptionPlans_PlanId",
-                        column: x => x.PlanId,
-                        principalSchema: "public",
-                        principalTable: "SubscriptionPlans",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                    table.ForeignKey(
-                        name: "FK_ManualSubscriptionAuthorizations_UserSubscriptions_Subscrip~",
-                        column: x => x.SubscriptionId,
-                        principalSchema: "public",
-                        principalTable: "UserSubscriptions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_ManualSubscriptionAuthorizations_Users_UserId",
-                        column: x => x.UserId,
-                        principalSchema: "public",
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
+            // ── 8. Study Folders ──
             migrationBuilder.CreateTable(
                 name: "StudyFolders",
                 schema: "public",
@@ -548,6 +301,7 @@ namespace Preform.Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // ── 9. Study Guide Categories ──
             migrationBuilder.CreateTable(
                 name: "StudyGuideCategories",
                 schema: "public",
@@ -570,143 +324,7 @@ namespace Preform.Api.Migrations
                     table.PrimaryKey("PK_StudyGuideCategories", x => x.Id);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "StudyReviewSessions",
-                schema: "public",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    UserId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    DeckId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    Mode = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    Programme = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
-                    TopicSlug = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    TopicTitle = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: true),
-                    FilterCriteriaJson = table.Column<string>(type: "text", nullable: false),
-                    TotalCards = table.Column<int>(type: "integer", nullable: false),
-                    CardsReviewed = table.Column<int>(type: "integer", nullable: false),
-                    CardsCorrect = table.Column<int>(type: "integer", nullable: false),
-                    CardsDifficult = table.Column<int>(type: "integer", nullable: false),
-                    CardsMissed = table.Column<int>(type: "integer", nullable: false),
-                    AccuracyPercentage = table.Column<double>(type: "double precision", nullable: false),
-                    DurationSeconds = table.Column<int>(type: "integer", nullable: false),
-                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_StudyReviewSessions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_StudyReviewSessions_FlashcardDecks_DeckId",
-                        column: x => x.DeckId,
-                        principalSchema: "public",
-                        principalTable: "FlashcardDecks",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_StudyReviewSessions_Users_UserId",
-                        column: x => x.UserId,
-                        principalSchema: "public",
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "SubscriptionPlanAppearances",
-                schema: "public",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    PlanId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    Version = table.Column<int>(type: "integer", nullable: false),
-                    IsPublished = table.Column<bool>(type: "boolean", nullable: false),
-                    TypographyJson = table.Column<string>(type: "text", nullable: false),
-                    ColorsJson = table.Column<string>(type: "text", nullable: false),
-                    CardStylingJson = table.Column<string>(type: "text", nullable: false),
-                    ButtonStylingJson = table.Column<string>(type: "text", nullable: false),
-                    LayoutJson = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    CreatedBy = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    PublishedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    PublishedBy = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SubscriptionPlanAppearances", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_SubscriptionPlanAppearances_SubscriptionPlans_PlanId",
-                        column: x => x.PlanId,
-                        principalSchema: "public",
-                        principalTable: "SubscriptionPlans",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "TopicQuizConfigurations",
-                schema: "public",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    UserId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Title = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: false),
-                    Programme = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
-                    SubjectDomainId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    TopicSlug = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
-                    TopicTitle = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: true),
-                    ClientNeedId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
-                    QuestionCount = table.Column<int>(type: "integer", nullable: false),
-                    Difficulty = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    TimeLimitMinutes = table.Column<int>(type: "integer", nullable: false),
-                    ImmediateFeedback = table.Column<bool>(type: "boolean", nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_TopicQuizConfigurations", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_TopicQuizConfigurations_Users_UserId",
-                        column: x => x.UserId,
-                        principalSchema: "public",
-                        principalTable: "Users",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "SubscriptionPlanEntitlements",
-                schema: "public",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    PlanId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    EntitlementCode = table.Column<string>(type: "character varying(64)", maxLength: 64, nullable: false),
-                    UsageLimit = table.Column<int>(type: "integer", nullable: true),
-                    MetadataJson = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_SubscriptionPlanEntitlements", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_SubscriptionPlanEntitlements_EntitlementDefinitions_Entitle~",
-                        column: x => x.EntitlementCode,
-                        principalSchema: "public",
-                        principalTable: "EntitlementDefinitions",
-                        principalColumn: "Code",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_SubscriptionPlanEntitlements_SubscriptionPlans_PlanId",
-                        column: x => x.PlanId,
-                        principalSchema: "public",
-                        principalTable: "SubscriptionPlans",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
+            // ── 10. Study Notes ──
             migrationBuilder.CreateTable(
                 name: "StudyNotes",
                 schema: "public",
@@ -753,40 +371,76 @@ namespace Preform.Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // ── 11. Study Note Versions ──
             migrationBuilder.CreateTable(
-                name: "CuratedStudyGuides",
+                name: "StudyNoteVersions",
                 schema: "public",
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "text", nullable: false),
-                    CategoryId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Slug = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    NoteId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
                     Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    Summary = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
-                    ReadTime = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    Difficulty = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    Programme = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
-                    ClientNeedId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
-                    ClinicalKeyTakeawaysJson = table.Column<string>(type: "text", nullable: false),
                     ContentJson = table.Column<string>(type: "text", nullable: false),
-                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    PublishedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    ScheduledPublishAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    WordCount = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_CuratedStudyGuides", x => x.Id);
+                    table.PrimaryKey("PK_StudyNoteVersions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_CuratedStudyGuides_StudyGuideCategories_CategoryId",
-                        column: x => x.CategoryId,
+                        name: "FK_StudyNoteVersions_StudyNotes_NoteId",
+                        column: x => x.NoteId,
                         principalSchema: "public",
-                        principalTable: "StudyGuideCategories",
+                        principalTable: "StudyNotes",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Restrict);
+                        onDelete: ReferentialAction.Cascade);
                 });
 
+            // ── 12. Study Review Sessions ──
+            migrationBuilder.CreateTable(
+                name: "StudyReviewSessions",
+                schema: "public",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "text", nullable: false),
+                    UserId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    DeckId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    Mode = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Programme = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    TopicSlug = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    TopicTitle = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: true),
+                    FilterCriteriaJson = table.Column<string>(type: "text", nullable: false),
+                    TotalCards = table.Column<int>(type: "integer", nullable: false),
+                    CardsReviewed = table.Column<int>(type: "integer", nullable: false),
+                    CardsCorrect = table.Column<int>(type: "integer", nullable: false),
+                    CardsDifficult = table.Column<int>(type: "integer", nullable: false),
+                    CardsMissed = table.Column<int>(type: "integer", nullable: false),
+                    AccuracyPercentage = table.Column<double>(type: "double precision", nullable: false),
+                    DurationSeconds = table.Column<int>(type: "integer", nullable: false),
+                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    StartedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    CompletedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_StudyReviewSessions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_StudyReviewSessions_FlashcardDecks_DeckId",
+                        column: x => x.DeckId,
+                        principalSchema: "public",
+                        principalTable: "FlashcardDecks",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_StudyReviewSessions_Users_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "public",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            // ── 13. Study Review Session Items ──
             migrationBuilder.CreateTable(
                 name: "StudyReviewSessionItems",
                 schema: "public",
@@ -818,6 +472,40 @@ namespace Preform.Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
+            // ── 14. Topic Quiz Configurations ──
+            migrationBuilder.CreateTable(
+                name: "TopicQuizConfigurations",
+                schema: "public",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "text", nullable: false),
+                    UserId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    Title = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: false),
+                    Programme = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    SubjectDomainId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    TopicSlug = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: true),
+                    TopicTitle = table.Column<string>(type: "character varying(160)", maxLength: 160, nullable: true),
+                    ClientNeedId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
+                    QuestionCount = table.Column<int>(type: "integer", nullable: false),
+                    Difficulty = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    TimeLimitMinutes = table.Column<int>(type: "integer", nullable: false),
+                    ImmediateFeedback = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_TopicQuizConfigurations", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_TopicQuizConfigurations_Users_UserId",
+                        column: x => x.UserId,
+                        principalSchema: "public",
+                        principalTable: "Users",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            // ── 15. Topic Quiz Attempts ──
             migrationBuilder.CreateTable(
                 name: "TopicQuizAttempts",
                 schema: "public",
@@ -859,56 +547,7 @@ namespace Preform.Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "StudyNoteVersions",
-                schema: "public",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    NoteId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    ContentJson = table.Column<string>(type: "text", nullable: false),
-                    WordCount = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_StudyNoteVersions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_StudyNoteVersions_StudyNotes_NoteId",
-                        column: x => x.NoteId,
-                        principalSchema: "public",
-                        principalTable: "StudyNotes",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "CuratedGuideVersions",
-                schema: "public",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "text", nullable: false),
-                    GuideId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    VersionNumber = table.Column<int>(type: "integer", nullable: false),
-                    Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    ContentJson = table.Column<string>(type: "text", nullable: false),
-                    CreatedBy = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
-                    ChangeSummary = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_CuratedGuideVersions", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_CuratedGuideVersions_CuratedStudyGuides_GuideId",
-                        column: x => x.GuideId,
-                        principalSchema: "public",
-                        principalTable: "CuratedStudyGuides",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
+            // ── 16. Topic Quiz Responses ──
             migrationBuilder.CreateTable(
                 name: "TopicQuizResponses",
                 schema: "public",
@@ -942,12 +581,69 @@ namespace Preform.Api.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateIndex(
-                name: "IX_QuestionMedia_CreatedById",
+            // ── 17. Curated Study Guides ──
+            migrationBuilder.CreateTable(
+                name: "CuratedStudyGuides",
                 schema: "public",
-                table: "QuestionMedia",
-                column: "CreatedById");
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "text", nullable: false),
+                    CategoryId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    Slug = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    Summary = table.Column<string>(type: "character varying(1024)", maxLength: 1024, nullable: false),
+                    ReadTime = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Difficulty = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    Programme = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false),
+                    ClientNeedId = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: true),
+                    ClinicalKeyTakeawaysJson = table.Column<string>(type: "text", nullable: false),
+                    ContentJson = table.Column<string>(type: "text", nullable: false),
+                    Status = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
+                    PublishedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    ScheduledPublishAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CuratedStudyGuides", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CuratedStudyGuides_StudyGuideCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalSchema: "public",
+                        principalTable: "StudyGuideCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
 
+            // ── 18. Curated Guide Versions ──
+            migrationBuilder.CreateTable(
+                name: "CuratedGuideVersions",
+                schema: "public",
+                columns: table => new
+                {
+                    Id = table.Column<string>(type: "text", nullable: false),
+                    GuideId = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    VersionNumber = table.Column<int>(type: "integer", nullable: false),
+                    Title = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
+                    ContentJson = table.Column<string>(type: "text", nullable: false),
+                    CreatedBy = table.Column<string>(type: "character varying(128)", maxLength: 128, nullable: false),
+                    ChangeSummary = table.Column<string>(type: "character varying(512)", maxLength: 512, nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CuratedGuideVersions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CuratedGuideVersions_CuratedStudyGuides_GuideId",
+                        column: x => x.GuideId,
+                        principalSchema: "public",
+                        principalTable: "CuratedStudyGuides",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            // ── 19. Indexes ──
             migrationBuilder.CreateIndex(
                 name: "IX_AIContentReviews_ContentType",
                 schema: "public",
@@ -1041,68 +737,6 @@ namespace Preform.Api.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_EntitlementDefinitions_CoursePathway",
-                schema: "public",
-                table: "EntitlementDefinitions",
-                column: "CoursePathway");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_EntitlementDefinitions_IsActive",
-                schema: "public",
-                table: "EntitlementDefinitions",
-                column: "IsActive");
-
-            migrationBuilder.CreateIndex(
-                name: "idx_manual_auth_tx_ref_unique",
-                schema: "public",
-                table: "ManualSubscriptionAuthorizations",
-                column: "TransactionReference",
-                unique: true,
-                filter: "\"TransactionReference\" IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManualSubscriptionAuthorizations_OrderId",
-                schema: "public",
-                table: "ManualSubscriptionAuthorizations",
-                column: "OrderId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManualSubscriptionAuthorizations_PaymentMethod",
-                schema: "public",
-                table: "ManualSubscriptionAuthorizations",
-                column: "PaymentMethod");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManualSubscriptionAuthorizations_PlanId",
-                schema: "public",
-                table: "ManualSubscriptionAuthorizations",
-                column: "PlanId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManualSubscriptionAuthorizations_RequestedByAdminId",
-                schema: "public",
-                table: "ManualSubscriptionAuthorizations",
-                column: "RequestedByAdminId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManualSubscriptionAuthorizations_Status",
-                schema: "public",
-                table: "ManualSubscriptionAuthorizations",
-                column: "Status");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManualSubscriptionAuthorizations_SubscriptionId",
-                schema: "public",
-                table: "ManualSubscriptionAuthorizations",
-                column: "SubscriptionId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ManualSubscriptionAuthorizations_UserId",
-                schema: "public",
-                table: "ManualSubscriptionAuthorizations",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_StudyFolders_UserId",
                 schema: "public",
                 table: "StudyFolders",
@@ -1132,12 +766,6 @@ namespace Preform.Api.Migrations
                 schema: "public",
                 table: "StudyNotes",
                 column: "ClientNeedId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_StudyNotes_FolderId",
-                schema: "public",
-                table: "StudyNotes",
-                column: "FolderId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_StudyNotes_TopicSlug",
@@ -1210,25 +838,6 @@ namespace Preform.Api.Migrations
                 schema: "public",
                 table: "StudyReviewSessions",
                 columns: new[] { "UserId", "Status" });
-
-            migrationBuilder.CreateIndex(
-                name: "idx_sub_plan_appearances_version",
-                schema: "public",
-                table: "SubscriptionPlanAppearances",
-                columns: new[] { "PlanId", "Version", "IsPublished" });
-
-            migrationBuilder.CreateIndex(
-                name: "idx_sub_plan_entitlements_unique",
-                schema: "public",
-                table: "SubscriptionPlanEntitlements",
-                columns: new[] { "PlanId", "EntitlementCode" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_SubscriptionPlanEntitlements_EntitlementCode",
-                schema: "public",
-                table: "SubscriptionPlanEntitlements",
-                column: "EntitlementCode");
 
             migrationBuilder.CreateIndex(
                 name: "IX_TopicQuizAttempts_ClientNeedId",
@@ -1323,47 +932,7 @@ namespace Preform.Api.Migrations
                 schema: "public");
 
             migrationBuilder.DropTable(
-                name: "ManualSubscriptionAuthorizations",
-                schema: "public");
-
-            migrationBuilder.DropTable(
-                name: "StudyNoteVersions",
-                schema: "public");
-
-            migrationBuilder.DropTable(
-                name: "StudyReviewSessionItems",
-                schema: "public");
-
-            migrationBuilder.DropTable(
-                name: "SubscriptionPlanAppearances",
-                schema: "public");
-
-            migrationBuilder.DropTable(
-                name: "SubscriptionPlanEntitlements",
-                schema: "public");
-
-            migrationBuilder.DropTable(
-                name: "TopicQuizResponses",
-                schema: "public");
-
-            migrationBuilder.DropTable(
                 name: "CuratedStudyGuides",
-                schema: "public");
-
-            migrationBuilder.DropTable(
-                name: "StudyNotes",
-                schema: "public");
-
-            migrationBuilder.DropTable(
-                name: "StudyReviewSessions",
-                schema: "public");
-
-            migrationBuilder.DropTable(
-                name: "EntitlementDefinitions",
-                schema: "public");
-
-            migrationBuilder.DropTable(
-                name: "TopicQuizAttempts",
                 schema: "public");
 
             migrationBuilder.DropTable(
@@ -1371,117 +940,36 @@ namespace Preform.Api.Migrations
                 schema: "public");
 
             migrationBuilder.DropTable(
+                name: "StudyNoteVersions",
+                schema: "public");
+
+            migrationBuilder.DropTable(
+                name: "StudyNotes",
+                schema: "public");
+
+            migrationBuilder.DropTable(
                 name: "StudyFolders",
+                schema: "public");
+
+            migrationBuilder.DropTable(
+                name: "StudyReviewSessionItems",
+                schema: "public");
+
+            migrationBuilder.DropTable(
+                name: "StudyReviewSessions",
+                schema: "public");
+
+            migrationBuilder.DropTable(
+                name: "TopicQuizResponses",
+                schema: "public");
+
+            migrationBuilder.DropTable(
+                name: "TopicQuizAttempts",
                 schema: "public");
 
             migrationBuilder.DropTable(
                 name: "TopicQuizConfigurations",
                 schema: "public");
-
-            migrationBuilder.DropIndex(
-                name: "IX_QuestionMedia_CreatedById",
-                schema: "public",
-                table: "QuestionMedia");
-
-            migrationBuilder.DropColumn(
-                name: "CancelledBy",
-                schema: "public",
-                table: "UserSubscriptions");
-
-            migrationBuilder.DropColumn(
-                name: "ExtendedAt",
-                schema: "public",
-                table: "UserSubscriptions");
-
-            migrationBuilder.DropColumn(
-                name: "ExtendedBy",
-                schema: "public",
-                table: "UserSubscriptions");
-
-            migrationBuilder.DropColumn(
-                name: "IsManual",
-                schema: "public",
-                table: "UserSubscriptions");
-
-            migrationBuilder.DropColumn(
-                name: "ManualAuthorizationId",
-                schema: "public",
-                table: "UserSubscriptions");
-
-            migrationBuilder.DropColumn(
-                name: "Notes",
-                schema: "public",
-                table: "UserSubscriptions");
-
-            migrationBuilder.DropColumn(
-                name: "SuspendedAt",
-                schema: "public",
-                table: "UserSubscriptions");
-
-            migrationBuilder.DropColumn(
-                name: "SuspensionReason",
-                schema: "public",
-                table: "UserSubscriptions");
-
-            migrationBuilder.DropColumn(
-                name: "PublicationStatus",
-                schema: "public",
-                table: "SubscriptionPlans");
-
-            migrationBuilder.DropColumn(
-                name: "Version",
-                schema: "public",
-                table: "SubscriptionPlans");
-
-            migrationBuilder.DropColumn(
-                name: "IsArchived",
-                schema: "public",
-                table: "QuestionTypeDefinitions");
-
-            migrationBuilder.DropColumn(
-                name: "IsSystemDefined",
-                schema: "public",
-                table: "QuestionTypeDefinitions");
-
-            migrationBuilder.DropColumn(
-                name: "ManualAuthorizationId",
-                schema: "public",
-                table: "Orders");
-
-            migrationBuilder.DropColumn(
-                name: "Notes",
-                schema: "public",
-                table: "Orders");
-
-            migrationBuilder.DropColumn(
-                name: "PaymentEvidenceUrl",
-                schema: "public",
-                table: "Orders");
-
-            migrationBuilder.DropColumn(
-                name: "PaymentMethod",
-                schema: "public",
-                table: "Orders");
-
-            migrationBuilder.DropColumn(
-                name: "ReceiptNumber",
-                schema: "public",
-                table: "Orders");
-
-            migrationBuilder.DropColumn(
-                name: "TransactionReference",
-                schema: "public",
-                table: "Orders");
-
-            migrationBuilder.DropColumn(
-                name: "VerifiedAt",
-                schema: "public",
-                table: "Orders");
-
-            migrationBuilder.DropColumn(
-                name: "VerifiedBy",
-                schema: "public",
-                table: "Orders");
 
             migrationBuilder.DropColumn(
                 name: "CardStyle",
@@ -1552,33 +1040,6 @@ namespace Preform.Api.Migrations
                 name: "TagsJson",
                 schema: "public",
                 table: "FlashcardDecks");
-
-            migrationBuilder.AlterColumn<string>(
-                name: "CreatedById",
-                schema: "public",
-                table: "QuestionMedia",
-                type: "character varying(128)",
-                maxLength: 128,
-                nullable: true,
-                oldClrType: typeof(string),
-                oldType: "text",
-                oldNullable: true);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IsArchived",
-                schema: "public",
-                table: "Categories",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "IsSystemDefined",
-                schema: "public",
-                table: "Categories",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
         }
     }
 }
