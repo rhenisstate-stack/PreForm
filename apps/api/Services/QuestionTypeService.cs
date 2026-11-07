@@ -109,6 +109,8 @@ public sealed class QuestionTypeService : IQuestionTypeService
                 $"Question-type definition '{definition.Key}' is not registered.");
         }
 
+        var publicCapabilities = NormalizePublicCapabilities(descriptor);
+
         return new QuestionTypeDto
         {
             Key = descriptor.Key,
@@ -120,10 +122,10 @@ public sealed class QuestionTypeService : IQuestionTypeService
             SupportedScoringModes = descriptor.SupportedScoringModes
                 .Select(ToScoringModeKey)
                 .ToList(),
-            CapabilityFlags = (int)descriptor.Capabilities,
+            CapabilityFlags = (int)publicCapabilities,
             Capabilities = Enum.GetValues<QuestionTypeCapability>()
                 .Where(capability => capability != QuestionTypeCapability.None
-                    && (descriptor.Capabilities & capability) != 0)
+                    && (publicCapabilities & capability) != 0)
                 .Select(capability => capability.ToString())
                 .Distinct(StringComparer.Ordinal)
                 .ToList(),
@@ -136,8 +138,8 @@ public sealed class QuestionTypeService : IQuestionTypeService
 
     private static QuestionTypeCapabilitiesDto ToCapabilityDto(QuestionTypeDescriptor descriptor)
     {
-        var capabilities = descriptor.Capabilities;
-        bool Includes(QuestionTypeCapability capability) => (capabilities & capability) != 0;
+        var publicCapabilities = NormalizePublicCapabilities(descriptor);
+        bool Includes(QuestionTypeCapability capability) => (publicCapabilities & capability) != 0;
 
         return new QuestionTypeCapabilitiesDto
         {
@@ -157,6 +159,18 @@ public sealed class QuestionTypeService : IQuestionTypeService
             RequiresSpecializedResponseValidator =
                 Includes(QuestionTypeCapability.RequiresSpecializedResponseValidator),
         };
+    }
+
+    private static QuestionTypeCapability NormalizePublicCapabilities(QuestionTypeDescriptor descriptor)
+    {
+        var capabilities = descriptor.Capabilities;
+        var supportsPartialCredit = descriptor.SupportedScoringModes.Contains(QuestionScoringMode.AutomaticPartialCredit);
+        if (!supportsPartialCredit)
+        {
+            capabilities &= ~QuestionTypeCapability.SupportsPartialCredit;
+        }
+
+        return capabilities;
     }
 
     private static string ScoringLabel(QuestionTypeDescriptor descriptor)

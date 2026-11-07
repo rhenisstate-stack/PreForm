@@ -447,26 +447,36 @@ public class ExamAttemptsController : ControllerBase
                 ? userId
                 : caller.userId;
 
-        Console.WriteLine($"DEBUG GetAttempts callerUserId={caller.userId} targetUserId={targetUserId} role={caller.role} isPrivileged={isPrivileged}");
         var attempts = await _context.ExamAttempts
             .AsNoTracking()
-            .Include(ea => ea.Exam)
-            .Include(ea => ea.Responses)
             .Where(ea => string.Equals(ea.UserId, targetUserId, StringComparison.Ordinal))
             .OrderByDescending(ea => ea.StartedAt)
             .ToListAsync(cancellationToken);
-        Console.WriteLine($"DEBUG GetAttempts rows={attempts.Count} first={attempts.FirstOrDefault()?.Id ?? "<none>"}");
+
+        var examIds = attempts
+            .Where(a => !string.IsNullOrWhiteSpace(a.ExamId))
+            .Select(a => a.ExamId)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        var examById = examIds.Count == 0
+            ? new Dictionary<string, Exam>(StringComparer.Ordinal)
+            : await _context.Exams
+                .AsNoTracking()
+                .Where(e => examIds.Contains(e.Id))
+                .ToDictionaryAsync(e => e.Id, StringComparer.Ordinal, cancellationToken);
 
         var dtos = attempts.Select(a =>
         {
-            var correctCount = a.Responses != null ? a.Responses.Count(r => r.IsCorrect) : 0;
-            var totalCount = a.Responses != null ? a.Responses.Count : 0;
+            var responseCount = a.Responses?.Count ?? 0;
+            var correctCount = a.Responses?.Count(r => r.IsCorrect) ?? 0;
             var duration = a.CompletedAt.HasValue && a.CompletedAt.Value >= a.StartedAt
                 ? (int)Math.Max(1, Math.Min(1440, (a.CompletedAt.Value - a.StartedAt).TotalMinutes))
                 : 0;
 
-            var attemptType = a.Exam != null
-                ? (a.Exam.ExamType == ExamType.DiagnosticReadiness ? "rat" : (a.Exam.ExamType == ExamType.Practice ? "practice" : "tutored_cat"))
+            var exam = examById.TryGetValue(a.ExamId, out var foundExam) ? foundExam : null;
+            var attemptType = exam != null
+                ? (exam.ExamType == ExamType.DiagnosticReadiness ? "rat" : (exam.ExamType == ExamType.Practice ? "practice" : "tutored_cat"))
                 : "tutored_cat";
 
             return new AttemptSummaryDto
@@ -474,18 +484,18 @@ public class ExamAttemptsController : ControllerBase
                 Id = a.Id,
                 UserId = a.UserId,
                 ExamId = a.ExamId ?? string.Empty,
-                Name = a.Exam?.Title ?? "Adaptive Practice Assessment",
+                Name = exam?.Title ?? "Adaptive Practice Assessment",
                 Type = attemptType,
                 Status = a.Status.ToString(),
                 ScorePercent = a.ScorePercent,
                 PerformanceTier = GetPerformanceTier(a.ScorePercent),
                 Passed = a.Passed,
-                TotalQuestions = totalCount,
+                TotalQuestions = responseCount,
                 CorrectCount = correctCount,
                 DurationMinutes = duration,
                 StartedAt = a.StartedAt,
                 CompletedAt = a.CompletedAt,
-                ResponseCount = totalCount
+                ResponseCount = responseCount
             };
         }).ToList();
 
