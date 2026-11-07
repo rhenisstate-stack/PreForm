@@ -1124,6 +1124,7 @@ export function AdminQuestionsClient({
             {/* Canonical 18-Type Configuration Editor + Exhibits Builder */}
             <QuestionTypeEditor
               questionTypeKey={formType}
+              questionId={editingQuestionId || undefined}
               options={formOptions}
               onOptionsChange={setFormOptions}
               structuredContentJson={formStructuredContent}

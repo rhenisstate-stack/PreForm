@@ -20,6 +20,7 @@ import {
   parseExhibitsJson,
   type ClinicalExhibitTab,
 } from "@/lib/question-types";
+import { QuestionImageUpload } from "@/components/questions/question-image-upload";
 
 export interface EditableQuestionOption {
   id?: string;
@@ -33,6 +34,8 @@ export interface EditableQuestionOption {
 
 export interface QuestionTypeEditorProps {
   questionTypeKey: string;
+  questionId?: string;
+  disabled?: boolean;
   options: EditableQuestionOption[];
   onOptionsChange: (options: EditableQuestionOption[]) => void;
   structuredContentJson: string;
@@ -44,6 +47,8 @@ export interface QuestionTypeEditorProps {
 
 export function QuestionTypeEditor({
   questionTypeKey,
+  questionId,
+  disabled = false,
   options,
   onOptionsChange,
   structuredContentJson,
@@ -364,21 +369,18 @@ export function QuestionTypeEditor({
                   />
                 </div>
 
-                {/* Media URL field for image-based / multiple-image (and available for any option with visual exhibit) */}
+                {/* Image upload control for image-based / multiple-image (and available for any option with visual exhibit) */}
                 {(typeDef.supportsMediaOptions || Boolean(opt.mediaUrl)) && (
-                  <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <ImageIcon className="h-3 w-3 text-primary" />
-                      Option {opt.optionKey} Clinical Image / Exhibit URL
-                    </Label>
-                    <Input
-                      aria-label={`Option ${opt.optionKey} Image URL`}
+                  <div className="pt-1">
+                    <QuestionImageUpload
+                      label={`Option ${opt.optionKey} Visual Exhibit`}
+                      fieldKey={`option_${opt.optionKey}`}
+                      questionId={questionId}
                       value={opt.mediaUrl}
-                      onChange={(e) =>
-                        handleOptionFieldChange(idx, "mediaUrl", e.target.value)
-                      }
-                      placeholder="https://cdn.prepford.com/exhibits/ecg-lead-ii.png"
-                      className="h-8 text-xs font-mono"
+                      onChange={(url) => handleOptionFieldChange(idx, "mediaUrl", url)}
+                      onRemove={() => handleOptionFieldChange(idx, "mediaUrl", "")}
+                      disabled={disabled}
+                      testIdPrefix={`option-${opt.optionKey}-image-upload`}
                     />
                   </div>
                 )}
