@@ -309,6 +309,17 @@ export function NCLEXPNPageClient() {
   const auth = useAuth();
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
+  const [isNavigatingDashboard, setIsNavigatingDashboard] = React.useState(false);
+
+  const handleGoToPnDashboard = React.useCallback(() => {
+    setIsNavigatingDashboard(true);
+    if (isAuthenticated) {
+      router.push("/dashboard/pn");
+    } else {
+      router.push(`/sign-in?from=${encodeURIComponent("/dashboard/pn")}`);
+    }
+  }, [isAuthenticated, router]);
+
   // Section 3: Interactive Sample Question State
   const [selectedOptionId, setSelectedOptionId] = React.useState<string | null>(null);
   const [isQuestionSubmitted, setIsQuestionSubmitted] = React.useState(false);
@@ -498,6 +509,43 @@ export function NCLEXPNPageClient() {
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
                   <span>Timed Readiness Assessment Packs</span>
+                </div>
+              </div>
+
+              {/* Prominent NCLEX-PN Learner Dashboard CTA */}
+              <div
+                data-testid="pn-dashboard-cta-banner"
+                className="mt-6 w-full max-w-xl rounded-2xl border-2 border-secondary/35 bg-gradient-to-r from-teal-500/15 via-teal-500/10 to-transparent p-4 sm:p-5 shadow-xs transition-all hover:border-secondary/50"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-2.5 w-2.5 rounded-full bg-secondary animate-pulse" aria-hidden="true" />
+                      <span className="text-xs font-bold tracking-wider uppercase text-teal-800 dark:text-teal-300">
+                        NCLEX-PN Practical Nurse Workspace
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-foreground/90 leading-snug">
+                      Continue your NCLEX-PN preparation, monitor your progress, and build your practical nursing confidence.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="lg"
+                    data-testid="pn-hero-dashboard-cta"
+                    onClick={handleGoToPnDashboard}
+                    disabled={isNavigatingDashboard}
+                    className="bg-secondary hover:bg-secondary/90 text-white font-semibold px-6 h-12 rounded-xl shadow-md shrink-0 flex items-center justify-center gap-2 group transition-all"
+                  >
+                    {isNavigatingDashboard ? (
+                      <span>Opening Dashboard...</span>
+                    ) : (
+                      <>
+                        <span>Go to PN Learner Dashboard</span>
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
 

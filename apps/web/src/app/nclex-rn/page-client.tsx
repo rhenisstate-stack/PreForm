@@ -421,6 +421,18 @@ export function NCLEXRNPageClient() {
   const { addItem } = useCart();
   const { isAuthenticated } = useAuth();
 
+  // Section 1: Dashboard navigation state
+  const [isNavigatingDashboard, setIsNavigatingDashboard] = React.useState(false);
+
+  const handleGoToRnDashboard = React.useCallback(() => {
+    setIsNavigatingDashboard(true);
+    if (isAuthenticated) {
+      router.push("/dashboard/rn");
+    } else {
+      router.push(`/sign-in?from=${encodeURIComponent("/dashboard/rn")}`);
+    }
+  }, [isAuthenticated, router]);
+
   // Section 2: Interactive product & duration selector state
   const [selectedDuration, setSelectedDuration] = React.useState<BillingDuration>("quarter");
   const [selectedTier, setSelectedTier] = React.useState<RnTierKey>("pro");
@@ -677,6 +689,43 @@ export function NCLEXRNPageClient() {
                   <span>Server-scored readiness assessments &amp; analytics</span>
                 </li>
               </ul>
+
+              {/* Prominent NCLEX-RN Learner Dashboard CTA */}
+              <div
+                data-testid="rn-dashboard-cta-banner"
+                className="mt-4 rounded-2xl border-2 border-secondary/35 bg-gradient-to-r from-secondary/15 via-secondary/10 to-transparent p-4 sm:p-5 shadow-xs transition-all hover:border-secondary/50"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-2.5 w-2.5 rounded-full bg-secondary animate-pulse" aria-hidden="true" />
+                      <span className="text-xs font-bold tracking-wider uppercase text-secondary">
+                        NCLEX-RN Registered Nurse Workspace
+                      </span>
+                    </div>
+                    <p className="text-sm font-medium text-foreground/90 leading-snug">
+                      Continue your NCLEX-RN preparation, track your progress, and access your learning tools.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="lg"
+                    data-testid="rn-hero-dashboard-cta"
+                    onClick={handleGoToRnDashboard}
+                    disabled={isNavigatingDashboard}
+                    className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold px-6 h-12 rounded-xl shadow-md shrink-0 flex items-center justify-center gap-2 group transition-all"
+                  >
+                    {isNavigatingDashboard ? (
+                      <span>Opening Dashboard...</span>
+                    ) : (
+                      <>
+                        <span>Go to RN Learner Dashboard</span>
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
 
               {/* Primary and secondary CTAs */}
               <div className="flex flex-wrap items-center gap-3.5 pt-3">
