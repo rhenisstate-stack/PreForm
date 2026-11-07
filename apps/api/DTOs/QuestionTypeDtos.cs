@@ -70,11 +70,7 @@ public sealed class QuestionTypeCapabilitiesDto
     public bool SupportsStructuredResponse { get; set; }
     public bool SupportsAutomaticGrading { get; set; }
     public bool SupportsManualGrading { get; set; }
-    public bool SupportsPartialCredit
-    {
-        get => false;
-        set { }
-    }
+    public bool SupportsPartialCredit { get; set; }
     public bool SupportsRandomization { get; set; }
     public bool RequiresSpecializedRenderer { get; set; }
     public bool RequiresSpecializedResponseValidator { get; set; }
