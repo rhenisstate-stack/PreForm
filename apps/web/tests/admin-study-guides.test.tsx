@@ -138,7 +138,8 @@ describe("Admin Study Guide Management Module", () => {
       const subitemsContainer = await screen.findByTestId("sidebar-subitems-admin-study-guides");
       expect(subitemsContainer).toBeDefined();
 
-      // Check for all four child routes
+      // Check for all child routes
+      expect(screen.getByTestId("sidebar-link-admin-study-guides-curated")).toBeDefined();
       expect(screen.getByTestId("sidebar-link-admin-study-guides-notes")).toBeDefined();
       expect(screen.getByTestId("sidebar-link-admin-study-guides-flashcards")).toBeDefined();
       expect(screen.getByTestId("sidebar-link-admin-study-guides-review-sessions")).toBeDefined();
