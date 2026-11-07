@@ -57,6 +57,7 @@ export function QuestionImageUpload({
   className = "",
   testIdPrefix = "question-image-upload",
 }: QuestionImageUploadProps) {
+  const inputId = React.useId();
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
@@ -210,7 +211,10 @@ export function QuestionImageUpload({
       data-testid={`${testIdPrefix}-container`}
     >
       <div className="flex items-center justify-between">
-        <Label className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+        <Label
+          htmlFor={inputId}
+          className="text-xs font-semibold text-foreground flex items-center gap-1.5 cursor-pointer"
+        >
           <ImageIcon className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
           {label}
         </Label>
@@ -220,13 +224,14 @@ export function QuestionImageUpload({
       </div>
 
       <input
+        id={inputId}
         ref={fileInputRef}
         type="file"
         accept={ALLOWED_EXTENSIONS.join(",")}
         onChange={handleInputChange}
         disabled={disabled || isUploading}
         className="sr-only"
-        aria-label={`${label} file input`}
+        aria-label={label}
         data-testid={`${testIdPrefix}-input`}
       />
 

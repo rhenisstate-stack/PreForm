@@ -59,3 +59,19 @@ The single source of truth for the 18 question types is `apps/api/Services/Quest
    - `apps/web/src/components/questions/question-type-editor.tsx`: Dedicated type-specific configuration editors for all 18 canonical question types, option `mediaUrl` editors for `image-based` and `multiple-image`, EHR Clinical Exhibits (`exhibitsJson`) tab builder, and synchronized JSON schema inspector.
    - `apps/web/src/components/questions/question-type-renderer.tsx`: Canonical renderer supporting `admin-preview`, `candidate-interactive`, and `candidate-review` modes across all 18 question types.
    - Full-page Question CRUD routes at `/admin/questions`, `/admin/questions/new`, `/admin/questions/[id]`, `/admin/questions/[id]/edit`, `/admin/questions/[id]/delete`, and alias routes under `/admin/question-repository/*`.
+
+
+---
+
+## 5. Image Upload & Admin Profile Image Integration
+
+### 5.1 Image Upload Integration Across Question Types
+- **Dual-Layer Boundary Enforcement:** Enforces maximum image size of 5 MB (`5,242,880` bytes) on both frontend and backend with client-side prevention and server-side magic-byte inspection (supporting PNG, JPEG, WebP, GIF).
+- **PostgreSQL Database Persistence:** Added `QuestionMedia` table with `bytea ImageData`, metadata, SHA-256 deduplication, foreign key to `Questions`, and cascade deletion. EF Core migration `0014_AddQuestionMediaBinaryStorage` applies schema changes.
+- **Draft Media Association:** Images uploaded during authoring of new questions prior to receiving a persisted `Question.Id` are temporarily stored with `QuestionId = null` and automatically linked to the newly created question by `QuestionBankService.CreateQuestionAsync` or `UpdateQuestionAsync`.
+- **Question Editor UI Component:** Created `<QuestionImageUpload>` (`apps/web/src/components/questions/question-image-upload.tsx`), featuring an accessible file input, drag-and-drop zone, instant client-side preview via `URL.createObjectURL`, progress indication, and replace/remove actions conforming to full-page CRUD standards.
+- **Learner Exam Delivery:** Enhanced `apps/web/src/app/dashboard/page-client.tsx` and `QuestionTypeRenderer` to render question stem exhibits (`activeQ.mediaUrl`) and option exhibits (`opt.mediaUrl`) during live examinations and post-exam reviews.
+
+### 5.2 Admin Profile Image Fix
+- **Root Cause:** In `apps/web/src/components/admin/admin-shell.tsx`, the top navbar `AdminAccountMenu` was hardcoded to display only text initials (`{initial}`), the sidebar was missing avatar rendering, and Next.js BFF lacked an `/api/v1/profile/image` route handler.
+- **Remediation:** Integrated `LearnerAvatar` into both `AdminAccountMenu` and `SidebarInner` (expanded and collapsed states), updated `apps/web/src/lib/profile-picture.ts` to normalize URLs, and added `/api/v1/profile/image` BFF proxy routing. Verified with 21 passing automated tests in `apps/web/tests/admin-shell.test.tsx`.

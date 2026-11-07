@@ -3366,16 +3366,30 @@ export function DashboardClient() {
                       )}
 
                       {/* Question Stem (Calm typography, generous line-height 1.6-1.75, full workspace width) */}
-                      <div className="w-full py-1">
+                      <div className="w-full py-1 space-y-3">
                         <p className="text-sm sm:text-base md:text-[17px] font-sans font-medium text-foreground leading-relaxed sm:leading-7 tracking-normal">
                           {activeQ.stem}
                         </p>
+                        {(activeQ as any).mediaUrl && (
+                          <div className="rounded-xl border border-border bg-muted/20 p-3 max-w-2xl overflow-hidden">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={(activeQ as any).mediaUrl}
+                              alt="Clinical scenario exhibit"
+                              className="max-h-72 w-auto rounded-lg object-contain"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {/* Options */}
                       <div className="space-y-2.5 pt-1" role={isMultiSelect ? "group" : "radiogroup"} aria-label="Question options">
                         {activeQ.options.map((opt, optIdx) => {
                           const isSelected = selectedIndices.includes(optIdx);
+                          const optMediaUrl = (activeQ as any).optionMediaUrls?.[optIdx];
 
                           return (
                             <button
@@ -3440,7 +3454,22 @@ export function DashboardClient() {
                               >
                                 {isSelected && isMultiSelect ? "✓" : String.fromCharCode(65 + optIdx)}
                               </span>
-                              <span className="flex-1 leading-relaxed">{opt}</span>
+                              <div className="flex-1 space-y-2">
+                                <span className="leading-relaxed block">{opt}</span>
+                                {optMediaUrl && (
+                                  <div className="rounded-lg border border-border/70 bg-background/60 p-2 max-w-md overflow-hidden">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={optMediaUrl}
+                                      alt={`Option ${String.fromCharCode(65 + optIdx)} exhibit`}
+                                      className="max-h-48 w-auto rounded object-contain"
+                                      onError={(e) => {
+                                        (e.currentTarget as HTMLElement).style.display = "none";
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             </button>
                           );
                         })}
@@ -3592,6 +3621,19 @@ export function DashboardClient() {
                     <p className="text-sm font-medium text-foreground leading-relaxed">
                       {q.stem}
                     </p>
+                    {(q as any).mediaUrl && (
+                      <div className="rounded-lg border border-border bg-background/60 p-2.5 max-w-lg overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={(q as any).mediaUrl}
+                          alt="Clinical exhibit"
+                          className="max-h-56 w-auto rounded object-contain"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                          }}
+                        />
+                      </div>
+                    )}
 
                     <div className="space-y-1.5 pt-1">
                       {q.options.map((opt, optIdx) => {
@@ -3601,6 +3643,7 @@ export function DashboardClient() {
                         const isCorrectChoice = isMulti
                           ? (q.correctAnswerIndices ?? []).includes(optIdx)
                           : q.correctAnswerIndex === optIdx;
+                        const optMedia = (q as any).optionMediaUrls?.[optIdx];
 
                         let optClass = "border-border bg-background text-muted-foreground";
                         if (isCorrectChoice && isUserChoice) {
@@ -3616,15 +3659,30 @@ export function DashboardClient() {
                             key={optIdx}
                             className={`p-2.5 rounded-lg border text-xs flex items-center justify-between ${optClass}`}
                           >
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-start gap-2.5 flex-1">
                               <span
                                 className={`h-4 w-4 ${
                                   isMulti ? "rounded-xs" : "rounded-full"
-                                } border border-current flex items-center justify-center text-[10px] font-mono shrink-0`}
+                                } border border-current flex items-center justify-center text-[10px] font-mono shrink-0 mt-0.5`}
                               >
                                 {isUserChoice && isMulti ? "✓" : String.fromCharCode(65 + optIdx)}
                               </span>
-                              <span>{opt}</span>
+                              <div className="space-y-1 flex-1">
+                                <span className="block">{opt}</span>
+                                {optMedia && (
+                                  <div className="rounded border border-border/70 bg-background/50 p-1.5 max-w-xs overflow-hidden">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                      src={optMedia}
+                                      alt={`Option ${String.fromCharCode(65 + optIdx)} exhibit`}
+                                      className="max-h-36 w-auto rounded object-contain"
+                                      onError={(e) => {
+                                        (e.currentTarget as HTMLElement).style.display = "none";
+                                      }}
+                                    />
+                                  </div>
+                                )}
+                              </div>
                             </div>
                             {isCorrectChoice && isUserChoice && (
                               <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">

@@ -370,18 +370,32 @@ export function QuestionTypeEditor({
                 </div>
 
                 {/* Image upload control for image-based / multiple-image (and available for any option with visual exhibit) */}
-                {(typeDef.supportsMediaOptions || Boolean(opt.mediaUrl)) && (
+                {typeDef.supportsMediaOptions || Boolean(opt.mediaUrl && opt.mediaUrl.trim()) ? (
                   <div className="pt-1">
                     <QuestionImageUpload
                       label={`Option ${opt.optionKey} Visual Exhibit`}
                       fieldKey={`option_${opt.optionKey}`}
                       questionId={questionId}
-                      value={opt.mediaUrl}
+                      value={opt.mediaUrl?.trim() ? opt.mediaUrl : null}
                       onChange={(url) => handleOptionFieldChange(idx, "mediaUrl", url)}
                       onRemove={() => handleOptionFieldChange(idx, "mediaUrl", "")}
                       disabled={disabled}
                       testIdPrefix={`option-${opt.optionKey}-image-upload`}
                     />
+                  </div>
+                ) : (
+                  <div className="pt-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleOptionFieldChange(idx, "mediaUrl", " ")}
+                      className="text-xs text-muted-foreground hover:text-foreground h-7 px-2"
+                      data-testid={`option-${opt.optionKey}-add-image-btn`}
+                    >
+                      <ImageIcon className="h-3.5 w-3.5 mr-1.5 text-primary" />
+                      Attach Option Image
+                    </Button>
                   </div>
                 )}
 

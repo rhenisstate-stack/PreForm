@@ -42,6 +42,7 @@ export interface QuestionTypeRendererProps {
   exhibitsJson?: string | null;
   structuredContentJson?: string | null;
   overallRationale?: string | null;
+  mediaUrl?: string | null;
   options?: RenderableQuestionOption[];
   /**
    * "admin-preview": shows candidate controls + highlights correct answer key & rationales
@@ -63,6 +64,7 @@ export function QuestionTypeRenderer({
   exhibitsJson,
   structuredContentJson,
   overallRationale,
+  mediaUrl,
   options = [],
   mode = "admin-preview",
   selectedOptionIndices = [],
@@ -228,13 +230,30 @@ export function QuestionTypeRenderer({
       )}
 
       {/* Question Stem & Instructions */}
-      <div className="rounded-xl border border-border bg-slate-50/70 dark:bg-slate-900/50 p-5 space-y-2">
+      <div className="rounded-xl border border-border bg-slate-50/70 dark:bg-slate-900/50 p-5 space-y-3">
         <p className="text-sm sm:text-base font-medium text-foreground leading-relaxed whitespace-pre-wrap">
           {stem}
         </p>
         <p className="text-xs italic text-muted-foreground">
           {instructions || typeDef.defaultInstructions}
         </p>
+        {mediaUrl && (
+          <div className="rounded-lg border border-border bg-muted/30 p-2.5 max-w-xl">
+            <div className="flex items-center gap-1.5 text-[11px] font-mono text-muted-foreground mb-1.5">
+              <ImageIcon className="h-3.5 w-3.5 text-primary" />
+              <span>Question Stem Visual Exhibit</span>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={mediaUrl}
+              alt="Question stem visual exhibit"
+              className="max-h-64 w-auto rounded object-contain"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = "none";
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Type-Specific Interactive / Preview Area */}
@@ -304,6 +323,9 @@ export function QuestionTypeRenderer({
                           src={opt.mediaUrl}
                           alt={`Option ${optionLetter} clinical exhibit`}
                           className="max-h-48 rounded object-contain"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                          }}
                         />
                       </div>
                     )}
