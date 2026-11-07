@@ -132,9 +132,88 @@ export function AdminUsersClient({
     }
   }, [search, roleFilter, statusFilter, page, pageSize]);
 
+  const fetchInvitations = React.useCallback(async () => {
+    setInvitationsLoading(true);
+    try {
+      const res = await fetch("/api/admin/invitations");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to fetch staff invitations");
+      setInvitations(data.invitations || []);
+    } catch {
+      // Fallback to client-side store
+      const invs = await invitationService.getInvitations();
+      setInvitations(invs);
+    } finally {
+      setInvitationsLoading(false);
+    }
+  }, []);
+
   React.useEffect(() => {
     fetchUsers();
-  }, [fetchUsers]);
+    fetchInvitations();
+  }, [fetchUsers, fetchInvitations]);
+
+  const handleInviteStaff = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteForm.email.trim()) {
+      notify.error("Please provide a valid staff email address.");
+      return;
+    }
+
+    setInviteSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(inviteForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send staff invitation");
+
+      notify.success(`Invitation dispatched to ${inviteForm.email} (expires in ${inviteForm.expiryHours}h).`);
+      setInviteModalOpen(false);
+      setInviteForm({ email: "", role: "instructor", notes: "", expiryHours: 72 });
+      fetchInvitations();
+    } catch (err) {
+      notify.error(sanitizeErrorMessage(err, "Failed to send invitation"));
+    } finally {
+      setInviteSubmitting(false);
+    }
+  };
+
+  const handleResendInvitation = async (id: string, email: string) => {
+    try {
+      const res = await fetch(`/api/admin/invitations/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "resend" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to resend invitation");
+
+      notify.success(`Renewed invitation token for ${email} (72h extension).`);
+      fetchInvitations();
+    } catch (err) {
+      notify.error(sanitizeErrorMessage(err, "Failed to resend invitation"));
+    }
+  };
+
+  const handleRevokeInvitation = async (id: string, email: string) => {
+    try {
+      const res = await fetch(`/api/admin/invitations/${id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "revoke" }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to revoke invitation");
+
+      notify.success(`Revoked invitation for ${email}.`);
+      fetchInvitations();
+    } catch (err) {
+      notify.error(sanitizeErrorMessage(err, "Failed to revoke invitation"));
+    }
+  };
 
   const handleInspect = async (id: string) => {
     setDetailModalOpen(true);
@@ -562,19 +641,68 @@ export function AdminUsersClient({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          <Button size="sm" onClick={() => setCreateModalOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
+          {activeMainTab === "users" ? (
+            <>
+              <Button variant="outline" size="sm" onClick={fetchUsers} disabled={loading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <Button size="sm" onClick={() => setCreateModalOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add User
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" size="sm" onClick={fetchInvitations} disabled={invitationsLoading}>
+                <RefreshCw className={`h-4 w-4 mr-2 ${invitationsLoading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setInviteModalOpen(true)}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                <UserPlus className="h-4 w-4 mr-2" />
+                Invite Staff Member
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      {/* Top Tab Switcher */}
+      <div className="flex items-center gap-2 border-b border-border/50 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveMainTab("users")}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+            activeMainTab === "users"
+              ? "bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-200 font-semibold"
+              : "text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          User Accounts & Learners ({total})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveMainTab("invitations")}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors flex items-center gap-2 ${
+            activeMainTab === "invitations"
+              ? "bg-teal-50 text-teal-800 dark:bg-teal-950/60 dark:text-teal-200 font-semibold"
+              : "text-muted-foreground hover:bg-muted"
+          }`}
+        >
+          <Mail className="w-4 h-4" />
+          Staff Invitations Lifecycle ({invitations.length})
+        </button>
+      </div>
+
+      {activeMainTab === "users" ? (
+        <>
+          {/* Filters Bar */}
+          <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -774,6 +902,211 @@ export function AdminUsersClient({
           </div>
         </div>
       </div>
+    </>
+  ) : (
+    /* Staff Invitations Lifecycle View */
+    <div className="space-y-4">
+      <div className="border rounded-lg overflow-hidden bg-card">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="bg-muted/50 border-b border-border/60 text-muted-foreground uppercase tracking-wider font-semibold">
+              <tr>
+                <th className="py-3 px-4">Invited Email & Department</th>
+                <th className="py-3 px-4">Intended Role</th>
+                <th className="py-3 px-4">Invited By</th>
+                <th className="py-3 px-4">Expires At</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/40">
+              {invitationsLoading ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                    Loading staff invitations...
+                  </td>
+                </tr>
+              ) : invitations.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-muted-foreground">
+                    <Mail className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+                    No staff invitations found. Click &quot;Invite Staff Member&quot; to issue a new credential invitation.
+                  </td>
+                </tr>
+              ) : (
+                invitations.map((inv) => (
+                  <tr key={inv.id} className="hover:bg-muted/20">
+                    <td className="py-3 px-4">
+                      <p className="font-semibold text-foreground text-sm">{inv.email}</p>
+                      {inv.notes && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">
+                          {inv.notes}
+                        </p>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                        {inv.role.replace("_", " ")}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4 text-muted-foreground">
+                      {inv.invitedBy}
+                    </td>
+                    <td className="py-3 px-4 text-muted-foreground font-mono">
+                      {new Date(inv.expiresAt).toLocaleDateString()}{" "}
+                      <span className="text-[10px]">
+                        ({new Date(inv.expiresAt) > new Date() ? "Active" : "Expired"})
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">
+                      <Badge
+                        variant={
+                          inv.status === "accepted"
+                            ? "default"
+                            : inv.status === "pending"
+                            ? "secondary"
+                            : "outline"
+                        }
+                        className={`text-[10px] uppercase ${
+                          inv.status === "accepted"
+                            ? "bg-emerald-600 text-white"
+                            : inv.status === "pending"
+                            ? "bg-teal-600 text-white"
+                            : inv.status === "revoked"
+                            ? "border-red-500 text-red-600"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {inv.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4 text-right space-x-1">
+                      {inv.status !== "accepted" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs text-teal-600 hover:text-teal-700"
+                          onClick={() => handleResendInvitation(inv.id, inv.email)}
+                          title="Resend invitation token (72h extension)"
+                        >
+                          <Send className="w-3.5 h-3.5 mr-1" /> Resend
+                        </Button>
+                      )}
+                      {inv.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40"
+                          onClick={() => handleRevokeInvitation(inv.id, inv.email)}
+                          title="Revoke invitation"
+                        >
+                          <Ban className="w-3.5 h-3.5 mr-1" /> Revoke
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
+  )}
+
+  {/* Invite Staff Dialog */}
+  <Dialog open={inviteModalOpen} onOpenChange={setInviteModalOpen}>
+    <DialogContent className="max-w-md">
+      <DialogHeader>
+        <DialogTitle className="text-lg font-bold flex items-center gap-2">
+          <UserPlus className="w-5 h-5 text-teal-600" />
+          Invite Staff Member
+        </DialogTitle>
+        <DialogDescription className="text-xs text-muted-foreground">
+          Issue a secure, time-limited onboarding invitation token to faculty, reviewers, or managers.
+        </DialogDescription>
+      </DialogHeader>
+
+      <form onSubmit={handleInviteStaff} className="space-y-4 py-2">
+        <div>
+          <label className="text-xs font-semibold">Staff Work Email <span className="text-red-500">*</span></label>
+          <Input
+            type="email"
+            placeholder="colleague@prepford.edu"
+            value={inviteForm.email}
+            onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
+            required
+            className="mt-1"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold">Assigned Role</label>
+            <select
+              value={inviteForm.role}
+              onChange={(e) =>
+                setInviteForm({
+                  ...inviteForm,
+                  role: e.target.value as StaffInvitation["role"],
+                })
+              }
+              className="w-full h-9 px-3 mt-1 text-sm rounded-md border border-input bg-background"
+            >
+              <option value="instructor">Instructor</option>
+              <option value="reviewer">Reviewer</option>
+              <option value="exam_manager">Exam Manager</option>
+              <option value="content_manager">Content Manager</option>
+              <option value="support">Support</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold">Token Expiration</label>
+            <select
+              value={inviteForm.expiryHours}
+              onChange={(e) =>
+                setInviteForm({ ...inviteForm, expiryHours: parseInt(e.target.value, 10) || 72 })
+              }
+              className="w-full h-9 px-3 mt-1 text-sm rounded-md border border-input bg-background"
+            >
+              <option value={24}>24 Hours</option>
+              <option value={48}>48 Hours</option>
+              <option value={72}>72 Hours (Default)</option>
+              <option value={168}>7 Days</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-xs font-semibold">Onboarding Notes / Department (Optional)</label>
+          <textarea
+            rows={2}
+            value={inviteForm.notes}
+            onChange={(e) => setInviteForm({ ...inviteForm, notes: e.target.value })}
+            placeholder="e.g. Critical care curriculum review onboarding"
+            className="w-full mt-1 p-2 text-xs rounded-md border border-input bg-background"
+          />
+        </div>
+
+        <DialogFooter className="pt-2">
+          <Button type="button" variant="outline" size="sm" onClick={() => setInviteModalOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            size="sm"
+            disabled={inviteSubmitting}
+            className="bg-teal-600 hover:bg-teal-700 text-white"
+          >
+            {inviteSubmitting ? "Dispatching..." : "Send Staff Invitation"}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
+</div>
   );
 }
