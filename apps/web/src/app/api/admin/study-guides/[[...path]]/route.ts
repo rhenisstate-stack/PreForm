@@ -28,7 +28,8 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ success: false, error: "Invalid admin endpoint." }, { status: 400 });
     }
 
-    const backendPath = buildBackendPath(segments, request.nextUrl.searchParams);
+    const searchParams = request.nextUrl ? request.nextUrl.searchParams : new URL(request.url, "http://localhost:3000").searchParams;
+    const backendPath = buildBackendPath(segments, searchParams);
     const method = request.method.toUpperCase();
 
     let payload: unknown = undefined;

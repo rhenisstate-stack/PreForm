@@ -32,7 +32,7 @@ function createMockRequest(
   if (body !== undefined) {
     init.body = typeof body === "string" ? body : JSON.stringify(body);
   }
-  return new NextRequest(new URL(url, "http://localhost:3000"), init);
+  return new Request(new URL(url, "http://localhost:3000").toString(), init) as unknown as NextRequest;
 }
 
 describe("BFF Admin Study Guides Proxy ([...path])", () => {
@@ -266,11 +266,11 @@ describe("BFF Admin Study Guides Proxy ([...path])", () => {
 
     it("returns 400 when malformed JSON is posted", async () => {
       vi.mocked(resolveSession).mockResolvedValueOnce(adminSession as any);
-      const req = new NextRequest(new URL("/api/admin/study-guides/topic-quizzes", "http://localhost:3000"), {
+      const req = new Request("http://localhost:3000/api/admin/study-guides/topic-quizzes", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: "{ this is invalid json }",
-      });
+      }) as unknown as NextRequest;
       const ctx = { params: Promise.resolve({ path: ["topic-quizzes"] }) };
 
       const res = await POST(req, ctx);
