@@ -20,6 +20,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import type { BackendAdminExamPreviewDto } from "@/lib/api-services";
+import { QuestionTypeRenderer } from "@/components/questions/question-type-renderer";
 
 interface ExaminationPreviewDialogProps {
   open: boolean;
@@ -157,7 +158,7 @@ export function ExaminationPreviewDialog({
                   Question {currentIndex + 1} of {questions.length}
                 </span>
                 <Badge variant="outline" className="text-[10px] font-mono text-slate-500">
-                  Type: {currentQuestion.questionTypeKey}
+                  Type: {(currentQuestion as any).questionTypeKey || (currentQuestion as any).questionType || "single-choice"}
                 </Badge>
                 {currentQuestion.clientNeedName && (
                   <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
@@ -166,71 +167,37 @@ export function ExaminationPreviewDialog({
                 )}
               </div>
               <div className="text-[11px] text-slate-400 font-mono">
-                ID: {currentQuestion.id.slice(0, 10)}...
+                ID: {(currentQuestion.id || "").slice(0, 10)}...
               </div>
             </div>
 
-            {/* Stem */}
-            <div className="p-5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
-              <p className="text-sm text-slate-900 dark:text-slate-100 leading-relaxed font-medium">
-                {currentQuestion.stem}
-              </p>
-            </div>
-
-            {/* Options */}
-            <div className="space-y-2.5">
-              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Candidate Option Choices
-              </Label>
-              <div className="space-y-2">
-                {currentQuestion.options.map((opt) => (
-                  <div
-                    key={opt.id}
-                    className={`p-3.5 rounded-lg border text-xs flex items-start gap-3 transition-colors ${
-                      opt.isCorrect
-                        ? "border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-100"
-                        : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300"
-                    }`}
-                  >
-                    <span
-                      className={`h-5 w-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
-                        opt.isCorrect
-                          ? "bg-emerald-600 text-white"
-                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
-                      }`}
-                    >
-                      {opt.optionKey}
-                    </span>
-                    <div className="flex-1 space-y-1">
-                      <div>{opt.content}</div>
-                      {opt.isCorrect && (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 dark:text-emerald-400">
-                          <CheckCircle2 className="h-3 w-3" /> Correct Key (Admin Preview)
-                        </span>
-                      )}
-                      {opt.rationale && (
-                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 pl-2 border-l border-emerald-400/50">
-                          {opt.rationale}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Overall Clinical Rationale */}
-            {currentQuestion.overallRationale && (
-              <div className="p-4 rounded-xl border border-teal-200 dark:border-teal-800/50 bg-teal-50/40 dark:bg-teal-950/20 space-y-1.5">
-                <h4 className="text-xs font-bold text-teal-900 dark:text-teal-200 flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Authoritative Clinical Rationale (Educator / Reviewer Verification)
-                </h4>
-                <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
-                  {currentQuestion.overallRationale}
-                </p>
-              </div>
-            )}
+            <QuestionTypeRenderer
+              questionId={currentQuestion.id}
+              questionTypeKey={
+                (currentQuestion as any).questionTypeKey ||
+                (currentQuestion as any).questionType ||
+                "single-choice"
+              }
+              stem={currentQuestion.stem}
+              instructions={(currentQuestion as any).instructions}
+              clinicalScenario={(currentQuestion as any).clinicalScenario}
+              exhibitsJson={(currentQuestion as any).exhibitsJson}
+              structuredContentJson={(currentQuestion as any).structuredContentJson}
+              overallRationale={
+                currentQuestion.overallRationale || (currentQuestion as any).rationale
+              }
+              options={(currentQuestion.options || []).map((opt: any, oIdx: number) => ({
+                id: opt.id || `${currentQuestion.id}_opt_${oIdx}`,
+                optionKey: opt.optionKey || opt.key || String.fromCharCode(65 + oIdx),
+                content: opt.content || opt.text || "",
+                isCorrect: Boolean(opt.isCorrect),
+                rationale: opt.rationale || null,
+                distractorRationale: opt.distractorRationale || null,
+                mediaUrl: opt.mediaUrl || null,
+                displayOrder: opt.displayOrder ?? oIdx,
+              }))}
+              mode="admin-preview"
+            />
           </div>
         )}
       </div>

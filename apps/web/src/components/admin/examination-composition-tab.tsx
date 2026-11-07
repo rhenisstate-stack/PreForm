@@ -38,12 +38,26 @@ const CLIENT_NEEDS_MASTER = [
 
 const ALLOWED_TRADITIONAL_TYPES = [
   { key: "single-choice", label: "Single Choice (Multiple Choice)" },
-  { key: "multiple-response", label: "Multiple Response (SATA)" },
-  { key: "drag-and-drop", label: "Drag and Drop" },
-  { key: "ordered-response", label: "Ordered Response" },
-  { key: "hot-spot", label: "Hot Spot" },
-  { key: "fill-in-the-blank", label: "Fill in the Blank" },
+  { key: "multiple-choice", label: "Multiple Choice" },
+  { key: "sata", label: "Select All That Apply (SATA)" },
+  { key: "checkbox", label: "Multiple True/False (Checkbox)" },
+  { key: "image-based", label: "Hot Spot / Image-Based" },
+  { key: "multiple-image", label: "Multiple Image Selection" },
+  { key: "true-false", label: "Clinical True / False" },
 ];
+
+const LEGACY_COMPOSITION_TYPE_MAP: Record<string, string> = {
+  "multiple-response": "sata",
+  "hot-spot": "image-based",
+};
+
+function normalizeAllowedTypes(types?: string[]): string[] {
+  if (!types || types.length === 0) return ["single-choice", "sata"];
+  const mapped = types
+    .map((t) => LEGACY_COMPOSITION_TYPE_MAP[t] || t)
+    .filter((t) => ALLOWED_TRADITIONAL_TYPES.some((allowed) => allowed.key === t));
+  return mapped.length > 0 ? Array.from(new Set(mapped)) : ["single-choice", "sata"];
+}
 
 interface ExaminationCompositionTabProps {
   revisionId: string;
@@ -64,7 +78,7 @@ export function ExaminationCompositionTab({
   const [selectionStrategy, setSelectionStrategy] = React.useState("Preset");
   const [allowedQuestionTypes, setAllowedQuestionTypes] = React.useState<string[]>([
     "single-choice",
-    "multiple-response",
+    "sata",
   ]);
   const [quotas, setQuotas] = React.useState<ClientNeedQuotaItem[]>([]);
   const [isInitialized, setIsInitialized] = React.useState(false);
@@ -106,11 +120,7 @@ export function ExaminationCompositionTab({
       const comp = compositionData.composition;
       setTargetQuestionCount(comp.targetQuestionCount || 10);
       setSelectionStrategy(comp.selectionStrategy || "Preset");
-      setAllowedQuestionTypes(
-        comp.allowedQuestionTypes && comp.allowedQuestionTypes.length > 0
-          ? comp.allowedQuestionTypes
-          : ["single-choice", "multiple-response"]
-      );
+      setAllowedQuestionTypes(normalizeAllowedTypes(comp.allowedQuestionTypes));
 
       // Merge master client needs with saved quotas
       const mergedQuotas: ClientNeedQuotaItem[] = CLIENT_NEEDS_MASTER.map((cn) => {
