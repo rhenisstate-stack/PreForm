@@ -216,10 +216,10 @@ export function AdminSubscriptionsClient() {
     setEditingPlan(plan);
     setPlanForm({
       name: plan.name,
-      slug: plan.slug,
-      description: plan.description,
+      slug: plan.slug || "",
+      description: plan.description || "",
       pathway: plan.pathway,
-      planType: plan.planType,
+      planType: plan.planType || "pro",
       price: plan.price,
       billingInterval: plan.billingInterval || "month",
       featuresText: (plan.features || []).join("\n"),

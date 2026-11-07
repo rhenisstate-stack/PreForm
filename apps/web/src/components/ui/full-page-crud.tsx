@@ -233,63 +233,119 @@ export function FullPageActionBar({
 export interface FullPageFormLayoutProps {
   title: React.ReactNode;
   description?: React.ReactNode;
+  subtitle?: React.ReactNode;
   eyebrow?: React.ReactNode;
   badge?: React.ReactNode;
   breadcrumbs?: BreadcrumbItem[];
   backLabel?: string;
   backHref?: string;
   onBack?: () => void;
+  onCancel?: () => void;
+  cancelLabel?: string;
+  onSubmit?: (e: React.FormEvent) => void | Promise<void>;
+  submitLabel?: string;
+  submitDisabled?: boolean;
+  isSubmitting?: boolean;
   headerActions?: React.ReactNode;
   footer?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  testId?: string;
   "data-testid"?: string;
 }
 
 export function FullPageFormLayout({
   title,
   description,
+  subtitle,
   eyebrow,
   badge,
   breadcrumbs,
   backLabel,
   backHref,
   onBack,
+  onCancel,
+  cancelLabel = "Cancel",
+  onSubmit,
+  submitLabel = "Save",
+  submitDisabled = false,
+  isSubmitting = false,
   headerActions,
   footer,
   children,
   className,
+  testId,
   "data-testid": dataTestId,
 }: FullPageFormLayoutProps) {
-  return (
+  const resolvedDescription = description ?? subtitle;
+  const resolvedBack = onBack ?? onCancel;
+  const resolvedFooter =
+    footer ??
+    (onSubmit || onCancel ? (
+      <FullPageActionBar
+        onCancel={onCancel}
+        cancelLabel={cancelLabel}
+        primaryAction={
+          onSubmit ? (
+            <Button
+              type="submit"
+              disabled={isSubmitting || submitDisabled}
+              className="gap-1.5"
+            >
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {submitLabel}
+            </Button>
+          ) : undefined
+        }
+      />
+    ) : undefined);
+
+  const content = (
     <FullPageCrudLayout
-      data-testid={dataTestId}
+      data-testid={dataTestId ?? testId ?? "full-page-form-layout"}
       className={className}
       header={
         <FullPageHeader
           title={title}
-          description={description}
+          description={resolvedDescription}
           eyebrow={eyebrow}
           badge={badge}
           breadcrumbs={breadcrumbs}
           backLabel={backLabel}
           backHref={backHref}
-          onBack={onBack}
+          onBack={resolvedBack}
           actions={headerActions}
         />
       }
-      footer={footer}
+      footer={resolvedFooter}
     >
       <div className="w-full max-w-none min-w-0 rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-xs space-y-6">
         {children}
       </div>
     </FullPageCrudLayout>
   );
+
+  if (onSubmit) {
+    return (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSubmit(e);
+        }}
+        className="w-full max-w-none min-w-0 flex-1 flex flex-col"
+      >
+        {content}
+      </form>
+    );
+  }
+
+  return content;
 }
 
 export interface FullPageDetailsLayoutProps {
   title: React.ReactNode;
   description?: React.ReactNode;
+  subtitle?: React.ReactNode;
   eyebrow?: React.ReactNode;
   badge?: React.ReactNode;
   breadcrumbs?: BreadcrumbItem[];
@@ -300,12 +356,14 @@ export interface FullPageDetailsLayoutProps {
   footer?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  testId?: string;
   "data-testid"?: string;
 }
 
 export function FullPageDetailsLayout({
   title,
   description,
+  subtitle,
   eyebrow,
   badge,
   breadcrumbs,
@@ -316,16 +374,17 @@ export function FullPageDetailsLayout({
   footer,
   children,
   className,
+  testId,
   "data-testid": dataTestId,
 }: FullPageDetailsLayoutProps) {
   return (
     <FullPageCrudLayout
-      data-testid={dataTestId}
+      data-testid={dataTestId ?? testId ?? "full-page-details-layout"}
       className={className}
       header={
         <FullPageHeader
           title={title}
-          description={description}
+          description={description ?? subtitle}
           eyebrow={eyebrow}
           badge={badge}
           breadcrumbs={breadcrumbs}
@@ -345,57 +404,79 @@ export function FullPageDetailsLayout({
 export interface FullPageDeleteLayoutProps {
   title: React.ReactNode;
   description?: React.ReactNode;
-  recordTitle: React.ReactNode;
+  subtitle?: React.ReactNode;
+  recordTitle?: React.ReactNode;
+  recordSummary?: React.ReactNode;
   recordSubtitle?: React.ReactNode;
   recordMetadata?: Array<{ label: string; value: React.ReactNode }>;
   consequences?: string[];
   dependencyNotice?: React.ReactNode;
   isBlocked?: boolean;
   blockedReason?: React.ReactNode;
+  blockReason?: React.ReactNode;
   breadcrumbs?: BreadcrumbItem[];
   backLabel?: string;
+  onBack?: () => void;
   onCancel: () => void;
   onConfirmDelete?: () => void;
   confirmDeleteLabel?: string;
+  confirmLabel?: string;
   onArchiveInstead?: () => void;
   archiveInsteadLabel?: string;
   isSubmitting?: boolean;
+  isDeleting?: boolean;
   children?: React.ReactNode;
+  testId?: string;
   "data-testid"?: string;
 }
 
 export function FullPageDeleteLayout({
   title,
-  description = "Review the record details, dependency impact, and historical-record protections before proceeding.",
+  description,
+  subtitle,
   recordTitle,
+  recordSummary,
   recordSubtitle,
   recordMetadata,
   consequences,
   dependencyNotice,
   isBlocked = false,
   blockedReason,
+  blockReason,
   breadcrumbs,
   backLabel = "Return without deleting",
+  onBack,
   onCancel,
   onConfirmDelete,
-  confirmDeleteLabel = "Confirm Delete",
+  confirmDeleteLabel,
+  confirmLabel,
   onArchiveInstead,
   archiveInsteadLabel = "Archive / Deactivate Instead",
   isSubmitting = false,
+  isDeleting = false,
   children,
+  testId,
   "data-testid": dataTestId,
 }: FullPageDeleteLayoutProps) {
+  const resolvedDescription =
+    description ??
+    subtitle ??
+    "Review the record details, dependency impact, and historical-record protections before proceeding.";
+  const resolvedBlockedReason = blockedReason ?? blockReason;
+  const resolvedConfirmLabel = confirmDeleteLabel ?? confirmLabel ?? "Confirm Delete";
+  const resolvedSubmitting = isSubmitting || isDeleting;
+
   return (
     <FullPageCrudLayout
-      data-testid={dataTestId}
+      data-testid={dataTestId ?? testId ?? "full-page-delete-layout"}
       header={
         <FullPageHeader
           eyebrow="Destructive Operation Review"
           title={title}
-          description={description}
+          description={resolvedDescription}
           breadcrumbs={breadcrumbs}
           backLabel={backLabel}
-          onBack={onCancel}
+          onBack={onBack ?? onCancel}
           badge={
             <Badge
               variant="outline"
@@ -416,11 +497,11 @@ export function FullPageDeleteLayout({
                 <Button
                   type="button"
                   variant="secondary"
-                  disabled={isSubmitting}
+                  disabled={resolvedSubmitting}
                   onClick={onArchiveInstead}
                   className="gap-1.5"
                 >
-                  {isSubmitting ? (
+                  {resolvedSubmitting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Archive className="h-4 w-4" />
@@ -432,16 +513,16 @@ export function FullPageDeleteLayout({
                 <Button
                   type="button"
                   variant="destructive"
-                  disabled={isSubmitting}
+                  disabled={resolvedSubmitting}
                   onClick={onConfirmDelete}
                   className="gap-1.5"
                 >
-                  {isSubmitting ? (
+                  {resolvedSubmitting ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Trash2 className="h-4 w-4" />
                   )}
-                  {confirmDeleteLabel}
+                  {resolvedConfirmLabel}
                 </Button>
               )}
             </div>
@@ -455,10 +536,11 @@ export function FullPageDeleteLayout({
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
               Target Record
             </p>
-            <h2 className="text-xl font-bold text-foreground">{recordTitle}</h2>
+            {recordTitle && <h2 className="text-xl font-bold text-foreground">{recordTitle}</h2>}
             {recordSubtitle && (
               <p className="text-sm text-muted-foreground">{recordSubtitle}</p>
             )}
+            {recordSummary && <div className="pt-1">{recordSummary}</div>}
           </div>
 
           {recordMetadata && recordMetadata.length > 0 && (
@@ -483,7 +565,7 @@ export function FullPageDeleteLayout({
                 <span>Hard Deletion Blocked by Data-Integrity Policy</span>
               </div>
               <div className="text-sm text-amber-900/90 dark:text-amber-100/90 leading-relaxed">
-                {blockedReason ||
+                {resolvedBlockedReason ||
                   "This record is referenced by historical learner attempts, active curriculum records, or published examination revisions and cannot be permanently deleted."}
               </div>
               {onArchiveInstead && (
