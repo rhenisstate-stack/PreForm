@@ -5,6 +5,7 @@
     <RollForward>Major</RollForward>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <NuGetAudit>false</NuGetAudit>
     <RootNamespace>Preform.Api.Tests</RootNamespace>
     <AssemblyName>Preform.Api.Tests</AssemblyName>
     <IsPackable>false</IsPackable>
