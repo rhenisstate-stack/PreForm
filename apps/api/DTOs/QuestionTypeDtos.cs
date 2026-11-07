@@ -1,9 +1,11 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 namespace Preform.Api.DTOs;
 
 public sealed class QuestionTypeDto
 {
+    [JsonIgnore]
     public string Id { get; set; } = string.Empty;
 
     [Required]
