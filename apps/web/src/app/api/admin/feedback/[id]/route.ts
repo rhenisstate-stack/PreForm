@@ -39,7 +39,7 @@ export async function PATCH(
     const updated = await feedbackService.updateFeedback(id, {
       status: body.status,
       adminNotes: body.adminNotes,
-      resolvedBy: auth.session?.user?.email || "admin@prepford.com",
+      resolvedBy: auth.session?.email || "admin@prepford.com",
     });
 
     return NextResponse.json({ success: true, feedback: updated });

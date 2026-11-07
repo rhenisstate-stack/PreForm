@@ -131,7 +131,10 @@ export const blogService = {
   },
 
   async createPost(
-    postData: Omit<AdminBlogPost, "slug"> & { slug?: string }
+    postData: Omit<AdminBlogPost, "slug" | "publishedAt"> & {
+      slug?: string;
+      publishedAt?: string;
+    }
   ): Promise<AdminBlogPost> {
     const slug =
       postData.slug?.trim() ||

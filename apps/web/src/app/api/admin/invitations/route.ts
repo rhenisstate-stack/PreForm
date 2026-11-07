@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     const invitation = await invitationService.createInvitation({
       email: body.email,
       role: body.role,
-      invitedBy: auth.session?.user?.email || "admin@prepford.com",
+      invitedBy: auth.session?.email || "admin@prepford.com",
       notes: body.notes,
       expiryHours: body.expiryHours || 72,
     });

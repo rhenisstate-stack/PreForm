@@ -181,7 +181,10 @@ export const videoService = {
   },
 
   async createVideo(
-    data: Omit<LearningVideo, "id" | "createdAt" | "updatedAt"> & { id?: string }
+    data: Omit<LearningVideo, "id" | "createdAt" | "updatedAt" | "slug"> & {
+      id?: string;
+      slug?: string;
+    }
   ): Promise<LearningVideo> {
     const slug =
       data.slug?.trim() ||

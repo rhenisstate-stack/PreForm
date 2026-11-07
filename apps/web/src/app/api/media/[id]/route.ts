@@ -44,7 +44,7 @@ export async function DELETE(
   try {
     const { id } = await params;
     const result = await mediaService.deleteAsset(id);
-    return NextResponse.json({ success: true, ...result });
+    return NextResponse.json(result);
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Failed to delete media asset";
     return NextResponse.json({ success: false, error: message }, { status: 400 });
