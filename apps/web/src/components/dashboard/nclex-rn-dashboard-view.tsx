@@ -132,7 +132,7 @@ export function NCLEXRNDashboardView({
 
   const rnAuthoritativeAttempts = React.useMemo(() => {
     return authoritativeAttempts.filter(
-      (a) => !a.examinationCode?.toLowerCase().includes("pn") || a.examinationCode?.toLowerCase().includes("rn")
+      (a) => !a.name?.toLowerCase().includes("pn") || a.name?.toLowerCase().includes("rn")
     );
   }, [authoritativeAttempts]);
 
@@ -144,11 +144,11 @@ export function NCLEXRNDashboardView({
         : rnStoredAttempts.length;
 
   const meanScore =
-    typeof analyticsSummary?.meanScorePercent === "number"
-      ? Math.round(analyticsSummary.meanScorePercent)
+    typeof analyticsSummary?.averageScorePercent === "number"
+      ? Math.round(analyticsSummary.averageScorePercent)
       : rnAuthoritativeAttempts.length > 0
         ? Math.round(
-            rnAuthoritativeAttempts.reduce((acc, a) => acc + (a.scorePercentage || 0), 0) /
+            rnAuthoritativeAttempts.reduce((acc, a) => acc + (a.scorePercent || 0), 0) /
               rnAuthoritativeAttempts.length
           )
         : rnStoredAttempts.length > 0
@@ -420,8 +420,8 @@ export function NCLEXRNDashboardView({
               <Clock className="h-4 w-4 text-secondary" />
             </div>
             <div className="text-3xl font-serif font-bold text-foreground">
-              {typeof analyticsSummary?.studyHoursLogged === "number"
-                ? analyticsSummary.studyHoursLogged.toFixed(1)
+              {typeof analyticsSummary?.totalDurationMinutes === "number"
+                ? (analyticsSummary.totalDurationMinutes / 60).toFixed(1)
                 : "0.0"}
             </div>
             <p className="text-xs text-muted-foreground">Active practice &amp; study time logged</p>
@@ -434,7 +434,7 @@ export function NCLEXRNDashboardView({
               <BarChart2 className="h-4 w-4 text-secondary" />
             </div>
             <div className="text-3xl font-serif font-bold text-foreground">
-              {analyticsSummary?.clientNeedsMasteryRank || "Proficient"}
+              {analyticsSummary?.currentReadinessTier || "Proficient"}
             </div>
             <p className="text-xs text-muted-foreground">NCSBN RN category percentile benchmark</p>
           </div>
@@ -511,26 +511,26 @@ export function NCLEXRNDashboardView({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {clientNeeds.map((cat) => (
               <div
-                key={cat.code}
+                key={cat.categoryCode}
                 className="rounded-xl border border-border/80 bg-muted/30 p-4 space-y-2 hover:border-secondary/40 transition-colors"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-foreground truncate max-w-[80%]">{cat.name}</span>
+                  <span className="text-xs font-bold text-foreground truncate max-w-[80%]">{cat.categoryName}</span>
                   <span className="text-xs font-mono font-semibold text-secondary">
-                    {Math.round(cat.accuracyPercentage)}%
+                    {Math.round(cat.accuracyPercent)}%
                   </span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full bg-secondary rounded-full transition-all duration-500"
-                    style={{ width: `${Math.min(100, Math.max(5, cat.accuracyPercentage))}%` }}
+                    style={{ width: `${Math.min(100, Math.max(5, cat.accuracyPercent))}%` }}
                   />
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>{cat.questionsAttempted} items attempted</span>
+                  <span>{cat.totalAssessedQuestions} items attempted</span>
                   <button
                     type="button"
-                    onClick={() => onOpenCreateTest("tutored_cat", cat.code)}
+                    onClick={() => onOpenCreateTest("tutored_cat", cat.categoryCode)}
                     className="text-secondary hover:underline font-medium"
                   >
                     Drill Category →
@@ -620,7 +620,7 @@ export function NCLEXRNDashboardView({
                         <span className="font-semibold text-sm text-foreground">{attempt.name}</span>
                         <Badge
                           variant="outline"
-                          className={`text-[10px] font-mono uppercase ${tierStyles.border} ${tierStyles.text}`}
+                          className={`text-[10px] font-mono uppercase ${tierStyles.badgeBorder} ${tierStyles.badgeBg}`}
                         >
                           {attempt.performanceTier} ({getTierShortCode(attempt.performanceTier)})
                         </Badge>

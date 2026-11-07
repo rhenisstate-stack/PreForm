@@ -3,6 +3,9 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { NCLEXRNDashboardView } from "@/components/dashboard/nclex-rn-dashboard-view";
+import { NCLEXPNDashboardView } from "@/components/dashboard/nclex-pn-dashboard-view";
 import {
   ArrowRight,
   BarChart2,
@@ -126,7 +129,13 @@ function readStoredRecentActivity(): RecentStudyActivity | null {
   }
 }
 
-export function DashboardClient() {
+export interface DashboardClientProps {
+  lockedPathway?: "rn" | "pn";
+  initialPathway?: "rn" | "pn";
+}
+
+export function DashboardClient({ lockedPathway, initialPathway }: DashboardClientProps = {}) {
+  const router = useRouter();
   const auth = useAuth();
   const cart = useCart();
 
@@ -443,9 +452,21 @@ export function DashboardClient() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const activePathway: "rn" | "pn" = selectedPathway ?? (user?.pathway === "pn" ? "pn" : "rn");
+  const activePathway: "rn" | "pn" =
+    lockedPathway ?? selectedPathway ?? initialPathway ?? (user?.pathway === "pn" ? "pn" : "rn");
   const pathwayLabel = activePathway === "pn" ? "NCLEX-PN" : "NCLEX-RN";
   const cartItemCount = cart?.itemCount ?? 0;
+
+  const handleSwitchPathway = React.useCallback(
+    (targetPathway: "rn" | "pn") => {
+      if (lockedPathway) {
+        router.push(`/dashboard/${targetPathway}`);
+      } else {
+        setSelectedPathway(targetPathway);
+      }
+    },
+    [lockedPathway, router]
+  );
 
   const recordActivity = React.useCallback(
     (entry: Omit<RecentStudyActivity, "visitedAt">) => {
@@ -577,7 +598,7 @@ export function DashboardClient() {
           name: user.name || user.displayName || "Candidate",
           displayName: user.displayName || user.name || "Candidate",
           role: user.role || "candidate",
-          pathway: (user.pathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
+          pathway: (activePathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
           csrfToken: "",
           sessionId: "",
           expiresAt: "",
@@ -661,7 +682,7 @@ export function DashboardClient() {
                   name: user.name || user.displayName || "Candidate",
                   displayName: user.displayName || user.name || "Candidate",
                   role: user.role || "candidate",
-                  pathway: (user.pathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
+                  pathway: (activePathway === "pn" ? "pn" : "rn") as "rn" | "pn" | "both",
                   csrfToken: "",
                   sessionId: "",
                   expiresAt: "",
@@ -693,6 +714,7 @@ export function DashboardClient() {
   }
 
   if (!isAuthenticated || !user) {
+    const signInReturnPath = lockedPathway === "rn" ? "/dashboard/rn" : lockedPathway === "pn" ? "/dashboard/pn" : "/dashboard";
     return (
       <div
         data-testid="dashboard-unauthenticated"
@@ -708,12 +730,60 @@ export function DashboardClient() {
           Please sign in to access your PrepFord learner dashboard, study guides, practice scenarios, and account settings.
         </p>
         <Link
-          href="/sign-in?from=/dashboard"
+          href={`/sign-in?from=${signInReturnPath}`}
           className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
         >
           <span>Sign In to Workspace</span>
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
+      </div>
+    );
+  }
+
+  // Entitlement verification for locked pathway routes
+  if (
+    user &&
+    lockedPathway &&
+    user.role !== "admin" &&
+    user.role !== "superadmin" &&
+    user.pathway !== "both" &&
+    user.pathway &&
+    user.pathway !== lockedPathway
+  ) {
+    const isRn = lockedPathway === "rn";
+    return (
+      <div
+        data-testid="dashboard-entitlement-blocked"
+        className="w-full py-24 px-4 text-center bg-background"
+      >
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mb-6">
+          <ShieldCheck className="h-8 w-8" aria-hidden="true" />
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground mb-3">
+          {isRn ? "NCLEX-RN Entitlement Required" : "NCLEX-PN Entitlement Required"}
+        </h1>
+        <p className="text-muted-foreground mb-8 text-sm max-w-md mx-auto leading-relaxed">
+          Your PrepFord account is currently configured for the{" "}
+          <strong className="text-foreground">
+            {user?.pathway === "pn" ? "NCLEX-PN (Practical Nursing)" : "NCLEX-RN (Registered Nursing)"}
+          </strong>{" "}
+          pathway. To access this dashboard, return to your enrolled pathway or add this examination package to your account.
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Link
+            href={isRn ? "/dashboard/pn" : "/dashboard/rn"}
+            className="inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors"
+          >
+            <span>Return to {isRn ? "NCLEX-PN" : "NCLEX-RN"} Dashboard</span>
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+          <Link
+            href={isRn ? "/nclex-rn#rn-study-plans" : "/nclex-pn#pn-study-plans"}
+            className="inline-flex items-center gap-2 rounded-xl border border-border px-6 py-3 text-sm font-semibold text-foreground hover:bg-muted transition-colors"
+          >
+            <span>View {isRn ? "NCLEX-RN" : "NCLEX-PN"} Plans</span>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -1291,7 +1361,25 @@ export function DashboardClient() {
                 Home
               </Link>
               <span>/</span>
-              <span className="text-foreground font-medium">Previous Tests</span>
+              {lockedPathway === "rn" ? (
+                <>
+                  <Link href="/nclex-rn" className="hover:text-foreground transition-colors">
+                    NCLEX-RN
+                  </Link>
+                  <span>/</span>
+                  <span className="text-foreground font-medium">RN Learner Dashboard</span>
+                </>
+              ) : lockedPathway === "pn" ? (
+                <>
+                  <Link href="/nclex-pn" className="hover:text-foreground transition-colors">
+                    NCLEX-PN
+                  </Link>
+                  <span>/</span>
+                  <span className="text-foreground font-medium">PN Learner Dashboard</span>
+                </>
+              ) : (
+                <span className="text-foreground font-medium">Previous Tests</span>
+              )}
             </nav>
           </div>
 
@@ -1303,7 +1391,7 @@ export function DashboardClient() {
                 type="button"
                 data-testid="dashboard-pathway-rn"
                 aria-pressed={activePathway === "rn"}
-                onClick={() => setSelectedPathway("rn")}
+                onClick={() => handleSwitchPathway("rn")}
                 className={`px-2.5 py-1 rounded-md transition-all ${
                   activePathway === "rn"
                     ? "bg-card text-foreground font-semibold shadow-2xs"
@@ -1316,7 +1404,7 @@ export function DashboardClient() {
                 type="button"
                 data-testid="dashboard-pathway-pn"
                 aria-pressed={activePathway === "pn"}
-                onClick={() => setSelectedPathway("pn")}
+                onClick={() => handleSwitchPathway("pn")}
                 className={`px-2.5 py-1 rounded-md transition-all ${
                   activePathway === "pn"
                     ? "bg-card text-foreground font-semibold shadow-2xs"
@@ -1376,11 +1464,81 @@ export function DashboardClient() {
 
         {/* Dashboard Main Workspace */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-[1600px] w-full mx-auto">
-          {/* =====================================================================
-              SECTION 1: WELCOME & STUDY FOCUS BANNER
-             ===================================================================== */}
-          <section
-            data-testid="dashboard-welcome-header"
+          {lockedPathway === "rn" ? (
+            <NCLEXRNDashboardView
+              learnerName={learnerName}
+              userEmail={userEmail}
+              userRole={userRole}
+              userPathway={userPathway}
+              activePlan={user?.activePlan}
+              targetExamDate={user?.targetExamDate}
+              recentActivity={recentActivity}
+              onOpenCreateTest={handleOpenCreateTest}
+              onResumeAttempt={handleResumeAttempt}
+              onReviewAttempt={setReviewModalAttempt}
+              onViewReport={setReportModalAttempt}
+              onSwitchPathway={handleSwitchPathway}
+              canSwitchPathway={true}
+              authoritativeAttempts={authoritativeAttempts}
+              storedAttempts={storedAttempts}
+              analyticsSummary={analyticsSummary}
+              readinessTrend={readinessTrend}
+              clientNeeds={clientNeeds}
+              curriculumTopics={curriculumTopics}
+              recommendations={recommendations}
+              studyOverview={studyOverview}
+              studyOverviewState={studyOverviewState}
+              availableAssessments={availableAssessments}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              showSamplePreview={showSamplePreview}
+              setShowSamplePreview={setShowSamplePreview}
+              chartTimeRange={chartTimeRange}
+              setChartTimeRange={setChartTimeRange}
+              hoveredAttemptIndex={hoveredAttemptIndex}
+              setHoveredAttemptIndex={setHoveredAttemptIndex}
+            />
+          ) : lockedPathway === "pn" ? (
+            <NCLEXPNDashboardView
+              learnerName={learnerName}
+              userEmail={userEmail}
+              userRole={userRole}
+              userPathway={userPathway}
+              activePlan={user?.activePlan}
+              targetExamDate={user?.targetExamDate}
+              recentActivity={recentActivity}
+              onOpenCreateTest={handleOpenCreateTest}
+              onResumeAttempt={handleResumeAttempt}
+              onReviewAttempt={setReviewModalAttempt}
+              onViewReport={setReportModalAttempt}
+              onSwitchPathway={handleSwitchPathway}
+              canSwitchPathway={true}
+              authoritativeAttempts={authoritativeAttempts}
+              storedAttempts={storedAttempts}
+              analyticsSummary={analyticsSummary}
+              readinessTrend={readinessTrend}
+              clientNeeds={clientNeeds}
+              curriculumTopics={curriculumTopics}
+              recommendations={recommendations}
+              studyOverview={studyOverview}
+              studyOverviewState={studyOverviewState}
+              availableAssessments={availableAssessments}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              showSamplePreview={showSamplePreview}
+              setShowSamplePreview={setShowSamplePreview}
+              chartTimeRange={chartTimeRange}
+              setChartTimeRange={setChartTimeRange}
+              hoveredAttemptIndex={hoveredAttemptIndex}
+              setHoveredAttemptIndex={setHoveredAttemptIndex}
+            />
+          ) : (
+            <>
+              {/* =====================================================================
+                  SECTION 1: WELCOME & STUDY FOCUS BANNER
+                 ===================================================================== */}
+              <section
+                data-testid="dashboard-welcome-header"
             aria-labelledby="dashboard-welcome-heading"
             className="rounded-2xl border border-border/80 bg-gradient-to-br from-card via-card to-teal-500/5 p-6 sm:p-8 shadow-xs"
           >
@@ -3016,7 +3174,9 @@ export function DashboardClient() {
               </Link>
             </div>
           </section>
-        </main>
+        </>
+      )}
+    </main>
       </div>
 
       {/* =====================================================================
