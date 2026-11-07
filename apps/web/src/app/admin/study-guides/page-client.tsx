@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import {
   BookOpen,
   Check,
@@ -12,6 +13,10 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  FileText,
+  HelpCircle,
+  RotateCcw,
+  ArrowRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -259,6 +264,73 @@ export function AdminStudyGuidesClient() {
             </Button>
           )}
         </div>
+      </div>
+
+      {/* ── 4 Dedicated Administrative Workspaces Navigation Hub ── */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Link
+          href="/admin/study-guides/notes"
+          className="group rounded-xl border border-border bg-card p-4 shadow-xs transition-all hover:border-primary/50 hover:shadow-sm"
+        >
+          <div className="flex items-center justify-between">
+            <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+              <FileText className="h-5 w-5" />
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+          </div>
+          <h3 className="font-semibold text-sm text-foreground mt-3">Notes Workspace</h3>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            Rich-text editor, publication workflow, NCLEX Client Needs, and RN/PN scoping.
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/study-guides/flashcards"
+          className="group rounded-xl border border-border bg-card p-4 shadow-xs transition-all hover:border-teal-500/50 hover:shadow-sm"
+        >
+          <div className="flex items-center justify-between">
+            <div className="h-9 w-9 rounded-lg bg-teal-500/10 flex items-center justify-center text-teal-600 group-hover:bg-teal-600 group-hover:text-white transition-colors">
+              <Layers className="h-5 w-5" />
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-teal-600 group-hover:translate-x-0.5 transition-all" />
+          </div>
+          <h3 className="font-semibold text-sm text-foreground mt-3">Flashcards Workspace</h3>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            Deck & card authoring, card styles, card reordering, duplication, and transfers.
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/study-guides/review-sessions"
+          className="group rounded-xl border border-border bg-card p-4 shadow-xs transition-all hover:border-blue-500/50 hover:shadow-sm"
+        >
+          <div className="flex items-center justify-between">
+            <div className="h-9 w-9 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+              <RotateCcw className="h-5 w-5" />
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-blue-600 group-hover:translate-x-0.5 transition-all" />
+          </div>
+          <h3 className="font-semibold text-sm text-foreground mt-3">Review Sessions</h3>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            Global SM-2 settings, real-time retention analytics, and session audit logs.
+          </p>
+        </Link>
+
+        <Link
+          href="/admin/study-guides/topic-quizzes"
+          className="group rounded-xl border border-border bg-card p-4 shadow-xs transition-all hover:border-amber-500/50 hover:shadow-sm"
+        >
+          <div className="flex items-center justify-between">
+            <div className="h-9 w-9 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors">
+              <HelpCircle className="h-5 w-5" />
+            </div>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-amber-600 group-hover:translate-x-0.5 transition-all" />
+          </div>
+          <h3 className="font-semibold text-sm text-foreground mt-3">Topic Quizzes</h3>
+          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+            Question bank assignment, AI draft generator, passing scores, and attempt analytics.
+          </p>
+        </Link>
       </div>
 
       {/* ── Content View ── */}
