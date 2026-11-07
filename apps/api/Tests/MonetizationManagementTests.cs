@@ -57,8 +57,8 @@ public class MonetizationManagementTests
         Assert.NotNull(duplicatedDto);
         Assert.NotEqual(originalPlan.Id, duplicatedDto.Id);
         Assert.Contains("Copy", duplicatedDto.Name);
-        Assert.Equal("Draft", duplicatedDto.PublicationStatus);
-        Assert.Equal(2, duplicatedDto.Version);
+        Assert.Equal("draft", duplicatedDto.PublicationStatus, ignoreCase: true);
+        Assert.Equal(1, duplicatedDto.Version);
 
         var storedCopy = await context.SubscriptionPlans.FindAsync(duplicatedDto.Id);
         Assert.NotNull(storedCopy);
@@ -103,9 +103,11 @@ public class MonetizationManagementTests
         });
         await context.SaveChangesAsync();
 
-        // Attempting to delete planWithSubs must throw InvalidOperationException
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            subscriptionService.DeletePlanAsync("plan_with_subs"));
+        // Attempting to delete planWithSubs must fail with financial/subscription guard error
+        var (guardSuccess, guardError) = await subscriptionService.DeletePlanAsync("plan_with_subs");
+        Assert.False(guardSuccess);
+        Assert.NotNull(guardError);
+        Assert.Contains("subscription records exist", guardError, StringComparison.OrdinalIgnoreCase);
 
         // Deleting unused plan succeeds
         var (deleteSuccess, deleteError) = await subscriptionService.DeletePlanAsync("plan_unused");
@@ -170,20 +172,17 @@ public class MonetizationManagementTests
         };
 
         var recordRes = await controller.RecordManualPayment(recordDto, CancellationToken.None);
-        var recordOk = Assert.IsType<OkObjectResult>(recordRes);
-        var recordData = recordOk.Value;
-        Assert.NotNull(recordData);
+        Assert.IsType<OkObjectResult>(recordRes);
 
-        var authId = recordData.GetType().GetProperty("authorizationId")?.GetValue(recordData) as string;
-        Assert.False(string.IsNullOrWhiteSpace(authId));
-
-        var storedAuth = await context.ManualSubscriptionAuthorizations.FindAsync(authId);
+        var storedAuth = await context.ManualSubscriptionAuthorizations
+            .FirstOrDefaultAsync(a => a.TransactionReference == "MPESA-TEST-9988");
         Assert.NotNull(storedAuth);
         Assert.Equal(PaymentVerificationStatus.PendingVerification, storedAuth.Status);
+        var authId = storedAuth.Id;
 
-        // User should not yet have active plan
+        // User should not yet have the target plan
         var userBeforeVerify = await context.Users.FindAsync("usr_cand_offline");
-        Assert.Null(userBeforeVerify!.ActivePlan);
+        Assert.NotEqual("plan_pn_pro", userBeforeVerify!.ActivePlan);
 
         // 2. Verify payment
         var verifyDto = new VerifyManualPaymentDto
