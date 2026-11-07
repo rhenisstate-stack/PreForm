@@ -244,3 +244,8 @@ public class StudyFlashcardsOverviewDto
     public int ReviewedToday { get; set; }
     public DateTime? LastReviewAt { get; set; }
 }
+
+public class ReorderFlashcardsRequest
+{
+    public List<string> CardIdsInOrder { get; set; } = new();
+}

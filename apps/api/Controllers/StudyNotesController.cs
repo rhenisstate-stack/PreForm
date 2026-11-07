@@ -45,8 +45,33 @@ public class StudyNotesController : ControllerBase
         var auth = RequireAuth(out var userId);
         if (auth != null) return auth;
 
-        var result = await _notesService.GetNotesAsync(userId, parameters);
-        return Ok(new { success = true, result });
+        var (notes, totalCount) = await _notesService.GetNotesAsync(
+            userId,
+            parameters.FolderId,
+            parameters.Programme,
+            parameters.TopicSlug,
+            parameters.ClientNeedId,
+            parameters.Search,
+            parameters.Tag,
+            parameters.IsPinned,
+            parameters.IsFavourite,
+            parameters.IncludeArchived,
+            parameters.SortBy ?? "lastEdited",
+            parameters.Page,
+            parameters.PageSize);
+
+        return Ok(new
+        {
+            success = true,
+            result = new
+            {
+                items = notes,
+                totalCount,
+                page = parameters.Page,
+                pageSize = parameters.PageSize,
+                totalPages = (int)Math.Ceiling((double)totalCount / Math.Max(1, parameters.PageSize))
+            }
+        });
     }
 
     [HttpGet("notes/{noteId}")]
@@ -55,14 +80,19 @@ public class StudyNotesController : ControllerBase
         var auth = RequireAuth(out var userId);
         if (auth != null) return auth;
 
-        var note = await _notesService.GetNoteByIdAsync(userId, noteId);
-        if (note == null) return NotFound(new { success = false, error = "Note not found." });
-
-        return Ok(new { success = true, note });
+        try
+        {
+            var note = await _notesService.GetNoteByIdAsync(userId, noteId);
+            return Ok(new { success = true, note });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Note not found." });
+        }
     }
 
     [HttpPost("notes")]
-    public async Task<IActionResult> CreateNote([FromBody] CreateNoteRequest request)
+    public async Task<IActionResult> CreateNote([FromBody] CreateStudyNoteRequest request)
     {
         var auth = RequireAuth(out var userId);
         if (auth != null) return auth;
@@ -79,7 +109,7 @@ public class StudyNotesController : ControllerBase
     }
 
     [HttpPut("notes/{noteId}")]
-    public async Task<IActionResult> UpdateNote(string noteId, [FromBody] UpdateNoteRequest request)
+    public async Task<IActionResult> UpdateNote(string noteId, [FromBody] UpdateStudyNoteRequest request)
     {
         var auth = RequireAuth(out var userId);
         if (auth != null) return auth;
@@ -105,7 +135,7 @@ public class StudyNotesController : ControllerBase
         var auth = RequireAuth(out var userId);
         if (auth != null) return auth;
 
-        var deleted = await _notesService.DeleteNoteAsync(userId, noteId);
+        var deleted = await _notesService.SoftDeleteNoteAsync(userId, noteId);
         if (!deleted) return NotFound(new { success = false, error = "Note not found." });
 
         return Ok(new { success = true, message = "Note deleted." });
@@ -148,8 +178,9 @@ public class StudyNotesController : ControllerBase
 
         try
         {
-            var note = await _notesService.TogglePinAsync(userId, noteId);
-            return Ok(new { success = true, note });
+            var note = await _notesService.GetNoteByIdAsync(userId, noteId);
+            var updated = await _notesService.UpdateNoteAsync(userId, noteId, new UpdateStudyNoteRequest { IsPinned = !note.IsPinned });
+            return Ok(new { success = true, note = updated });
         }
         catch (KeyNotFoundException)
         {
@@ -165,8 +196,9 @@ public class StudyNotesController : ControllerBase
 
         try
         {
-            var note = await _notesService.ToggleFavouriteAsync(userId, noteId);
-            return Ok(new { success = true, note });
+            var note = await _notesService.GetNoteByIdAsync(userId, noteId);
+            var updated = await _notesService.UpdateNoteAsync(userId, noteId, new UpdateStudyNoteRequest { IsFavourite = !note.IsFavourite });
+            return Ok(new { success = true, note = updated });
         }
         catch (KeyNotFoundException)
         {
@@ -180,10 +212,16 @@ public class StudyNotesController : ControllerBase
         var auth = RequireAuth(out var userId);
         if (auth != null) return auth;
 
-        var archived = await _notesService.ArchiveNoteAsync(userId, noteId);
-        if (!archived) return NotFound(new { success = false, error = "Note not found." });
-
-        return Ok(new { success = true, message = "Note archived." });
+        try
+        {
+            var note = await _notesService.GetNoteByIdAsync(userId, noteId);
+            var updated = await _notesService.UpdateNoteAsync(userId, noteId, new UpdateStudyNoteRequest { IsArchived = !note.IsArchived });
+            return Ok(new { success = true, note = updated });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Note not found." });
+        }
     }
 
     [HttpGet("notes/{noteId}/versions")]
@@ -206,17 +244,17 @@ public class StudyNotesController : ControllerBase
     // ── Folders ──
 
     [HttpGet("folders")]
-    public async Task<IActionResult> GetFolders([FromQuery] string? programme = null)
+    public async Task<IActionResult> GetFolders([FromQuery] bool includeArchived = false)
     {
         var auth = RequireAuth(out var userId);
         if (auth != null) return auth;
 
-        var folders = await _notesService.GetFoldersAsync(userId, programme);
+        var folders = await _notesService.GetFoldersAsync(userId, includeArchived);
         return Ok(new { success = true, count = folders.Count, folders });
     }
 
     [HttpPost("folders")]
-    public async Task<IActionResult> CreateFolder([FromBody] CreateFolderRequest request)
+    public async Task<IActionResult> CreateFolder([FromBody] CreateStudyFolderRequest request)
     {
         var auth = RequireAuth(out var userId);
         if (auth != null) return auth;
@@ -233,7 +271,7 @@ public class StudyNotesController : ControllerBase
     }
 
     [HttpPut("folders/{folderId}")]
-    public async Task<IActionResult> UpdateFolder(string folderId, [FromBody] UpdateFolderRequest request)
+    public async Task<IActionResult> UpdateFolder(string folderId, [FromBody] UpdateStudyFolderRequest request)
     {
         var auth = RequireAuth(out var userId);
         if (auth != null) return auth;

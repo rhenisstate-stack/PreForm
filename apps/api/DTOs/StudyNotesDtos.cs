@@ -159,3 +159,25 @@ public class StudyNoteVersionDto
     public int WordCount { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+
+public class NoteFilterParameters
+{
+    public string? FolderId { get; set; }
+    public string? Programme { get; set; }
+    public string? SubjectDomainId { get; set; }
+    public string? TopicSlug { get; set; }
+    public string? ClientNeedId { get; set; }
+    public string? Search { get; set; }
+    public string? Tag { get; set; }
+    public bool? IsPinned { get; set; }
+    public bool? IsFavourite { get; set; }
+    public bool IncludeArchived { get; set; } = false;
+    public string SortBy { get; set; } = "lastEdited";
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 20;
+}
+
+public class CreateNoteRequest : CreateStudyNoteRequest { }
+public class UpdateNoteRequest : UpdateStudyNoteRequest { }
+public class CreateFolderRequest : CreateStudyFolderRequest { }
+public class UpdateFolderRequest : UpdateStudyFolderRequest { }
