@@ -65,6 +65,27 @@ public class AppDbContext : DbContext
     public DbSet<Flashcard> Flashcards => Set<Flashcard>();
     public DbSet<FlashcardReview> FlashcardReviews => Set<FlashcardReview>();
 
+    // Study Guide Management & Personal Notes
+    public DbSet<StudyFolder> StudyFolders => Set<StudyFolder>();
+    public DbSet<StudyNote> StudyNotes => Set<StudyNote>();
+    public DbSet<StudyNoteVersion> StudyNoteVersions => Set<StudyNoteVersion>();
+    public DbSet<StudyReviewSession> StudyReviewSessions => Set<StudyReviewSession>();
+    public DbSet<StudyReviewSessionItem> StudyReviewSessionItems => Set<StudyReviewSessionItem>();
+    public DbSet<TopicQuizConfiguration> TopicQuizConfigurations => Set<TopicQuizConfiguration>();
+    public DbSet<TopicQuizAttempt> TopicQuizAttempts => Set<TopicQuizAttempt>();
+    public DbSet<TopicQuizResponse> TopicQuizResponses => Set<TopicQuizResponse>();
+    public DbSet<StudyGuideCategory> StudyGuideCategories => Set<StudyGuideCategory>();
+    public DbSet<CuratedStudyGuide> CuratedStudyGuides => Set<CuratedStudyGuide>();
+    public DbSet<CuratedGuideVersion> CuratedGuideVersions => Set<CuratedGuideVersion>();
+
+    // AI Study Studio & Governance
+    public DbSet<AIProviderConfiguration> AIProviderConfigurations => Set<AIProviderConfiguration>();
+    public DbSet<AIRequest> AIRequests => Set<AIRequest>();
+    public DbSet<AIUsageRecord> AIUsageRecords => Set<AIUsageRecord>();
+    public DbSet<AIStudyPlan> AIStudyPlans => Set<AIStudyPlan>();
+    public DbSet<AITutorConversation> AITutorConversations => Set<AITutorConversation>();
+    public DbSet<AIContentReview> AIContentReviews => Set<AIContentReview>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -646,6 +667,184 @@ public class AppDbContext : DbContext
                   .WithMany()
                   .HasForeignKey(spe => spe.EntitlementCode)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── Study Guide Management & Personal Notes (Phase 17) ──
+        modelBuilder.Entity<StudyFolder>(entity =>
+        {
+            entity.HasIndex(f => f.UserId);
+            entity.HasIndex(f => new { f.UserId, f.IsArchived });
+            entity.HasOne(f => f.User)
+                  .WithMany()
+                  .HasForeignKey(f => f.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudyNote>(entity =>
+        {
+            entity.HasIndex(n => n.UserId);
+            entity.HasIndex(n => new { n.UserId, n.IsDeleted, n.IsArchived });
+            entity.HasIndex(n => new { n.UserId, n.Programme });
+            entity.HasIndex(n => new { n.UserId, n.FolderId });
+            entity.HasIndex(n => n.TopicSlug);
+            entity.HasIndex(n => n.ClientNeedId);
+            entity.HasOne(n => n.User)
+                  .WithMany()
+                  .HasForeignKey(n => n.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(n => n.Folder)
+                  .WithMany(f => f.Notes)
+                  .HasForeignKey(n => n.FolderId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<StudyNoteVersion>(entity =>
+        {
+            entity.HasIndex(v => v.NoteId);
+            entity.HasOne(v => v.Note)
+                  .WithMany(n => n.Versions)
+                  .HasForeignKey(v => v.NoteId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudyReviewSession>(entity =>
+        {
+            entity.HasIndex(s => s.UserId);
+            entity.HasIndex(s => new { s.UserId, s.Status });
+            entity.HasIndex(s => new { s.UserId, s.Programme });
+            entity.HasOne(s => s.User)
+                  .WithMany()
+                  .HasForeignKey(s => s.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(s => s.Deck)
+                  .WithMany()
+                  .HasForeignKey(s => s.DeckId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<StudyReviewSessionItem>(entity =>
+        {
+            entity.HasIndex(i => i.SessionId);
+            entity.HasIndex(i => i.FlashcardId);
+            entity.HasOne(i => i.Session)
+                  .WithMany(s => s.Items)
+                  .HasForeignKey(i => i.SessionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(i => i.Flashcard)
+                  .WithMany()
+                  .HasForeignKey(i => i.FlashcardId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TopicQuizConfiguration>(entity =>
+        {
+            entity.HasIndex(c => c.UserId);
+            entity.HasIndex(c => new { c.Programme, c.TopicSlug });
+            entity.HasOne(c => c.User)
+                  .WithMany()
+                  .HasForeignKey(c => c.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TopicQuizAttempt>(entity =>
+        {
+            entity.HasIndex(a => a.UserId);
+            entity.HasIndex(a => new { a.UserId, a.Status });
+            entity.HasIndex(a => new { a.UserId, a.Programme });
+            entity.HasIndex(a => a.TopicSlug);
+            entity.HasIndex(a => a.ClientNeedId);
+            entity.HasOne(a => a.User)
+                  .WithMany()
+                  .HasForeignKey(a => a.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(a => a.Configuration)
+                  .WithMany(c => c.Attempts)
+                  .HasForeignKey(a => a.ConfigurationId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<TopicQuizResponse>(entity =>
+        {
+            entity.HasIndex(r => r.AttemptId);
+            entity.HasIndex(r => r.QuestionId);
+            entity.HasOne(r => r.Attempt)
+                  .WithMany(a => a.Responses)
+                  .HasForeignKey(r => r.AttemptId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(r => r.Question)
+                  .WithMany()
+                  .HasForeignKey(r => r.QuestionId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StudyGuideCategory>(entity =>
+        {
+            entity.HasIndex(c => c.Slug).IsUnique();
+            entity.HasIndex(c => c.IsActive);
+        });
+
+        modelBuilder.Entity<CuratedStudyGuide>(entity =>
+        {
+            entity.HasIndex(g => g.Slug).IsUnique();
+            entity.HasIndex(g => new { g.Programme, g.Status });
+            entity.HasIndex(g => g.CategoryId);
+            entity.HasIndex(g => g.ClientNeedId);
+            entity.HasOne(g => g.Category)
+                  .WithMany(c => c.Guides)
+                  .HasForeignKey(g => g.CategoryId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CuratedGuideVersion>(entity =>
+        {
+            entity.HasIndex(v => v.GuideId);
+            entity.HasOne(v => v.Guide)
+                  .WithMany(g => g.Versions)
+                  .HasForeignKey(v => v.GuideId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ── AI Study Studio & Governance ──
+        modelBuilder.Entity<AIRequest>(entity =>
+        {
+            entity.HasIndex(r => r.UserId);
+            entity.HasIndex(r => new { r.UserId, r.CreatedAt });
+            entity.HasIndex(r => r.Feature);
+            entity.HasOne(r => r.User)
+                  .WithMany()
+                  .HasForeignKey(r => r.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AIUsageRecord>(entity =>
+        {
+            entity.HasIndex(u => new { u.UserId, u.DateUtc }).IsUnique();
+        });
+
+        modelBuilder.Entity<AIStudyPlan>(entity =>
+        {
+            entity.HasIndex(p => p.UserId);
+            entity.HasIndex(p => new { p.UserId, p.IsActive });
+            entity.HasOne(p => p.User)
+                  .WithMany()
+                  .HasForeignKey(p => p.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AITutorConversation>(entity =>
+        {
+            entity.HasIndex(c => c.UserId);
+            entity.HasIndex(c => new { c.UserId, c.TopicSlug });
+            entity.HasOne(c => c.User)
+                  .WithMany()
+                  .HasForeignKey(c => c.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AIContentReview>(entity =>
+        {
+            entity.HasIndex(cr => cr.Status);
+            entity.HasIndex(cr => cr.ContentType);
         });
     }
 }
