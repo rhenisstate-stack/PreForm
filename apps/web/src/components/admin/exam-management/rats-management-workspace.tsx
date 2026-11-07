@@ -26,6 +26,7 @@ import {
   FullPageActionBar,
 } from "@/components/ui/full-page-crud";
 import { ExaminationPreviewDialog } from "@/components/admin/examination-preview-dialog";
+import { notify } from "@/lib/notifications";
 
 export interface ReadinessThresholdsState {
   lowMin: number;
@@ -70,11 +71,15 @@ export function validateReadinessThresholds(
 
 interface RatsManagementWorkspaceProps {
   canModify?: boolean;
+  initialMode?: "list" | "create" | "details" | "edit" | "delete";
+  initialEntityId?: string;
   onExamCatalogChanged?: () => void;
 }
 
 export function RatsManagementWorkspace({
   canModify = true,
+  initialMode = "list",
+  initialEntityId,
   onExamCatalogChanged,
 }: RatsManagementWorkspaceProps) {
   const [rats, setRats] = useState<any[]>([]);
@@ -84,6 +89,15 @@ export function RatsManagementWorkspace({
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (!bannerMessage) return;
+    if (bannerMessage.type === "success") {
+      notify.success(bannerMessage.text);
+    } else {
+      notify.error(bannerMessage.text);
+    }
+  }, [bannerMessage]);
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -159,6 +173,24 @@ export function RatsManagementWorkspace({
   useEffect(() => {
     loadRats();
   }, [loadRats]);
+
+  useEffect(() => {
+    if (initialMode === "create") {
+      setModalOpen(true);
+      return;
+    }
+    if (loading || !initialEntityId) return;
+    const matched = rats.find((item) => item.id === initialEntityId);
+    if (!matched) return;
+    if (initialMode === "edit") {
+      openEditRatModal(matched);
+    } else if (initialMode === "delete") {
+      setDeleteTarget(matched);
+    } else if (initialMode === "details") {
+      const revId = matched.latestRevision?.id || matched.currentRevision?.id;
+      if (revId) setPreviewRevisionId(revId);
+    }
+  }, [initialMode, initialEntityId, loading, rats]);
 
   useEffect(() => {
     if (modalOpen) {

@@ -2,15 +2,21 @@ import type { LucideIcon } from "lucide-react";
 import {
   Activity,
   BarChart3,
+  BookOpen,
+  ClipboardCheck,
   CreditCard,
   FileText,
+  GraduationCap,
   HelpCircle,
   KeyRound,
   Layers,
   LayoutDashboard,
+  Library,
   Network,
   ScrollText,
   ShieldCheck,
+  Sparkles,
+  Target,
   Users,
 } from "lucide-react";
 import type { AdminCapabilities } from "@/lib/admin/authz";
@@ -19,10 +25,7 @@ import type { AdminCapabilities } from "@/lib/admin/authz";
  * Role-aware admin navigation model, adapted from Studio Admin's typed
  * `sidebar-items` structure (arhamkhnz/next-shadcn-admin-dashboard, MIT).
  *
- * Invariant: every href here must correspond to an existing route. Items for
- * modules without backend capability land in this file during their phase
- * (Academics P3, Question Bank P4, Exams P5, Users/Audit P6, Analytics P7).
- * Placeholder pages for nonexistent modules are intentionally not created.
+ * Invariant: every href here must correspond to an existing route.
  */
 
 export type NavCapability = keyof AdminCapabilities;
@@ -36,6 +39,12 @@ export interface NavItem {
   capability: NavCapability;
   /** Short description shown in the command palette. */
   description?: string;
+  /** When true, only exact route matches highlight this item as active. */
+  exact?: boolean;
+  /** When true, renders as an expandable/collapsible parent section in the sidebar. */
+  collapsible?: boolean;
+  /** Nested child navigation items under a collapsible parent. */
+  children?: NavItem[];
 }
 
 export interface NavGroup {
@@ -53,6 +62,7 @@ const OVERVIEW_GROUP: NavGroup = {
       id: "dashboard",
       title: "Dashboard",
       href: "/admin",
+      exact: true,
       icon: LayoutDashboard,
       capability: "canViewOverview",
       description: "Platform governance overview and quick actions",
@@ -62,8 +72,68 @@ const OVERVIEW_GROUP: NavGroup = {
 
 const EXAMINATION_GROUP: NavGroup = {
   id: "examination",
-  label: "Examination",
+  label: "Examination Management",
   items: [
+    {
+      id: "standalone-custom-test",
+      title: "Create Custom Test (Stand Alone)",
+      href: "/admin/examinations/standalone",
+      icon: Sparkles,
+      capability: "canViewExaminations",
+      collapsible: true,
+      description: "Configure standalone examinations, courses, subject domains, and NCLEX Client Needs",
+      children: [
+        {
+          id: "standalone-courses",
+          title: "Course/Subject Management",
+          href: "/admin/examinations/standalone/courses",
+          icon: BookOpen,
+          capability: "canViewExaminations",
+          description: "Manage courses, subject domains, codes, and NCLEX pathway alignments",
+        },
+        {
+          id: "standalone-client-needs",
+          title: "Client Needs Management",
+          href: "/admin/examinations/standalone/client-needs",
+          icon: ClipboardCheck,
+          capability: "canViewExaminations",
+          description: "Manage official NCLEX Client Needs categories and blueprint codes",
+        },
+        {
+          id: "standalone-tests",
+          title: "Standalone Test Management",
+          href: "/admin/examinations/standalone/tests",
+          icon: FileText,
+          capability: "canViewExaminations",
+          description: "Create and govern standalone custom examinations with the 6-stage wizard",
+        },
+      ],
+    },
+    {
+      id: "rats-management",
+      title: "RATS (Readiness Assessment Tests)",
+      href: "/admin/examinations/rats",
+      icon: Target,
+      capability: "canViewExaminations",
+      description: "Manage Readiness Assessment Tests and 4-tier readiness classification thresholds",
+    },
+    {
+      id: "practice-exams",
+      title: "Practice Exams",
+      href: "/admin/examinations/practice",
+      icon: GraduationCap,
+      capability: "canViewExaminations",
+      description: "Manage NCLEX-RN and NCLEX-PN practice examinations and difficulty distributions",
+    },
+    {
+      id: "examinations",
+      title: "Examination Library",
+      href: "/admin/examinations",
+      exact: true,
+      icon: Library,
+      capability: "canViewExaminations",
+      description: "Manage examination families, revisions, and question membership",
+    },
     {
       id: "questions",
       title: "Question Bank",
@@ -73,14 +143,6 @@ const EXAMINATION_GROUP: NavGroup = {
       description: "Author, review, and manage canonical NCLEX questions and curriculum",
     },
     {
-      id: "examinations",
-      title: "Examinations",
-      href: "/admin/examinations",
-      icon: FileText,
-      capability: "canViewExaminations",
-      description: "Manage examination families, revisions, and question membership",
-    },
-    {
       id: "question-types",
       title: "Question-Type Registry",
       href: "/admin/question-types",
@@ -88,7 +150,6 @@ const EXAMINATION_GROUP: NavGroup = {
       capability: "canViewQuestionTypes",
       description: "The 18 validated traditional and NGN question formats",
     },
-    // Question Bank (repository) arrives with the P4 backend.
   ],
 };
 
@@ -202,17 +263,28 @@ const ALL_GROUPS: NavGroup[] = [
   GOVERNANCE_GROUP,
 ];
 
-/** Filters navigation items by the caller's verified capabilities. */
+/** Filters navigation items (and any nested children) by the caller's verified capabilities. */
 export function getAuthorizedNavGroups(capabilities: AdminCapabilities): NavGroup[] {
   return ALL_GROUPS.map((group) => ({
     ...group,
-    items: group.items.filter((item) => capabilities[item.capability]),
+    items: group.items
+      .filter((item) => capabilities[item.capability])
+      .map((item) =>
+        item.children
+          ? {
+              ...item,
+              children: item.children.filter((child) => capabilities[child.capability]),
+            }
+          : item
+      ),
   })).filter((group) => group.items.length > 0);
 }
 
-/** Flattened item lookup for breadcrumbs and the command palette. */
+/** Flattened item lookup (including nested children) for breadcrumbs and the command palette. */
 export function getAuthorizedNavItems(capabilities: AdminCapabilities): NavItem[] {
-  return getAuthorizedNavGroups(capabilities).flatMap((g) => g.items);
+  return getAuthorizedNavGroups(capabilities).flatMap((g) =>
+    g.items.flatMap((item) => (item.children ? [item, ...item.children] : [item]))
+  );
 }
 
 /** Breadcrumb trail: ("Admin", leading to "/admin", then matched ancestors). */
@@ -235,10 +307,29 @@ export function getAdminBreadcrumbs(pathname: string): { label: string; href: st
   return crumbs;
 }
 
+const ROUTE_BREADCRUMB_LABELS: Record<string, string> = {
+  "/admin/examinations": "Examination Library",
+  "/admin/examinations/standalone": "Create Custom Test (Stand Alone)",
+  "/admin/examinations/standalone/courses": "Course/Subject Management",
+  "/admin/examinations/standalone/client-needs": "Client Needs Management",
+  "/admin/examinations/standalone/tests": "Standalone Test Management",
+  "/admin/examinations/rats": "RATS (Readiness Assessment Tests)",
+  "/admin/examinations/practice": "Practice Exams",
+  "/admin/question-repository": "Question Repository",
+};
+
 function groupLabelForHref(href: string): string | undefined {
+  if (ROUTE_BREADCRUMB_LABELS[href]) {
+    return ROUTE_BREADCRUMB_LABELS[href];
+  }
   for (const group of ALL_GROUPS) {
     for (const item of group.items) {
       if (item.href === href) return item.title;
+      if (item.children) {
+        for (const child of item.children) {
+          if (child.href === href) return child.title;
+        }
+      }
     }
   }
   return undefined;
@@ -257,6 +348,15 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/users": "User & Account Governance",
   "/admin/roles": "Roles & Permissions Directory",
   "/admin/subscriptions": "Subscription Plan Management",
+  "/admin/examinations": "Examination Management & Library",
+  "/admin/examinations/standalone": "Create Custom Test (Stand Alone)",
+  "/admin/examinations/standalone/courses": "Course & Subject Domain Management",
+  "/admin/examinations/standalone/client-needs": "NCLEX Client Needs Management",
+  "/admin/examinations/standalone/tests": "Standalone Test Management",
+  "/admin/examinations/rats": "Readiness Assessment Tests (RATS)",
+  "/admin/examinations/practice": "NCLEX Practice Exams",
+  "/admin/questions": "Centralized Question Bank",
+  "/admin/question-repository": "Centralized Question Repository",
   "/admin/question-types": "Question-Type Registry",
   "/admin/audit-logs": "Administrative Audit Trail",
   "/admin/security/ip-rules": "IP Access Rule Governance",

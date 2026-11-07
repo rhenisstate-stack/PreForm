@@ -38,7 +38,9 @@ import {
   getAdminBreadcrumbs,
   getAdminPageTitle,
   getAuthorizedNavGroups,
+  getAuthorizedNavItems,
   type NavGroup,
+  type NavItem,
 } from "@/lib/admin/navigation";
 import { AdminCommandMenu, AdminSearchTrigger } from "@/components/admin/admin-command-menu";
 
@@ -90,9 +92,25 @@ interface SidebarNavProps {
   onNavigateMobile?: () => void;
 }
 
-function isActiveRoute(href: string, pathname: string): boolean {
-  if (href === "/admin") return pathname === "/admin" || pathname === "/admin/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+function isActiveRoute(href: string, pathname: string, exact = false): boolean {
+  const normalizedPath = pathname.replace(/\/+$/, "") || "/admin";
+  if (href === "/admin") return normalizedPath === "/admin";
+  if (exact) {
+    if (href === "/admin/examinations") {
+      if (normalizedPath === "/admin/examinations") return true;
+      if (
+        normalizedPath.startsWith("/admin/examinations/") &&
+        !normalizedPath.startsWith("/admin/examinations/standalone") &&
+        !normalizedPath.startsWith("/admin/examinations/rats") &&
+        !normalizedPath.startsWith("/admin/examinations/practice")
+      ) {
+        return true;
+      }
+      return false;
+    }
+    return normalizedPath === href;
+  }
+  return normalizedPath === href || normalizedPath.startsWith(`${href}/`);
 }
 
 function SidebarNav({
@@ -117,7 +135,107 @@ function SidebarNav({
 }
 
 function defaultGroupExpanded(group: NavGroup, pathname: string): boolean {
-  return group.items.some((item) => isActiveRoute(item.href, pathname));
+  if (group.id === "examination") return true;
+  return group.items.some(
+    (item) =>
+      isActiveRoute(item.href, pathname, item.exact) ||
+      (item.children?.some((child) => isActiveRoute(child.href, pathname, child.exact)) ?? false)
+  );
+}
+
+function CollapsibleNavParentItem({
+  item,
+  pathname,
+  collapsed,
+  onNavigateMobile,
+}: {
+  item: NavItem;
+  pathname: string;
+  collapsed: boolean;
+  onNavigateMobile?: () => void;
+}) {
+  const children = item.children ?? [];
+  const isChildActive = children.some((child) => isActiveRoute(child.href, pathname, child.exact));
+  const isParentActive = isActiveRoute(item.href, pathname, false) || isChildActive;
+  const [manualExpanded, setManualExpanded] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    if (isParentActive) {
+      setManualExpanded(true);
+    }
+  }, [isParentActive, pathname]);
+
+  const expanded = manualExpanded ?? isParentActive;
+  const Icon = item.icon;
+
+  return (
+    <div className="space-y-1">
+      <button
+        type="button"
+        data-testid={`sidebar-collapsible-${item.id}`}
+        aria-expanded={expanded}
+        aria-controls={`admin-nav-subitems-${item.id}`}
+        title={collapsed ? item.title : undefined}
+        onClick={() => setManualExpanded(!expanded)}
+        className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+          collapsed ? "justify-center px-2" : ""
+        } ${
+          isParentActive
+            ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+            : expanded
+            ? "bg-primary/10 text-primary border border-primary/20 font-semibold"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        }`}
+      >
+        <span className="flex items-center gap-3 min-w-0">
+          <Icon aria-hidden="true" className="h-4 w-4 shrink-0" />
+          {!collapsed && <span className="truncate">{item.title}</span>}
+          {collapsed && <span className="sr-only">{item.title}</span>}
+        </span>
+        {!collapsed && (
+          <ChevronDown
+            aria-hidden="true"
+            className={`h-3.5 w-3.5 shrink-0 transition-transform motion-safe:duration-200 ${
+              expanded ? "" : "-rotate-90"
+            }`}
+          />
+        )}
+      </button>
+
+      <div
+        id={`admin-nav-subitems-${item.id}`}
+        data-testid={`sidebar-subitems-${item.id}`}
+        hidden={!expanded}
+        className={`ml-3 border-l border-border/80 pl-3 space-y-1 ${expanded ? "" : "hidden"}`}
+      >
+        {children.map((child) => {
+          const ChildIcon = child.icon;
+          const childActive = isActiveRoute(child.href, pathname, child.exact);
+          return (
+            <Link
+              key={child.id}
+              href={child.href}
+              data-testid={`sidebar-link-${child.id}`}
+              onClick={onNavigateMobile}
+              title={collapsed ? child.title : undefined}
+              aria-current={childActive ? "page" : undefined}
+              className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                collapsed ? "justify-center px-1.5" : ""
+              } ${
+                childActive
+                  ? "bg-primary text-primary-foreground shadow-xs font-semibold"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <ChildIcon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+              {!collapsed && <span className="truncate">{child.title}</span>}
+              {collapsed && <span className="sr-only">{child.title}</span>}
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function CollapsibleNavGroup({
@@ -157,12 +275,25 @@ function CollapsibleNavGroup({
         className={`space-y-1 ${expanded ? "" : "hidden"}`}
       >
         {group.items.map((item) => {
+          if (item.collapsible && item.children && item.children.length > 0) {
+            return (
+              <CollapsibleNavParentItem
+                key={item.id}
+                item={item}
+                pathname={pathname}
+                collapsed={collapsed}
+                onNavigateMobile={onNavigateMobile}
+              />
+            );
+          }
+
           const Icon = item.icon;
-          const active = isActiveRoute(item.href, pathname);
+          const active = isActiveRoute(item.href, pathname, item.exact);
           return (
             <Link
               key={item.id}
               href={item.href}
+              data-testid={`sidebar-link-${item.id}`}
               onClick={onNavigateMobile}
               title={collapsed ? item.title : undefined}
               aria-current={active ? "page" : undefined}
@@ -389,7 +520,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
   /* ── Authorized shell ── */
 
   const navGroups = getAuthorizedNavGroups(capabilities);
-  const navItems = navGroups.flatMap((g) => g.items);
+  const navItems = getAuthorizedNavItems(capabilities);
   const crumbs = getAdminBreadcrumbs(pathname);
   const pageTitle = getAdminPageTitle(pathname);
 

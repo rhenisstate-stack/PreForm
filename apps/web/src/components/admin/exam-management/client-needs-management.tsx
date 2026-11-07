@@ -44,11 +44,15 @@ export interface ClientNeedItem {
 interface ClientNeedsManagementProps {
   canModify?: boolean;
   onCatalogChanged?: () => void;
+  initialMode?: "list" | "create" | "details" | "edit" | "delete";
+  initialEntityId?: string;
 }
 
 export function ClientNeedsManagement({
   canModify = true,
   onCatalogChanged,
+  initialMode = "list",
+  initialEntityId,
 }: ClientNeedsManagementProps) {
   const [clientNeeds, setClientNeeds] = useState<ClientNeedItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,6 +61,15 @@ export function ClientNeedsManagement({
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (!bannerMessage) return;
+    if (bannerMessage.type === "success") {
+      notify.success(bannerMessage.text);
+    } else {
+      notify.error(bannerMessage.text);
+    }
+  }, [bannerMessage]);
 
   // Filters & sorting
   const [searchQuery, setSearchQuery] = useState("");
@@ -106,6 +119,30 @@ export function ClientNeedsManagement({
   useEffect(() => {
     loadClientNeeds();
   }, [loadClientNeeds]);
+
+  useEffect(() => {
+    if (initialMode === "create") {
+      setDialogOpen(true);
+      return;
+    }
+    if (loading || !initialEntityId) return;
+    const matched = clientNeeds.find((item) => item.id === initialEntityId);
+    if (!matched) return;
+    if (initialMode === "details") {
+      setDetailItem(matched);
+    } else if (initialMode === "edit") {
+      setEditingItem(matched);
+      setCode(matched.code);
+      setName(matched.name);
+      setPathway(matched.pathway === "rn" || matched.pathway === "pn" ? matched.pathway : "both");
+      setDescription(matched.description || "");
+      setDisplayOrder(matched.displayOrder ?? 1);
+      setIsActive(matched.isActive);
+      setDialogOpen(true);
+    } else if (initialMode === "delete") {
+      setDeleteTarget(matched);
+    }
+  }, [initialMode, initialEntityId, loading, clientNeeds]);
 
   useEffect(() => {
     setPage(1);

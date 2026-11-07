@@ -43,6 +43,7 @@ import {
   type ClientNeedItem,
 } from "./client-needs-management";
 import { ExaminationPreviewDialog } from "@/components/admin/examination-preview-dialog";
+import { notify } from "@/lib/notifications";
 
 interface EligibleQuestionItem {
   id: string;
@@ -67,12 +68,16 @@ interface EligibleQuestionItem {
 interface StandaloneTestsWorkspaceProps {
   canModify?: boolean;
   initialSubTab?: "tests" | "courses" | "client-needs";
+  initialMode?: "list" | "create" | "details" | "edit" | "delete";
+  initialEntityId?: string;
   onExamCatalogChanged?: () => void;
 }
 
 export function StandaloneTestsWorkspace({
   canModify = true,
   initialSubTab = "tests",
+  initialMode = "list",
+  initialEntityId,
   onExamCatalogChanged,
 }: StandaloneTestsWorkspaceProps) {
   const [subTab, setSubTab] = useState<"tests" | "courses" | "client-needs">(
@@ -101,6 +106,15 @@ export function StandaloneTestsWorkspace({
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (!bannerMessage) return;
+    if (bannerMessage.type === "success") {
+      notify.success(bannerMessage.text);
+    } else {
+      notify.error(bannerMessage.text);
+    }
+  }, [bannerMessage]);
 
   // Stage 1: Basic Info
   const [title, setTitle] = useState("");
@@ -225,6 +239,22 @@ export function StandaloneTestsWorkspace({
     loadStandaloneExams();
     loadClassifications();
   }, [loadStandaloneExams, loadClassifications]);
+
+  useEffect(() => {
+    if (initialMode === "create" || initialMode === "edit") {
+      setWizardOpen(true);
+      return;
+    }
+    if (loadingExams || !initialEntityId) return;
+    const matched = exams.find((item) => item.id === initialEntityId);
+    if (!matched) return;
+    if (initialMode === "delete") {
+      setDeleteTarget(matched);
+    } else if (initialMode === "details") {
+      const revId = matched.latestRevision?.id || matched.currentRevision?.id;
+      if (revId) setPreviewRevisionId(revId);
+    }
+  }, [initialMode, initialEntityId, loadingExams, exams]);
 
   useEffect(() => {
     if (wizardOpen && wizardStep === 4) {

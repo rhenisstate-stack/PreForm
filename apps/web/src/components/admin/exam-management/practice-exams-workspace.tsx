@@ -27,14 +27,19 @@ import {
 } from "@/components/ui/full-page-crud";
 import { ExaminationPreviewDialog } from "@/components/admin/examination-preview-dialog";
 import { DuplicateExaminationDialog } from "@/components/admin/duplicate-examination-dialog";
+import { notify } from "@/lib/notifications";
 
 interface PracticeExamsWorkspaceProps {
   canModify?: boolean;
+  initialMode?: "list" | "create" | "details" | "edit" | "delete";
+  initialEntityId?: string;
   onExamCatalogChanged?: () => void;
 }
 
 export function PracticeExamsWorkspace({
   canModify = true,
+  initialMode = "list",
+  initialEntityId,
   onExamCatalogChanged,
 }: PracticeExamsWorkspaceProps) {
   const [exams, setExams] = useState<any[]>([]);
@@ -44,6 +49,15 @@ export function PracticeExamsWorkspace({
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (!bannerMessage) return;
+    if (bannerMessage.type === "success") {
+      notify.success(bannerMessage.text);
+    } else {
+      notify.error(bannerMessage.text);
+    }
+  }, [bannerMessage]);
 
   // Programme Tabs & Filters
   const [pathwayTab, setPathwayTab] = useState<"all" | "rn" | "pn">("all");
@@ -128,6 +142,24 @@ export function PracticeExamsWorkspace({
   useEffect(() => {
     loadPracticeExams();
   }, [loadPracticeExams]);
+
+  useEffect(() => {
+    if (initialMode === "create") {
+      setModalOpen(true);
+      return;
+    }
+    if (loading || !initialEntityId) return;
+    const matched = exams.find((item) => item.id === initialEntityId);
+    if (!matched) return;
+    if (initialMode === "edit") {
+      openEditModal(matched);
+    } else if (initialMode === "delete") {
+      setDeleteTarget(matched);
+    } else if (initialMode === "details") {
+      const revId = matched.latestRevision?.id || matched.currentRevision?.id;
+      if (revId) setPreviewRevisionId(revId);
+    }
+  }, [initialMode, initialEntityId, loading, exams]);
 
   useEffect(() => {
     if (modalOpen) {

@@ -4,9 +4,7 @@ import * as React from "react";
 import {
   Search,
   Plus,
-  Filter,
   CheckCircle2,
-  Clock,
   AlertTriangle,
   Archive,
   RotateCcw,
@@ -19,8 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   HelpCircle,
-  FileText,
-  Layers,
+  Trash2,
+  ShieldAlert,
   Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
@@ -33,17 +31,29 @@ import { Label } from "@/components/ui/label";
 import {
   FullPageFormLayout,
   FullPageDetailsLayout,
+  FullPageDeleteLayout,
   FullPageActionBar,
 } from "@/components/ui/full-page-crud";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notify } from "@/lib/notifications";
+import {
+  CANONICAL_QUESTION_TYPES,
+  getQuestionTypeDefinition,
+  getDefaultStructuredContent,
+  isOptionBasedQuestionType,
+  validateQuestionPayload,
+} from "@/lib/question-types";
+import {
+  QuestionTypeEditor,
+  type EditableQuestionOption,
+} from "@/components/questions/question-type-editor";
+import { QuestionTypeRenderer } from "@/components/questions/question-type-renderer";
 import type {
   AdminQuestionSummary,
   AdminQuestionDetail,
   AdminQuestionVersion,
   AdminClientNeed,
   AdminCurriculumTreeNode,
-  AdminQuestionOption,
 } from "@/lib/api-services";
 
 const QUESTION_STATUS_LABELS: Record<
@@ -64,35 +74,15 @@ const QUESTION_DIFFICULTY_LABELS: Record<number, { label: string; className: str
   4: { label: "Expert", className: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" },
 };
 
-const TRADITIONAL_TYPES = [
-  { key: "single-choice", name: "Single Choice" },
-  { key: "multiple-choice", name: "Multiple Choice" },
-  { key: "sata", name: "Select All That Apply (SATA)" },
-  { key: "checkbox", name: "Checkbox Response" },
-  { key: "image-based", name: "Image-Based Question" },
-  { key: "multiple-image", name: "Multiple-Image Item" },
-  { key: "true-false", name: "True / False" },
-];
-
-const NGN_TYPES = [
-  { key: "case-study", name: "NGN Case Study" },
-  { key: "drag-drop", name: "Drag-and-Drop" },
-  { key: "ordering", name: "Ordering / Sequencing" },
-  { key: "matrix", name: "Matrix / Grid Response" },
-  { key: "tabular", name: "Tabular Response" },
-  { key: "dynamic-lab", name: "Dynamic Lab Value Response" },
-  { key: "fill-blank", name: "Fill-in-the-Blank" },
-  { key: "numeric", name: "Numeric Response" },
-  { key: "essay", name: "Extended Response / Essay" },
-  { key: "matching", name: "Matching" },
-  { key: "short-answer", name: "Short-Answer Response" },
-];
+const TRADITIONAL_TYPES = CANONICAL_QUESTION_TYPES.filter((t) => t.category === "Traditional");
+const CLINICAL_TYPES = CANONICAL_QUESTION_TYPES.filter((t) => t.category === "Clinical");
+const NGN_TYPES = CANONICAL_QUESTION_TYPES.filter((t) => t.category === "NGN");
 
 export function AdminQuestionsClient({
   initialMode,
   initialQuestionId,
 }: {
-  initialMode?: "create" | "details" | "edit";
+  initialMode?: "create" | "details" | "edit" | "delete";
   initialQuestionId?: string;
 } = {}) {
   const { user } = useAuth();
@@ -118,6 +108,11 @@ export function AdminQuestionsClient({
   const [viewingQuestionId, setViewingQuestionId] = React.useState<string | null>(
     initialMode === "details" && initialQuestionId ? initialQuestionId : null
   );
+  const [isDeleteOpen, setIsDeleteOpen] = React.useState(initialMode === "delete" && Boolean(initialQuestionId));
+  const [deletingQuestionId, setDeletingQuestionId] = React.useState<string | null>(
+    initialMode === "delete" && initialQuestionId ? initialQuestionId : null
+  );
+  const [deleteConflictError, setDeleteConflictError] = React.useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
   const [historyQuestionId, setHistoryQuestionId] = React.useState<string | null>(null);
   const [isRejectOpen, setIsRejectOpen] = React.useState(false);
@@ -138,24 +133,68 @@ export function AdminQuestionsClient({
   const [formClinicalJudgmentStep, setFormClinicalJudgmentStep] = React.useState("");
   const [formSource, setFormSource] = React.useState("");
   const [formStructuredContent, setFormStructuredContent] = React.useState("");
+  const [formExhibitsJson, setFormExhibitsJson] = React.useState("");
   const [formChangeSummary, setFormChangeSummary] = React.useState("");
-  const [formOptions, setFormOptions] = React.useState<Array<{
-    id?: string;
-    optionKey: string;
-    content: string;
-    isCorrect: boolean;
-    rationale: string;
-    distractorRationale: string;
-    mediaUrl: string;
-  }>>([
+  const [validationErrors, setValidationErrors] = React.useState<Record<string, string>>({});
+  const [previewMode, setPreviewMode] = React.useState<"admin-preview" | "candidate-interactive">("admin-preview");
+  const [formOptions, setFormOptions] = React.useState<EditableQuestionOption[]>([
     { optionKey: "A", content: "", isCorrect: true, rationale: "", distractorRationale: "", mediaUrl: "" },
     { optionKey: "B", content: "", isCorrect: false, rationale: "", distractorRationale: "", mediaUrl: "" },
     { optionKey: "C", content: "", isCorrect: false, rationale: "", distractorRationale: "", mediaUrl: "" },
     { optionKey: "D", content: "", isCorrect: false, rationale: "", distractorRationale: "", mediaUrl: "" },
   ]);
 
+  const populateFormFromQuestion = React.useCallback((q: AdminQuestionDetail) => {
+    setFormPathway(q.pathway || "rn");
+    setFormType(q.questionTypeKey || "single-choice");
+    setFormStem(q.stem || "");
+    setFormInstructions(q.instructions || "");
+    setFormDifficulty(q.difficulty || 2);
+    setFormClientNeedId(q.clientNeedId || "");
+    setFormTopicId(q.topicId || "");
+    setFormClinicalScenario(q.clinicalScenario || "");
+    setFormOverallRationale(q.overallRationale || "");
+    setFormCognitiveLevel(q.cognitiveLevel || "");
+    setFormClinicalJudgmentStep(q.clinicalJudgmentStep || "");
+    setFormSource(q.source || "");
+    setFormStructuredContent(q.structuredContentJson || "");
+    setFormExhibitsJson(q.exhibitsJson || "");
+    setFormChangeSummary("");
+    setValidationErrors({});
+
+    if (q.options && q.options.length > 0) {
+      setFormOptions(
+        q.options.map((o) => ({
+          id: o.id,
+          optionKey: o.optionKey,
+          content: o.content,
+          isCorrect: o.isCorrect,
+          rationale: o.rationale || "",
+          distractorRationale: o.distractorRationale || "",
+          mediaUrl: o.mediaUrl || "",
+        }))
+      );
+    }
+  }, []);
+
+  // Load initial question if mounted in edit mode via dedicated route
+  React.useEffect(() => {
+    if (initialMode === "edit" && initialQuestionId) {
+      fetch(`/api/admin/questions/${initialQuestionId}`)
+        .then((res) => (res.ok ? res.json() : Promise.reject(new Error("Failed to load question"))))
+        .then((json) => {
+          if (json?.question) {
+            populateFormFromQuestion(json.question);
+          }
+        })
+        .catch(() => {
+          notify.error("Failed to load question for editing.");
+        });
+    }
+  }, [initialMode, initialQuestionId, populateFormFromQuestion]);
+
   // Fetch Questions
-  const { data: questionsData, isLoading: isLoadingQuestions, refetch: refetchQuestions } = useQuery({
+  const { data: questionsData, isLoading: isLoadingQuestions } = useQuery({
     queryKey: ["admin", "questions", { search, typeFilter, pathwayFilter, statusFilter, difficultyFilter, clientNeedFilter, page }],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -207,7 +246,20 @@ export function AdminQuestionsClient({
       const json = await res.json();
       return json.question as AdminQuestionDetail;
     },
-    enabled: !!viewingQuestionId,
+    enabled: !!viewingQuestionId && isDetailOpen,
+  });
+
+  // Fetch Single Question for deletion review
+  const { data: deletingQuestion, isLoading: isLoadingDeleteTarget } = useQuery({
+    queryKey: ["admin", "questions", deletingQuestionId, "delete-target"],
+    queryFn: async () => {
+      if (!deletingQuestionId) return null;
+      const res = await fetch(`/api/admin/questions/${deletingQuestionId}`);
+      if (!res.ok) throw new Error("Failed to load question details");
+      const json = await res.json();
+      return json.question as AdminQuestionDetail;
+    },
+    enabled: !!deletingQuestionId && isDeleteOpen,
   });
 
   // Fetch Versions for Question
@@ -220,7 +272,7 @@ export function AdminQuestionsClient({
       const json = await res.json();
       return json.versions as AdminQuestionVersion[];
     },
-    enabled: !!historyQuestionId,
+    enabled: !!historyQuestionId && isHistoryOpen,
   });
 
   // Mutations
@@ -293,11 +345,48 @@ export function AdminQuestionsClient({
       const targetLabel = QUESTION_STATUS_LABELS[variables.targetStatus]?.label || "Status";
       notify.success(`Question transitioned to ${targetLabel}.`);
       setIsRejectOpen(false);
+      setIsDeleteOpen(false);
+      setDeletingQuestionId(null);
+      setDeleteConflictError(null);
       setRejectionReason("");
       queryClient.invalidateQueries({ queryKey: ["admin", "questions"] });
     },
     onError: (err: any) => {
       notify.error(err.message || "Status transition failed");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/admin/questions/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const errorJson = await res.json().catch(() => ({}));
+        const message =
+          errorJson.detail ||
+          errorJson.error ||
+          (res.status === 409
+            ? "Question cannot be permanently deleted because it is referenced by examinations or learner attempts."
+            : "Failed to delete question");
+        const error = new Error(message) as Error & { status?: number };
+        error.status = res.status;
+        throw error;
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      notify.success("Question permanently deleted from the repository.");
+      setIsDeleteOpen(false);
+      setDeletingQuestionId(null);
+      setDeleteConflictError(null);
+      queryClient.invalidateQueries({ queryKey: ["admin", "questions"] });
+    },
+    onError: (err: any) => {
+      if (err?.status === 409) {
+        setDeleteConflictError(err.message);
+      }
+      notify.error(err.message || "Failed to delete question");
     },
   });
 
@@ -316,7 +405,9 @@ export function AdminQuestionsClient({
     setFormClinicalJudgmentStep("");
     setFormSource("");
     setFormStructuredContent("");
+    setFormExhibitsJson("");
     setFormChangeSummary("");
+    setValidationErrors({});
     setFormOptions([
       { optionKey: "A", content: "", isCorrect: true, rationale: "", distractorRationale: "", mediaUrl: "" },
       { optionKey: "B", content: "", isCorrect: false, rationale: "", distractorRationale: "", mediaUrl: "" },
@@ -325,13 +416,26 @@ export function AdminQuestionsClient({
     ]);
   };
 
+  const handleQuestionTypeChange = (nextType: string) => {
+    const def = getQuestionTypeDefinition(nextType);
+    setFormType(def.key);
+    setValidationErrors({});
+    if (!def.isOptionBased && !formStructuredContent.trim()) {
+      setFormStructuredContent(JSON.stringify(getDefaultStructuredContent(def.key), null, 2));
+    }
+  };
+
   const openEditorForCreate = () => {
     resetForm();
+    setIsDetailOpen(false);
+    setIsDeleteOpen(false);
     setIsEditorOpen(true);
   };
 
-  const openEditorForEdit = async (question: AdminQuestionSummary) => {
+  const openEditorForEdit = async (question: AdminQuestionSummary | AdminQuestionDetail) => {
     resetForm();
+    setIsDetailOpen(false);
+    setIsDeleteOpen(false);
     setEditingQuestionId(question.id);
     setIsEditorOpen(true);
 
@@ -340,45 +444,39 @@ export function AdminQuestionsClient({
       if (res.ok) {
         const json = await res.json();
         const q: AdminQuestionDetail = json.question;
-        setFormPathway(q.pathway || "rn");
-        setFormType(q.questionTypeKey || "single-choice");
-        setFormStem(q.stem || "");
-        setFormInstructions(q.instructions || "");
-        setFormDifficulty(q.difficulty || 2);
-        setFormClientNeedId(q.clientNeedId || "");
-        setFormTopicId(q.topicId || "");
-        setFormClinicalScenario(q.clinicalScenario || "");
-        setFormOverallRationale(q.overallRationale || "");
-        setFormCognitiveLevel(q.cognitiveLevel || "");
-        setFormClinicalJudgmentStep(q.clinicalJudgmentStep || "");
-        setFormSource(q.source || "");
-        setFormStructuredContent(q.structuredContentJson || "");
-        setFormChangeSummary("");
-
-        if (q.options && q.options.length > 0) {
-          setFormOptions(
-            q.options.map((o) => ({
-              id: o.id,
-              optionKey: o.optionKey,
-              content: o.content,
-              isCorrect: o.isCorrect,
-              rationale: o.rationale || "",
-              distractorRationale: o.distractorRationale || "",
-              mediaUrl: o.mediaUrl || "",
-            }))
-          );
-        }
+        populateFormFromQuestion(q);
       }
     } catch {
       notify.error("Failed to load full question for editing");
     }
   };
 
+  const openDeleteForQuestion = (questionId: string) => {
+    setIsDetailOpen(false);
+    setIsEditorOpen(false);
+    setDeleteConflictError(null);
+    setDeletingQuestionId(questionId);
+    setIsDeleteOpen(true);
+  };
+
   const handleSaveQuestion = () => {
-    if (!formStem.trim()) {
-      notify.error("Question stem is required.");
+    const validation = validateQuestionPayload({
+      questionTypeKey: formType,
+      stem: formStem,
+      options: formOptions,
+      structuredContentJson: formStructuredContent,
+      exhibitsJson: formExhibitsJson,
+    });
+
+    if (!validation.valid) {
+      setValidationErrors(validation.errors);
+      const firstError = Object.values(validation.errors)[0] || "Please resolve validation errors before saving.";
+      notify.error(firstError);
       return;
     }
+
+    setValidationErrors({});
+    const optionBased = isOptionBasedQuestionType(formType);
 
     const payload = {
       pathway: formPathway,
@@ -389,22 +487,25 @@ export function AdminQuestionsClient({
       instructions: formInstructions.trim() || null,
       difficulty: formDifficulty,
       clinicalScenario: formClinicalScenario.trim() || null,
+      exhibitsJson: formExhibitsJson.trim() || null,
       overallRationale: formOverallRationale.trim() || null,
       cognitiveLevel: formCognitiveLevel.trim() || null,
       clinicalJudgmentStep: formClinicalJudgmentStep.trim() || null,
       source: formSource.trim() || null,
       structuredContentJson: formStructuredContent.trim() || null,
       changeSummary: formChangeSummary.trim() || null,
-      options: formOptions.map((o, idx) => ({
-        id: o.id,
-        optionKey: o.optionKey || String.fromCharCode(65 + idx),
-        content: o.content.trim(),
-        displayOrder: idx,
-        isCorrect: o.isCorrect,
-        rationale: o.rationale.trim() || null,
-        distractorRationale: o.distractorRationale.trim() || null,
-        mediaUrl: o.mediaUrl.trim() || null,
-      })),
+      options: optionBased
+        ? formOptions.map((o, idx) => ({
+            id: o.id,
+            optionKey: o.optionKey || String.fromCharCode(65 + idx),
+            content: o.content.trim(),
+            displayOrder: idx,
+            isCorrect: o.isCorrect,
+            rationale: o.rationale.trim() || null,
+            distractorRationale: o.distractorRationale.trim() || null,
+            mediaUrl: o.mediaUrl.trim() || null,
+          }))
+        : [],
     };
 
     if (editingQuestionId) {
@@ -412,37 +513,6 @@ export function AdminQuestionsClient({
     } else {
       createMutation.mutate(payload);
     }
-  };
-
-  const handleOptionCorrectChange = (index: number, checked: boolean) => {
-    const isSingle = formType === "single-choice" || formType === "image-based" || formType === "true-false";
-    setFormOptions((prev) =>
-      prev.map((opt, i) => {
-        if (i === index) {
-          return { ...opt, isCorrect: checked };
-        }
-        if (isSingle && checked) {
-          return { ...opt, isCorrect: false };
-        }
-        return opt;
-      })
-    );
-  };
-
-  const addOption = () => {
-    const nextKey = String.fromCharCode(65 + formOptions.length);
-    setFormOptions((prev) => [
-      ...prev,
-      { optionKey: nextKey, content: "", isCorrect: false, rationale: "", distractorRationale: "", mediaUrl: "" },
-    ]);
-  };
-
-  const removeOption = (index: number) => {
-    if (formOptions.length <= 2) {
-      notify.error("A question must have at least 2 options.");
-      return;
-    }
-    setFormOptions((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Flatten topics from curriculum tree for dropdown
@@ -473,14 +543,100 @@ export function AdminQuestionsClient({
     );
   }
 
+  const isDeleteBlocked = Boolean(
+    deleteConflictError ||
+      (deletingQuestion &&
+        (deletingQuestion.canDelete === false ||
+          (deletingQuestion.referencedByExamCount ?? 0) > 0 ||
+          (deletingQuestion.referencedByAttemptCount ?? 0) > 0))
+  );
+
   return (
     <div className="w-full max-w-none min-w-0 space-y-6">
-      {isDetailOpen ? (
+      {isDeleteOpen ? (
+        <FullPageDeleteLayout
+          data-testid="question-delete-fullpage"
+          title={`Delete Question: ${deletingQuestion?.code || deletingQuestionId || "Record"}`}
+          description="Verify examination and learner-attempt dependencies before deleting or archiving this canonical question."
+          recordTitle={deletingQuestion?.stem || "Loading question..."}
+          recordSubtitle={`Code: ${deletingQuestion?.code || "N/A"} • Type: ${deletingQuestion?.questionTypeName || deletingQuestion?.questionTypeKey || "Unknown"} • Pathway: ${(deletingQuestion?.pathway || "rn").toUpperCase()}`}
+          recordMetadata={[
+            {
+              label: "Lifecycle Status",
+              value: QUESTION_STATUS_LABELS[deletingQuestion?.status ?? 0]?.label || "Draft",
+            },
+            {
+              label: "Referenced by Examinations",
+              value: String(deletingQuestion?.referencedByExamCount ?? 0),
+            },
+            {
+              label: "Referenced by Learner Attempts",
+              value: String(deletingQuestion?.referencedByAttemptCount ?? 0),
+            },
+            {
+              label: "Client Need Category",
+              value: deletingQuestion?.clientNeedCode || "Unassigned",
+            },
+          ]}
+          isBlocked={isDeleteBlocked}
+          blockedReason={
+            deleteConflictError ||
+            `This question is referenced by ${deletingQuestion?.referencedByExamCount ?? 0} examination revision(s) and ${deletingQuestion?.referencedByAttemptCount ?? 0} learner attempt(s). Hard deletion is blocked (HTTP 409 Conflict) to preserve audit and psychometric integrity.`
+          }
+          consequences={[
+            "Permanently removes this question, its answer options, and its version snapshots from the repository.",
+            "This operation cannot be undone once confirmed.",
+          ]}
+          dependencyNotice={
+            deletingQuestion?.referencedExams && deletingQuestion.referencedExams.length > 0 ? (
+              <div className="space-y-2">
+                <div className="font-semibold text-foreground">Referenced Examinations:</div>
+                <ul className="list-disc pl-5 space-y-1 text-xs">
+                  {deletingQuestion.referencedExams.map((exam) => (
+                    <li key={exam.examId}>
+                      <span className="font-mono font-semibold">{exam.code}</span> — {exam.title} ({exam.status})
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : undefined
+          }
+          backLabel="Return to Question Bank"
+          onBack={() => {
+            setIsDeleteOpen(false);
+            setDeletingQuestionId(null);
+            setDeleteConflictError(null);
+          }}
+          onCancel={() => {
+            setIsDeleteOpen(false);
+            setDeletingQuestionId(null);
+            setDeleteConflictError(null);
+          }}
+          onConfirmDelete={
+            deletingQuestionId
+              ? () => deleteMutation.mutate(deletingQuestionId)
+              : undefined
+          }
+          confirmDeleteLabel="Permanently Delete Question"
+          onArchiveInstead={
+            deletingQuestionId && deletingQuestion?.status !== 4
+              ? () =>
+                  transitionMutation.mutate({
+                    id: deletingQuestionId,
+                    targetStatus: 4,
+                    changeSummary: "Archived via Deactivate Instead fallback",
+                  })
+              : undefined
+          }
+          archiveInsteadLabel="Archive / Deactivate Instead"
+          isSubmitting={deleteMutation.isPending || transitionMutation.isPending || isLoadingDeleteTarget}
+        />
+      ) : isDetailOpen ? (
         <FullPageDetailsLayout
           data-testid="question-details-fullpage"
           eyebrow="Centralized Question Repository"
           title={`Question Details: ${viewingQuestion?.code || "Draft"}`}
-          description={`Version ${viewingQuestion?.version ?? 1} • Pathway: ${viewingQuestion?.pathway?.toUpperCase() || "RN"} • Type: ${viewingQuestion?.questionTypeName || ""}`}
+          description={`Version ${viewingQuestion?.version ?? 1} • Pathway: ${viewingQuestion?.pathway?.toUpperCase() || "RN"} • Type: ${viewingQuestion?.questionTypeName || viewingQuestion?.questionTypeKey || ""}`}
           badge={
             viewingQuestion && (
               <Badge
@@ -490,6 +646,30 @@ export function AdminQuestionsClient({
                 {QUESTION_STATUS_LABELS[viewingQuestion.status]?.label}
               </Badge>
             )
+          }
+          actions={
+            viewingQuestion && caps.canManageQuestions ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openEditorForEdit(viewingQuestion)}
+                  className="gap-1.5"
+                >
+                  <Edit className="h-3.5 w-3.5" />
+                  Edit Question
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openDeleteForQuestion(viewingQuestion.id)}
+                  className="gap-1.5 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete / Archive
+                </Button>
+              </div>
+            ) : undefined
           }
           backLabel="Return to Question Bank"
           onBack={() => setIsDetailOpen(false)}
@@ -505,7 +685,7 @@ export function AdminQuestionsClient({
               <BrandedLoading message="Loading question details..." fullScreen={false} />
             </div>
           ) : (
-            <div className="rounded-2xl border border-border bg-card p-6 space-y-6 text-sm">
+            <div className="space-y-6 text-sm">
               {viewingQuestion.rejectionReason && (
                 <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
                   <div className="font-semibold flex items-center gap-1.5">
@@ -515,105 +695,134 @@ export function AdminQuestionsClient({
                 </div>
               )}
 
-              {viewingQuestion.clinicalScenario && (
-                <div className="rounded-lg border bg-muted/30 p-4">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Clinical Scenario / Vignette
-                  </span>
-                  <p className="mt-1 whitespace-pre-wrap">{viewingQuestion.clinicalScenario}</p>
-                </div>
-              )}
-
-              <div>
-                <span className="text-xs font-semibold text-muted-foreground uppercase">Stem</span>
-                <p className="mt-1 text-base font-medium">{viewingQuestion.stem}</p>
-              </div>
-
-              {viewingQuestion.instructions && (
-                <div>
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">Instructions</span>
-                  <p className="mt-1 text-muted-foreground italic">{viewingQuestion.instructions}</p>
-                </div>
-              )}
-
-              {viewingQuestion.options && viewingQuestion.options.length > 0 && (
-                <div>
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">Options</span>
-                  <div className="mt-2 space-y-2">
-                    {viewingQuestion.options.map((opt) => (
-                      <div
-                        key={opt.id}
-                        className={`rounded-lg border p-3.5 ${
-                          opt.isCorrect
-                            ? "border-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10"
-                            : "bg-card"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs px-2 py-0.5 rounded bg-muted">
-                              {opt.optionKey}
-                            </span>
-                            <span className="font-medium">{opt.content}</span>
-                          </div>
-                          {opt.isCorrect && (
-                            <Badge variant="success" className="text-xs">
-                              Correct Key
-                            </Badge>
-                          )}
-                        </div>
-                        {opt.rationale && (
-                          <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
-                            <strong>Rationale:</strong> {opt.rationale}
-                          </div>
-                        )}
-                        {opt.distractorRationale && (
-                          <div className="mt-1 text-xs text-rose-700 dark:text-rose-400">
-                            <strong>Distractor:</strong> {opt.distractorRationale}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+              {/* Canonical Question Type Renderer Preview */}
+              <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+                  <div>
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                      Learner & Clinical Key Preview
+                    </h3>
+                    <p className="text-xs text-muted-foreground">
+                      Rendered with the canonical PrepFord NCLEX question-type presentation engine.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={previewMode === "admin-preview" ? "default" : "outline"}
+                      onClick={() => setPreviewMode("admin-preview")}
+                    >
+                      Admin Key View
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={previewMode === "candidate-interactive" ? "default" : "outline"}
+                      onClick={() => setPreviewMode("candidate-interactive")}
+                    >
+                      Interactive Learner View
+                    </Button>
                   </div>
                 </div>
-              )}
 
-              {viewingQuestion.structuredContentJson && (
-                <div>
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Structured NGN Schema JSON
-                  </span>
-                  <pre className="mt-1 rounded bg-muted p-3 text-xs overflow-x-auto font-mono">
-                    {viewingQuestion.structuredContentJson}
-                  </pre>
-                </div>
-              )}
+                <QuestionTypeRenderer
+                  questionId={viewingQuestion.id}
+                  questionCode={viewingQuestion.code}
+                  questionTypeKey={viewingQuestion.questionTypeKey}
+                  stem={viewingQuestion.stem}
+                  instructions={viewingQuestion.instructions}
+                  clinicalScenario={viewingQuestion.clinicalScenario}
+                  exhibitsJson={viewingQuestion.exhibitsJson}
+                  structuredContentJson={viewingQuestion.structuredContentJson}
+                  overallRationale={viewingQuestion.overallRationale}
+                  options={viewingQuestion.options}
+                  mode={previewMode}
+                />
+              </div>
 
-              {viewingQuestion.overallRationale && (
-                <div className="rounded-lg border bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20 p-4">
-                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase">
-                    Overall Clinical Rationale
-                  </span>
-                  <p className="mt-1 text-xs leading-relaxed">{viewingQuestion.overallRationale}</p>
+              {/* Dependency & Governance Section */}
+              <div
+                data-testid="question-dependency-panel"
+                className="rounded-2xl border border-border bg-card p-6 space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <ShieldAlert className="h-4 w-4 text-primary" />
+                    <h3 className="font-bold text-sm uppercase tracking-wider">
+                      Dependency & Examination Governance
+                    </h3>
+                  </div>
+                  <Badge variant={viewingQuestion.canDelete === false ? "outline" : "secondary"}>
+                    {viewingQuestion.canDelete === false
+                      ? "Protected Record (Archive Only)"
+                      : "No Active Dependencies"}
+                  </Badge>
                 </div>
-              )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t text-xs text-muted-foreground">
-                <div>
-                  <span className="font-semibold block">Client Need:</span>
-                  {viewingQuestion.clientNeedCode || "None"}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+                  <div className="rounded-xl border bg-muted/20 p-3.5">
+                    <span className="text-muted-foreground block">Referenced by Examinations</span>
+                    <span className="text-lg font-bold text-foreground">
+                      {viewingQuestion.referencedByExamCount ?? 0}
+                    </span>
+                  </div>
+                  <div className="rounded-xl border bg-muted/20 p-3.5">
+                    <span className="text-muted-foreground block">Referenced by Learner Attempts</span>
+                    <span className="text-lg font-bold text-foreground">
+                      {viewingQuestion.referencedByAttemptCount ?? 0}
+                    </span>
+                  </div>
+                  <div className="rounded-xl border bg-muted/20 p-3.5">
+                    <span className="text-muted-foreground block">Deletion Governance</span>
+                    <span className="text-sm font-semibold text-foreground">
+                      {viewingQuestion.canDelete === false
+                        ? "Blocked (HTTP 409 Conflict)"
+                        : "Eligible for Hard Deletion"}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <span className="font-semibold block">Cognitive Level:</span>
-                  {viewingQuestion.cognitiveLevel || "Unspecified"}
-                </div>
-                <div>
-                  <span className="font-semibold block">Clinical Judgment:</span>
-                  {viewingQuestion.clinicalJudgmentStep || "Unspecified"}
-                </div>
-                <div>
-                  <span className="font-semibold block">Author:</span>
-                  {viewingQuestion.authorName || "System"}
+
+                {viewingQuestion.referencedExams && viewingQuestion.referencedExams.length > 0 && (
+                  <div className="space-y-2 pt-2">
+                    <span className="text-xs font-semibold text-muted-foreground uppercase">
+                      Linked Examination Blueprints & Revisions
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {viewingQuestion.referencedExams.map((exam) => (
+                        <div
+                          key={exam.examId}
+                          className="flex items-center justify-between rounded-lg border bg-background px-3 py-2 text-xs"
+                        >
+                          <div>
+                            <span className="font-mono font-bold">{exam.code}</span> — {exam.title}
+                          </div>
+                          <Badge variant="outline" className="text-[10px]">
+                            {exam.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t text-xs text-muted-foreground">
+                  <div>
+                    <span className="font-semibold block">Client Need:</span>
+                    {viewingQuestion.clientNeedCode || "None"}
+                  </div>
+                  <div>
+                    <span className="font-semibold block">Cognitive Level:</span>
+                    {viewingQuestion.cognitiveLevel || "Unspecified"}
+                  </div>
+                  <div>
+                    <span className="font-semibold block">Clinical Judgment:</span>
+                    {viewingQuestion.clinicalJudgmentStep || "Unspecified"}
+                  </div>
+                  <div>
+                    <span className="font-semibold block">Author:</span>
+                    {viewingQuestion.authorName || "System"}
+                  </div>
                 </div>
               </div>
             </div>
@@ -728,7 +937,7 @@ export function AdminQuestionsClient({
           data-testid="question-editor-fullpage"
           eyebrow="Centralized Question Repository"
           title={editingQuestionId ? "Edit Question" : "Create Canonical Question"}
-          description="Define the question stem, clinical scenario, taxonomy alignment, and type-specific response keys."
+          description="Define the question stem, clinical scenario, taxonomy alignment, and type-specific response keys across all 18 canonical NCLEX formats."
           backLabel="Return to Question Bank"
           onBack={() => setIsEditorOpen(false)}
           footer={
@@ -736,6 +945,7 @@ export function AdminQuestionsClient({
               onCancel={() => setIsEditorOpen(false)}
               primaryAction={
                 <Button
+                  data-testid="save-question-btn"
                   onClick={handleSaveQuestion}
                   disabled={createMutation.isPending || updateMutation.isPending}
                 >
@@ -746,26 +956,52 @@ export function AdminQuestionsClient({
           }
         >
           <div className="space-y-6 text-sm">
+            {Object.keys(validationErrors).length > 0 && (
+              <div
+                data-testid="question-validation-errors"
+                className="rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-destructive space-y-1"
+              >
+                <div className="font-semibold flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0" />
+                  <span>Please resolve the following validation issues before saving:</span>
+                </div>
+                <ul className="list-disc pl-5 text-xs space-y-0.5">
+                  {Object.entries(validationErrors).map(([field, msg]) => (
+                    <li key={field}>{msg}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Top row: Type, Pathway, Difficulty */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <Label>Question Type *</Label>
+                <Label htmlFor="question-type-select">Question Type *</Label>
                 <select
+                  id="question-type-select"
+                  data-testid="question-type-select"
                   value={formType}
-                  onChange={(e) => setFormType(e.target.value)}
+                  onChange={(e) => handleQuestionTypeChange(e.target.value)}
                   className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <optgroup label="Traditional Types">
+                  <optgroup label="Traditional Formats (5)">
                     {TRADITIONAL_TYPES.map((t) => (
                       <option key={t.key} value={t.key}>
-                        {t.name}
+                        {t.label}
                       </option>
                     ))}
                   </optgroup>
-                  <optgroup label="NGN Clinical Types">
+                  <optgroup label="Clinical Media Formats (2)">
+                    {CLINICAL_TYPES.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="NGN Structured Formats (11)">
                     {NGN_TYPES.map((t) => (
                       <option key={t.key} value={t.key}>
-                        {t.name}
+                        {t.label}
                       </option>
                     ))}
                   </optgroup>
@@ -773,8 +1009,9 @@ export function AdminQuestionsClient({
               </div>
 
               <div>
-                <Label>Pathway *</Label>
+                <Label htmlFor="question-pathway-select">Pathway *</Label>
                 <select
+                  id="question-pathway-select"
                   value={formPathway}
                   onChange={(e) => setFormPathway(e.target.value)}
                   className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -786,8 +1023,9 @@ export function AdminQuestionsClient({
               </div>
 
               <div>
-                <Label>Difficulty</Label>
+                <Label htmlFor="question-difficulty-select">Difficulty</Label>
                 <select
+                  id="question-difficulty-select"
                   value={formDifficulty}
                   onChange={(e) => setFormDifficulty(Number(e.target.value))}
                   className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -819,7 +1057,7 @@ export function AdminQuestionsClient({
               </div>
 
               <div>
-                <Label>Curriculum Topic</Label>
+                <Label>Curriculum Topic / Subject Domain</Label>
                 <select
                   value={formTopicId}
                   onChange={(e) => setFormTopicId(e.target.value)}
@@ -849,14 +1087,28 @@ export function AdminQuestionsClient({
 
             {/* Stem */}
             <div>
-              <Label>Question Stem *</Label>
+              <Label htmlFor="question-stem-input">Question Stem *</Label>
               <textarea
+                id="question-stem-input"
+                data-testid="question-stem-input"
                 rows={3}
                 value={formStem}
-                onChange={(e) => setFormStem(e.target.value)}
+                onChange={(e) => {
+                  setFormStem(e.target.value);
+                  if (validationErrors.stem) {
+                    setValidationErrors((prev) => {
+                      const next = { ...prev };
+                      delete next.stem;
+                      return next;
+                    });
+                  }
+                }}
                 placeholder="Which clinical manifestation should the nurse prioritize when evaluating the client's condition?"
                 className="mt-1.5 w-full rounded-md border border-input bg-background p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               />
+              {validationErrors.stem && (
+                <p className="mt-1 text-xs text-destructive font-medium">{validationErrors.stem}</p>
+              )}
             </div>
 
             {/* Instructions */}
@@ -865,113 +1117,61 @@ export function AdminQuestionsClient({
               <Input
                 value={formInstructions}
                 onChange={(e) => setFormInstructions(e.target.value)}
-                placeholder="e.g. Select all that apply."
+                placeholder={getQuestionTypeDefinition(formType).defaultInstructions}
               />
             </div>
 
-            {/* Options Editor for Traditional Types */}
-            {TRADITIONAL_TYPES.some((t) => t.key === formType) ? (
-              <div className="space-y-4 rounded-xl border p-5 bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <Label className="font-semibold text-base">Options & Rationales</Label>
-                  <Button variant="outline" size="sm" onClick={addOption} className="gap-1">
-                    <Plus className="h-3.5 w-3.5" /> Add Option
+            {/* Canonical 18-Type Configuration Editor + Exhibits Builder */}
+            <QuestionTypeEditor
+              questionTypeKey={formType}
+              options={formOptions}
+              onOptionsChange={setFormOptions}
+              structuredContentJson={formStructuredContent}
+              onStructuredContentJsonChange={setFormStructuredContent}
+              exhibitsJson={formExhibitsJson}
+              onExhibitsJsonChange={setFormExhibitsJson}
+              validationErrors={validationErrors}
+            />
+
+            {/* Live Learner Preview inside the Editor */}
+            <div className="rounded-2xl border border-border bg-muted/15 p-5 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <span className="font-semibold text-sm">Live Question Preview</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={previewMode === "admin-preview" ? "default" : "outline"}
+                    onClick={() => setPreviewMode("admin-preview")}
+                  >
+                    Admin Key Preview
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={previewMode === "candidate-interactive" ? "default" : "outline"}
+                    onClick={() => setPreviewMode("candidate-interactive")}
+                  >
+                    Interactive Learner Preview
                   </Button>
                 </div>
-
-                <p className="text-xs text-muted-foreground">
-                  {formType === "single-choice" || formType === "image-based"
-                    ? "Single Choice questions require at least 2 options and exactly 1 correct key."
-                    : formType === "sata" || formType === "checkbox" || formType === "multiple-choice" || formType === "multiple-image"
-                    ? "Multi-response questions require at least 2 options and at least 1 correct key."
-                    : "True/False requires exactly 2 options with 1 correct key."}
-                </p>
-
-                <div className="space-y-3">
-                  {formOptions.map((opt, idx) => (
-                    <div key={idx} className="rounded-lg border bg-card p-3.5 space-y-2.5">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs px-2 py-1 rounded bg-muted w-8 text-center">
-                          {opt.optionKey}
-                        </span>
-                        <Input
-                          placeholder={`Option ${opt.optionKey} text...`}
-                          value={opt.content}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormOptions((prev) =>
-                              prev.map((o, i) => (i === idx ? { ...o, content: val } : o))
-                            );
-                          }}
-                          className="flex-1"
-                        />
-                        <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none px-2.5 py-1.5 rounded border bg-background hover:bg-muted/50">
-                          <input
-                            type="checkbox"
-                            checked={opt.isCorrect}
-                            onChange={(e) => handleOptionCorrectChange(idx, e.target.checked)}
-                            className="rounded border-input text-primary focus:ring-primary"
-                          />
-                          Correct
-                        </label>
-                        {formOptions.length > 2 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeOption(idx)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                        <Input
-                          placeholder="Option rationale (why correct or valid)..."
-                          value={opt.rationale}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormOptions((prev) =>
-                              prev.map((o, i) => (i === idx ? { ...o, rationale: val } : o))
-                            );
-                          }}
-                        />
-                        <Input
-                          placeholder="Distractor rationale (why unsafe or incorrect)..."
-                          value={opt.distractorRationale}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormOptions((prev) =>
-                              prev.map((o, i) => (i === idx ? { ...o, distractorRationale: val } : o))
-                            );
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
               </div>
-            ) : (
-              /* Structured Editor for NGN Types */
-              <div className="space-y-2 rounded-xl border p-5 bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <Label className="font-semibold text-base">NGN Structured Content Schema</Label>
-                  <Badge variant="outline">NGN Catalogued Format</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Provide JSON schema specifying prompts, tabs, matrix grids, or drag targets for this NGN
-                  question type.
-                </p>
-                <textarea
-                  rows={6}
-                  value={formStructuredContent}
-                  onChange={(e) => setFormStructuredContent(e.target.value)}
-                  placeholder={`{\n  "matrixRows": ["Manifestation 1", "Manifestation 2"],\n  "columns": ["Expected", "Unexpected"]\n}`}
-                  className="w-full font-mono text-xs rounded-md border border-input bg-background p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </div>
-            )}
+
+              <QuestionTypeRenderer
+                questionTypeKey={formType}
+                stem={formStem || "Enter a question stem above to preview how learners will experience this question."}
+                instructions={formInstructions}
+                clinicalScenario={formClinicalScenario}
+                exhibitsJson={formExhibitsJson}
+                structuredContentJson={formStructuredContent}
+                overallRationale={formOverallRationale}
+                options={formOptions}
+                mode={previewMode}
+              />
+            </div>
 
             {/* Overall Rationale */}
             <div>
@@ -1047,376 +1247,405 @@ export function AdminQuestionsClient({
         </FullPageFormLayout>
       ) : (
         <>
-      {/* Top Banner */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Question Bank</h1>
-          <p className="text-muted-foreground text-sm">
-            Author, review, approve, and manage canonical NCLEX questions with complete revision traceability.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {caps.canManageQuestions && (
-            <Button onClick={openEditorForCreate} className="gap-2">
-              <Plus className="h-4 w-4" />
-              New Question
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Filter and Search Bar */}
-      <div className="grid gap-3 rounded-xl border bg-card p-4 shadow-sm md:grid-cols-6">
-        <div className="md:col-span-2 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search stems, codes, or rationales..."
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
-              setPage(1);
-            }}
-            className="pl-9"
-          />
-        </div>
-
-        <div>
-          <select
-            value={typeFilter}
-            onChange={(e) => {
-              setTypeFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">All Question Types</option>
-            <optgroup label="Traditional Types">
-              {TRADITIONAL_TYPES.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.name}
-                </option>
-              ))}
-            </optgroup>
-            <optgroup label="NGN Clinical Types">
-              {NGN_TYPES.map((t) => (
-                <option key={t.key} value={t.key}>
-                  {t.name}
-                </option>
-              ))}
-            </optgroup>
-          </select>
-        </div>
-
-        <div>
-          <select
-            value={pathwayFilter}
-            onChange={(e) => {
-              setPathwayFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">All Pathways</option>
-            <option value="rn">NCLEX-RN</option>
-            <option value="pn">NCLEX-PN</option>
-            <option value="both">Both (RN & PN)</option>
-          </select>
-        </div>
-
-        <div>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">All Statuses</option>
-            <option value="0">Draft</option>
-            <option value="1">In Review</option>
-            <option value="2">Approved</option>
-            <option value="3">Published</option>
-            <option value="4">Archived</option>
-          </select>
-        </div>
-
-        <div>
-          <select
-            value={clientNeedFilter}
-            onChange={(e) => {
-              setClientNeedFilter(e.target.value);
-              setPage(1);
-            }}
-            className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">All Client Needs</option>
-            {clientNeedsData?.map((cn) => (
-              <option key={cn.id} value={cn.id}>
-                {cn.code} - {cn.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Questions List Table */}
-      <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
-        {isLoadingQuestions ? (
-          <div className="p-12 text-center">
-            <BrandedLoading message="Loading questions..." fullScreen={false} />
-          </div>
-        ) : !questionsData?.items || questionsData.items.length === 0 ? (
-          <div className="p-12 text-center">
-            <HelpCircle className="h-10 w-10 text-muted-foreground/60 mx-auto mb-3" />
-            <h3 className="text-lg font-semibold">No questions found</h3>
-            <p className="text-muted-foreground text-sm mt-1">
-              Try adjusting your filters or search keywords, or create a new question.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left border-collapse">
-              <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase border-b">
-                <tr>
-                  <th className="px-4 py-3">Code / Ver</th>
-                  <th className="px-4 py-3">Question Stem</th>
-                  <th className="px-4 py-3">Type & Pathway</th>
-                  <th className="px-4 py-3">Client Need</th>
-                  <th className="px-4 py-3">Difficulty</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Author</th>
-                  <th className="px-4 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {questionsData.items.map((q: AdminQuestionSummary) => {
-                  const statusInfo = QUESTION_STATUS_LABELS[q.status] || { label: "Unknown", variant: "secondary" };
-                  const diffInfo = QUESTION_DIFFICULTY_LABELS[q.difficulty] || { label: "Moderate", className: "" };
-                  const isAuthor = user?.id && q.createdById === user.id;
-
-                  return (
-                    <tr key={q.id} className="hover:bg-muted/40 transition-colors">
-                      <td className="px-4 py-3 font-mono font-medium whitespace-nowrap">
-                        <div className="flex items-center gap-1.5">
-                          <span>{q.code || "PENDING"}</span>
-                          <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-sans">
-                            v{q.version}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 max-w-xs md:max-w-md truncate">
-                        <span className="font-medium text-foreground">{q.stem}</span>
-                        {q.topicTitle && (
-                          <div className="text-xs text-muted-foreground truncate mt-0.5">
-                            Topic: {q.topicTitle}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <div className="flex flex-col gap-1 items-start">
-                          <span className="text-xs font-medium">{q.questionTypeName}</span>
-                          <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
-                            {q.pathway.toUpperCase()}
-                          </Badge>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
-                        {q.clientNeedCode ? (
-                          <span title={q.clientNeedName}>{q.clientNeedCode}</span>
-                        ) : (
-                          <span className="italic">Unassigned</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${diffInfo.className}`}>
-                          {diffInfo.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <Badge variant={statusInfo.variant} className={statusInfo.className}>{statusInfo.label}</Badge>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
-                        {q.authorName || "System"}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {/* View details */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="View Question Details"
-                            onClick={() => {
-                              setViewingQuestionId(q.id);
-                              setIsDetailOpen(true);
-                            }}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-
-                          {/* Version history */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            title="Revision History"
-                            onClick={() => {
-                              setHistoryQuestionId(q.id);
-                              setIsHistoryOpen(true);
-                            }}
-                          >
-                            <History className="h-4 w-4" />
-                          </Button>
-
-                          {/* Edit (allowed for draft or published) */}
-                          {caps.canManageQuestions && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              title="Edit Question"
-                              onClick={() => openEditorForEdit(q)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          )}
-
-                          {/* Workflow status actions */}
-                          {/* 1. Submit for review (Draft -> InReview) */}
-                          {q.status === 0 && caps.canManageQuestions && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                              title="Submit for Review"
-                              onClick={() =>
-                                transitionMutation.mutate({ id: q.id, targetStatus: 1 })
-                              }
-                            >
-                              <Send className="h-4 w-4" />
-                            </Button>
-                          )}
-
-                          {/* 2. Review actions (InReview -> Approved or Rejected) */}
-                          {q.status === 1 && caps.canReviewQuestions && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                                title={
-                                  isAuthor && user?.role !== "superadmin"
-                                    ? "Author cannot approve their own question (Separation of Duties)"
-                                    : "Approve Question"
-                                }
-                                disabled={Boolean(isAuthor && user?.role !== "superadmin")}
-                                onClick={() =>
-                                  transitionMutation.mutate({ id: q.id, targetStatus: 2 })
-                                }
-                              >
-                                <Check className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                                title="Reject / Request Changes"
-                                onClick={() => {
-                                  setRejectingQuestionId(q.id);
-                                  setIsRejectOpen(true);
-                                }}
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-
-                          {/* 3. Publish (Approved -> Published) */}
-                          {q.status === 2 && caps.canPublishQuestions && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
-                              title="Publish Question"
-                              onClick={() =>
-                                transitionMutation.mutate({ id: q.id, targetStatus: 3 })
-                              }
-                            >
-                              <CheckCircle2 className="h-4 w-4" />
-                            </Button>
-                          )}
-
-                          {/* 4. Archive (Published or Approved -> Archived) */}
-                          {(q.status === 2 || q.status === 3) && caps.canPublishQuestions && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                              title="Archive Question"
-                              onClick={() =>
-                                transitionMutation.mutate({ id: q.id, targetStatus: 4 })
-                              }
-                            >
-                              <Archive className="h-4 w-4" />
-                            </Button>
-                          )}
-
-                          {/* 5. Restore (Archived -> Draft) */}
-                          {q.status === 4 && caps.canManageQuestions && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                              title="Restore to Draft"
-                              onClick={() =>
-                                transitionMutation.mutate({ id: q.id, targetStatus: 0 })
-                              }
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pagination Footer */}
-        {questionsData && questionsData.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
-            <span className="text-muted-foreground">
-              Showing {(page - 1) * pageSize + 1} to{" "}
-              {Math.min(page * pageSize, questionsData.totalCount)} of {questionsData.totalCount} questions
-            </span>
+          {/* Top Banner */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">Question Bank</h1>
+              <p className="text-muted-foreground text-sm">
+                Author, review, approve, and manage canonical NCLEX questions across all 18 supported question types.
+              </p>
+            </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" /> Previous
-              </Button>
-              <span className="px-2 font-medium">
-                {page} / {questionsData.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= questionsData.totalPages}
-                onClick={() => setPage((p) => Math.min(questionsData.totalPages, p + 1))}
-              >
-                Next <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+              {caps.canManageQuestions && (
+                <Button data-testid="new-question-btn" onClick={openEditorForCreate} className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  New Question
+                </Button>
+              )}
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Filter and Search Bar */}
+          <div className="grid gap-3 rounded-xl border bg-card p-4 shadow-sm md:grid-cols-6">
+            <div className="md:col-span-2 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search stems, codes, or rationales..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                className="pl-9"
+              />
+            </div>
+
+            <div>
+              <select
+                value={typeFilter}
+                onChange={(e) => {
+                  setTypeFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">All 18 Question Types</option>
+                <optgroup label="Traditional Formats">
+                  {TRADITIONAL_TYPES.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Clinical Media Formats">
+                  {CLINICAL_TYPES.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="NGN Structured Formats">
+                  {NGN_TYPES.map((t) => (
+                    <option key={t.key} value={t.key}>
+                      {t.label}
+                    </option>
+                  ))}
+                </optgroup>
+              </select>
+            </div>
+
+            <div>
+              <select
+                value={pathwayFilter}
+                onChange={(e) => {
+                  setPathwayFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">All Pathways</option>
+                <option value="rn">NCLEX-RN</option>
+                <option value="pn">NCLEX-PN</option>
+                <option value="both">Both (RN & PN)</option>
+              </select>
+            </div>
+
+            <div>
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">All Statuses</option>
+                <option value="0">Draft</option>
+                <option value="1">In Review</option>
+                <option value="2">Approved</option>
+                <option value="3">Published</option>
+                <option value="4">Archived</option>
+              </select>
+            </div>
+
+            <div>
+              <select
+                value={clientNeedFilter}
+                onChange={(e) => {
+                  setClientNeedFilter(e.target.value);
+                  setPage(1);
+                }}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <option value="">All Client Needs</option>
+                {clientNeedsData?.map((cn) => (
+                  <option key={cn.id} value={cn.id}>
+                    {cn.code} - {cn.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Questions List Table */}
+          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+            {isLoadingQuestions ? (
+              <div className="p-12 text-center">
+                <BrandedLoading message="Loading questions..." fullScreen={false} />
+              </div>
+            ) : !questionsData?.items || questionsData.items.length === 0 ? (
+              <div className="p-12 text-center">
+                <HelpCircle className="h-10 w-10 text-muted-foreground/60 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold">No questions found</h3>
+                <p className="text-muted-foreground text-sm mt-1">
+                  Try adjusting your filters or search keywords, or create a new question.
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left border-collapse">
+                  <thead className="bg-muted/50 text-xs font-semibold text-muted-foreground uppercase border-b">
+                    <tr>
+                      <th className="px-4 py-3">Code / Ver</th>
+                      <th className="px-4 py-3">Question Stem</th>
+                      <th className="px-4 py-3">Type & Pathway</th>
+                      <th className="px-4 py-3">Client Need</th>
+                      <th className="px-4 py-3">Difficulty</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Dependencies</th>
+                      <th className="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {questionsData.items.map((q: AdminQuestionSummary) => {
+                      const statusInfo = QUESTION_STATUS_LABELS[q.status] || { label: "Unknown", variant: "secondary" };
+                      const diffInfo = QUESTION_DIFFICULTY_LABELS[q.difficulty] || { label: "Moderate", className: "" };
+                      const isAuthor = user?.id && q.createdById === user.id;
+                      const examRefs = q.referencedByExamCount ?? 0;
+                      const attemptRefs = q.referencedByAttemptCount ?? 0;
+
+                      return (
+                        <tr key={q.id} className="hover:bg-muted/40 transition-colors">
+                          <td className="px-4 py-3 font-mono font-medium whitespace-nowrap">
+                            <div className="flex items-center gap-1.5">
+                              <span>{q.code || "PENDING"}</span>
+                              <span className="text-[10px] bg-muted text-muted-foreground px-1.5 py-0.5 rounded font-sans">
+                                v{q.version}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 max-w-xs md:max-w-md truncate">
+                            <span className="font-medium text-foreground">{q.stem}</span>
+                            {q.topicTitle && (
+                              <div className="text-xs text-muted-foreground truncate mt-0.5">
+                                Topic: {q.topicTitle}
+                              </div>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="flex flex-col gap-1 items-start">
+                              <span className="text-xs font-medium">{q.questionTypeName}</span>
+                              <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                                {q.pathway.toUpperCase()}
+                              </Badge>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+                            {q.clientNeedCode ? (
+                              <span title={q.clientNeedName}>{q.clientNeedCode}</span>
+                            ) : (
+                              <span className="italic">Unassigned</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <span className={`text-xs px-2 py-0.5 rounded-full border ${diffInfo.className}`}>
+                              {diffInfo.label}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <Badge variant={statusInfo.variant} className={statusInfo.className}>{statusInfo.label}</Badge>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-xs text-muted-foreground">
+                            {examRefs > 0 || attemptRefs > 0 ? (
+                              <span title={`${examRefs} exam(s), ${attemptRefs} attempt(s)`}>
+                                {examRefs} exam{examRefs === 1 ? "" : "s"} • {attemptRefs} attempt{attemptRefs === 1 ? "" : "s"}
+                              </span>
+                            ) : (
+                              <span>Unreferenced</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {/* View details */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                title="View Question Details"
+                                onClick={() => {
+                                  setViewingQuestionId(q.id);
+                                  setIsDetailOpen(true);
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+
+                              {/* Version history */}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                title="Revision History"
+                                onClick={() => {
+                                  setHistoryQuestionId(q.id);
+                                  setIsHistoryOpen(true);
+                                }}
+                              >
+                                <History className="h-4 w-4" />
+                              </Button>
+
+                              {/* Edit */}
+                              {caps.canManageQuestions && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  title="Edit Question"
+                                  onClick={() => openEditorForEdit(q)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {/* Delete / Archive */}
+                              {caps.canManageQuestions && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  data-testid={`delete-question-${q.id}`}
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  title="Delete Question"
+                                  onClick={() => openDeleteForQuestion(q.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {/* Workflow status actions */}
+                              {/* 1. Submit for review (Draft -> InReview) */}
+                              {q.status === 0 && caps.canManageQuestions && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                  title="Submit for Review"
+                                  onClick={() =>
+                                    transitionMutation.mutate({ id: q.id, targetStatus: 1 })
+                                  }
+                                >
+                                  <Send className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {/* 2. Review actions (InReview -> Approved or Rejected) */}
+                              {q.status === 1 && caps.canReviewQuestions && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                    title={
+                                      isAuthor && user?.role !== "superadmin"
+                                        ? "Author cannot approve their own question (Separation of Duties)"
+                                        : "Approve Question"
+                                    }
+                                    disabled={Boolean(isAuthor && user?.role !== "superadmin")}
+                                    onClick={() =>
+                                      transitionMutation.mutate({ id: q.id, targetStatus: 2 })
+                                    }
+                                  >
+                                    <Check className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                    title="Reject / Request Changes"
+                                    onClick={() => {
+                                      setRejectingQuestionId(q.id);
+                                      setIsRejectOpen(true);
+                                    }}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </>
+                              )}
+
+                              {/* 3. Publish (Approved -> Published) */}
+                              {q.status === 2 && caps.canPublishQuestions && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                                  title="Publish Question"
+                                  onClick={() =>
+                                    transitionMutation.mutate({ id: q.id, targetStatus: 3 })
+                                  }
+                                >
+                                  <CheckCircle2 className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {/* 4. Archive (Published or Approved -> Archived) */}
+                              {(q.status === 2 || q.status === 3) && caps.canPublishQuestions && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  title="Archive Question"
+                                  onClick={() =>
+                                    transitionMutation.mutate({ id: q.id, targetStatus: 4 })
+                                  }
+                                >
+                                  <Archive className="h-4 w-4" />
+                                </Button>
+                              )}
+
+                              {/* 5. Restore (Archived -> Draft) */}
+                              {q.status === 4 && caps.canManageQuestions && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  title="Restore to Draft"
+                                  onClick={() =>
+                                    transitionMutation.mutate({ id: q.id, targetStatus: 0 })
+                                  }
+                                >
+                                  <RotateCcw className="h-4 w-4" />
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Pagination Footer */}
+            {questionsData && questionsData.totalPages > 1 && (
+              <div className="flex items-center justify-between border-t px-4 py-3 text-sm">
+                <span className="text-muted-foreground">
+                  Showing {(page - 1) * pageSize + 1} to{" "}
+                  {Math.min(page * pageSize, questionsData.totalCount)} of {questionsData.totalCount} questions
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" /> Previous
+                  </Button>
+                  <span className="px-2 font-medium">
+                    {page} / {questionsData.totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= questionsData.totalPages}
+                    onClick={() => setPage((p) => Math.min(questionsData.totalPages, p + 1))}
+                  >
+                    Next <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </>
       )}
     </div>

@@ -66,11 +66,15 @@ export interface SubjectDomainItem {
 interface CourseSubjectManagementProps {
   canModify?: boolean;
   onCatalogChanged?: () => void;
+  initialMode?: "list" | "create" | "details" | "edit" | "delete";
+  initialEntityId?: string;
 }
 
 export function CourseSubjectManagement({
   canModify = true,
   onCatalogChanged,
+  initialMode = "list",
+  initialEntityId,
 }: CourseSubjectManagementProps) {
   const [activeEntityTab, setActiveEntityTab] = useState<"courses" | "subjects">("courses");
   const [courses, setCourses] = useState<CourseItem[]>([]);
@@ -81,6 +85,15 @@ export function CourseSubjectManagement({
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (!bannerMessage) return;
+    if (bannerMessage.type === "success") {
+      notify.success(bannerMessage.text);
+    } else {
+      notify.error(bannerMessage.text);
+    }
+  }, [bannerMessage]);
 
   // Filters & sorting
   const [searchQuery, setSearchQuery] = useState("");
@@ -169,6 +182,74 @@ export function CourseSubjectManagement({
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => {
+    if (initialMode === "create") {
+      setCourseDialogOpen(true);
+      return;
+    }
+    if (loading || !initialEntityId) return;
+    const matchedCourse = courses.find((c) => c.id === initialEntityId);
+    const matchedSubject = subjects.find((s) => s.id === initialEntityId);
+    if (matchedCourse) {
+      setActiveEntityTab("courses");
+      if (initialMode === "details") setDetailCourse(matchedCourse);
+      if (initialMode === "edit") {
+        setEditingCourse(matchedCourse);
+        setCourseTitle(matchedCourse.title);
+        setCourseCode(matchedCourse.code || "");
+        setCoursePathway(
+          matchedCourse.pathway === "pn" || matchedCourse.pathway === "both"
+            ? matchedCourse.pathway
+            : "rn"
+        );
+        setCourseDescription(matchedCourse.description || "");
+        setCourseOrder(matchedCourse.displayOrder ?? 1);
+        setCourseActive(matchedCourse.isActive);
+        setCourseDialogOpen(true);
+      }
+      if (initialMode === "delete") {
+        setDeleteTarget({
+          kind: "course",
+          id: matchedCourse.id,
+          title: matchedCourse.title,
+          code: matchedCourse.code,
+          isActive: matchedCourse.isActive,
+          questionCount: matchedCourse.questionCount ?? 0,
+          childCount: matchedCourse.subjectDomainCount ?? 0,
+        });
+      }
+    } else if (matchedSubject) {
+      setActiveEntityTab("subjects");
+      if (initialMode === "details") setDetailSubject(matchedSubject);
+      if (initialMode === "edit") {
+        setEditingSubject(matchedSubject);
+        setSubjectCourseId(matchedSubject.courseId);
+        setSubjectTitle(matchedSubject.title);
+        setSubjectCode(matchedSubject.code || "");
+        setSubjectPathway(
+          matchedSubject.pathway === "pn" || matchedSubject.pathway === "both"
+            ? matchedSubject.pathway
+            : "rn"
+        );
+        setSubjectDescription(matchedSubject.description || "");
+        setSubjectOrder(matchedSubject.displayOrder ?? 1);
+        setSubjectActive(matchedSubject.isActive);
+        setSubjectDialogOpen(true);
+      }
+      if (initialMode === "delete") {
+        setDeleteTarget({
+          kind: "subject",
+          id: matchedSubject.id,
+          title: matchedSubject.title,
+          code: matchedSubject.code,
+          isActive: matchedSubject.isActive,
+          questionCount: matchedSubject.questionCount ?? 0,
+          childCount: matchedSubject.categoryCount ?? 0,
+        });
+      }
+    }
+  }, [initialMode, initialEntityId, loading, courses, subjects]);
 
   // Reset pagination on filter changes
   useEffect(() => {
