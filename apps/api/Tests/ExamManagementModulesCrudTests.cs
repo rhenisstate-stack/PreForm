@@ -466,9 +466,10 @@ public class ExamManagementModulesCrudTests
             lifecycleService.DeleteExaminationAsync(rnPractice.Id, reviewerUser));
 
         // Transition RN Practice Exam through Draft -> InReview -> Approved -> Published, then Duplicate
+        var approverAdmin = CreateUserPrincipal("admin_02", "admin");
         var inReview = await lifecycleService.SubmitForReviewAsync(rnRev.Id, rnRev.ConcurrencyToken, adminUser);
-        var approved = await lifecycleService.ApproveAsync(rnRev.Id, inReview.ConcurrencyToken, adminUser);
-        var published = await lifecycleService.PublishAsync(rnRev.Id, approved.ConcurrencyToken, adminUser);
+        var approved = await lifecycleService.ApproveAsync(rnRev.Id, inReview.ConcurrencyToken, approverAdmin);
+        var published = await lifecycleService.PublishAsync(rnRev.Id, approved.ConcurrencyToken, approverAdmin);
         Assert.Equal("Published", published.LifecycleState);
 
         // Published exam cannot be hard-deleted; must be archived

@@ -21,7 +21,13 @@ import {
   ArrowUpDown,
   SlidersHorizontal,
   Check,
+  FileSpreadsheet,
+  Activity,
+  GraduationCap,
 } from "lucide-react";
+import { StandaloneTestsWorkspace } from "@/components/admin/exam-management/standalone-tests-workspace";
+import { RatsManagementWorkspace } from "@/components/admin/exam-management/rats-management-workspace";
+import { PracticeExamsWorkspace } from "@/components/admin/exam-management/practice-exams-workspace";
 import { useAuth } from "@/lib/auth-context";
 import { BrandedLoading } from "@/components/layout/branded-loading";
 import { getAdminCapabilities } from "@/lib/admin/authz";
@@ -147,6 +153,7 @@ export function AdminExaminationsClient() {
   const [pageSize, setPageSize] = React.useState<number>(initialParams.pageSize);
 
   const [isCreateOpen, setIsCreateOpen] = React.useState(false);
+  const [activeModule, setActiveModule] = React.useState<"library" | "standalone" | "rats" | "practice">("library");
 
   // Create Form State
   const [formPathway, setFormPathway] = React.useState<"rn" | "pn">("rn");
@@ -392,6 +399,140 @@ export function AdminExaminationsClient() {
           </Button>
         )}
       </div>
+
+      {/* Phase 2 Target Information Architecture: Three Primary Examination Management Modules */}
+      <div className="space-y-3" data-testid="exam-management-primary-modules">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Primary Examination Management Modules
+          </div>
+          {activeModule !== "library" && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveModule("library")}
+              data-testid="return-to-library-btn"
+              className="text-xs h-8"
+            >
+              View Full Examination Library
+            </Button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Button 1: Create Custom Test (Stand Alone) */}
+          <button
+            type="button"
+            onClick={() => setActiveModule("standalone")}
+            data-testid="primary-module-standalone"
+            className={`text-left rounded-xl border p-5 transition-all group ${
+              activeModule === "standalone"
+                ? "border-indigo-500 bg-indigo-500/10 ring-2 ring-indigo-500/20 shadow-sm"
+                : "border-slate-200 dark:border-slate-800 bg-card hover:border-indigo-500/40 hover:shadow-xs"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                <FileSpreadsheet className="h-5 w-5" />
+              </div>
+              <Badge variant="outline" className="text-[10px] border-indigo-500/30 text-indigo-600 dark:text-indigo-400">
+                Courses • Client Needs • Tests
+              </Badge>
+            </div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+              Create Custom Test (Stand Alone)
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+              Manage Course/Subject & Client Needs classifications and assemble standalone custom tests from the Question Repository.
+            </p>
+          </button>
+
+          {/* Button 2: RATS */}
+          <button
+            type="button"
+            onClick={() => setActiveModule("rats")}
+            data-testid="primary-module-rats"
+            className={`text-left rounded-xl border p-5 transition-all group ${
+              activeModule === "rats"
+                ? "border-amber-500 bg-amber-500/10 ring-2 ring-amber-500/20 shadow-sm"
+                : "border-slate-200 dark:border-slate-800 bg-card hover:border-amber-500/40 hover:shadow-xs"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="p-2.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Activity className="h-5 w-5" />
+              </div>
+              <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-600 dark:text-amber-400">
+                Readiness Thresholds
+              </Badge>
+            </div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+              RATS
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+              Manage Readiness Assessment Tests, readiness classification bands (Low, Borderline, High, Very High), and benchmarks.
+            </p>
+          </button>
+
+          {/* Button 3: Practice Exams */}
+          <button
+            type="button"
+            onClick={() => setActiveModule("practice")}
+            data-testid="primary-module-practice"
+            className={`text-left rounded-xl border p-5 transition-all group ${
+              activeModule === "practice"
+                ? "border-teal-500 bg-teal-500/10 ring-2 ring-teal-500/20 shadow-sm"
+                : "border-slate-200 dark:border-slate-800 bg-card hover:border-teal-500/40 hover:shadow-xs"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <div className="p-2.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                <GraduationCap className="h-5 w-5" />
+              </div>
+              <Badge variant="outline" className="text-[10px] border-teal-500/30 text-teal-600 dark:text-teal-400">
+                NCLEX-RN & NCLEX-PN
+              </Badge>
+            </div>
+            <h2 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+              Practice Exams
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">
+              Manage structured NCLEX-RN and NCLEX-PN Practice Examinations, Traditional/NGN item mixes, duplication, and previews.
+            </p>
+          </button>
+        </div>
+      </div>
+
+      {activeModule === "standalone" && (
+        <StandaloneTestsWorkspace
+          canModify={capabilities.canManageExaminations}
+          onExamCatalogChanged={() =>
+            queryClient.invalidateQueries({ queryKey: ["admin-examinations-library"] })
+          }
+        />
+      )}
+
+      {activeModule === "rats" && (
+        <RatsManagementWorkspace
+          canModify={capabilities.canManageExaminations}
+          onExamCatalogChanged={() =>
+            queryClient.invalidateQueries({ queryKey: ["admin-examinations-library"] })
+          }
+        />
+      )}
+
+      {activeModule === "practice" && (
+        <PracticeExamsWorkspace
+          canModify={capabilities.canManageExaminations}
+          onExamCatalogChanged={() =>
+            queryClient.invalidateQueries({ queryKey: ["admin-examinations-library"] })
+          }
+        />
+      )}
+
+      {activeModule === "library" && (
+        <>
 
       {/* Query Control Bar: Search & Pathway & Lifecycle Filters */}
       <div className="bg-card p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4 shadow-2xs">
@@ -738,6 +879,8 @@ export function AdminExaminationsClient() {
             </div>
           </div>
         </div>
+      )}
+        </>
       )}
 
       {/* Create Examination Family Modal */}
