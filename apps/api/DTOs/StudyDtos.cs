@@ -193,6 +193,17 @@ public class FlashcardDto
     public string Front { get; set; } = string.Empty;
     public string Back { get; set; } = string.Empty;
     public string Explanation { get; set; } = string.Empty;
+    public string? ImageUrl { get; set; }
+    public string? DiagramUrl { get; set; }
+    public string CardStyle { get; set; } = "qa";
+    public bool IsFavourite { get; set; }
+    public bool IsDifficult { get; set; }
+    public string? SubjectDomainId { get; set; }
+    public string? TopicSlug { get; set; }
+    public string? TopicTitle { get; set; }
+    public string? ClientNeedId { get; set; }
+    public List<string> Tags { get; set; } = new();
+    public int DisplayOrder { get; set; }
     public string Difficulty { get; set; } = "medium";
     public string Programme { get; set; } = "rn";
     public string Status { get; set; } = "active";
