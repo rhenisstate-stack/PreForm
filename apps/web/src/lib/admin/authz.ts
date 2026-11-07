@@ -115,6 +115,14 @@ export interface AdminCapabilities {
   canViewReports: boolean;
   /** Platform operational health monitoring. */
   canViewMonitoring: boolean;
+  /** Central Media Library management with referential integrity guard. */
+  canManageMedia: boolean;
+  /** Clinical editorial and publishing management. */
+  canManageBlog: boolean;
+  /** Clinical video lecture curriculum management. */
+  canManageVideos: boolean;
+  /** Learner feedback and issue moderation. */
+  canManageFeedback: boolean;
 }
 
 const EXAM_AUTHOR_ROLES = new Set<AdminRole>([
@@ -177,5 +185,9 @@ export function getAdminCapabilities(rawRole?: string | null): AdminCapabilities
     canManageIpRules: role === "superadmin" || role === "admin",
     canViewReports: role === "superadmin" || role === "admin" || role === "manager" || role === "content_manager" || role === "exam_manager",
     canViewMonitoring: role === "superadmin" || role === "admin",
+    canManageMedia: shell && role !== "candidate",
+    canManageBlog: role === "superadmin" || role === "admin" || role === "content_manager",
+    canManageVideos: shell && role !== "candidate",
+    canManageFeedback: role === "superadmin" || role === "admin" || role === "manager" || role === "content_manager" || role === "exam_manager" || role === "support",
   };
 }
