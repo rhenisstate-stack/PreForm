@@ -986,13 +986,16 @@ public class AdminStudyGuideService : IAdminStudyGuideService
             ImmediateFeedback = q.ImmediateFeedback,
             FeedbackMode = q.FeedbackMode,
             MaxAttempts = q.MaxAttempts,
+            TargetScore = 75,
             Status = q.Status,
             IsPublished = q.IsPublished,
             IsOfficial = q.IsOfficial,
+            IsArchived = q.Status == "Archived",
             QuestionIds = SafeDeserializeTags(q.QuestionIdsJson),
             AttemptCount = q.Attempts.Count,
             AverageScore = q.Attempts.Any() ? Math.Round(q.Attempts.Average(a => a.ScorePercentage), 1) : 0,
-            CreatedAt = q.CreatedAt
+            CreatedAt = q.CreatedAt,
+            UpdatedAt = q.CreatedAt
         }).ToList();
     }
 
@@ -1021,13 +1024,16 @@ public class AdminStudyGuideService : IAdminStudyGuideService
             ImmediateFeedback = q.ImmediateFeedback,
             FeedbackMode = q.FeedbackMode,
             MaxAttempts = q.MaxAttempts,
+            TargetScore = 75,
             Status = q.Status,
             IsPublished = q.IsPublished,
             IsOfficial = q.IsOfficial,
+            IsArchived = q.Status == "Archived",
             QuestionIds = SafeDeserializeTags(q.QuestionIdsJson),
             AttemptCount = q.Attempts.Count,
             AverageScore = q.Attempts.Any() ? Math.Round(q.Attempts.Average(a => a.ScorePercentage), 1) : 0,
-            CreatedAt = q.CreatedAt
+            CreatedAt = q.CreatedAt,
+            UpdatedAt = q.CreatedAt
         };
     }
 

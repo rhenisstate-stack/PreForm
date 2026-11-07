@@ -7,7 +7,7 @@ using Preform.Api.Services;
 namespace Preform.Api.Controllers;
 
 [ApiController]
-[Authorize(Policy = "RequireAdmin")]
+[Authorize(Policy = "RequireContentManager")]
 [Route("api/v1/admin/study-guides")]
 public class AdminStudyGuidesController : ControllerBase
 {

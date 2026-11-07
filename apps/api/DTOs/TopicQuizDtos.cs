@@ -46,6 +46,10 @@ public class TopicQuizConfigurationDto
     public string Difficulty { get; set; } = "all";
     public int TimeLimitMinutes { get; set; }
     public bool ImmediateFeedback { get; set; }
+    public string Description { get; set; } = string.Empty;
+    public string Status { get; set; } = "Draft";
+    public bool IsPublished { get; set; }
+    public bool IsOfficial { get; set; }
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
 }

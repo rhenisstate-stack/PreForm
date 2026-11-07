@@ -52,6 +52,9 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
       case "PUT":
         res = await apiClient.put<unknown>(backendPath, payload, { session });
         break;
+      case "PATCH":
+        res = await apiClient.patch<unknown>(backendPath, payload, { session });
+        break;
       case "DELETE":
         res = await apiClient.delete<unknown>(backendPath, { session });
         break;
@@ -76,6 +79,10 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
 }
 
 export async function PUT(request: NextRequest, ctx: RouteContext) {
+  return proxy(request, ctx);
+}
+
+export async function PATCH(request: NextRequest, ctx: RouteContext) {
   return proxy(request, ctx);
 }
 

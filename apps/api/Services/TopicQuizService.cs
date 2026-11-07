@@ -47,7 +47,8 @@ public class TopicQuizService : ITopicQuizService
 
     public async Task<List<TopicQuizConfigurationDto>> GetUserConfigurationsAsync(string userId, string? programme = null)
     {
-        var query = _context.TopicQuizConfigurations.AsNoTracking().Where(c => c.UserId == userId && c.IsActive);
+        var query = _context.TopicQuizConfigurations.AsNoTracking()
+            .Where(c => (c.UserId == userId || (c.IsOfficial && c.IsPublished)) && c.IsActive);
         if (!string.IsNullOrWhiteSpace(programme) && programme != "all")
         {
             query = query.Where(c => c.Programme == programme || c.Programme == "both");
@@ -83,10 +84,12 @@ public class TopicQuizService : ITopicQuizService
         string? clientNeedId = request.ClientNeedId;
         int questionCount = Math.Clamp(request.QuestionCount, 3, 50);
 
+        List<Question> matchedQuestions = new();
+
         if (!string.IsNullOrWhiteSpace(request.ConfigurationId))
         {
             var config = await _context.TopicQuizConfigurations.AsNoTracking()
-                .FirstOrDefaultAsync(c => c.Id == request.ConfigurationId && c.UserId == userId);
+                .FirstOrDefaultAsync(c => c.Id == request.ConfigurationId && (c.UserId == userId || (c.IsOfficial && c.IsPublished)));
 
             if (config != null)
             {
@@ -97,52 +100,72 @@ public class TopicQuizService : ITopicQuizService
                 topicTitle = config.TopicTitle;
                 clientNeedId = config.ClientNeedId;
                 questionCount = config.QuestionCount;
+
+                var assignedQuestionIds = ParseStringList(config.QuestionIdsJson);
+                if (assignedQuestionIds.Count > 0)
+                {
+                    var assignedQuestions = await _context.Questions
+                        .Include(q => q.Options)
+                        .Include(q => q.Topic)
+                        .Where(q => assignedQuestionIds.Contains(q.Id))
+                        .ToListAsync();
+
+                    if (assignedQuestions.Count > 0)
+                    {
+                        matchedQuestions = assignedQuestions
+                            .OrderBy(q => assignedQuestionIds.IndexOf(q.Id))
+                            .ToList();
+                    }
+                }
             }
         }
 
-        // Query questions from canonical Questions repository
-        var qQuery = _context.Questions
-            .Include(q => q.Options)
-            .Include(q => q.Topic)
-            .Where(q => q.Status == QuestionStatus.Published || q.Status == QuestionStatus.InReview);
-
-        if (!string.IsNullOrWhiteSpace(programme) && programme != "all")
+        // Query questions dynamically from canonical Questions repository if no assigned questions
+        if (matchedQuestions.Count == 0)
         {
-            qQuery = qQuery.Where(q => q.Pathway == programme || q.Pathway == "both");
-        }
-
-        if (!string.IsNullOrWhiteSpace(clientNeedId))
-        {
-            qQuery = qQuery.Where(q => q.ClientNeedId == clientNeedId);
-        }
-
-        if (!string.IsNullOrWhiteSpace(topicSlug))
-        {
-            qQuery = qQuery.Where(q => q.Topic != null && (q.Topic.Title.ToLower() == topicSlug.ToLower() || q.Topic.Id == topicSlug));
-        }
-
-        var matchedQuestions = await qQuery
-            .OrderBy(q => EF.Functions.Random())
-            .Take(questionCount)
-            .ToListAsync();
-
-        // If not enough questions with strict filters, backfill with pathway questions
-        if (matchedQuestions.Count < questionCount)
-        {
-            var matchedIds = matchedQuestions.Select(q => q.Id).ToHashSet();
-            var needed = questionCount - matchedQuestions.Count;
-
-            var backfill = await _context.Questions
+            var qQuery = _context.Questions
                 .Include(q => q.Options)
                 .Include(q => q.Topic)
-                .Where(q => !matchedIds.Contains(q.Id) &&
-                            (q.Pathway == programme || q.Pathway == "both") &&
-                            (q.Status == QuestionStatus.Published || q.Status == QuestionStatus.InReview))
+                .Where(q => q.Status == QuestionStatus.Published || q.Status == QuestionStatus.InReview);
+
+            if (!string.IsNullOrWhiteSpace(programme) && programme != "all")
+            {
+                qQuery = qQuery.Where(q => q.Pathway == programme || q.Pathway == "both");
+            }
+
+            if (!string.IsNullOrWhiteSpace(clientNeedId))
+            {
+                qQuery = qQuery.Where(q => q.ClientNeedId == clientNeedId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(topicSlug))
+            {
+                qQuery = qQuery.Where(q => q.Topic != null && (q.Topic.Title.ToLower() == topicSlug.ToLower() || q.Topic.Id == topicSlug));
+            }
+
+            matchedQuestions = await qQuery
                 .OrderBy(q => EF.Functions.Random())
-                .Take(needed)
+                .Take(questionCount)
                 .ToListAsync();
 
-            matchedQuestions.AddRange(backfill);
+            // If not enough questions with strict filters, backfill with pathway questions
+            if (matchedQuestions.Count < questionCount)
+            {
+                var matchedIds = matchedQuestions.Select(q => q.Id).ToHashSet();
+                var needed = questionCount - matchedQuestions.Count;
+
+                var backfill = await _context.Questions
+                    .Include(q => q.Options)
+                    .Include(q => q.Topic)
+                    .Where(q => !matchedIds.Contains(q.Id) &&
+                                (q.Pathway == programme || q.Pathway == "both") &&
+                                (q.Status == QuestionStatus.Published || q.Status == QuestionStatus.InReview))
+                    .OrderBy(q => EF.Functions.Random())
+                    .Take(needed)
+                    .ToListAsync();
+
+                matchedQuestions.AddRange(backfill);
+            }
         }
 
         // Create attempt record
@@ -455,6 +478,7 @@ public class TopicQuizService : ITopicQuizService
     {
         Id = c.Id,
         Title = c.Title,
+        Description = c.Description,
         Programme = c.Programme,
         SubjectDomainId = c.SubjectDomainId,
         TopicSlug = c.TopicSlug,
@@ -464,9 +488,25 @@ public class TopicQuizService : ITopicQuizService
         Difficulty = c.Difficulty,
         TimeLimitMinutes = c.TimeLimitMinutes,
         ImmediateFeedback = c.ImmediateFeedback,
+        Status = c.Status,
+        IsPublished = c.IsPublished,
+        IsOfficial = c.IsOfficial,
         IsActive = c.IsActive,
         CreatedAt = c.CreatedAt
     };
+
+    private static List<string> ParseStringList(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return new List<string>();
+        try
+        {
+            return JsonSerializer.Deserialize<List<string>>(json) ?? new List<string>();
+        }
+        catch
+        {
+            return new List<string>();
+        }
+    }
 
     private static TopicQuizQuestionDto MapQuestionToDto(Question q, bool revealAnswer)
     {

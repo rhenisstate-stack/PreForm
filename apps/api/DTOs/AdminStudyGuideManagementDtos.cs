@@ -404,13 +404,16 @@ public class AdminTopicQuizDto
     public bool ImmediateFeedback { get; set; }
     public string FeedbackMode { get; set; } = "immediate";
     public int MaxAttempts { get; set; }
+    public int TargetScore { get; set; } = 75;
     public string Status { get; set; } = "Draft"; // "Draft", "Published", "Archived"
     public bool IsPublished { get; set; }
     public bool IsOfficial { get; set; }
+    public bool IsArchived { get; set; }
     public List<string> QuestionIds { get; set; } = new();
     public int AttemptCount { get; set; }
     public double AverageScore { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }
 
 public class AdminCreateTopicQuizRequest
@@ -436,6 +439,7 @@ public class AdminCreateTopicQuizRequest
     public bool ImmediateFeedback { get; set; } = true;
     public string FeedbackMode { get; set; } = "immediate";
     public int MaxAttempts { get; set; } = 0;
+    public int TargetScore { get; set; } = 75;
     public string Status { get; set; } = "Draft";
     public bool IsPublished { get; set; } = false;
     public bool IsOfficial { get; set; } = true;
@@ -465,6 +469,7 @@ public class AdminUpdateTopicQuizRequest
     public bool ImmediateFeedback { get; set; } = true;
     public string FeedbackMode { get; set; } = "immediate";
     public int MaxAttempts { get; set; } = 0;
+    public int TargetScore { get; set; } = 75;
     public string Status { get; set; } = "Draft";
     public bool IsPublished { get; set; } = false;
     public bool IsOfficial { get; set; } = true;
