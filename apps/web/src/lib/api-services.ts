@@ -962,6 +962,8 @@ export interface AdminExamPreviewOptionDto {
   content: string;
   isCorrect: boolean;
   rationale?: string | null;
+  distractorRationale?: string | null;
+  mediaUrl?: string | null;
   displayOrder: number;
 }
 
@@ -969,6 +971,10 @@ export interface AdminExamPreviewQuestionDto {
   id: string;
   displayOrder: number;
   stem: string;
+  instructions?: string | null;
+  clinicalScenario?: string | null;
+  exhibitsJson?: string | null;
+  structuredContentJson?: string | null;
   questionTypeKey: string;
   clientNeedId?: string | null;
   clientNeedName?: string | null;
@@ -1903,9 +1909,20 @@ export interface AdminQuestionSummary {
   reviewedById?: string;
   reviewerName?: string;
   optionsCount: number;
+  referencedByExamCount?: number;
+  referencedByAttemptCount?: number;
+  canDelete?: boolean;
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
+}
+
+export interface AdminQuestionDependencyExam {
+  revisionId: string;
+  examinationId: string;
+  examinationCode?: string;
+  title: string;
+  lifecycleState: string;
 }
 
 export interface AdminQuestionDetail extends AdminQuestionSummary {
@@ -1917,6 +1934,7 @@ export interface AdminQuestionDetail extends AdminQuestionSummary {
   source?: string;
   rejectionReason?: string;
   versionsCount: number;
+  referencedExams?: AdminQuestionDependencyExam[];
   options: AdminQuestionOption[];
 }
 
@@ -2084,6 +2102,13 @@ export const adminQuestionsService = {
   getQuestionVersions: async (id: string, session?: VerifiedSession | null) => {
     return apiClient.get<{ success: boolean; versions: AdminQuestionVersion[] }>(
       `/api/v1/questions/${encodeURIComponent(id)}/versions`,
+      { session }
+    );
+  },
+
+  deleteQuestion: async (id: string, session?: VerifiedSession | null) => {
+    return apiClient.delete<{ success: boolean; error?: string; detail?: string }>(
+      `/api/v1/questions/${encodeURIComponent(id)}`,
       { session }
     );
   },

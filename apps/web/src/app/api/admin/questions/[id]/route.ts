@@ -28,3 +28,17 @@ export async function PUT(request: Request, { params }: RouteParams) {
   const res = await adminQuestionsService.updateQuestion(id, body, auth.session);
   return NextResponse.json(res.data || { success: res.success }, { status: res.status });
 }
+
+export async function DELETE(request: Request, { params }: RouteParams) {
+  const auth = await verifyAdminAuth(request);
+  if (!auth.authorized) {
+    return NextResponse.json({ success: false, error: auth.error }, { status: auth.status });
+  }
+
+  const { id } = await params;
+  const res = await adminQuestionsService.deleteQuestion(id, auth.session);
+  return NextResponse.json(
+    res.data || { success: res.success, error: res.error },
+    { status: res.status }
+  );
+}
