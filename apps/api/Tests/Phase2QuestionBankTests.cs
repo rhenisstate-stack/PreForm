@@ -560,5 +560,105 @@ public class Phase2QuestionBankTests
         Assert.Equal("sata", typeResult.Items[0].QuestionTypeKey);
     }
 
+    [Fact]
+    public async Task QuestionCrud_PreservesExhibitsAndStructuredContentOnUpdate_AndEnforcesDependencyProtectedDeletion()
+    {
+        var (_, qbService, db) = CreateServices(nameof(QuestionCrud_PreservesExhibitsAndStructuredContentOnUpdate_AndEnforcesDependencyProtectedDeletion));
+
+        var exhibitsJson = JsonSerializer.Serialize(new[]
+        {
+            new { id = "ex-1", title = "Lab Results", category = "Labs", content = "K+ 6.4 mEq/L" }
+        });
+        var structuredJson = JsonSerializer.Serialize(new
+        {
+            rows = new[] { "Finding 1", "Finding 2" },
+            columns = new[] { "Indicated", "Contraindicated" }
+        });
+
+        var created = await qbService.CreateQuestionAsync(new CreateQuestionRequest
+        {
+            Pathway = "rn",
+            QuestionTypeKey = "matrix",
+            Stem = "Evaluate matrix findings.",
+            ExhibitsJson = exhibitsJson,
+            StructuredContentJson = structuredJson
+        }, "author-1");
+
+        Assert.Equal(exhibitsJson, created.ExhibitsJson);
+        Assert.Equal(structuredJson, created.StructuredContentJson);
+        Assert.True(created.CanDelete);
+        Assert.Equal(0, created.ReferencedByExamCount);
+
+        // Update stem while omitting ExhibitsJson & StructuredContentJson -> must preserve existing JSON!
+        var updated = await qbService.UpdateQuestionAsync(created.Id, new UpdateQuestionRequest
+        {
+            Pathway = "rn",
+            QuestionTypeKey = "matrix",
+            Stem = "Evaluate updated matrix findings.",
+            ExhibitsJson = null,
+            StructuredContentJson = null
+        }, "author-1");
+
+        Assert.NotNull(updated);
+        Assert.Equal(exhibitsJson, updated!.ExhibitsJson);
+        Assert.Equal(structuredJson, updated.StructuredContentJson);
+
+        // Link question to an Examination Revision and verify deletion is blocked
+        var exam = new Examination
+        {
+            Id = "exam-dep-1",
+            Code = "RN-EX-DEP1",
+            Title = "Dependency Test Exam",
+            Pathway = "rn"
+        };
+        var revision = new ExamRevision
+        {
+            Id = "rev-dep-1",
+            ExaminationId = exam.Id,
+            RevisionNumber = 1,
+            Title = "Dependency Test Exam Rev 1",
+            Pathway = "rn",
+            LifecycleState = ExamRevisionState.Draft
+        };
+        var membership = new ExamQuestion
+        {
+            Id = "eq-dep-1",
+            ExamRevisionId = revision.Id,
+            QuestionId = created.Id,
+            DisplayOrder = 1
+        };
+        db.Examinations.Add(exam);
+        db.ExamRevisions.Add(revision);
+        db.ExamQuestions.Add(membership);
+        await db.SaveChangesAsync();
+
+        var detailWithDep = await qbService.GetQuestionByIdAsync(created.Id);
+        Assert.NotNull(detailWithDep);
+        Assert.False(detailWithDep!.CanDelete);
+        Assert.Equal(1, detailWithDep.ReferencedByExamCount);
+        Assert.Single(detailWithDep.ReferencedExams);
+        Assert.Equal("RN-EX-DEP1", detailWithDep.ReferencedExams[0].ExaminationCode);
+
+        // Attempting to delete referenced question throws InvalidOperationException (409 Conflict in controller)
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            qbService.DeleteQuestionAsync(created.Id, "admin-1"));
+
+        // Archiving as Deactivate fallback succeeds
+        var archived = await qbService.TransitionStatusAsync(created.Id, new QuestionStatusTransitionRequest
+        {
+            TargetStatus = QuestionStatus.Archived,
+            ChangeSummary = "Archived due to examination reference"
+        }, "admin-1", isSuperAdmin: true);
+        Assert.Equal(QuestionStatus.Archived, archived!.Status);
+
+        // Remove ExamQuestion reference -> now hard deletion succeeds
+        db.ExamQuestions.Remove(membership);
+        await db.SaveChangesAsync();
+
+        var deleted = await qbService.DeleteQuestionAsync(created.Id, "admin-1");
+        Assert.True(deleted);
+        Assert.Null(await qbService.GetQuestionByIdAsync(created.Id));
+    }
+
     #endregion
 }

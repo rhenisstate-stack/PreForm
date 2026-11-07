@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import * as React from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { AdminCommandMenu } from "@/components/admin/admin-command-menu";
@@ -260,6 +260,80 @@ describe("AdminShell rendering by role", () => {
     // but hidden behind the full-screen credential verification loader.
     expect(screen.getByText("Overview content")).not.toBeVisible();
     expect(screen.queryByRole("navigation", { name: "Admin navigation" })).not.toBeInTheDocument();
+  });
+
+  it("renders the Examination Management sidebar hierarchy and expands/collapses Create Custom Test (Stand Alone)", () => {
+    mockPathname = "/admin/examinations";
+    render(
+      <AdminShell>
+        <p>Examinations landing</p>
+      </AdminShell>
+    );
+
+    const standaloneParent = screen.getByTestId("sidebar-collapsible-standalone-custom-test");
+    expect(standaloneParent).toBeInTheDocument();
+    expect(standaloneParent).toHaveAttribute("aria-expanded", "false");
+
+    const subitemsContainer = screen.getByTestId("sidebar-subitems-standalone-custom-test");
+    expect(subitemsContainer).not.toBeVisible();
+
+    // Click Create Custom Test (Stand Alone) to expand nested items
+    fireEvent.click(standaloneParent);
+    expect(standaloneParent).toHaveAttribute("aria-expanded", "true");
+    expect(subitemsContainer).toBeVisible();
+
+    expect(screen.getByTestId("sidebar-link-standalone-courses")).toHaveAttribute(
+      "href",
+      "/admin/examinations/standalone/courses"
+    );
+    expect(screen.getByTestId("sidebar-link-standalone-client-needs")).toHaveAttribute(
+      "href",
+      "/admin/examinations/standalone/client-needs"
+    );
+    expect(screen.getByTestId("sidebar-link-standalone-tests")).toHaveAttribute(
+      "href",
+      "/admin/examinations/standalone/tests"
+    );
+    expect(screen.getByTestId("sidebar-link-rats-management")).toHaveAttribute(
+      "href",
+      "/admin/examinations/rats"
+    );
+    expect(screen.getByTestId("sidebar-link-practice-exams")).toHaveAttribute(
+      "href",
+      "/admin/examinations/practice"
+    );
+    expect(screen.getByTestId("sidebar-link-examinations")).toHaveAttribute(
+      "href",
+      "/admin/examinations"
+    );
+    expect(screen.getByTestId("sidebar-link-examinations")).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+
+    // Click again to collapse
+    fireEvent.click(standaloneParent);
+    expect(standaloneParent).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("auto-expands Create Custom Test (Stand Alone) and highlights active child route on nested standalone paths", () => {
+    mockPathname = "/admin/examinations/standalone/courses";
+    render(
+      <AdminShell>
+        <p>Courses workspace</p>
+      </AdminShell>
+    );
+
+    const standaloneParent = screen.getByTestId("sidebar-collapsible-standalone-custom-test");
+    expect(standaloneParent).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByTestId("sidebar-link-standalone-courses")).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+    expect(screen.getByTestId("sidebar-link-examinations")).not.toHaveAttribute(
+      "aria-current",
+      "page"
+    );
   });
 });
 

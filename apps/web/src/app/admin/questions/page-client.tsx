@@ -593,8 +593,8 @@ export function AdminQuestionsClient({
                 <div className="font-semibold text-foreground">Referenced Examinations:</div>
                 <ul className="list-disc pl-5 space-y-1 text-xs">
                   {deletingQuestion.referencedExams.map((exam) => (
-                    <li key={exam.examId}>
-                      <span className="font-mono font-semibold">{exam.code}</span> — {exam.title} ({exam.status})
+                    <li key={exam.revisionId || exam.examinationId}>
+                      <span className="font-mono font-semibold">{exam.examinationCode || exam.examinationId}</span> — {exam.title} ({exam.lifecycleState})
                     </li>
                   ))}
                 </ul>
@@ -791,14 +791,14 @@ export function AdminQuestionsClient({
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {viewingQuestion.referencedExams.map((exam) => (
                         <div
-                          key={exam.examId}
+                          key={exam.revisionId || exam.examinationId}
                           className="flex items-center justify-between rounded-lg border bg-background px-3 py-2 text-xs"
                         >
                           <div>
-                            <span className="font-mono font-bold">{exam.code}</span> — {exam.title}
+                            <span className="font-mono font-bold">{exam.examinationCode || exam.examinationId}</span> — {exam.title}
                           </div>
                           <Badge variant="outline" className="text-[10px]">
-                            {exam.status}
+                            {exam.lifecycleState}
                           </Badge>
                         </div>
                       ))}
