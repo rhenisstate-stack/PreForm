@@ -25,6 +25,88 @@ public class CreateFlashcardDeckRequest
 
     [MaxLength(160)]
     public string TopicTitle { get; set; } = string.Empty;
+
+    [MaxLength(32)]
+    public string? ClientNeedId { get; set; }
+
+    public List<string>? Tags { get; set; }
+}
+
+public class UpdateFlashcardDeckRequest
+{
+    [MaxLength(160)]
+    public string? Name { get; set; }
+
+    [MaxLength(512)]
+    public string? Description { get; set; }
+
+    [MaxLength(10)]
+    public string? Programme { get; set; }
+
+    [MaxLength(64)]
+    public string? TopicSlug { get; set; }
+
+    [MaxLength(160)]
+    public string? TopicTitle { get; set; }
+
+    [MaxLength(32)]
+    public string? ClientNeedId { get; set; }
+
+    public List<string>? Tags { get; set; }
+
+    public bool? IsFavourite { get; set; }
+    public bool? IsArchived { get; set; }
+}
+
+public class MoveFlashcardRequest
+{
+    [Required, MaxLength(128)]
+    public string TargetDeckId { get; set; } = string.Empty;
+}
+
+public class UpdateFlashcardRequest
+{
+    [MaxLength(512)]
+    public string? Front { get; set; }
+
+    [MaxLength(1024)]
+    public string? Back { get; set; }
+
+    [MaxLength(1024)]
+    public string? Explanation { get; set; }
+
+    [MaxLength(512)]
+    public string? ImageUrl { get; set; }
+
+    [MaxLength(512)]
+    public string? DiagramUrl { get; set; }
+
+    [MaxLength(32)]
+    public string? CardStyle { get; set; }
+
+    [MaxLength(16)]
+    public string? Difficulty { get; set; }
+
+    [MaxLength(10)]
+    public string? Programme { get; set; }
+
+    [MaxLength(128)]
+    public string? SubjectDomainId { get; set; }
+
+    [MaxLength(128)]
+    public string? TopicSlug { get; set; }
+
+    [MaxLength(160)]
+    public string? TopicTitle { get; set; }
+
+    [MaxLength(32)]
+    public string? ClientNeedId { get; set; }
+
+    public List<string>? Tags { get; set; }
+
+    public bool? IsFavourite { get; set; }
+    public bool? IsDifficult { get; set; }
+    public int? DisplayOrder { get; set; }
 }
 
 public class CreateFlashcardRequest
@@ -49,6 +131,32 @@ public class CreateFlashcardRequest
 
     [MaxLength(256)]
     public string SourceReference { get; set; } = string.Empty;
+
+    [MaxLength(512)]
+    public string? ImageUrl { get; set; }
+
+    [MaxLength(512)]
+    public string? DiagramUrl { get; set; }
+
+    [MaxLength(32)]
+    public string CardStyle { get; set; } = "qa";
+
+    [MaxLength(128)]
+    public string? SubjectDomainId { get; set; }
+
+    [MaxLength(128)]
+    public string? TopicSlug { get; set; }
+
+    [MaxLength(160)]
+    public string? TopicTitle { get; set; }
+
+    [MaxLength(32)]
+    public string? ClientNeedId { get; set; }
+
+    public List<string>? Tags { get; set; }
+
+    public bool IsFavourite { get; set; } = false;
+    public bool IsDifficult { get; set; } = false;
 }
 
 public class ReviewFlashcardRequest
@@ -68,6 +176,9 @@ public class FlashcardDeckDto
     public string SourceReference { get; set; } = string.Empty;
     public string TopicSlug { get; set; } = string.Empty;
     public string TopicTitle { get; set; } = string.Empty;
+    public string? ClientNeedId { get; set; }
+    public List<string> Tags { get; set; } = new();
+    public bool IsFavourite { get; set; }
     public bool IsArchived { get; set; }
     public int CardCount { get; set; }
     public int DueCount { get; set; }
