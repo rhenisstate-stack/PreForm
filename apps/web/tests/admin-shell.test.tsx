@@ -22,7 +22,7 @@ beforeAll(() => {
 });
 
 /* Mutable mock state so individual tests can set role and pathname. */
-let mockUser: { role: string; displayName?: string; email?: string } | null = null;
+let mockUser: { role: string; displayName?: string; email?: string; picture?: string } | null = null;
 let mockIsLoading = false;
 let mockIsAuthenticated = true;
 let mockPathname = "/admin";
@@ -357,5 +357,85 @@ describe("Admin command palette", () => {
 
     expect(screen.queryByText("Subscription Plans")).not.toBeInTheDocument();
     expect(screen.getByText("Question-Type Registry")).toBeInTheDocument();
+  });
+});
+
+describe("Admin profile image loading and fallback behavior", () => {
+  beforeEach(() => {
+    mockIsLoading = false;
+    mockIsAuthenticated = true;
+    mockPathname = "/admin";
+  });
+
+  it("renders the authenticated admin profile image in both navbar and sidebar when present", () => {
+    mockUser = {
+      role: "admin",
+      displayName: "Sarah Connor, RN",
+      email: "sarah.admin@prepford.com",
+      picture: "/api/profile/image?v=20261107",
+    };
+
+    render(
+      <AdminShell>
+        <p>Dashboard main content</p>
+      </AdminShell>
+    );
+
+    // Navbar avatar image
+    const navbarImage = screen.getByTestId("admin-avatar-image");
+    expect(navbarImage).toBeInTheDocument();
+    expect(navbarImage).toHaveAttribute("src", "/api/profile/image?v=20261107");
+
+    // Sidebar avatar image
+    const sidebarImage = screen.getByTestId("admin-sidebar-avatar-image");
+    expect(sidebarImage).toBeInTheDocument();
+    expect(sidebarImage).toHaveAttribute("src", "/api/profile/image?v=20261107");
+  });
+
+  it("renders the polished initials fallback badge when the admin has no profile picture", () => {
+    mockUser = {
+      role: "admin",
+      displayName: "Florence Nightingale",
+      email: "florence@prepford.com",
+      picture: undefined,
+    };
+
+    render(
+      <AdminShell>
+        <p>Dashboard main content</p>
+      </AdminShell>
+    );
+
+    // Fallbacks in navbar and sidebar render initials "FN"
+    const navbarFallback = screen.getByTestId("admin-avatar-initial");
+    expect(navbarFallback).toBeInTheDocument();
+    expect(navbarFallback).toHaveTextContent("FN");
+
+    const sidebarFallback = screen.getByTestId("admin-sidebar-avatar-initial");
+    expect(sidebarFallback).toBeInTheDocument();
+    expect(sidebarFallback).toHaveTextContent("FN");
+  });
+
+  it("gracefully falls back to initials when the profile image encounters an error (no broken image icons)", () => {
+    mockUser = {
+      role: "admin",
+      displayName: "Ada Lovelace",
+      email: "ada@prepford.com",
+      picture: "/api/profile/image?v=broken",
+    };
+
+    render(
+      <AdminShell>
+        <p>Dashboard main content</p>
+      </AdminShell>
+    );
+
+    const navbarImage = screen.getByTestId("admin-avatar-image");
+    fireEvent.error(navbarImage);
+
+    // After image load error, the avatar displays the initials badge
+    const navbarFallback = screen.getByTestId("admin-avatar-initial");
+    expect(navbarFallback).toBeInTheDocument();
+    expect(navbarFallback).toHaveTextContent("AL");
   });
 });
