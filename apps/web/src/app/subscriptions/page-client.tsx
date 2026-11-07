@@ -25,28 +25,54 @@ export function SubscriptionsPageClient({ initialPlans }: SubscriptionsPageClien
 
   const [pathwayFilter, setPathwayFilter] = React.useState<"all" | "RN" | "PN" | "Both">("all");
   const [intervalFilter, setIntervalFilter] = React.useState<"month" | "quarter">("month");
+  const [appearance, setAppearance] = React.useState<any>(null);
 
-  // Refresh plans from authoritative API
+  // Refresh plans and appearance from authoritative API
   React.useEffect(() => {
     let isMounted = true;
-    async function fetchPlans() {
+    async function fetchPlansAndAppearance() {
       try {
-        const res = await fetch("/api/subscriptions");
-        if (res.ok) {
-          const data = await res.json();
+        const [plansRes, appearanceRes] = await Promise.all([
+          fetch("/api/subscriptions"),
+          fetch("/api/subscriptions/appearance").catch(() => null),
+        ]);
+
+        if (plansRes.ok) {
+          const data = await plansRes.json();
           if (isMounted && data.success && Array.isArray(data.plans) && data.plans.length > 0) {
             setPlans(data.plans.filter((p: Product) => p.planType !== "readiness"));
+          }
+        }
+
+        if (appearanceRes && appearanceRes.ok) {
+          const appData = await appearanceRes.json();
+          if (isMounted && appData.success && appData.appearance) {
+            setAppearance(appData.appearance);
           }
         }
       } catch {
         // Fallback remains initial plans or PRODUCTS
       }
     }
-    fetchPlans();
+    fetchPlansAndAppearance();
     return () => {
       isMounted = false;
     };
   }, []);
+
+  const parsedStyles = React.useMemo(() => {
+    if (!appearance) return null;
+    try {
+      return {
+        typography: appearance.typographyJson ? JSON.parse(appearance.typographyJson) : null,
+        colors: appearance.colorsJson ? JSON.parse(appearance.colorsJson) : null,
+        cardStyling: appearance.cardStylingJson ? JSON.parse(appearance.cardStylingJson) : null,
+        buttonStyling: appearance.buttonStylingJson ? JSON.parse(appearance.buttonStylingJson) : null,
+      };
+    } catch {
+      return null;
+    }
+  }, [appearance]);
 
   // Filter plans based on active pathway and interval
   const displayedPlans = React.useMemo(() => {
@@ -210,10 +236,12 @@ export function SubscriptionsPageClient({ initialPlans }: SubscriptionsPageClien
           <div className="mt-14 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {displayedPlans.map((plan) => {
               const isFeatured = plan.popular || plan.planType === "pro";
-              const buttonText = getButtonLabel(plan);
-              const customStyles = {
-                ...(plan.bgColour ? { backgroundColor: plan.bgColour } : {}),
-                ...(plan.textColour ? { color: plan.textColour } : {}),
+              const buttonText = parsedStyles?.buttonStyling?.buttonLabel || getButtonLabel(plan);
+              const customStyles: React.CSSProperties = {
+                ...(plan.bgColour ? { backgroundColor: plan.bgColour } : parsedStyles?.colors?.cardBgColor ? { backgroundColor: parsedStyles.colors.cardBgColor } : {}),
+                ...(plan.textColour ? { color: plan.textColour } : parsedStyles?.colors?.featuresColor ? { color: parsedStyles.colors.featuresColor } : {}),
+                ...(parsedStyles?.typography?.fontFamily ? { fontFamily: parsedStyles.typography.fontFamily } : {}),
+                ...(parsedStyles?.cardStyling?.borderRadius ? { borderRadius: parsedStyles.cardStyling.borderRadius } : {}),
               };
 
               return (

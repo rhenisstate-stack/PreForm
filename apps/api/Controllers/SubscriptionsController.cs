@@ -22,6 +22,13 @@ public class SubscriptionsController : ControllerBase
         return Ok(catalog);
     }
 
+    [HttpGet("appearance")]
+    public async Task<IActionResult> GetAppearance([FromQuery] string? planId, CancellationToken cancellationToken)
+    {
+        var appearance = await _subscriptionService.GetPlanAppearanceAsync(planId, cancellationToken);
+        return Ok(new { success = true, appearance });
+    }
+
     [HttpGet("{idOrSlug}")]
     public async Task<IActionResult> GetPlanById(string idOrSlug, CancellationToken cancellationToken)
     {
