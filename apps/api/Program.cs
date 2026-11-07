@@ -120,6 +120,7 @@ builder.Services.AddScoped<IAssessmentSelectionService, AssessmentSelectionServi
 
 // Phase 5 Learner Analytics, Administrative Reporting & Operational Monitoring
 builder.Services.AddScoped<ILearnerAnalyticsService, LearnerAnalyticsService>();
+builder.Services.AddScoped<ILearnerReportingService, LearnerReportingService>();
 builder.Services.AddScoped<IAdminReportingService, AdminReportingService>();
 builder.Services.AddScoped<IQuestionAnalyticsService, QuestionAnalyticsService>();
 builder.Services.AddScoped<ICsvExportService, CsvExportService>();

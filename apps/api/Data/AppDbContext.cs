@@ -87,6 +87,10 @@ public class AppDbContext : DbContext
     public DbSet<AITutorConversation> AITutorConversations => Set<AITutorConversation>();
     public DbSet<AIContentReview> AIContentReviews => Set<AIContentReview>();
 
+    // Learner Performance Intelligence & Interventions
+    public DbSet<LearnerPerformanceRecommendation> LearnerPerformanceRecommendations => Set<LearnerPerformanceRecommendation>();
+    public DbSet<LearnerIntervention> LearnerInterventions => Set<LearnerIntervention>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -851,6 +855,36 @@ public class AppDbContext : DbContext
         {
             entity.HasIndex(cr => cr.Status);
             entity.HasIndex(cr => cr.ContentType);
+        });
+
+        modelBuilder.Entity<LearnerPerformanceRecommendation>(entity =>
+        {
+            entity.ToTable("LearnerPerformanceRecommendations", "public");
+            entity.HasKey(r => r.Id);
+            entity.HasIndex(r => r.UserId);
+            entity.HasIndex(r => new { r.UserId, r.Pathway });
+            entity.HasIndex(r => new { r.UserId, r.Status });
+            entity.HasOne(r => r.User)
+                  .WithMany()
+                  .HasForeignKey(r => r.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LearnerIntervention>(entity =>
+        {
+            entity.ToTable("LearnerInterventions", "public");
+            entity.HasKey(i => i.Id);
+            entity.HasIndex(i => i.UserId);
+            entity.HasIndex(i => new { i.UserId, i.Pathway });
+            entity.HasIndex(i => new { i.UserId, i.Status });
+            entity.HasOne(i => i.User)
+                  .WithMany()
+                  .HasForeignKey(i => i.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(i => i.Recommendation)
+                  .WithMany(r => r.Interventions)
+                  .HasForeignKey(i => i.RecommendationId)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }
