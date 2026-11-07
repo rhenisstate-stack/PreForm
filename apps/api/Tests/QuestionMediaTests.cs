@@ -223,7 +223,7 @@ public class QuestionMediaTests
             QuestionTypeKey = "image-based",
             Stem = "Analyze the rhythm strips below and select the correct cardiac dysrhythmia.",
             Difficulty = QuestionDifficulty.Moderate,
-            Options = new List<CreateQuestionOptionDto>
+            Options = new List<CreateQuestionOptionRequest>
             {
                 new() { OptionKey = "A", Content = "Atrial Fibrillation", IsCorrect = true, MediaUrl = mediaA.Url },
                 new() { OptionKey = "B", Content = "Ventricular Tachycardia", IsCorrect = false, MediaUrl = mediaB.Url },

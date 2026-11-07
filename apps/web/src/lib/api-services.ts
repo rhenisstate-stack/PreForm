@@ -2112,6 +2112,38 @@ export const adminQuestionsService = {
       { session }
     );
   },
+
+  uploadQuestionMedia: async (
+    data: FormData,
+    session?: VerifiedSession | null,
+    questionId?: string
+  ) => {
+    const endpoint = questionId
+      ? `/api/v1/questions/${encodeURIComponent(questionId)}/media`
+      : "/api/v1/questions/media";
+    return apiClient.post<{ success: boolean; media?: any; error?: string }>(endpoint, data, { session });
+  },
+
+  getQuestionMediaBinary: async (mediaId: string, session?: VerifiedSession | null) => {
+    return apiClient.get<Blob | ArrayBuffer>(
+      `/api/v1/questions/media/${encodeURIComponent(mediaId)}`,
+      { session }
+    );
+  },
+
+  deleteQuestionMedia: async (mediaId: string, session?: VerifiedSession | null) => {
+    return apiClient.delete<{ success: boolean; message?: string; error?: string }>(
+      `/api/v1/questions/media/${encodeURIComponent(mediaId)}`,
+      { session }
+    );
+  },
+
+  listQuestionMedia: async (questionId: string, session?: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; media: any[] }>(
+      `/api/v1/questions/${encodeURIComponent(questionId)}/media`,
+      { session }
+    );
+  },
 };
 
 export const adminCurriculumService = {
