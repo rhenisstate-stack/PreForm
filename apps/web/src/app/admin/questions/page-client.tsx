@@ -31,13 +31,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDetailsLayout,
+  FullPageActionBar,
+} from "@/components/ui/full-page-crud";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { notify } from "@/lib/notifications";
 import type {
@@ -91,7 +88,13 @@ const NGN_TYPES = [
   { key: "short-answer", name: "Short-Answer Response" },
 ];
 
-export function AdminQuestionsClient() {
+export function AdminQuestionsClient({
+  initialMode,
+  initialQuestionId,
+}: {
+  initialMode?: "create" | "details" | "edit";
+  initialQuestionId?: string;
+} = {}) {
   const { user } = useAuth();
   const caps = getAdminCapabilities(user?.role);
   const queryClient = useQueryClient();
@@ -106,11 +109,15 @@ export function AdminQuestionsClient() {
   const [page, setPage] = React.useState(1);
   const pageSize = 15;
 
-  // Modals state
-  const [isEditorOpen, setIsEditorOpen] = React.useState(false);
-  const [editingQuestionId, setEditingQuestionId] = React.useState<string | null>(null);
-  const [isDetailOpen, setIsDetailOpen] = React.useState(false);
-  const [viewingQuestionId, setViewingQuestionId] = React.useState<string | null>(null);
+  // Full-Page CRUD view state
+  const [isEditorOpen, setIsEditorOpen] = React.useState(initialMode === "create" || initialMode === "edit");
+  const [editingQuestionId, setEditingQuestionId] = React.useState<string | null>(
+    initialMode === "edit" && initialQuestionId ? initialQuestionId : null
+  );
+  const [isDetailOpen, setIsDetailOpen] = React.useState(initialMode === "details" && Boolean(initialQuestionId));
+  const [viewingQuestionId, setViewingQuestionId] = React.useState<string | null>(
+    initialMode === "details" && initialQuestionId ? initialQuestionId : null
+  );
   const [isHistoryOpen, setIsHistoryOpen] = React.useState(false);
   const [historyQuestionId, setHistoryQuestionId] = React.useState<string | null>(null);
   const [isRejectOpen, setIsRejectOpen] = React.useState(false);
@@ -467,7 +474,579 @@ export function AdminQuestionsClient() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-none min-w-0 space-y-6">
+      {isDetailOpen ? (
+        <FullPageDetailsLayout
+          data-testid="question-details-fullpage"
+          eyebrow="Centralized Question Repository"
+          title={`Question Details: ${viewingQuestion?.code || "Draft"}`}
+          description={`Version ${viewingQuestion?.version ?? 1} • Pathway: ${viewingQuestion?.pathway?.toUpperCase() || "RN"} • Type: ${viewingQuestion?.questionTypeName || ""}`}
+          badge={
+            viewingQuestion && (
+              <Badge
+                variant={QUESTION_STATUS_LABELS[viewingQuestion.status]?.variant || "secondary"}
+                className={QUESTION_STATUS_LABELS[viewingQuestion.status]?.className}
+              >
+                {QUESTION_STATUS_LABELS[viewingQuestion.status]?.label}
+              </Badge>
+            )
+          }
+          backLabel="Return to Question Bank"
+          onBack={() => setIsDetailOpen(false)}
+          footer={
+            <FullPageActionBar
+              onCancel={() => setIsDetailOpen(false)}
+              cancelLabel="Close"
+            />
+          }
+        >
+          {isLoadingView || !viewingQuestion ? (
+            <div className="py-8 text-center">
+              <BrandedLoading message="Loading question details..." fullScreen={false} />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-border bg-card p-6 space-y-6 text-sm">
+              {viewingQuestion.rejectionReason && (
+                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-4 text-destructive">
+                  <div className="font-semibold flex items-center gap-1.5">
+                    <AlertTriangle className="h-4 w-4" /> Reviewer Rejection Feedback
+                  </div>
+                  <div className="mt-1 text-xs">{viewingQuestion.rejectionReason}</div>
+                </div>
+              )}
+
+              {viewingQuestion.clinicalScenario && (
+                <div className="rounded-lg border bg-muted/30 p-4">
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    Clinical Scenario / Vignette
+                  </span>
+                  <p className="mt-1 whitespace-pre-wrap">{viewingQuestion.clinicalScenario}</p>
+                </div>
+              )}
+
+              <div>
+                <span className="text-xs font-semibold text-muted-foreground uppercase">Stem</span>
+                <p className="mt-1 text-base font-medium">{viewingQuestion.stem}</p>
+              </div>
+
+              {viewingQuestion.instructions && (
+                <div>
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Instructions</span>
+                  <p className="mt-1 text-muted-foreground italic">{viewingQuestion.instructions}</p>
+                </div>
+              )}
+
+              {viewingQuestion.options && viewingQuestion.options.length > 0 && (
+                <div>
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">Options</span>
+                  <div className="mt-2 space-y-2">
+                    {viewingQuestion.options.map((opt) => (
+                      <div
+                        key={opt.id}
+                        className={`rounded-lg border p-3.5 ${
+                          opt.isCorrect
+                            ? "border-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10"
+                            : "bg-card"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-xs px-2 py-0.5 rounded bg-muted">
+                              {opt.optionKey}
+                            </span>
+                            <span className="font-medium">{opt.content}</span>
+                          </div>
+                          {opt.isCorrect && (
+                            <Badge variant="success" className="text-xs">
+                              Correct Key
+                            </Badge>
+                          )}
+                        </div>
+                        {opt.rationale && (
+                          <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
+                            <strong>Rationale:</strong> {opt.rationale}
+                          </div>
+                        )}
+                        {opt.distractorRationale && (
+                          <div className="mt-1 text-xs text-rose-700 dark:text-rose-400">
+                            <strong>Distractor:</strong> {opt.distractorRationale}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {viewingQuestion.structuredContentJson && (
+                <div>
+                  <span className="text-xs font-semibold text-muted-foreground uppercase">
+                    Structured NGN Schema JSON
+                  </span>
+                  <pre className="mt-1 rounded bg-muted p-3 text-xs overflow-x-auto font-mono">
+                    {viewingQuestion.structuredContentJson}
+                  </pre>
+                </div>
+              )}
+
+              {viewingQuestion.overallRationale && (
+                <div className="rounded-lg border bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20 p-4">
+                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase">
+                    Overall Clinical Rationale
+                  </span>
+                  <p className="mt-1 text-xs leading-relaxed">{viewingQuestion.overallRationale}</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-4 border-t text-xs text-muted-foreground">
+                <div>
+                  <span className="font-semibold block">Client Need:</span>
+                  {viewingQuestion.clientNeedCode || "None"}
+                </div>
+                <div>
+                  <span className="font-semibold block">Cognitive Level:</span>
+                  {viewingQuestion.cognitiveLevel || "Unspecified"}
+                </div>
+                <div>
+                  <span className="font-semibold block">Clinical Judgment:</span>
+                  {viewingQuestion.clinicalJudgmentStep || "Unspecified"}
+                </div>
+                <div>
+                  <span className="font-semibold block">Author:</span>
+                  {viewingQuestion.authorName || "System"}
+                </div>
+              </div>
+            </div>
+          )}
+        </FullPageDetailsLayout>
+      ) : isHistoryOpen ? (
+        <FullPageDetailsLayout
+          data-testid="question-history-fullpage"
+          eyebrow="Centralized Question Repository"
+          title="Revision History & Audit Snapshots"
+          description="Prior snapshots captured when published questions were modified or archived."
+          backLabel="Return to Question Bank"
+          onBack={() => setIsHistoryOpen(false)}
+          footer={
+            <FullPageActionBar
+              onCancel={() => setIsHistoryOpen(false)}
+              cancelLabel="Close"
+            />
+          }
+        >
+          {isLoadingVersions ? (
+            <div className="py-8 text-center">
+              <BrandedLoading message="Loading revision snapshots..." fullScreen={false} />
+            </div>
+          ) : !questionVersions || questionVersions.length === 0 ? (
+            <div className="rounded-2xl border border-border bg-card p-12 text-center text-muted-foreground text-sm">
+              No historical revision snapshots recorded yet. Snapshots are automatically generated when a
+              published question is edited or archived.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {questionVersions.map((v) => (
+                <div key={v.id} className="rounded-xl border bg-card p-4 shadow-sm text-sm">
+                  <div className="flex items-center justify-between border-b pb-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">
+                        Version {v.versionNumber}
+                      </span>
+                      <Badge
+                        variant={QUESTION_STATUS_LABELS[v.status]?.variant || "secondary"}
+                        className={QUESTION_STATUS_LABELS[v.status]?.className}
+                      >
+                        {QUESTION_STATUS_LABELS[v.status]?.label}
+                      </Badge>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(v.createdAt).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted-foreground mb-2">
+                    <strong>Change Summary:</strong> {v.changeSummary || "No note provided"}
+                    {v.createdByName && ` • By ${v.createdByName}`}
+                  </div>
+                  <details className="text-xs">
+                    <summary className="cursor-pointer text-primary font-medium hover:underline">
+                      View Snapshot JSON
+                    </summary>
+                    <pre className="mt-2 rounded bg-muted p-3 font-mono text-[11px] overflow-x-auto">
+                      {v.snapshotJson}
+                    </pre>
+                  </details>
+                </div>
+              ))}
+            </div>
+          )}
+        </FullPageDetailsLayout>
+      ) : isRejectOpen ? (
+        <FullPageFormLayout
+          data-testid="question-reject-fullpage"
+          eyebrow="Question Review Governance"
+          title="Return Question to Draft"
+          description="Provide specific clinical feedback for why this question is being returned for revisions."
+          backLabel="Return to Question Bank"
+          onBack={() => setIsRejectOpen(false)}
+          footer={
+            <FullPageActionBar
+              onCancel={() => setIsRejectOpen(false)}
+              primaryAction={
+                <Button
+                  variant="destructive"
+                  disabled={!rejectionReason.trim() || transitionMutation.isPending}
+                  onClick={() => {
+                    if (rejectingQuestionId) {
+                      transitionMutation.mutate({
+                        id: rejectingQuestionId,
+                        targetStatus: 0,
+                        reason: rejectionReason.trim(),
+                      });
+                    }
+                  }}
+                >
+                  Confirm Return to Draft
+                </Button>
+              }
+            />
+          }
+        >
+          <div className="space-y-3">
+            <Label htmlFor="rejectionReason">Rejection Reason / Required Changes *</Label>
+            <textarea
+              id="rejectionReason"
+              rows={5}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="e.g. Option C is clinically ambiguous; revise the rationale to cite recent ADA clinical guidelines."
+              className="w-full rounded-md border border-input bg-background p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            />
+          </div>
+        </FullPageFormLayout>
+      ) : isEditorOpen ? (
+        <FullPageFormLayout
+          data-testid="question-editor-fullpage"
+          eyebrow="Centralized Question Repository"
+          title={editingQuestionId ? "Edit Question" : "Create Canonical Question"}
+          description="Define the question stem, clinical scenario, taxonomy alignment, and type-specific response keys."
+          backLabel="Return to Question Bank"
+          onBack={() => setIsEditorOpen(false)}
+          footer={
+            <FullPageActionBar
+              onCancel={() => setIsEditorOpen(false)}
+              primaryAction={
+                <Button
+                  onClick={handleSaveQuestion}
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                >
+                  {editingQuestionId ? "Save Changes" : "Create Question"}
+                </Button>
+              }
+            />
+          }
+        >
+          <div className="space-y-6 text-sm">
+            {/* Top row: Type, Pathway, Difficulty */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <Label>Question Type *</Label>
+                <select
+                  value={formType}
+                  onChange={(e) => setFormType(e.target.value)}
+                  className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <optgroup label="Traditional Types">
+                    {TRADITIONAL_TYPES.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="NGN Clinical Types">
+                    {NGN_TYPES.map((t) => (
+                      <option key={t.key} value={t.key}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              <div>
+                <Label>Pathway *</Label>
+                <select
+                  value={formPathway}
+                  onChange={(e) => setFormPathway(e.target.value)}
+                  className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="rn">NCLEX-RN</option>
+                  <option value="pn">NCLEX-PN</option>
+                  <option value="both">Both (RN & PN)</option>
+                </select>
+              </div>
+
+              <div>
+                <Label>Difficulty</Label>
+                <select
+                  value={formDifficulty}
+                  onChange={(e) => setFormDifficulty(Number(e.target.value))}
+                  className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value={1}>Easy</option>
+                  <option value={2}>Moderate</option>
+                  <option value={3}>Hard</option>
+                  <option value={4}>Expert</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Curriculum alignment row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Client Need Classification</Label>
+                <select
+                  value={formClientNeedId}
+                  onChange={(e) => setFormClientNeedId(e.target.value)}
+                  className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Select Client Need Category...</option>
+                  {clientNeedsData?.map((cn) => (
+                    <option key={cn.id} value={cn.id}>
+                      {cn.code} - {cn.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <Label>Curriculum Topic</Label>
+                <select
+                  value={formTopicId}
+                  onChange={(e) => setFormTopicId(e.target.value)}
+                  className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Select Topic...</option>
+                  {allTopics.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Clinical Scenario Vignette */}
+            <div>
+              <Label>Clinical Scenario / EHR Vignette (Optional)</Label>
+              <textarea
+                rows={3}
+                value={formClinicalScenario}
+                onChange={(e) => setFormClinicalScenario(e.target.value)}
+                placeholder="A 58-year-old client with a history of heart failure is admitted to the progressive care unit..."
+                className="mt-1.5 w-full rounded-md border border-input bg-background p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+
+            {/* Stem */}
+            <div>
+              <Label>Question Stem *</Label>
+              <textarea
+                rows={3}
+                value={formStem}
+                onChange={(e) => setFormStem(e.target.value)}
+                placeholder="Which clinical manifestation should the nurse prioritize when evaluating the client's condition?"
+                className="mt-1.5 w-full rounded-md border border-input bg-background p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+
+            {/* Instructions */}
+            <div>
+              <Label>Candidate Instructions (Optional)</Label>
+              <Input
+                value={formInstructions}
+                onChange={(e) => setFormInstructions(e.target.value)}
+                placeholder="e.g. Select all that apply."
+              />
+            </div>
+
+            {/* Options Editor for Traditional Types */}
+            {TRADITIONAL_TYPES.some((t) => t.key === formType) ? (
+              <div className="space-y-4 rounded-xl border p-5 bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <Label className="font-semibold text-base">Options & Rationales</Label>
+                  <Button variant="outline" size="sm" onClick={addOption} className="gap-1">
+                    <Plus className="h-3.5 w-3.5" /> Add Option
+                  </Button>
+                </div>
+
+                <p className="text-xs text-muted-foreground">
+                  {formType === "single-choice" || formType === "image-based"
+                    ? "Single Choice questions require at least 2 options and exactly 1 correct key."
+                    : formType === "sata" || formType === "checkbox" || formType === "multiple-choice" || formType === "multiple-image"
+                    ? "Multi-response questions require at least 2 options and at least 1 correct key."
+                    : "True/False requires exactly 2 options with 1 correct key."}
+                </p>
+
+                <div className="space-y-3">
+                  {formOptions.map((opt, idx) => (
+                    <div key={idx} className="rounded-lg border bg-card p-3.5 space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-xs px-2 py-1 rounded bg-muted w-8 text-center">
+                          {opt.optionKey}
+                        </span>
+                        <Input
+                          placeholder={`Option ${opt.optionKey} text...`}
+                          value={opt.content}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormOptions((prev) =>
+                              prev.map((o, i) => (i === idx ? { ...o, content: val } : o))
+                            );
+                          }}
+                          className="flex-1"
+                        />
+                        <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none px-2.5 py-1.5 rounded border bg-background hover:bg-muted/50">
+                          <input
+                            type="checkbox"
+                            checked={opt.isCorrect}
+                            onChange={(e) => handleOptionCorrectChange(idx, e.target.checked)}
+                            className="rounded border-input text-primary focus:ring-primary"
+                          />
+                          Correct
+                        </label>
+                        {formOptions.length > 2 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeOption(idx)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <Input
+                          placeholder="Option rationale (why correct or valid)..."
+                          value={opt.rationale}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormOptions((prev) =>
+                              prev.map((o, i) => (i === idx ? { ...o, rationale: val } : o))
+                            );
+                          }}
+                        />
+                        <Input
+                          placeholder="Distractor rationale (why unsafe or incorrect)..."
+                          value={opt.distractorRationale}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setFormOptions((prev) =>
+                              prev.map((o, i) => (i === idx ? { ...o, distractorRationale: val } : o))
+                            );
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* Structured Editor for NGN Types */
+              <div className="space-y-2 rounded-xl border p-5 bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <Label className="font-semibold text-base">NGN Structured Content Schema</Label>
+                  <Badge variant="outline">NGN Catalogued Format</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Provide JSON schema specifying prompts, tabs, matrix grids, or drag targets for this NGN
+                  question type.
+                </p>
+                <textarea
+                  rows={6}
+                  value={formStructuredContent}
+                  onChange={(e) => setFormStructuredContent(e.target.value)}
+                  placeholder={`{\n  "matrixRows": ["Manifestation 1", "Manifestation 2"],\n  "columns": ["Expected", "Unexpected"]\n}`}
+                  className="w-full font-mono text-xs rounded-md border border-input bg-background p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                />
+              </div>
+            )}
+
+            {/* Overall Rationale */}
+            <div>
+              <Label>Overall Clinical Rationale</Label>
+              <textarea
+                rows={3}
+                value={formOverallRationale}
+                onChange={(e) => setFormOverallRationale(e.target.value)}
+                placeholder="Comprehensive clinical explanation supporting the correct nursing decision and citing standard nursing protocols..."
+                className="mt-1.5 w-full rounded-md border border-input bg-background p-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </div>
+
+            {/* Cognitive & Clinical Judgment */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <Label>Cognitive Level</Label>
+                <select
+                  value={formCognitiveLevel}
+                  onChange={(e) => setFormCognitiveLevel(e.target.value)}
+                  className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Select Level...</option>
+                  <option value="Remembering">Remembering</option>
+                  <option value="Understanding">Understanding</option>
+                  <option value="Applying">Applying</option>
+                  <option value="Analyzing">Analyzing</option>
+                  <option value="Evaluating">Evaluating</option>
+                </select>
+              </div>
+
+              <div>
+                <Label>Clinical Judgment Step (NCJMM)</Label>
+                <select
+                  value={formClinicalJudgmentStep}
+                  onChange={(e) => setFormClinicalJudgmentStep(e.target.value)}
+                  className="mt-1.5 w-full h-10 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <option value="">Select Step...</option>
+                  <option value="Recognize Cues">1. Recognize Cues</option>
+                  <option value="Analyze Cues">2. Analyze Cues</option>
+                  <option value="Prioritize Hypotheses">3. Prioritize Hypotheses</option>
+                  <option value="Generate Solutions">4. Generate Solutions</option>
+                  <option value="Take Action">5. Take Action</option>
+                  <option value="Evaluate Outcomes">6. Evaluate Outcomes</option>
+                </select>
+              </div>
+
+              <div>
+                <Label>Source / Attribution</Label>
+                <Input
+                  value={formSource}
+                  onChange={(e) => setFormSource(e.target.value)}
+                  placeholder="e.g. PrepFord NCLEX Expert Committee"
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+
+            {/* If editing an existing question, show Change Summary */}
+            {editingQuestionId && (
+              <div>
+                <Label>Change Summary (Audit Traceability)</Label>
+                <Input
+                  value={formChangeSummary}
+                  onChange={(e) => setFormChangeSummary(e.target.value)}
+                  placeholder="Describe what was modified (e.g. Corrected distractor typo in option C)..."
+                  className="mt-1.5"
+                />
+              </div>
+            )}
+          </div>
+        </FullPageFormLayout>
+      ) : (
+        <>
       {/* Top Banner */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -838,587 +1417,8 @@ export function AdminQuestionsClient() {
           </div>
         )}
       </div>
-
-      {/* Question Detail Modal */}
-      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <span>Question Details: {viewingQuestion?.code || "Draft"}</span>
-              {viewingQuestion && (
-                <Badge
-                  variant={QUESTION_STATUS_LABELS[viewingQuestion.status]?.variant || "secondary"}
-                  className={QUESTION_STATUS_LABELS[viewingQuestion.status]?.className}
-                >
-                  {QUESTION_STATUS_LABELS[viewingQuestion.status]?.label}
-                </Badge>
-              )}
-            </DialogTitle>
-            <DialogDescription>
-              Version {viewingQuestion?.version} • Pathway: {viewingQuestion?.pathway?.toUpperCase()} • Type:{" "}
-              {viewingQuestion?.questionTypeName}
-            </DialogDescription>
-          </DialogHeader>
-
-          {isLoadingView || !viewingQuestion ? (
-            <div className="py-8 text-center">
-              <BrandedLoading message="Loading question details..." fullScreen={false} />
-            </div>
-          ) : (
-            <div className="space-y-4 text-sm">
-              {viewingQuestion.rejectionReason && (
-                <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-destructive">
-                  <div className="font-semibold flex items-center gap-1.5">
-                    <AlertTriangle className="h-4 w-4" /> Reviewer Rejection Feedback
-                  </div>
-                  <div className="mt-1 text-xs">{viewingQuestion.rejectionReason}</div>
-                </div>
-              )}
-
-              {viewingQuestion.clinicalScenario && (
-                <div className="rounded-lg border bg-muted/30 p-3">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Clinical Scenario / Vignette
-                  </span>
-                  <p className="mt-1 whitespace-pre-wrap">{viewingQuestion.clinicalScenario}</p>
-                </div>
-              )}
-
-              <div>
-                <span className="text-xs font-semibold text-muted-foreground uppercase">Stem</span>
-                <p className="mt-1 text-base font-medium">{viewingQuestion.stem}</p>
-              </div>
-
-              {viewingQuestion.instructions && (
-                <div>
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">Instructions</span>
-                  <p className="mt-1 text-muted-foreground italic">{viewingQuestion.instructions}</p>
-                </div>
-              )}
-
-              {viewingQuestion.options && viewingQuestion.options.length > 0 && (
-                <div>
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">Options</span>
-                  <div className="mt-2 space-y-2">
-                    {viewingQuestion.options.map((opt) => (
-                      <div
-                        key={opt.id}
-                        className={`rounded-lg border p-3 ${
-                          opt.isCorrect
-                            ? "border-emerald-500/50 bg-emerald-500/5 dark:bg-emerald-500/10"
-                            : "bg-card"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs px-2 py-0.5 rounded bg-muted">
-                              {opt.optionKey}
-                            </span>
-                            <span className="font-medium">{opt.content}</span>
-                          </div>
-                          {opt.isCorrect && (
-                            <Badge variant="success" className="text-xs">
-                              Correct Key
-                            </Badge>
-                          )}
-                        </div>
-                        {opt.rationale && (
-                          <div className="mt-2 text-xs text-emerald-700 dark:text-emerald-400">
-                            <strong>Rationale:</strong> {opt.rationale}
-                          </div>
-                        )}
-                        {opt.distractorRationale && (
-                          <div className="mt-1 text-xs text-rose-700 dark:text-rose-400">
-                            <strong>Distractor:</strong> {opt.distractorRationale}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {viewingQuestion.structuredContentJson && (
-                <div>
-                  <span className="text-xs font-semibold text-muted-foreground uppercase">
-                    Structured NGN Schema JSON
-                  </span>
-                  <pre className="mt-1 rounded bg-muted p-3 text-xs overflow-x-auto font-mono">
-                    {viewingQuestion.structuredContentJson}
-                  </pre>
-                </div>
-              )}
-
-              {viewingQuestion.overallRationale && (
-                <div className="rounded-lg border bg-blue-500/5 dark:bg-blue-500/10 border-blue-500/20 p-3">
-                  <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase">
-                    Overall Clinical Rationale
-                  </span>
-                  <p className="mt-1 text-xs leading-relaxed">{viewingQuestion.overallRationale}</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 border-t text-xs text-muted-foreground">
-                <div>
-                  <span className="font-semibold block">Client Need:</span>
-                  {viewingQuestion.clientNeedCode || "None"}
-                </div>
-                <div>
-                  <span className="font-semibold block">Cognitive Level:</span>
-                  {viewingQuestion.cognitiveLevel || "Unspecified"}
-                </div>
-                <div>
-                  <span className="font-semibold block">Clinical Judgment:</span>
-                  {viewingQuestion.clinicalJudgmentStep || "Unspecified"}
-                </div>
-                <div>
-                  <span className="font-semibold block">Author:</span>
-                  {viewingQuestion.authorName || "System"}
-                </div>
-              </div>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Revision History Modal */}
-      <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Revision History & Audit Snapshots</DialogTitle>
-            <DialogDescription>
-              Prior snapshots captured when published questions were modified or archived.
-            </DialogDescription>
-          </DialogHeader>
-
-          {isLoadingVersions ? (
-            <div className="py-8 text-center">
-              <BrandedLoading message="Loading revision snapshots..." fullScreen={false} />
-            </div>
-          ) : !questionVersions || questionVersions.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground text-sm">
-              No historical revision snapshots recorded yet. Snapshots are automatically generated when a
-              published question is edited or archived.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {questionVersions.map((v) => (
-                <div key={v.id} className="rounded-lg border bg-card p-3 shadow-sm text-sm">
-                  <div className="flex items-center justify-between border-b pb-2 mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-xs px-2 py-0.5 rounded bg-primary/10 text-primary">
-                        Version {v.versionNumber}
-                      </span>
-                      <Badge
-                        variant={QUESTION_STATUS_LABELS[v.status]?.variant || "secondary"}
-                        className={QUESTION_STATUS_LABELS[v.status]?.className}
-                      >
-                        {QUESTION_STATUS_LABELS[v.status]?.label}
-                      </Badge>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(v.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground mb-2">
-                    <strong>Change Summary:</strong> {v.changeSummary || "No note provided"}
-                    {v.createdByName && ` • By ${v.createdByName}`}
-                  </div>
-                  <details className="text-xs">
-                    <summary className="cursor-pointer text-primary font-medium hover:underline">
-                      View Snapshot JSON
-                    </summary>
-                    <pre className="mt-2 rounded bg-muted p-2 font-mono text-[11px] overflow-x-auto max-h-48">
-                      {v.snapshotJson}
-                    </pre>
-                  </details>
-                </div>
-              ))}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsHistoryOpen(false)}>
-              Close
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Reject Modal */}
-      <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Return Question to Draft</DialogTitle>
-            <DialogDescription>
-              Provide specific clinical feedback for why this question is being returned for revisions.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-3 py-2">
-            <Label htmlFor="rejectionReason">Rejection Reason / Required Changes *</Label>
-            <textarea
-              id="rejectionReason"
-              rows={4}
-              value={rejectionReason}
-              onChange={(e) => setRejectionReason(e.target.value)}
-              placeholder="e.g. Option C is clinically ambiguous; revise the rationale to cite recent ADA clinical guidelines."
-              className="w-full rounded-md border border-input bg-background p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRejectOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              disabled={!rejectionReason.trim() || transitionMutation.isPending}
-              onClick={() => {
-                if (rejectingQuestionId) {
-                  transitionMutation.mutate({
-                    id: rejectingQuestionId,
-                    targetStatus: 0,
-                    reason: rejectionReason.trim(),
-                  });
-                }
-              }}
-            >
-              Confirm Return to Draft
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create / Edit Question Modal */}
-      <Dialog open={isEditorOpen} onOpenChange={setIsEditorOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingQuestionId ? "Edit Question" : "Create Canonical Question"}
-            </DialogTitle>
-            <DialogDescription>
-              Define the question stem, clinical scenario, taxonomy alignment, and type-specific response keys.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2 text-sm">
-            {/* Top row: Type, Pathway, Difficulty */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <Label>Question Type *</Label>
-                <select
-                  value={formType}
-                  onChange={(e) => setFormType(e.target.value)}
-                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <optgroup label="Traditional Types">
-                    {TRADITIONAL_TYPES.map((t) => (
-                      <option key={t.key} value={t.key}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                  <optgroup label="NGN Clinical Types">
-                    {NGN_TYPES.map((t) => (
-                      <option key={t.key} value={t.key}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </optgroup>
-                </select>
-              </div>
-
-              <div>
-                <Label>Pathway *</Label>
-                <select
-                  value={formPathway}
-                  onChange={(e) => setFormPathway(e.target.value)}
-                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="rn">NCLEX-RN</option>
-                  <option value="pn">NCLEX-PN</option>
-                  <option value="both">Both (RN & PN)</option>
-                </select>
-              </div>
-
-              <div>
-                <Label>Difficulty</Label>
-                <select
-                  value={formDifficulty}
-                  onChange={(e) => setFormDifficulty(Number(e.target.value))}
-                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value={1}>Easy</option>
-                  <option value={2}>Moderate</option>
-                  <option value={3}>Hard</option>
-                  <option value={4}>Expert</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Curriculum alignment row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <Label>Client Need Classification</Label>
-                <select
-                  value={formClientNeedId}
-                  onChange={(e) => setFormClientNeedId(e.target.value)}
-                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="">Select Client Need Category...</option>
-                  {clientNeedsData?.map((cn) => (
-                    <option key={cn.id} value={cn.id}>
-                      {cn.code} - {cn.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <Label>Curriculum Topic</Label>
-                <select
-                  value={formTopicId}
-                  onChange={(e) => setFormTopicId(e.target.value)}
-                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="">Select Topic...</option>
-                  {allTopics.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Clinical Scenario Vignette */}
-            <div>
-              <Label>Clinical Scenario / EHR Vignette (Optional)</Label>
-              <textarea
-                rows={3}
-                value={formClinicalScenario}
-                onChange={(e) => setFormClinicalScenario(e.target.value)}
-                placeholder="A 58-year-old client with a history of heart failure is admitted to the progressive care unit..."
-                className="mt-1 w-full rounded-md border border-input bg-background p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-
-            {/* Stem */}
-            <div>
-              <Label>Question Stem *</Label>
-              <textarea
-                rows={3}
-                value={formStem}
-                onChange={(e) => setFormStem(e.target.value)}
-                placeholder="Which clinical manifestation should the nurse prioritize when evaluating the client's condition?"
-                className="mt-1 w-full rounded-md border border-input bg-background p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-
-            {/* Instructions */}
-            <div>
-              <Label>Candidate Instructions (Optional)</Label>
-              <Input
-                value={formInstructions}
-                onChange={(e) => setFormInstructions(e.target.value)}
-                placeholder="e.g. Select all that apply."
-              />
-            </div>
-
-            {/* Options Editor for Traditional Types */}
-            {TRADITIONAL_TYPES.some((t) => t.key === formType) ? (
-              <div className="space-y-3 rounded-lg border p-4 bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <Label className="font-semibold text-base">Options & Rationales</Label>
-                  <Button variant="outline" size="sm" onClick={addOption} className="gap-1">
-                    <Plus className="h-3.5 w-3.5" /> Add Option
-                  </Button>
-                </div>
-
-                <p className="text-xs text-muted-foreground">
-                  {formType === "single-choice" || formType === "image-based"
-                    ? "Single Choice questions require at least 2 options and exactly 1 correct key."
-                    : formType === "sata" || formType === "checkbox" || formType === "multiple-choice" || formType === "multiple-image"
-                    ? "Multi-response questions require at least 2 options and at least 1 correct key."
-                    : "True/False requires exactly 2 options with 1 correct key."}
-                </p>
-
-                <div className="space-y-3">
-                  {formOptions.map((opt, idx) => (
-                    <div key={idx} className="rounded-lg border bg-card p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-xs px-2 py-1 rounded bg-muted w-8 text-center">
-                          {opt.optionKey}
-                        </span>
-                        <Input
-                          placeholder={`Option ${opt.optionKey} text...`}
-                          value={opt.content}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormOptions((prev) =>
-                              prev.map((o, i) => (i === idx ? { ...o, content: val } : o))
-                            );
-                          }}
-                          className="flex-1"
-                        />
-                        <label className="flex items-center gap-1.5 text-xs font-semibold cursor-pointer select-none px-2 py-1 rounded border bg-background hover:bg-muted/50">
-                          <input
-                            type="checkbox"
-                            checked={opt.isCorrect}
-                            onChange={(e) => handleOptionCorrectChange(idx, e.target.checked)}
-                            className="rounded border-input text-primary focus:ring-primary"
-                          />
-                          Correct
-                        </label>
-                        {formOptions.length > 2 && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeOption(idx)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                        <Input
-                          placeholder="Option rationale (why correct or valid)..."
-                          value={opt.rationale}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormOptions((prev) =>
-                              prev.map((o, i) => (i === idx ? { ...o, rationale: val } : o))
-                            );
-                          }}
-                        />
-                        <Input
-                          placeholder="Distractor rationale (why unsafe or incorrect)..."
-                          value={opt.distractorRationale}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setFormOptions((prev) =>
-                              prev.map((o, i) => (i === idx ? { ...o, distractorRationale: val } : o))
-                            );
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              /* Structured Editor for NGN Types */
-              <div className="space-y-2 rounded-lg border p-4 bg-muted/20">
-                <div className="flex items-center justify-between">
-                  <Label className="font-semibold text-base">NGN Structured Content Schema</Label>
-                  <Badge variant="outline">NGN Catalogued Format</Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Provide JSON schema specifying prompts, tabs, matrix grids, or drag targets for this NGN
-                  question type.
-                </p>
-                <textarea
-                  rows={6}
-                  value={formStructuredContent}
-                  onChange={(e) => setFormStructuredContent(e.target.value)}
-                  placeholder={`{\n  "matrixRows": ["Manifestation 1", "Manifestation 2"],\n  "columns": ["Expected", "Unexpected"]\n}`}
-                  className="w-full font-mono text-xs rounded-md border border-input bg-background p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                />
-              </div>
-            )}
-
-            {/* Overall Rationale */}
-            <div>
-              <Label>Overall Clinical Rationale</Label>
-              <textarea
-                rows={3}
-                value={formOverallRationale}
-                onChange={(e) => setFormOverallRationale(e.target.value)}
-                placeholder="Comprehensive clinical explanation supporting the correct nursing decision and citing standard nursing protocols..."
-                className="mt-1 w-full rounded-md border border-input bg-background p-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              />
-            </div>
-
-            {/* Cognitive & Clinical Judgment */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <Label>Cognitive Level</Label>
-                <select
-                  value={formCognitiveLevel}
-                  onChange={(e) => setFormCognitiveLevel(e.target.value)}
-                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="">Select Level...</option>
-                  <option value="Remembering">Remembering</option>
-                  <option value="Understanding">Understanding</option>
-                  <option value="Applying">Applying</option>
-                  <option value="Analyzing">Analyzing</option>
-                  <option value="Evaluating">Evaluating</option>
-                </select>
-              </div>
-
-              <div>
-                <Label>Clinical Judgment Step (NCJMM)</Label>
-                <select
-                  value={formClinicalJudgmentStep}
-                  onChange={(e) => setFormClinicalJudgmentStep(e.target.value)}
-                  className="mt-1 w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  <option value="">Select Step...</option>
-                  <option value="Recognize Cues">1. Recognize Cues</option>
-                  <option value="Analyze Cues">2. Analyze Cues</option>
-                  <option value="Prioritize Hypotheses">3. Prioritize Hypotheses</option>
-                  <option value="Generate Solutions">4. Generate Solutions</option>
-                  <option value="Take Action">5. Take Action</option>
-                  <option value="Evaluate Outcomes">6. Evaluate Outcomes</option>
-                </select>
-              </div>
-
-              <div>
-                <Label>Source / Attribution</Label>
-                <Input
-                  value={formSource}
-                  onChange={(e) => setFormSource(e.target.value)}
-                  placeholder="e.g. PrepFord NCLEX Expert Committee"
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            {/* If editing an existing question, show Change Summary */}
-            {editingQuestionId && (
-              <div>
-                <Label>Change Summary (Audit Traceability)</Label>
-                <Input
-                  value={formChangeSummary}
-                  onChange={(e) => setFormChangeSummary(e.target.value)}
-                  placeholder="Describe what was modified (e.g. Corrected distractor typo in option C)..."
-                  className="mt-1"
-                />
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditorOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveQuestion}
-              disabled={createMutation.isPending || updateMutation.isPending}
-            >
-              {editingQuestionId ? "Save Changes" : "Create Question"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
     </div>
   );
 }

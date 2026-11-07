@@ -26,18 +26,20 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDetailsLayout,
+} from "@/components/ui/full-page-crud";
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
 import type { AdminUserListItem } from "@/lib/api-services";
 
-export function AdminUsersClient() {
+export function AdminUsersClient({
+  initialMode = "list",
+  initialUserId,
+}: {
+  initialMode?: "list" | "create" | "detail";
+  initialUserId?: string;
+} = {}) {
   const { user: currentUser } = useAuth();
 
   const [users, setUsers] = React.useState<AdminUserListItem[]>([]);
@@ -49,9 +51,9 @@ export function AdminUsersClient() {
   const [statusFilter, setStatusFilter] = React.useState("");
   const [loading, setLoading] = React.useState(true);
 
-  // Modals state
+  // Full-Page CRUD state
   const [selectedUser, setSelectedUser] = React.useState<any | null>(null);
-  const [detailModalOpen, setDetailModalOpen] = React.useState(false);
+  const [detailModalOpen, setDetailModalOpen] = React.useState(initialMode === "detail");
   const [detailLoading, setDetailLoading] = React.useState(false);
 
   const [statusModalOpen, setStatusModalOpen] = React.useState(false);
@@ -63,7 +65,7 @@ export function AdminUsersClient() {
   const [selectedRoleToAdd, setSelectedRoleToAdd] = React.useState("");
   const [roleActionLoading, setRoleActionLoading] = React.useState(false);
 
-  const [createModalOpen, setCreateModalOpen] = React.useState(false);
+  const [createModalOpen, setCreateModalOpen] = React.useState(initialMode === "create");
   const [createForm, setCreateForm] = React.useState({
     email: "",
     displayName: "",
@@ -239,8 +241,283 @@ export function AdminUsersClient() {
 
   const totalPages = Math.ceil(total / pageSize) || 1;
 
+  React.useEffect(() => {
+    if (initialUserId && initialMode === "detail") {
+      handleInspect(initialUserId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialUserId, initialMode]);
+
+  if (detailModalOpen) {
+    return (
+      <FullPageDetailsLayout
+        title="User Account Details"
+        subtitle="Comprehensive profile, assigned roles, active sessions, and recent governance events."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Users & Roles", onClick: () => setDetailModalOpen(false) },
+          { label: selectedUser?.displayName || "User Details" },
+        ]}
+        onBack={() => setDetailModalOpen(false)}
+      >
+        {detailLoading || !selectedUser ? (
+          <div className="py-12 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
+        ) : (
+          <div className="space-y-6 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-5 rounded-xl bg-muted/40 border">
+              <div>
+                <span className="text-xs text-muted-foreground">Display Name</span>
+                <p className="font-semibold text-base">{selectedUser.displayName}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Email</span>
+                <p className="font-semibold text-base">{selectedUser.email}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Account Status</span>
+                <p className="font-medium capitalize text-base">{selectedUser.accountStatus}</p>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground">Security Version</span>
+                <p className="font-medium text-base">v{selectedUser.securityVersion}</p>
+              </div>
+            </div>
+
+            {/* Roles */}
+            <div className="rounded-xl border bg-card p-5 space-y-3">
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground">Assigned Roles</h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedUser.roles?.map((r: any) => (
+                  <div key={r.id || r.name} className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border bg-muted/30 text-xs">
+                    <span className="font-medium capitalize">{r.name || r}</span>
+                    <button
+                      onClick={() => handleRemoveRole(selectedUser.id, r.name || r)}
+                      className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+                      title="Remove role"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Active Sessions */}
+            <div className="rounded-xl border bg-card p-5 space-y-3">
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground">
+                Active Sessions ({selectedUser.activeSessions?.length || 0})
+              </h4>
+              {selectedUser.activeSessions?.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">No active sessions.</p>
+              ) : (
+                <div className="space-y-2">
+                  {selectedUser.activeSessions?.map((s: any) => (
+                    <div key={s.id} className="p-3 rounded-lg border bg-muted/20 text-xs flex justify-between items-center">
+                      <div>
+                        <div className="font-medium">{s.deviceLabel || "Standard Web Client"}</div>
+                        <div className="text-muted-foreground">IP: {s.lastIpAddress || "Unknown"} • Active: {new Date(s.lastActiveAt).toLocaleString()}</div>
+                      </div>
+                      <Badge variant="outline" className="text-[10px]">Active</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Recent Audit Logs */}
+            <div className="rounded-xl border bg-card p-5 space-y-3">
+              <h4 className="text-xs font-semibold uppercase text-muted-foreground">Recent Security Events</h4>
+              <div className="space-y-1.5">
+                {selectedUser.recentAuditLogs?.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">No recent events.</p>
+                ) : (
+                  selectedUser.recentAuditLogs?.map((al: any) => (
+                    <div key={al.id} className="p-2.5 rounded border bg-muted/10 text-xs flex justify-between">
+                      <div>
+                        <span className="font-semibold text-primary mr-2">{al.action}</span>
+                        <span className="text-muted-foreground">{al.description}</span>
+                      </div>
+                      <span className="text-muted-foreground">{new Date(al.timestamp).toLocaleTimeString()}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </FullPageDetailsLayout>
+    );
+  }
+
+  if (statusModalOpen) {
+    return (
+      <FullPageFormLayout
+        title="Update Account Status"
+        subtitle="Modifying account status immediately increments SecurityVersion and revokes active sessions if suspended."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Users & Roles", onClick: () => setStatusModalOpen(false) },
+          { label: "Update Account Status" },
+        ]}
+        onBack={() => setStatusModalOpen(false)}
+        onCancel={() => setStatusModalOpen(false)}
+        onSubmit={handleUpdateStatus}
+        submitLabel="Confirm Status Change"
+        isSubmitting={statusActionLoading}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">New Status</label>
+            <select
+              value={newStatus}
+              onChange={(e) => setNewStatus(e.target.value)}
+              className="w-full h-10 px-3 rounded-md border bg-background text-sm"
+            >
+              <option value="Active">Active</option>
+              <option value="Suspended">Suspended</option>
+              <option value="Deactivated">Deactivated</option>
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Reason for Status Change</label>
+            <Input
+              placeholder="Reason (e.g. administrative review, payment failure)..."
+              value={statusReason}
+              onChange={(e) => setStatusReason(e.target.value)}
+            />
+          </div>
+        </div>
+      </FullPageFormLayout>
+    );
+  }
+
+  if (roleModalOpen) {
+    return (
+      <FullPageFormLayout
+        title={`Assign Role to ${selectedUser?.displayName || "User"}`}
+        subtitle="Assigning a role updates permissions immediately and revokes active sessions to ensure fresh token issuance."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Users & Roles", onClick: () => setRoleModalOpen(false) },
+          { label: "Assign Role" },
+        ]}
+        onBack={() => setRoleModalOpen(false)}
+        onCancel={() => setRoleModalOpen(false)}
+        onSubmit={handleAssignRole}
+        submitLabel="Assign Role"
+        submitDisabled={!selectedRoleToAdd}
+        isSubmitting={roleActionLoading}
+      >
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Select Role</label>
+          <select
+            value={selectedRoleToAdd}
+            onChange={(e) => setSelectedRoleToAdd(e.target.value)}
+            className="w-full h-10 px-3 rounded-md border bg-background text-sm"
+          >
+            <option value="">Choose a role...</option>
+            <option value="superadmin">Super Admin</option>
+            <option value="admin">Operations Admin</option>
+            <option value="content_manager">Content Manager</option>
+            <option value="exam_manager">Exam Manager</option>
+            <option value="reviewer">Reviewer</option>
+            <option value="instructor">Instructor</option>
+            <option value="support">Support</option>
+            <option value="candidate">Candidate</option>
+          </select>
+        </div>
+      </FullPageFormLayout>
+    );
+  }
+
+  if (createModalOpen) {
+    return (
+      <FullPageFormLayout
+        title="Create New User Account"
+        subtitle="Create an administrative, faculty, or learner account with initial role assignment."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Users & Roles", onClick: () => setCreateModalOpen(false) },
+          { label: "Create User Account" },
+        ]}
+        onBack={() => setCreateModalOpen(false)}
+        onCancel={() => setCreateModalOpen(false)}
+        onSubmit={handleCreateUser}
+        submitLabel="Create Account"
+        isSubmitting={createLoading}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Display Name</label>
+            <Input
+              required
+              placeholder="Full Name"
+              value={createForm.displayName}
+              onChange={(e) => setCreateForm({ ...createForm, displayName: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Email Address</label>
+            <Input
+              type="email"
+              required
+              placeholder="name@prepford.com"
+              value={createForm.email}
+              onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Temporary Password</label>
+            <Input
+              type="password"
+              required
+              placeholder="At least 8 characters"
+              value={createForm.password}
+              onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Initial Role</label>
+              <select
+                value={createForm.role}
+                onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
+                className="w-full h-10 px-3 rounded-md border bg-background text-sm"
+              >
+                <option value="candidate">Candidate</option>
+                <option value="instructor">Instructor</option>
+                <option value="reviewer">Reviewer</option>
+                <option value="exam_manager">Exam Manager</option>
+                <option value="content_manager">Content Manager</option>
+                <option value="support">Support</option>
+                <option value="admin">Administrator</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium">Pathway</label>
+              <select
+                value={createForm.pathway}
+                onChange={(e) => setCreateForm({ ...createForm, pathway: e.target.value })}
+                className="w-full h-10 px-3 rounded-md border bg-background text-sm"
+              >
+                <option value="rn">NCLEX-RN</option>
+                <option value="pn">NCLEX-PN</option>
+                <option value="both">Both (RN & PN)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </FullPageFormLayout>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-none min-w-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>

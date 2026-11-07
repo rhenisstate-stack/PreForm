@@ -252,7 +252,7 @@ export default function QuestionTypesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8">
+    <div className="w-full max-w-none min-w-0 space-y-8">
       {/* Header (page title/breadcrumbs are rendered by the admin shell) */}
       <div>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
