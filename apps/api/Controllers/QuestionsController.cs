@@ -175,4 +175,37 @@ public class QuestionsController : ControllerBase
         var versions = await _questionBankService.GetQuestionVersionsAsync(id, ct);
         return Ok(new { success = true, versions });
     }
+
+    [HttpDelete("{id}")]
+    [Authorize(Policy = "Permission:content.edit")]
+    public async Task<IActionResult> DeleteQuestion(string id, CancellationToken ct = default)
+    {
+        var actorId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? "system";
+
+        try
+        {
+            var deleted = await _questionBankService.DeleteQuestionAsync(id, actorId, ct);
+            if (!deleted)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Status = 404,
+                    Title = "Question Not Found",
+                    Detail = $"Question '{id}' was not found."
+                });
+            }
+
+            return Ok(new { success = true });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
+            {
+                success = false,
+                error = ex.Message,
+                title = "Question Deletion Blocked by Dependencies",
+                detail = ex.Message
+            });
+        }
+    }
 }

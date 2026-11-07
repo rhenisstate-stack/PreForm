@@ -637,11 +637,6 @@ public class QuestionBankService : IQuestionBankService
                 break;
 
             case QuestionStatus.Archived:
-                if (currentStatus != QuestionStatus.Published && currentStatus != QuestionStatus.Approved)
-                {
-                    throw new InvalidOperationException($"Cannot archive question in '{currentStatus}' status. Only 'Published' or 'Approved' questions can be archived.");
-                }
-
                 // Create snapshot before archiving
                 var archiveSnapshot = CreateSnapshotJson(question, question.Options.ToList());
                 _context.QuestionVersions.Add(new QuestionVersion
@@ -685,6 +680,58 @@ public class QuestionBankService : IQuestionBankService
         await _context.SaveChangesAsync(ct);
 
         return await GetQuestionByIdAsync(id, ct);
+    }
+
+    public async Task<bool> DeleteQuestionAsync(string id, string actorUserId, CancellationToken ct = default)
+    {
+        var question = await _context.Questions
+            .Include(q => q.Options)
+            .Include(q => q.Versions)
+            .FirstOrDefaultAsync(q => q.Id == id, ct);
+
+        if (question == null)
+        {
+            return false;
+        }
+
+        var examRefCount = await _context.ExamQuestions
+            .CountAsync(eq => eq.QuestionId == id, ct);
+        var attemptRefCount = await _context.AttemptResponses
+            .CountAsync(ar => ar.QuestionId == id, ct);
+        var attemptSnapshotCount = await _context.ExamAttemptQuestions
+            .CountAsync(eaq => eaq.QuestionId == id, ct);
+
+        if (examRefCount > 0 || attemptRefCount > 0 || attemptSnapshotCount > 0)
+        {
+            throw new InvalidOperationException(
+                $"Cannot delete question '{question.Code ?? question.Id}' because it is referenced by {examRefCount} examination revision(s) and {Math.Max(attemptRefCount, attemptSnapshotCount)} learner attempt record(s). Deactivate / Archive the question instead.");
+        }
+
+        var now = DateTime.UtcNow;
+        var code = question.Code;
+        var typeKey = question.QuestionTypeKey;
+
+        _context.QuestionOptions.RemoveRange(question.Options);
+        _context.QuestionVersions.RemoveRange(question.Versions);
+        _context.Questions.Remove(question);
+
+        _context.AuditLogs.Add(new AuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            ActorId = actorUserId,
+            Action = "QuestionDeleted",
+            EntityType = "Question",
+            EntityId = id,
+            Description = JsonSerializer.Serialize(new
+            {
+                code,
+                type = typeKey
+            }),
+            Timestamp = now
+        });
+
+        await _context.SaveChangesAsync(ct);
+        return true;
     }
 
     public async Task<List<QuestionVersionDto>> GetQuestionVersionsAsync(string questionId, CancellationToken ct = default)

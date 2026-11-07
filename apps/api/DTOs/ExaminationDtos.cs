@@ -585,9 +585,16 @@ public sealed class ExamReadinessReportDto
 
 public sealed class AdminExamPreviewOptionDto
 {
+    public string Id { get; set; } = string.Empty;
     public string Key { get; set; } = string.Empty;
+    public string OptionKey { get; set; } = string.Empty;
     public string Text { get; set; } = string.Empty;
+    public string Content { get; set; } = string.Empty;
     public bool IsCorrect { get; set; }
+    public string? Rationale { get; set; }
+    public string? DistractorRationale { get; set; }
+    public string? MediaUrl { get; set; }
+    public int DisplayOrder { get; set; }
 }
 
 public sealed class AdminExamPreviewQuestionDto
@@ -595,11 +602,19 @@ public sealed class AdminExamPreviewQuestionDto
     public string Id { get; set; } = string.Empty;
     public int DisplayOrder { get; set; }
     public string Stem { get; set; } = string.Empty;
+    public string? Instructions { get; set; }
+    public string? ClinicalScenario { get; set; }
+    public string? ExhibitsJson { get; set; }
+    public string? StructuredContentJson { get; set; }
     public string QuestionType { get; set; } = string.Empty;
+    public string QuestionTypeKey { get; set; } = string.Empty;
     public string ClientNeed { get; set; } = string.Empty;
+    public string? ClientNeedId { get; set; }
+    public string? ClientNeedName { get; set; }
     public string Difficulty { get; set; } = string.Empty;
     public List<AdminExamPreviewOptionDto> Options { get; set; } = new();
     public string? Rationale { get; set; }
+    public string? OverallRationale { get; set; }
     public List<string> CorrectOptionKeys { get; set; } = new();
 }
 

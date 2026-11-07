@@ -2784,15 +2784,30 @@ public class ExamLifecycleService : IExamLifecycleService
                     Id = eq.Question.Id,
                     DisplayOrder = i + 1,
                     Stem = eq.Question.Stem,
+                    Instructions = eq.Question.Instructions,
+                    ClinicalScenario = eq.Question.ClinicalScenario,
+                    ExhibitsJson = eq.Question.ExhibitsJson,
+                    StructuredContentJson = eq.Question.StructuredContentJson,
                     QuestionType = eq.Question.QuestionTypeKey,
+                    QuestionTypeKey = eq.Question.QuestionTypeKey,
                     ClientNeed = eq.Question.ClientNeedId ?? "MOC",
+                    ClientNeedId = eq.Question.ClientNeedId ?? "MOC",
+                    ClientNeedName = ClientNeedCategory.GetDisplayName(eq.Question.ClientNeedId ?? "MOC"),
                     Difficulty = eq.Question.Difficulty.ToString(),
                     Rationale = eq.Question.OverallRationale,
+                    OverallRationale = eq.Question.OverallRationale,
                     Options = eq.Question.Options.OrderBy(o => o.DisplayOrder).Select(o => new AdminExamPreviewOptionDto
                     {
+                        Id = o.Id,
                         Key = o.OptionKey,
+                        OptionKey = o.OptionKey,
                         Text = o.Content,
-                        IsCorrect = o.IsCorrect
+                        Content = o.Content,
+                        IsCorrect = o.IsCorrect,
+                        Rationale = o.Rationale,
+                        DistractorRationale = o.DistractorRationale,
+                        MediaUrl = o.MediaUrl,
+                        DisplayOrder = o.DisplayOrder
                     }).ToList(),
                     CorrectOptionKeys = eq.Question.Options.Where(o => o.IsCorrect).Select(o => o.OptionKey).ToList()
                 });
@@ -2819,15 +2834,30 @@ public class ExamLifecycleService : IExamLifecycleService
                     Id = q.Id,
                     DisplayOrder = i + 1,
                     Stem = q.Stem,
+                    Instructions = q.Instructions,
+                    ClinicalScenario = q.ClinicalScenario,
+                    ExhibitsJson = q.ExhibitsJson,
+                    StructuredContentJson = q.StructuredContentJson,
                     QuestionType = q.QuestionTypeKey,
+                    QuestionTypeKey = q.QuestionTypeKey,
                     ClientNeed = q.ClientNeedId ?? "MOC",
+                    ClientNeedId = q.ClientNeedId ?? "MOC",
+                    ClientNeedName = ClientNeedCategory.GetDisplayName(q.ClientNeedId ?? "MOC"),
                     Difficulty = q.Difficulty.ToString(),
                     Rationale = q.OverallRationale,
+                    OverallRationale = q.OverallRationale,
                     Options = q.Options.OrderBy(o => o.DisplayOrder).Select(o => new AdminExamPreviewOptionDto
                     {
+                        Id = o.Id,
                         Key = o.OptionKey,
+                        OptionKey = o.OptionKey,
                         Text = o.Content,
-                        IsCorrect = o.IsCorrect
+                        Content = o.Content,
+                        IsCorrect = o.IsCorrect,
+                        Rationale = o.Rationale,
+                        DistractorRationale = o.DistractorRationale,
+                        MediaUrl = o.MediaUrl,
+                        DisplayOrder = o.DisplayOrder
                     }).ToList(),
                     CorrectOptionKeys = q.Options.Where(o => o.IsCorrect).Select(o => o.OptionKey).ToList()
                 });
