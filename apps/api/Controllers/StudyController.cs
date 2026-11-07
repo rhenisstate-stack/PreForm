@@ -145,6 +145,58 @@ public class StudyController : ControllerBase
         return Ok(new { success = true, message = "Deck archived." });
     }
 
+    [HttpPut("flashcards/decks/{deckId}")]
+    public async Task<IActionResult> UpdateDeck(string deckId, [FromBody] UpdateFlashcardDeckRequest request, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        try
+        {
+            var deck = await _flashcards.UpdateDeckAsync(userId, deckId, request, ct);
+            return Ok(new { success = true, deck });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Deck not found." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, error = ex.Message });
+        }
+    }
+
+    [HttpPost("flashcards/decks/{deckId}/duplicate")]
+    public async Task<IActionResult> DuplicateDeck(string deckId, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        try
+        {
+            var deck = await _flashcards.DuplicateDeckAsync(userId, deckId, ct);
+            return Ok(new { success = true, deck });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Deck not found." });
+        }
+    }
+
+    [HttpDelete("flashcards/decks/{deckId}")]
+    public async Task<IActionResult> DeleteDeck(string deckId, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        var deleted = await _flashcards.DeleteDeckAsync(userId, deckId, ct);
+        if (!deleted)
+        {
+            return NotFound(new { success = false, error = "Deck not found." });
+        }
+        return Ok(new { success = true, message = "Deck deleted." });
+    }
+
     // ── Cards ──
 
     [HttpPost("flashcards/decks/{deckId}/cards")]
@@ -197,6 +249,129 @@ public class StudyController : ControllerBase
             return NotFound(new { success = false, error = "Flashcard not found." });
         }
         return Ok(new { success = true, message = "Flashcard deleted." });
+    }
+
+    [HttpGet("flashcards/cards/{cardId}")]
+    public async Task<IActionResult> GetCard(string cardId, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        try
+        {
+            var card = await _flashcards.GetCardByIdAsync(userId, cardId, ct);
+            return Ok(new { success = true, card });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Flashcard not found." });
+        }
+    }
+
+    [HttpPut("flashcards/cards/{cardId}")]
+    public async Task<IActionResult> UpdateCard(string cardId, [FromBody] UpdateFlashcardRequest request, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        try
+        {
+            var card = await _flashcards.UpdateCardAsync(userId, cardId, request, ct);
+            return Ok(new { success = true, card });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Flashcard not found." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, error = ex.Message });
+        }
+    }
+
+    [HttpPost("flashcards/cards/{cardId}/duplicate")]
+    public async Task<IActionResult> DuplicateCard(string cardId, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        try
+        {
+            var card = await _flashcards.DuplicateCardAsync(userId, cardId, ct);
+            return Ok(new { success = true, card });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Flashcard not found." });
+        }
+    }
+
+    [HttpPost("flashcards/cards/{cardId}/move")]
+    public async Task<IActionResult> MoveCard(string cardId, [FromBody] MoveFlashcardRequest request, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        try
+        {
+            var card = await _flashcards.MoveCardAsync(userId, cardId, request, ct);
+            return Ok(new { success = true, card });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Flashcard or target deck not found." });
+        }
+    }
+
+    [HttpPost("flashcards/cards/{cardId}/toggle-favourite")]
+    public async Task<IActionResult> ToggleFavourite(string cardId, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        try
+        {
+            var card = await _flashcards.ToggleFavouriteAsync(userId, cardId, ct);
+            return Ok(new { success = true, card });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Flashcard not found." });
+        }
+    }
+
+    [HttpPost("flashcards/cards/{cardId}/toggle-difficult")]
+    public async Task<IActionResult> ToggleDifficult(string cardId, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        try
+        {
+            var card = await _flashcards.ToggleDifficultAsync(userId, cardId, ct);
+            return Ok(new { success = true, card });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Flashcard not found." });
+        }
+    }
+
+    [HttpPost("flashcards/decks/{deckId}/reorder")]
+    public async Task<IActionResult> ReorderCards(string deckId, [FromBody] ReorderFlashcardsRequest request, CancellationToken ct)
+    {
+        var authResult = RequireAuth(out var userId, out var email);
+        if (authResult != null) return authResult;
+
+        try
+        {
+            var cards = await _flashcards.ReorderCardsAsync(userId, deckId, request, ct);
+            return Ok(new { success = true, count = cards.Count, cards });
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound(new { success = false, error = "Deck not found." });
+        }
     }
 
     // ── Review ──
