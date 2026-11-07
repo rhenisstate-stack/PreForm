@@ -20,11 +20,23 @@ import {
   Eye,
   LogOut,
   Loader2,
+  Mail,
+  Send,
+  Clock,
+  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   FullPageFormLayout,
   FullPageDetailsLayout,
@@ -32,6 +44,7 @@ import {
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
 import type { AdminUserListItem } from "@/lib/api-services";
+import { invitationService, StaffInvitation } from "@/lib/invitation-service";
 
 export function AdminUsersClient({
   initialMode = "list",
@@ -42,6 +55,7 @@ export function AdminUsersClient({
 } = {}) {
   const { user: currentUser } = useAuth();
 
+  const [activeMainTab, setActiveMainTab] = React.useState<"users" | "invitations">("users");
   const [users, setUsers] = React.useState<AdminUserListItem[]>([]);
   const [total, setTotal] = React.useState(0);
   const [page, setPage] = React.useState(1);
@@ -50,6 +64,23 @@ export function AdminUsersClient({
   const [roleFilter, setRoleFilter] = React.useState("");
   const [statusFilter, setStatusFilter] = React.useState("");
   const [loading, setLoading] = React.useState(true);
+
+  // Staff Invitations State
+  const [invitations, setInvitations] = React.useState<StaffInvitation[]>([]);
+  const [invitationsLoading, setInvitationsLoading] = React.useState(false);
+  const [inviteModalOpen, setInviteModalOpen] = React.useState(false);
+  const [inviteForm, setInviteForm] = React.useState<{
+    email: string;
+    role: StaffInvitation["role"];
+    notes: string;
+    expiryHours: number;
+  }>({
+    email: "",
+    role: "instructor",
+    notes: "",
+    expiryHours: 72,
+  });
+  const [inviteSubmitting, setInviteSubmitting] = React.useState(false);
 
   // Full-Page CRUD state
   const [selectedUser, setSelectedUser] = React.useState<any | null>(null);
