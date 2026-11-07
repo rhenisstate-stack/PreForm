@@ -113,3 +113,57 @@ public class UpdateCuratedGuideRequest
 
     public string? ChangeSummary { get; set; }
 }
+
+public class CreateStudyGuideCategoryRequest
+{
+    [Required, MaxLength(128)]
+    public string Slug { get; set; } = string.Empty;
+
+    [Required, MaxLength(160)]
+    public string Title { get; set; } = string.Empty;
+
+    [MaxLength(64)]
+    public string ShortTitle { get; set; } = string.Empty;
+
+    [MaxLength(1024)]
+    public string Description { get; set; } = string.Empty;
+
+    [MaxLength(64)]
+    public string Badge { get; set; } = "Core";
+
+    [MaxLength(64)]
+    public string IconName { get; set; } = "BookOpen";
+
+    [MaxLength(32)]
+    public string ColorTheme { get; set; } = "teal";
+
+    public int DisplayOrder { get; set; } = 0;
+}
+
+public class UpdateStudyGuideCategoryRequest
+{
+    [MaxLength(128)]
+    public string? Slug { get; set; }
+
+    [MaxLength(160)]
+    public string? Title { get; set; }
+
+    [MaxLength(64)]
+    public string? ShortTitle { get; set; }
+
+    [MaxLength(1024)]
+    public string? Description { get; set; }
+
+    [MaxLength(64)]
+    public string? Badge { get; set; }
+
+    [MaxLength(64)]
+    public string? IconName { get; set; }
+
+    [MaxLength(32)]
+    public string? ColorTheme { get; set; }
+
+    public int? DisplayOrder { get; set; }
+
+    public bool? IsActive { get; set; }
+}
