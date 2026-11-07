@@ -111,7 +111,8 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
         Assert.Equal("GradingSupported", sata.GetProperty("implementationStatus").GetString());
         Assert.Equal("automatic-exact-match",
             sata.GetProperty("supportedScoringModes")[0].GetString());
-        Assert.False(sata.GetProperty("capabilityDetails").GetProperty("supportsPartialCredit").GetBoolean());
+        var partialCredit = sata.GetProperty("capabilityDetails").GetProperty("supportsPartialCredit").GetBoolean();
+        Assert.False(partialCredit, await response.Content.ReadAsStringAsync());
         Assert.False(sata.TryGetProperty("id", out _));
         Assert.DoesNotContain("isCorrect", sata.GetRawText(), StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("answerKey", sata.GetRawText(), StringComparison.OrdinalIgnoreCase);
