@@ -171,8 +171,11 @@ public class MonetizationManagementTests
 
         var recordRes = await controller.RecordManualPayment(recordDto, CancellationToken.None);
         var recordOk = Assert.IsType<OkObjectResult>(recordRes);
-        var recordData = recordOk.Value as dynamic;
-        string authId = recordData.authorizationId;
+        var recordData = recordOk.Value;
+        Assert.NotNull(recordData);
+
+        var authId = recordData.GetType().GetProperty("authorizationId")?.GetValue(recordData) as string;
+        Assert.False(string.IsNullOrWhiteSpace(authId));
 
         var storedAuth = await context.ManualSubscriptionAuthorizations.FindAsync(authId);
         Assert.NotNull(storedAuth);
