@@ -28,7 +28,6 @@ public class QuestionTypesController : ControllerBase
     public async Task<ActionResult<QuestionTypeCatalogueResponse>> GetQuestionTypes(CancellationToken cancellationToken = default)
     {
         var types = await _questionTypeService.GetAllQuestionTypesAsync(cancellationToken);
-        Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(types.First(t => t.Key == "sata")));
         return Ok(new QuestionTypeCatalogueResponse
         {
             Success = true,

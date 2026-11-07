@@ -110,7 +110,6 @@ public sealed class QuestionTypeService : IQuestionTypeService
         }
 
         var publicCapabilities = NormalizePublicCapabilities(descriptor);
-        Console.WriteLine($"DEBUG {definition.Key} raw={(int)descriptor.Capabilities} public={(int)publicCapabilities} scoring={string.Join(",", descriptor.SupportedScoringModes)}");
 
         return new QuestionTypeDto
         {
