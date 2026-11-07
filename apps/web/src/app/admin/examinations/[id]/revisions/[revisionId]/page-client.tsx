@@ -621,8 +621,20 @@ export function AdminRevisionStudioClient({
             </div>
           )}
         </FullPageDeleteLayout>
-      ) : (
-        <>
+      ) : null}
+
+      <div
+        className={
+          isPickerOpen ||
+          isDuplicateOpen ||
+          isPreviewOpen ||
+          isDiscardOpen ||
+          Boolean(lifecycleModal) ||
+          Boolean(questionToRemove)
+            ? "hidden"
+            : "space-y-6"
+        }
+      >
       {/* Top Breadcrumb & Family Link */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Link
@@ -1321,8 +1333,7 @@ export function AdminRevisionStudioClient({
           </div>
         </div>
       )}
-        </>
-      )}
+      </div>
     </div>
   );
 }

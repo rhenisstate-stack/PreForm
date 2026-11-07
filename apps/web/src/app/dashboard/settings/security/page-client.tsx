@@ -278,7 +278,6 @@ export function SecuritySettingsClient() {
           ]}
           recordSummary={
             <div className="space-y-1 text-sm">
-              <div className="font-semibold text-foreground">{targetSessionToRevoke.deviceLabel}</div>
               <div className="text-xs text-muted-foreground">
                 IP: {targetSessionToRevoke.lastIpAddress || "Unknown"} • Signed in: {formatDateTime(targetSessionToRevoke.createdAt)}
               </div>
@@ -287,7 +286,7 @@ export function SecuritySettingsClient() {
           consequences={[
             targetSessionToRevoke.isCurrent
               ? "You will be signed out of this browser and redirected to the sign-in screen."
-              : `The session on ${targetSessionToRevoke.deviceLabel} will be immediately invalidated.`,
+              : "The remote session will be immediately invalidated.",
           ]}
           onBack={() => setTargetSessionToRevoke(null)}
           onCancel={() => setTargetSessionToRevoke(null)}

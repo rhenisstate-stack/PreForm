@@ -428,7 +428,7 @@ export function AdminSecuritySessionsClient() {
           </div>
         }
         consequences={[
-          "Restores 2 concurrent sessions, 1 session per client, 300m idle timeout, and 10,080m absolute timeout.",
+          "Immediately increments the global policy version and applies canonical timeout and concurrency limits.",
         ]}
         onBack={() => setConfirmResetPolicyOpen(false)}
         onCancel={() => setConfirmResetPolicyOpen(false)}
