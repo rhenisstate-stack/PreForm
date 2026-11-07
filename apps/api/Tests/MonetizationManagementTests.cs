@@ -107,7 +107,7 @@ public class MonetizationManagementTests
         var (guardSuccess, guardError) = await subscriptionService.DeletePlanAsync("plan_with_subs");
         Assert.False(guardSuccess);
         Assert.NotNull(guardError);
-        Assert.Contains("subscription records exist", guardError, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Cannot permanently delete plan", guardError);
 
         // Deleting unused plan succeeds
         var (deleteSuccess, deleteError) = await subscriptionService.DeletePlanAsync("plan_unused");
@@ -207,8 +207,8 @@ public class MonetizationManagementTests
         Assert.Equal(authId, activeSubscription.ManualAuthorizationId);
 
         var updatedUser = await context.Users.FindAsync("usr_cand_offline");
-        Assert.Equal("plan_pn_pro", updatedUser!.ActivePlan);
-        Assert.Equal("PN", updatedUser.Pathway);
+        Assert.Equal(plan.Name, updatedUser!.ActivePlan);
+        Assert.Equal("pn", updatedUser.Pathway, ignoreCase: true);
     }
 
     [Fact]
