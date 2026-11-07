@@ -94,6 +94,7 @@ builder.Services.AddScoped<INotesService, NotesService>();
 builder.Services.AddScoped<IReviewSessionService, ReviewSessionService>();
 builder.Services.AddScoped<ITopicQuizService, TopicQuizService>();
 builder.Services.AddScoped<ICuratedStudyGuideService, CuratedStudyGuideService>();
+builder.Services.AddScoped<IAdminStudyGuideService, AdminStudyGuideService>();
 builder.Services.AddSingleton<MockStudyProvider>();
 builder.Services.AddHttpClient<GeminiStudyProvider>();
 builder.Services.AddScoped<IAIStudyProvider, GeminiStudyProvider>();

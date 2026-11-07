@@ -562,3 +562,29 @@ public class FrequentlyMissedQuestionDto
     public int IncorrectResponses { get; set; }
     public double MissRatePercentage { get; set; }
 }
+
+public class SetStatusRequest
+{
+    public string Status { get; set; } = string.Empty;
+}
+
+public class ArchiveRequest
+{
+    public bool IsArchived { get; set; } = true;
+}
+
+public class PublishRequest
+{
+    public bool IsPublished { get; set; } = true;
+}
+
+public class ReorderCardsRequest
+{
+    public List<string> CardIds { get; set; } = new();
+}
+
+public class AssignQuestionsRequest
+{
+    public List<string> QuestionIds { get; set; } = new();
+}
+
