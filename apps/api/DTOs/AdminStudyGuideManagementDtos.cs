@@ -439,6 +439,7 @@ public class AdminCreateTopicQuizRequest
     public bool ImmediateFeedback { get; set; } = true;
     public string FeedbackMode { get; set; } = "immediate";
     public int MaxAttempts { get; set; } = 0;
+    [Range(50, 100, ErrorMessage = "TargetScore must be between 50 and 100.")]
     public int TargetScore { get; set; } = 75;
     public string Status { get; set; } = "Draft";
     public bool IsPublished { get; set; } = false;
@@ -469,6 +470,7 @@ public class AdminUpdateTopicQuizRequest
     public bool ImmediateFeedback { get; set; } = true;
     public string FeedbackMode { get; set; } = "immediate";
     public int MaxAttempts { get; set; } = 0;
+    [Range(50, 100, ErrorMessage = "TargetScore must be between 50 and 100.")]
     public int TargetScore { get; set; } = 75;
     public string Status { get; set; } = "Draft";
     public bool IsPublished { get; set; } = false;

@@ -100,8 +100,10 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
         var response = await client.GetAsync("/api/v1/question-types");
 
         response.EnsureSuccessStatusCode();
+        var body = await response.Content.ReadFromJsonAsync<QuestionTypeCatalogueResponse>();
+        Assert.NotNull(body);
+        Assert.False(body.Items.Single(item => item.Key == "sata").CapabilityDetails.SupportsPartialCredit);
         var payload = await response.Content.ReadAsStringAsync();
-        Console.WriteLine(payload);
         using var document = JsonDocument.Parse(payload);
         var json = document.RootElement;
         var sata = json.GetProperty("items").EnumerateArray()
