@@ -1293,8 +1293,8 @@ export function StandaloneTestsWorkspace({
       {previewRevisionId && (
         <ExaminationPreviewDialog
           revisionId={previewRevisionId}
-          isOpen={!!previewRevisionId}
-          onClose={() => setPreviewRevisionId(null)}
+          open={!!previewRevisionId}
+          onOpenChange={(open) => !open && setPreviewRevisionId(null)}
         />
       )}
 

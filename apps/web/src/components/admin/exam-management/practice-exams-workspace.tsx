@@ -890,30 +890,33 @@ export function PracticeExamsWorkspace({
       {previewRevisionId && (
         <ExaminationPreviewDialog
           revisionId={previewRevisionId}
-          isOpen={!!previewRevisionId}
-          onClose={() => setPreviewRevisionId(null)}
+          open={!!previewRevisionId}
+          onOpenChange={(open) => !open && setPreviewRevisionId(null)}
         />
       )}
 
       {/* Duplicate Dialog */}
       {duplicateTarget && (
         <DuplicateExaminationDialog
-          isOpen={!!duplicateTarget}
-          onClose={() => setDuplicateTarget(null)}
-          sourceExaminationId={duplicateTarget.id}
-          sourceExaminationCode={duplicateTarget.code}
-          sourceExaminationTitle={duplicateTarget.title}
-          pathway={duplicateTarget.pathway}
-          sourceRevision={
-            duplicateTarget.publishedRevision ||
-            duplicateTarget.latestRevision ||
-            duplicateTarget.currentRevision
-          }
-          onDuplicated={() => {
-            setDuplicateTarget(null);
-            loadPracticeExams();
-            onExamCatalogChanged?.();
+          open={!!duplicateTarget}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDuplicateTarget(null);
+              loadPracticeExams();
+              onExamCatalogChanged?.();
+            }
           }}
+          examinationId={duplicateTarget.id}
+          examinationCode={duplicateTarget.code}
+          examinationTitle={duplicateTarget.title}
+          examinationPathway={duplicateTarget.pathway}
+          eligibleRevisions={
+            [
+              duplicateTarget.publishedRevision ||
+                duplicateTarget.latestRevision ||
+                duplicateTarget.currentRevision,
+            ].filter(Boolean)
+          }
         />
       )}
 
