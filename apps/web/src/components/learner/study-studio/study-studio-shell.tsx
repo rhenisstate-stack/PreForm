@@ -30,9 +30,11 @@ import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 
 const STUDY_NAV_ITEMS = [
   { href: "/dashboard/study", label: "Studio Overview", icon: Sparkles, exact: true },
-  { href: "/dashboard/study/flashcards", label: "Flashcard Decks", icon: Layers, exact: false },
-  { href: "/dashboard/study/review", label: "Review Session", icon: RotateCcw, exact: true },
-  { href: "/dashboard/study/quizzes", label: "Topic Quizzes", icon: FileQuestion, exact: true },
+  { href: "/dashboard/study/notes", label: "Personal Notes", icon: BookOpen, exact: false },
+  { href: "/dashboard/study/flashcards", label: "Flashcards", icon: Layers, exact: false },
+  { href: "/dashboard/study/review", label: "Review Sessions", icon: RotateCcw, exact: false },
+  { href: "/dashboard/study/quizzes", label: "Topic Quizzes", icon: FileQuestion, exact: false },
+  { href: "/dashboard/study/guides", label: "Curated Guides", icon: Compass, exact: false },
 ] as const;
 
 export function StudyStudioShell({ children }: { children: React.ReactNode }) {

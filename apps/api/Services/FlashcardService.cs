@@ -359,6 +359,16 @@ public class FlashcardService : IFlashcardService
         return cards.Select(MapCard).ToList();
     }
 
+    public async Task<FlashcardDto> GetCardAsync(string userId, string cardId, CancellationToken ct)
+    {
+        var card = await _context.Flashcards
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == cardId && c.UserId == userId && c.Status != "archived", ct)
+            ?? throw new KeyNotFoundException("Flashcard not found.");
+
+        return MapCard(card);
+    }
+
     public async Task<FlashcardDto> AddCardAsync(
         string userId, string deckId, CreateFlashcardRequest request, CancellationToken ct)
     {

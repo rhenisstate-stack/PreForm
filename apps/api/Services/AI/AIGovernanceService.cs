@@ -93,9 +93,7 @@ public class AIGovernanceService : IAIGovernanceService
                 RequestCount = 1,
                 TotalInputTokens = inputTokens,
                 TotalOutputTokens = outputTokens,
-                EstimatedCostUsd = (inputTokens + outputTokens) * 0.00000015m,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                EstimatedCostUsd = (inputTokens + outputTokens) * 0.00000015m
             };
             _context.AIUsageRecords.Add(usage);
         }
@@ -105,7 +103,6 @@ public class AIGovernanceService : IAIGovernanceService
             usage.TotalInputTokens += inputTokens;
             usage.TotalOutputTokens += outputTokens;
             usage.EstimatedCostUsd += (inputTokens + outputTokens) * 0.00000015m;
-            usage.UpdatedAt = DateTime.UtcNow;
         }
 
         await _context.SaveChangesAsync();

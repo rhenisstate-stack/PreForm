@@ -30,6 +30,8 @@ public interface IFlashcardService
     // Cards
     Task<List<FlashcardDto>> GetDeckCardsAsync(string userId, string deckId, CancellationToken ct);
 
+    Task<FlashcardDto> GetCardAsync(string userId, string cardId, CancellationToken ct);
+
     Task<FlashcardDto> AddCardAsync(
         string userId, string deckId, CreateFlashcardRequest request, CancellationToken ct);
 

@@ -277,7 +277,6 @@ public class CuratedStudyGuideService : ICuratedStudyGuideService
             Status = string.IsNullOrWhiteSpace(request.Status) ? "Draft" : request.Status,
             PublishedAt = request.Status == "Published" ? now : null,
             ScheduledPublishAt = request.ScheduledPublishAt,
-            CreatedById = createdByUserId,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -293,7 +292,7 @@ public class CuratedStudyGuideService : ICuratedStudyGuideService
             Title = guide.Title,
             ContentJson = guide.ContentJson,
             ChangeSummary = "Initial creation",
-            EditedById = createdByUserId,
+            CreatedBy = createdByUserId,
             CreatedAt = now
         });
 
@@ -374,7 +373,7 @@ public class CuratedStudyGuideService : ICuratedStudyGuideService
                 Title = guide.Title,
                 ContentJson = guide.ContentJson,
                 ChangeSummary = request.ChangeSummary ?? "Content update",
-                EditedById = updatedByUserId,
+                CreatedBy = updatedByUserId,
                 CreatedAt = now
             });
         }
@@ -396,7 +395,6 @@ public class CuratedStudyGuideService : ICuratedStudyGuideService
 
         guide.Status = "Published";
         guide.PublishedAt = DateTime.UtcNow;
-        guide.ReviewedById = publishedByUserId;
         guide.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();

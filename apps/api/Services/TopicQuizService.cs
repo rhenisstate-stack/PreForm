@@ -118,7 +118,7 @@ public class TopicQuizService : ITopicQuizService
 
         if (!string.IsNullOrWhiteSpace(topicSlug))
         {
-            qQuery = qQuery.Where(q => q.Topic != null && (q.Topic.Slug == topicSlug || q.Topic.Name.ToLower() == topicSlug.ToLower()));
+            qQuery = qQuery.Where(q => q.Topic != null && (q.Topic.Title.ToLower() == topicSlug.ToLower() || q.Topic.Id == topicSlug));
         }
 
         var matchedQuestions = await qQuery
@@ -404,7 +404,7 @@ public class TopicQuizService : ITopicQuizService
                 missedQuestions.Add(MapQuestionToDto(q, true));
                 if (q.Topic != null)
                 {
-                    recommendedTopics.Add(q.Topic.Name);
+                    recommendedTopics.Add(q.Topic.Title);
                 }
             }
         }

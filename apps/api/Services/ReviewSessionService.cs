@@ -46,7 +46,7 @@ public class ReviewSessionService : IReviewSessionService
 
         query = mode switch
         {
-            "all_due" => query.Where(c => c.NextDueAt <= now).OrderBy(c => c.NextDueAt),
+            "all_due" => query.Where(c => c.DueAt <= now).OrderBy(c => c.DueAt),
             "difficult" => query.Where(c => c.IsDifficult).OrderByDescending(c => c.UpdatedAt),
             "favourites" => query.Where(c => c.IsFavourite).OrderByDescending(c => c.UpdatedAt),
             "random" => query.OrderBy(c => EF.Functions.Random()),
@@ -143,7 +143,7 @@ public class ReviewSessionService : IReviewSessionService
         card.IntervalDays = scheduleUpdate.IntervalDays;
         card.EaseFactor = scheduleUpdate.EaseFactor;
         card.RepetitionCount = scheduleUpdate.RepetitionCount;
-        card.NextDueAt = scheduleUpdate.NextDueAt;
+        card.DueAt = scheduleUpdate.NextDueAt;
         card.LastReviewedAt = now;
         card.UpdatedAt = now;
 
@@ -162,10 +162,10 @@ public class ReviewSessionService : IReviewSessionService
             Id = Guid.NewGuid().ToString(),
             FlashcardId = card.Id,
             UserId = userId,
-            Rating = rating.ToString().ToLowerInvariant(),
+            RecallRating = (int)rating,
             IntervalDays = scheduleUpdate.IntervalDays,
             EaseFactor = scheduleUpdate.EaseFactor,
-            RepetitionNumber = scheduleUpdate.RepetitionCount,
+            RepetitionCount = scheduleUpdate.RepetitionCount,
             ReviewedAt = now
         };
         _context.FlashcardReviews.Add(review);
@@ -259,8 +259,8 @@ public class ReviewSessionService : IReviewSessionService
         var now = DateTime.UtcNow;
         var dueRemaining = await _context.Flashcards
             .AsNoTracking()
-            .Where(c => c.UserId == userId && c.NextDueAt <= now)
-            .OrderBy(c => c.NextDueAt)
+            .Where(c => c.UserId == userId && c.DueAt <= now)
+            .OrderBy(c => c.DueAt)
             .Take(10)
             .Select(c => new FlashcardDto
             {
@@ -271,15 +271,14 @@ public class ReviewSessionService : IReviewSessionService
                 Explanation = c.Explanation,
                 Difficulty = c.Difficulty,
                 CardStyle = c.CardStyle,
-                NextDueAt = c.NextDueAt,
+                DueAt = c.DueAt,
                 RepetitionCount = c.RepetitionCount,
                 IntervalDays = c.IntervalDays,
                 EaseFactor = c.EaseFactor,
                 LastReviewedAt = c.LastReviewedAt,
                 IsDifficult = c.IsDifficult,
                 IsFavourite = c.IsFavourite,
-                CreatedAt = c.CreatedAt,
-                UpdatedAt = c.UpdatedAt
+                CreatedAt = c.CreatedAt
             })
             .ToListAsync();
 

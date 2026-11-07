@@ -259,7 +259,7 @@ public class StudyController : ControllerBase
 
         try
         {
-            var card = await _flashcards.GetCardByIdAsync(userId, cardId, ct);
+            var card = await _flashcards.GetCardAsync(userId, cardId, ct);
             return Ok(new { success = true, card });
         }
         catch (KeyNotFoundException)
@@ -329,15 +329,12 @@ public class StudyController : ControllerBase
         var authResult = RequireAuth(out var userId, out var email);
         if (authResult != null) return authResult;
 
-        try
-        {
-            var card = await _flashcards.ToggleFavouriteAsync(userId, cardId, ct);
-            return Ok(new { success = true, card });
-        }
-        catch (KeyNotFoundException)
+        var toggled = await _flashcards.ToggleCardFavouriteAsync(userId, cardId, ct);
+        if (!toggled)
         {
             return NotFound(new { success = false, error = "Flashcard not found." });
         }
+        return Ok(new { success = true });
     }
 
     [HttpPost("flashcards/cards/{cardId}/toggle-difficult")]
@@ -346,15 +343,12 @@ public class StudyController : ControllerBase
         var authResult = RequireAuth(out var userId, out var email);
         if (authResult != null) return authResult;
 
-        try
-        {
-            var card = await _flashcards.ToggleDifficultAsync(userId, cardId, ct);
-            return Ok(new { success = true, card });
-        }
-        catch (KeyNotFoundException)
+        var toggled = await _flashcards.ToggleCardDifficultAsync(userId, cardId, ct);
+        if (!toggled)
         {
             return NotFound(new { success = false, error = "Flashcard not found." });
         }
+        return Ok(new { success = true });
     }
 
     [HttpPost("flashcards/decks/{deckId}/reorder")]
@@ -363,15 +357,12 @@ public class StudyController : ControllerBase
         var authResult = RequireAuth(out var userId, out var email);
         if (authResult != null) return authResult;
 
-        try
-        {
-            var cards = await _flashcards.ReorderCardsAsync(userId, deckId, request, ct);
-            return Ok(new { success = true, count = cards.Count, cards });
-        }
-        catch (KeyNotFoundException)
+        var reordered = await _flashcards.ReorderCardsAsync(userId, deckId, request.CardIdsInOrder, ct);
+        if (!reordered)
         {
             return NotFound(new { success = false, error = "Deck not found." });
         }
+        return Ok(new { success = true, message = "Cards reordered." });
     }
 
     // ── Review ──
