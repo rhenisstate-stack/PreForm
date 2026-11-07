@@ -22,6 +22,7 @@ import {
 } from "@/lib/question-types";
 
 export interface EditableQuestionOption {
+  id?: string;
   optionKey: string;
   content: string;
   isCorrect: boolean;
