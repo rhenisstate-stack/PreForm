@@ -880,7 +880,7 @@ export function ProfilePageClient() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleUpdatePassword} className="space-y-5 max-w-xl">
+              <form onSubmit={handleUpdatePassword} className="space-y-5 w-full max-w-none">
                 {passwordMessage && (
                   <div
                     className={`p-3 rounded-md text-xs font-medium flex items-center gap-2 ${
@@ -1019,7 +1019,7 @@ export function ProfilePageClient() {
               </p>
             </div>
 
-            <div className="space-y-4 max-w-xl">
+            <div className="space-y-4 w-full max-w-none">
               <div className="flex items-center justify-between p-4 rounded-xl bg-muted/40">
                 <div className="space-y-0.5">
                   <span className="text-sm font-semibold text-foreground">Daily Study Reminders</span>

@@ -486,7 +486,6 @@ function CreateDeckModal({ onClose, onCreated }: { onClose: () => void; onCreate
             {submitting ? "Creating…" : source === "curated_guide" ? "Generate deck from guide" : "Create deck"}
           </Button>
         </div>
-      </div>
     </div>
   );
 }
@@ -510,6 +509,8 @@ function DeckDetail({
   const [difficulty, setDifficulty] = React.useState<"fundamental" | "medium" | "high_yield">("medium");
   const [addError, setAddError] = React.useState<string | null>(null);
   const [adding, setAdding] = React.useState(false);
+  const [cardToDelete, setCardToDelete] = React.useState<Flashcard | null>(null);
+  const [archiveConfirmOpen, setArchiveConfirmOpen] = React.useState(false);
 
   const reloadCards = React.useCallback(async () => {
     setLoadState("loading");
@@ -556,27 +557,90 @@ function DeckDetail({
     }
   };
 
-  const confirmDeleteCard = async (card: Flashcard) => {
-    if (!window.confirm(`Delete the card “${card.front.slice(0, 60)}…”? This cannot be undone.`)) return;
+  const confirmDeleteCard = (card: Flashcard) => {
+    setCardToDelete(card);
+  };
+
+  const executeDeleteCard = async () => {
+    if (!cardToDelete) return;
     try {
-      await deleteFlashcard(card.id);
+      await deleteFlashcard(cardToDelete.id);
+      setCardToDelete(null);
       await reloadCards();
       onChanged();
     } catch {
-      // leave list unchanged on failure; user can retry
+      setCardToDelete(null);
     }
   };
 
-  const confirmArchiveDeck = async () => {
-    if (!window.confirm(`Archive deck “${deck.name}”? Archived decks are hidden from your active decks.`)) return;
+  const confirmArchiveDeck = () => {
+    setArchiveConfirmOpen(true);
+  };
+
+  const executeArchiveDeck = async () => {
     try {
       await archiveFlashcardDeck(deck.id);
+      setArchiveConfirmOpen(false);
       onChanged();
       onBack();
     } catch {
-      // ignore; user can retry
+      setArchiveConfirmOpen(false);
     }
   };
+
+  if (cardToDelete) {
+    return (
+      <FullPageDeleteLayout
+        title="Delete Flashcard"
+        subtitle="Permanently remove this flashcard from your deck."
+        breadcrumbs={[
+          { label: "Flashcards", onClick: onBack },
+          { label: deck.name, onClick: () => setCardToDelete(null) },
+          { label: "Delete Card" },
+        ]}
+        recordSummary={
+          <div className="space-y-1 text-sm">
+            <div className="font-semibold">{cardToDelete.front}</div>
+            <div className="text-xs text-muted-foreground">{cardToDelete.back}</div>
+          </div>
+        }
+        consequences={[
+          "Deleting this card permanently removes it and its review history from your deck.",
+        ]}
+        onBack={() => setCardToDelete(null)}
+        onCancel={() => setCardToDelete(null)}
+        onConfirmDelete={executeDeleteCard}
+        confirmLabel="Permanently Delete Card"
+      />
+    );
+  }
+
+  if (archiveConfirmOpen) {
+    return (
+      <FullPageDeleteLayout
+        title="Archive Flashcard Deck"
+        subtitle="Archived decks are hidden from your active decks without deleting your review history."
+        breadcrumbs={[
+          { label: "Flashcards", onClick: onBack },
+          { label: deck.name, onClick: () => setArchiveConfirmOpen(false) },
+          { label: "Archive Deck" },
+        ]}
+        recordSummary={
+          <div className="space-y-1 text-sm">
+            <div className="font-semibold">{deck.name}</div>
+            <div className="text-xs text-muted-foreground">{cards.length} cards</div>
+          </div>
+        }
+        consequences={[
+          "Hides this deck from your active deck list while preserving historical review statistics.",
+        ]}
+        onBack={() => setArchiveConfirmOpen(false)}
+        onCancel={() => setArchiveConfirmOpen(false)}
+        onConfirmDelete={executeArchiveDeck}
+        confirmLabel="Archive Deck"
+      />
+    );
+  }
 
   return (
     <section data-testid="study-flashcards-deck-detail" className="space-y-6">
