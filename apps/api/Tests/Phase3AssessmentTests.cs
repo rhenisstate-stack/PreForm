@@ -578,4 +578,36 @@ public class Phase3AssessmentTests
         Assert.Contains(assessments, a => a.ExamType == "Practice");
         Assert.Contains(assessments, a => a.ExamType == "CAT");
     }
+
+    [Fact]
+    public async Task ExamAttemptsController_GetAttempts_WithMissingExam_ReturnsSuccessful200Without500()
+    {
+        var (controller, _, db) = CreateController("P3_GetAttempts_NullExam_Test", "cand_attempts_null_exam");
+
+        // Add attempt with nonexistent ExamId to simulate orphaned or desynchronized attempt
+        db.ExamAttempts.Add(new ExamAttempt
+        {
+            Id = "att_orphan_1",
+            UserId = "cand_attempts_null_exam",
+            ExamId = "nonexistent_exam_id",
+            Status = AttemptStatus.InProgress,
+            ScorePercent = 0m,
+            Passed = false,
+            StartedAt = DateTime.UtcNow.AddMinutes(-30),
+            CompletedAt = null
+        });
+        await db.SaveChangesAsync();
+
+        var result = await controller.GetAttempts(null, CancellationToken.None);
+        var okResult = Assert.IsType<OkObjectResult>(result);
+        Assert.NotNull(okResult.Value);
+
+        var property = okResult.Value.GetType().GetProperty("attempts");
+        Assert.NotNull(property);
+        var attemptsList = property.GetValue(okResult.Value) as List<AttemptSummaryDto>;
+        Assert.NotNull(attemptsList);
+        Assert.Single(attemptsList);
+        Assert.Equal("att_orphan_1", attemptsList[0].Id);
+        Assert.Equal("Adaptive Practice Assessment", attemptsList[0].Name);
+    }
 }

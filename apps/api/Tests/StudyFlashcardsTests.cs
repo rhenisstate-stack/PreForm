@@ -203,6 +203,32 @@ public class StudyFlashcardsTests : IClassFixture<WebApplicationFactory<Program>
     }
 
     [Fact]
+    public async Task GetOverview_WithReviewsToday_CalculatesAccurately()
+    {
+        var client = _factory.CreateClient();
+        AddGatewayHeaders(client, "study-user-overview", "learner.overview@nursing.edu", "candidate");
+
+        var createDeck = await client.PostAsync("/api/v1/study/flashcards/decks", JsonContent.Create(new { name = "Overview Deck", programme = "rn" }));
+        var deck = await ReadEnvelopeAsync<DeckDto>(createDeck, "deck");
+        var addCard = await client.PostAsync($"/api/v1/study/flashcards/decks/{deck!.Id}/cards", JsonContent.Create(new { front = "Q1", back = "A1" }));
+        var card = await ReadEnvelopeAsync<CardDto>(addCard, "card");
+
+        // Submit review
+        await client.PostAsync($"/api/v1/study/flashcards/cards/{card!.Id}/review", JsonContent.Create(new { recallRating = 2 }));
+
+        var response = await client.GetAsync("/api/v1/study/overview");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>(Json);
+        Assert.True(payload.GetProperty("success").GetBoolean());
+        var overview = payload.GetProperty("overview");
+        Assert.Equal(1, overview.GetProperty("deckCount").GetInt32());
+        Assert.Equal(1, overview.GetProperty("cardCount").GetInt32());
+        Assert.Equal(1, overview.GetProperty("reviewedToday").GetInt32());
+        Assert.NotNull(overview.GetProperty("lastReviewAt").GetString());
+    }
+
+    [Fact]
     public async Task ProgrammeFilter_SeparatesRnAndPnStudyMaterial()
     {
         var client = _factory.CreateClient();

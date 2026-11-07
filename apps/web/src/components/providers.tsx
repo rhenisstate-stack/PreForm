@@ -7,6 +7,7 @@ import type { ThemeProviderProps as NextThemesProviderProps } from "next-themes"
 import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import { NotificationsProvider } from "@/lib/notifications-context";
+import { SplashScreen } from "@/components/layout/splash-screen";
 
 function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -47,7 +48,10 @@ export function Providers({ children, ...themeProps }: { children: React.ReactNo
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <CartProvider>
-            <NotificationsProvider>{children}</NotificationsProvider>
+            <NotificationsProvider>
+              <SplashScreen />
+              {children}
+            </NotificationsProvider>
           </CartProvider>
         </AuthProvider>
       </QueryClientProvider>
