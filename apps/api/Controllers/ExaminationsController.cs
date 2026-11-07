@@ -89,7 +89,7 @@ public class ExaminationsController : ControllerBase
     [HttpDelete("{id}")]
     public async Task<IActionResult> DeleteExamination(string id, CancellationToken ct)
     {
-        return await ExecuteLifecycleActionAsync(async () =>
+        try
         {
             var deleted = await _lifecycleService.DeleteExaminationAsync(id, User, ct);
             if (!deleted)
@@ -97,7 +97,15 @@ public class ExaminationsController : ControllerBase
                 return NotFound(new { success = false, error = $"Examination '{id}' not found." });
             }
             return Ok(new { success = true, deleted = true, message = "Examination deleted successfully." });
-        });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { success = false, error = ex.Message });
+        }
     }
 
     [HttpPost]

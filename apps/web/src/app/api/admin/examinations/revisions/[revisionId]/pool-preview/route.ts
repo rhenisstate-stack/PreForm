@@ -19,22 +19,27 @@ export async function GET(
     }
 
     const raw = res.data as any;
-    if (raw && !raw.preview && Array.isArray(raw.quotas)) {
+    const rawItems = Array.isArray(raw?.quotas)
+      ? raw.quotas
+      : Array.isArray(raw?.clientNeedBreakdown)
+        ? raw.clientNeedBreakdown
+        : null;
+    if (raw && !raw.preview && rawItems) {
       return NextResponse.json({
         success: true,
         preview: {
           revisionId: raw.revisionId,
           pathway: raw.pathway || "rn",
-          selectionStrategy: raw.selectionStrategy,
+          selectionStrategy: raw.selectionStrategy || "Preset",
           totalRequiredQuestions: raw.targetQuestionCount ?? 0,
-          totalAvailableApprovedQuestions: raw.totalEligibleInPool ?? 0,
-          isOverallPoolSufficient: Boolean(raw.allQuotasSatisfied),
-          items: raw.quotas.map((q: any) => ({
-            clientNeedId: q.clientNeedId || q.clientNeedCode,
-            clientNeedName: q.clientNeedName,
-            requiredCount: q.targetCount ?? 0,
-            availableApprovedQuestions: q.availablePoolCount ?? 0,
-            isSufficient: Boolean(q.isSatisfied),
+          totalAvailableApprovedQuestions: raw.totalEligibleInPool ?? raw.totalEligiblePublishedQuestions ?? 0,
+          isOverallPoolSufficient: Boolean(raw.allQuotasSatisfied ?? raw.isPoolSufficient),
+          items: rawItems.map((q: any) => ({
+            clientNeedId: q.clientNeedId || q.clientNeedCode || q.code,
+            clientNeedName: q.clientNeedName || q.name,
+            requiredCount: q.targetCount ?? q.requestedCount ?? 0,
+            availableApprovedQuestions: q.availablePoolCount ?? q.availableCount ?? 0,
+            isSufficient: Boolean(q.isSatisfied ?? q.isSufficient),
           })),
         },
       });

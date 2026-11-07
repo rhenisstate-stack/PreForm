@@ -644,7 +644,7 @@ public class CurriculumService : ICurriculumService
             }
         }
 
-        var packedDesc = PackMetadata(request.Code, null, request.Description);
+        var packedDesc = PackMetadata(request.Code, request.Pathway, request.Description);
 
         var domain = new SubjectDomain
         {
@@ -691,6 +691,11 @@ public class CurriculumService : ICurriculumService
                 throw new ArgumentException($"A Subject Domain with code '{normalizedCode}' already exists.");
             }
             existingCode = normalizedCode;
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Pathway))
+        {
+            existingPathway = request.Pathway.Trim().ToLowerInvariant();
         }
 
         if (!string.IsNullOrWhiteSpace(request.CourseId) && request.CourseId != domain.CourseId)

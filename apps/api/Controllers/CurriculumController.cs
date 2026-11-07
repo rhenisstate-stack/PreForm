@@ -137,7 +137,7 @@ public class CurriculumController : ControllerBase
                 d.CourseTitle.Contains(s, StringComparison.OrdinalIgnoreCase) ||
                 d.Description.Contains(s, StringComparison.OrdinalIgnoreCase)).ToList();
         }
-        return Ok(new { success = true, domains });
+        return Ok(new { success = true, domains, subjectDomains = domains });
     }
 
     [HttpGet("subject-domains/{id}")]
@@ -146,7 +146,7 @@ public class CurriculumController : ControllerBase
     {
         var domain = await _curriculumService.GetSubjectDomainByIdAsync(id, ct);
         if (domain == null) return NotFound(new ProblemDetails { Status = 404, Title = "Subject Domain Not Found", Detail = $"Subject domain '{id}' was not found." });
-        return Ok(new { success = true, domain });
+        return Ok(new { success = true, domain, subjectDomain = domain });
     }
 
     [HttpPost("subject-domains")]
@@ -156,7 +156,7 @@ public class CurriculumController : ControllerBase
         try
         {
             var created = await _curriculumService.CreateSubjectDomainAsync(request, ct);
-            return CreatedAtAction(nameof(GetSubjectDomainById), new { id = created.Id }, new { success = true, domain = created });
+            return CreatedAtAction(nameof(GetSubjectDomainById), new { id = created.Id }, new { success = true, domain = created, subjectDomain = created });
         }
         catch (ArgumentException ex)
         {
@@ -172,7 +172,7 @@ public class CurriculumController : ControllerBase
         {
             var updated = await _curriculumService.UpdateSubjectDomainAsync(id, request, ct);
             if (updated == null) return NotFound(new ProblemDetails { Status = 404, Title = "Subject Domain Not Found", Detail = $"Subject domain '{id}' was not found." });
-            return Ok(new { success = true, domain = updated });
+            return Ok(new { success = true, domain = updated, subjectDomain = updated });
         }
         catch (ArgumentException ex)
         {

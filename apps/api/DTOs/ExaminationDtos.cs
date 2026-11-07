@@ -484,6 +484,15 @@ public sealed class ReadinessThresholdsDto
 
     [Range(0, 100)]
     public decimal VeryHighMax { get; set; } = 100m;
+
+    public decimal LowMinPercent { get => LowMin; set => LowMin = value; }
+    public decimal LowMaxPercent { get => LowMax; set => LowMax = value; }
+    public decimal BorderlineMinPercent { get => BorderlineMin; set => BorderlineMin = value; }
+    public decimal BorderlineMaxPercent { get => BorderlineMax; set => BorderlineMax = value; }
+    public decimal HighMinPercent { get => HighMin; set => HighMin = value; }
+    public decimal HighMaxPercent { get => HighMax; set => HighMax = value; }
+    public decimal VeryHighMinPercent { get => VeryHighMin; set => VeryHighMin = value; }
+    public decimal VeryHighMaxPercent { get => VeryHighMax; set => VeryHighMax = value; }
 }
 
 public sealed class ExamCompositionDto

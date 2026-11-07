@@ -85,6 +85,9 @@ public class CreateSubjectDomainRequest
     [Required]
     public string CourseId { get; set; } = string.Empty;
 
+    [MaxLength(16)]
+    public string? Pathway { get; set; }
+
     [MaxLength(32)]
     public string? Code { get; set; }
 
@@ -106,6 +109,9 @@ public class UpdateSubjectDomainRequest
 
     [MaxLength(32)]
     public string? Code { get; set; }
+
+    [MaxLength(16)]
+    public string? Pathway { get; set; }
 
     public string? CourseId { get; set; }
 

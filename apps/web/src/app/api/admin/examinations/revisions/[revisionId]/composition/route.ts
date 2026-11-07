@@ -65,9 +65,14 @@ export async function PUT(
     };
     if (Array.isArray(courseIds)) payload.courseIds = courseIds;
     if (Array.isArray(subjectIds)) payload.subjectIds = subjectIds;
+    if (body.difficulty !== undefined) payload.difficulty = body.difficulty;
     if (difficultyDistribution !== undefined) payload.difficultyDistribution = difficultyDistribution;
     if (readinessThresholds !== undefined) payload.readinessThresholds = readinessThresholds;
-    if (Array.isArray(assessmentObjectives)) payload.assessmentObjectives = assessmentObjectives;
+    if (Array.isArray(assessmentObjectives)) {
+      payload.assessmentObjectives = assessmentObjectives.join("\n");
+    } else if (typeof assessmentObjectives === "string") {
+      payload.assessmentObjectives = assessmentObjectives;
+    }
     if (randomizeQuestions !== undefined) payload.randomizeQuestions = Boolean(randomizeQuestions);
     if (questionFormatFilter !== undefined) payload.questionFormatFilter = questionFormatFilter;
 
