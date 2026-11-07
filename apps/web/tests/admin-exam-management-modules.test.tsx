@@ -2,7 +2,7 @@ import React from "react";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import AdminExaminationsClient from "@/app/admin/examinations/page-client";
+import { AdminExaminationsClient } from "@/app/admin/examinations/page-client";
 import { CourseSubjectManagement } from "@/components/admin/exam-management/course-subject-management";
 import { ClientNeedsManagement } from "@/components/admin/exam-management/client-needs-management";
 import {
@@ -269,7 +269,7 @@ describe("Admin Dashboard Exam Management — Three Primary Modules & Classifica
     expect(screen.getByText("MED-SURG-RN")).toBeInTheDocument();
 
     // Switch to Subject Domains tab
-    fireEvent.click(screen.getByText(/Subject Domains/i));
+    fireEvent.click(screen.getByText(/Subject Domains \(/i));
     expect(
       await screen.findByText("Cardiovascular & Hemodynamic Disorders")
     ).toBeInTheDocument();
