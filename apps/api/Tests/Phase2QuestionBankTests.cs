@@ -611,24 +611,24 @@ public class Phase2QuestionBankTests
             Title = "Dependency Test Exam",
             Pathway = "rn"
         };
-        var revision = new ExamRevision
+        var revision = new Exam
         {
             Id = "rev-dep-1",
             ExaminationId = exam.Id,
             RevisionNumber = 1,
             Title = "Dependency Test Exam Rev 1",
             Pathway = "rn",
-            LifecycleState = ExamRevisionState.Draft
+            LifecycleState = RevisionLifecycleState.Draft
         };
         var membership = new ExamQuestion
         {
             Id = "eq-dep-1",
-            ExamRevisionId = revision.Id,
+            ExamId = revision.Id,
             QuestionId = created.Id,
             DisplayOrder = 1
         };
         db.Examinations.Add(exam);
-        db.ExamRevisions.Add(revision);
+        db.Exams.Add(revision);
         db.ExamQuestions.Add(membership);
         await db.SaveChangesAsync();
 
