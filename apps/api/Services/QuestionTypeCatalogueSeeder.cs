@@ -61,12 +61,22 @@ public sealed class QuestionTypeCatalogueSeeder
                     ImplementationStatus = descriptor.ImplementationStatus.ToString(),
                     IsActive = true,
                     DisplayOrder = descriptor.DefaultDisplayOrder,
+                    IsSystemDefined = true,
+                    IsArchived = false,
+                    SupportedPathways = "both",
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
                 });
                 addedCount++;
                 continue;
             }
 
             var changed = false;
+            if (!existing.IsSystemDefined)
+            {
+                existing.IsSystemDefined = true;
+                changed = true;
+            }
             var capabilityFlags = (int)descriptor.Capabilities;
             if (existing.CapabilityFlags != capabilityFlags)
             {

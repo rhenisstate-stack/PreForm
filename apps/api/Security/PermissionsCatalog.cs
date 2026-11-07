@@ -46,6 +46,8 @@ public static class PermissionsCatalog
         new("content.review", "Review Questions", "Content", "Review submitted draft questions and recommend approval or rejection"),
         new("content.publish", "Publish Questions", "Content", "Approve and publish questions to the bank"),
         new("content.delete", "Delete Questions", "Content", "Archive or delete question bank items"),
+        new("question_types.view", "View Question Types", "Content", "View question type definitions and capability metadata"),
+        new("question_types.manage", "Manage Question Types", "Content", "Create, edit, activate, deactivate, and archive question types"),
 
         // Subscriptions & Monetization
         new("subscriptions.view", "View Subscriptions", "Monetization", "View subscription plans and entitlements"),

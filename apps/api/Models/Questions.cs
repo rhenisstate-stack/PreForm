@@ -144,6 +144,18 @@ public class QuestionTypeDefinition
 
     public bool IsActive { get; set; } = true;
     public int DisplayOrder { get; set; } = 0;
+
+    public bool IsSystemDefined { get; set; } = false;
+    public bool IsArchived { get; set; } = false;
+
+    [MaxLength(32)]
+    public string SupportedPathways { get; set; } = "both";
+
+    public string? AdminInstructions { get; set; }
+    public string? CandidateInstructions { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
 [Table("Questions", Schema = "public")]

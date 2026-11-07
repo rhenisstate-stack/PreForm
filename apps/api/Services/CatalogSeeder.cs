@@ -118,8 +118,8 @@ public static class CatalogSeeder
         }
 
         Assign("superadmin", "*");
-        Assign("admin", "users.*", "roles.view", "roles.create", "roles.edit", "audit_logs.*", "security.*", "content.*", "exams.*", "subscriptions.*", "system.health");
-        Assign("content_manager", "content.*", "exams.view", "exams.create", "exams.edit", "exams.review");
+        Assign("admin", "users.*", "roles.view", "roles.create", "roles.edit", "audit_logs.*", "security.*", "content.*", "exams.*", "subscriptions.*", "system.health", "question_types.*");
+        Assign("content_manager", "content.*", "exams.view", "exams.create", "exams.edit", "exams.review", "question_types.*");
         Assign("exam_manager", "exams.*", "content.view", "content.create", "content.edit");
         Assign("reviewer", "content.view", "content.review", "content.edit", "exams.view", "exams.review");
         Assign("instructor", "content.view", "content.create", "content.edit", "exams.view");
