@@ -122,7 +122,7 @@ export function RevenueAnalyticsTab({ canManagePlans }: RevenueAnalyticsTabProps
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-serif font-bold text-foreground">
-              ${grossRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {"$" + grossRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Total payment intake
@@ -141,7 +141,7 @@ export function RevenueAnalyticsTab({ canManagePlans }: RevenueAnalyticsTabProps
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-serif font-bold text-foreground">
-              ${netRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {"$" + netRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Net after refunds &amp; reversals
@@ -160,7 +160,7 @@ export function RevenueAnalyticsTab({ canManagePlans }: RevenueAnalyticsTabProps
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-serif font-bold text-foreground">
-              ${mrr.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {"$" + mrr.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Normalized monthly run-rate
@@ -179,7 +179,7 @@ export function RevenueAnalyticsTab({ canManagePlans }: RevenueAnalyticsTabProps
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-serif font-bold text-foreground">
-              ${arpu.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {"$" + arpu.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Across {activeSubs} active enrollees

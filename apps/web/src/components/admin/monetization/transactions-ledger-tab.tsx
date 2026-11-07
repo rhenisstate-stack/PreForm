@@ -241,7 +241,7 @@ export function TransactionsLedgerTab({ canManagePlans }: TransactionsLedgerTabP
                     return (
                       <tr key={t.id || t.orderId} className="hover:bg-muted/20 transition-colors">
                         <td className="py-3.5 px-4 font-mono font-medium text-foreground">
-                          {t.orderId ? t.orderId.slice(0, 8) + "..." : "-"}
+                          {t.orderId ? (t.orderId.length > 14 ? t.orderId.slice(0, 10) + "..." : t.orderId) : "-"}
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="font-semibold text-foreground">{t.userName || "Candidate"}</div>
