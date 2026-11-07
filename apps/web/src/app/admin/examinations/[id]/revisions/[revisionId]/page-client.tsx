@@ -36,13 +36,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDeleteLayout,
+  FullPageActionBar,
+} from "@/components/ui/full-page-crud";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   BackendExamRevisionDto,
@@ -484,7 +481,148 @@ export function AdminRevisionStudioClient({
   const existingIds = new Set(questions.map((q) => q.questionId));
 
   return (
-    <div className="space-y-6 p-6 max-w-7xl mx-auto">
+    <div className="w-full max-w-none min-w-0 space-y-6 p-6">
+      {isPickerOpen ? (
+        <QuestionPickerDialog
+          open={isPickerOpen}
+          onOpenChange={setIsPickerOpen}
+          revisionId={revisionId}
+          revisionPathway={revision.pathway}
+          existingQuestionIds={existingIds}
+          concurrencyToken={revision.concurrencyToken}
+          onQuestionAdded={() => {
+            queryClient.invalidateQueries({ queryKey: ["admin-revision", revisionId] });
+            queryClient.invalidateQueries({ queryKey: ["admin-revision-questions", revisionId] });
+            queryClient.invalidateQueries({ queryKey: ["admin-revision-validation", revisionId] });
+          }}
+        />
+      ) : isDuplicateOpen ? (
+        <DuplicateExaminationDialog
+          open={isDuplicateOpen}
+          onOpenChange={setIsDuplicateOpen}
+          examinationId={familyId}
+          examinationCode={familyData?.examination?.code || revision?.examinationCode || ""}
+          examinationTitle={familyData?.examination?.title || revision?.title || "Examination"}
+          examinationPathway={familyData?.examination?.pathway || revision?.pathway || "rn"}
+          eligibleRevisions={eligibleRevisions}
+          defaultSourceRevisionId={
+            revision && ["published", "approved", "archived"].includes(revision.lifecycleState.toLowerCase())
+              ? revision.id
+              : undefined
+          }
+        />
+      ) : isPreviewOpen ? (
+        <ExaminationPreviewDialog
+          open={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+          revisionId={revision.id}
+        />
+      ) : isDiscardOpen ? (
+        <FullPageDeleteLayout
+          data-testid="discard-draft-fullpage"
+          title="Discard Draft Revision"
+          description={`Are you sure you want to permanently discard Revision ${revision.revisionNumber}? This action is only permitted for unused drafts with zero assessment attempts.`}
+          recordTitle={revision.title}
+          recordSubtitle={`Revision ${revision.revisionNumber} • ${revision.examinationCode || familyId}`}
+          consequences={[
+            `Permanently discards unused Draft Revision ${revision.revisionNumber}.`,
+            "Only permitted for unused drafts with zero learner assessment attempts.",
+          ]}
+          onCancel={() => setIsDiscardOpen(false)}
+          onConfirmDelete={() => discardMutation.mutate()}
+          confirmDeleteLabel={discardMutation.isPending ? "Discarding..." : "Discard Revision"}
+          isSubmitting={discardMutation.isPending}
+        />
+      ) : lifecycleModal ? (
+        <FullPageFormLayout
+          data-testid="lifecycle-transition-fullpage"
+          eyebrow={`Lifecycle Governance • Revision ${revision.revisionNumber}`}
+          title={lifecycleModal.title}
+          description={lifecycleModal.description}
+          backLabel="Return to Revision Studio"
+          onBack={() => setLifecycleModal(null)}
+          footer={
+            <FullPageActionBar
+              onCancel={() => setLifecycleModal(null)}
+              primaryAction={
+                <Button
+                  variant={lifecycleModal.variant || "default"}
+                  onClick={() => lifecycleTransitionMutation.mutate()}
+                  disabled={
+                    lifecycleTransitionMutation.isPending ||
+                    (lifecycleModal.requireReason && !lifecycleReason.trim())
+                  }
+                  className={
+                    lifecycleModal.variant === "destructive"
+                      ? ""
+                      : "bg-[#0D9488] hover:bg-[#0F766E] text-white"
+                  }
+                >
+                  {lifecycleTransitionMutation.isPending ? "Executing..." : lifecycleModal.buttonText}
+                </Button>
+              }
+            />
+          }
+        >
+          <div className="space-y-4">
+            {lifecycleModal.requireReason && (
+              <div>
+                <Label htmlFor="l-reason" className="text-xs font-semibold">
+                  Mandatory Reason
+                </Label>
+                <textarea
+                  id="l-reason"
+                  value={lifecycleReason}
+                  onChange={(e) => setLifecycleReason(e.target.value)}
+                  placeholder="Provide justification for this transition..."
+                  rows={4}
+                  className="w-full mt-1.5 px-3 py-2 text-sm border rounded-md border-slate-300 dark:border-slate-800 bg-transparent"
+                />
+              </div>
+            )}
+
+            {lifecycleModal.requireNotes && (
+              <div>
+                <Label htmlFor="l-notes" className="text-xs font-semibold">
+                  Review / Recommendation Notes (Optional)
+                </Label>
+                <textarea
+                  id="l-notes"
+                  value={lifecycleNotes}
+                  onChange={(e) => setLifecycleNotes(e.target.value)}
+                  placeholder="Advisory notes for the approving administrator..."
+                  rows={4}
+                  className="w-full mt-1.5 px-3 py-2 text-sm border rounded-md border-slate-300 dark:border-slate-800 bg-transparent"
+                />
+              </div>
+            )}
+          </div>
+        </FullPageFormLayout>
+      ) : questionToRemove ? (
+        <FullPageDeleteLayout
+          data-testid="remove-question-fullpage"
+          title="Remove question from examination?"
+          description={`Are you sure you want to remove Question ${questionToRemove.position} from this examination revision? This changes the revision's question membership and may affect the displayed question order. This action cannot be assumed to be reversible.`}
+          recordTitle={`Question ${questionToRemove.position}`}
+          recordSubtitle={`ID: ${questionToRemove.questionId}`}
+          onCancel={() => setQuestionToRemove(null)}
+          onConfirmDelete={() => {
+            if (questionToRemove) {
+              removeQuestionMutation.mutate(questionToRemove.questionId);
+            }
+          }}
+          confirmDeleteLabel={removeQuestionMutation.isPending ? "Removing..." : "Remove Question"}
+          isSubmitting={removeQuestionMutation.isPending}
+        >
+          {questionToRemove.stem && (
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300">
+              <p className="font-semibold text-slate-800 dark:text-slate-200 mb-1">Question prompt:</p>
+              <p className="italic">{questionToRemove.stem}</p>
+            </div>
+          )}
+        </FullPageDeleteLayout>
+      ) : (
+        <>
       {/* Top Breadcrumb & Family Link */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Link
@@ -847,7 +985,7 @@ export function AdminRevisionStudioClient({
             </div>
           )}
 
-          <div className="space-y-4 max-w-2xl">
+          <div className="space-y-4 w-full max-w-none">
             <div>
               <Label htmlFor="m-title" className="text-xs font-semibold">
                 Revision Title

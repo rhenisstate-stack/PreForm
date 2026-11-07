@@ -36,13 +36,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageActionBar,
+} from "@/components/ui/full-page-crud";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   BackendExaminationLibraryItemDto,
@@ -372,7 +368,104 @@ export function AdminExaminationsClient() {
   const pagination = libraryData?.pagination || { page: 1, pageSize: 20, totalItems: items.length, totalPages: items.length > 0 ? 1 : 0 };
 
   return (
-    <div className="space-y-6 p-6 max-w-7xl mx-auto">
+    <div className="w-full max-w-none min-w-0 space-y-6 p-6">
+      {isCreateOpen ? (
+        <FullPageFormLayout
+          data-testid="create-exam-family-fullpage"
+          eyebrow="Examination Library"
+          title="Create Examination Family"
+          description="Create an authoritative examination family with its foundational revision (Revision 1)."
+          backLabel="Return to Examination Library"
+          onBack={() => setIsCreateOpen(false)}
+          footer={
+            <FullPageActionBar
+              onCancel={() => setIsCreateOpen(false)}
+              primaryAction={
+                <Button
+                  onClick={() => createMutation.mutate()}
+                  disabled={createMutation.isPending || !formTitle.trim()}
+                  className="bg-[#0D9488] hover:bg-[#0F766E] text-white"
+                >
+                  {createMutation.isPending ? "Creating..." : "Create Examination"}
+                </Button>
+              }
+            />
+          }
+        >
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="examPathway">Pathway *</Label>
+              <div className="grid grid-cols-2 gap-3 max-w-md">
+                <Button
+                  type="button"
+                  variant={formPathway === "rn" ? "default" : "outline"}
+                  onClick={() => setFormPathway("rn")}
+                  className={formPathway === "rn" ? "bg-[#0D9488] hover:bg-[#0F766E]" : ""}
+                >
+                  NCLEX-RN
+                </Button>
+                <Button
+                  type="button"
+                  variant={formPathway === "pn" ? "default" : "outline"}
+                  onClick={() => setFormPathway("pn")}
+                  className={formPathway === "pn" ? "bg-indigo-600 hover:bg-indigo-700" : ""}
+                >
+                  NCLEX-PN
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="examTitle">Examination Title *</Label>
+              <Input
+                id="examTitle"
+                value={formTitle}
+                onChange={(e) => setFormTitle(e.target.value)}
+                placeholder="e.g. NCLEX-RN Comprehensive Readiness Exam"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="examDescription">Description</Label>
+              <textarea
+                id="examDescription"
+                value={formDescription}
+                onChange={(e) => setFormDescription(e.target.value)}
+                placeholder="Brief administrative description of this examination family..."
+                rows={4}
+                className="w-full text-sm p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-900 dark:text-white"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="examTime">Time Limit (mins)</Label>
+                <Input
+                  id="examTime"
+                  type="number"
+                  min={0}
+                  max={720}
+                  value={formTimeLimit}
+                  onChange={(e) => setFormTimeLimit(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="examPass">Passing Standard (%)</Label>
+                <Input
+                  id="examPass"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={formPassingScore}
+                  onChange={(e) => setFormPassingScore(Number(e.target.value))}
+                />
+              </div>
+            </div>
+          </div>
+        </FullPageFormLayout>
+      ) : (
+        <>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
         <div>
@@ -882,103 +975,8 @@ export function AdminExaminationsClient() {
       )}
         </>
       )}
-
-      {/* Create Examination Family Modal */}
-      <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Create Examination Family</DialogTitle>
-            <DialogDescription>
-              Create an authoritative examination family with its foundational revision (Revision 1).
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="examPathway">Pathway *</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={formPathway === "rn" ? "default" : "outline"}
-                  onClick={() => setFormPathway("rn")}
-                  className={formPathway === "rn" ? "bg-[#0D9488] hover:bg-[#0F766E]" : ""}
-                >
-                  NCLEX-RN
-                </Button>
-                <Button
-                  type="button"
-                  variant={formPathway === "pn" ? "default" : "outline"}
-                  onClick={() => setFormPathway("pn")}
-                  className={formPathway === "pn" ? "bg-indigo-600 hover:bg-indigo-700" : ""}
-                >
-                  NCLEX-PN
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="examTitle">Examination Title *</Label>
-              <Input
-                id="examTitle"
-                value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
-                placeholder="e.g. NCLEX-RN Comprehensive Readiness Exam"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="examDescription">Description</Label>
-              <textarea
-                id="examDescription"
-                value={formDescription}
-                onChange={(e) => setFormDescription(e.target.value)}
-                placeholder="Brief administrative description of this examination family..."
-                rows={3}
-                className="w-full text-xs p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-transparent text-slate-900 dark:text-white"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="examTime">Time Limit (mins)</Label>
-                <Input
-                  id="examTime"
-                  type="number"
-                  min={0}
-                  max={720}
-                  value={formTimeLimit}
-                  onChange={(e) => setFormTimeLimit(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="examPass">Passing Standard (%)</Label>
-                <Input
-                  id="examPass"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={formPassingScore}
-                  onChange={(e) => setFormPassingScore(Number(e.target.value))}
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => createMutation.mutate()}
-              disabled={createMutation.isPending || !formTitle.trim()}
-              className="bg-[#0D9488] hover:bg-[#0F766E] text-white"
-            >
-              {createMutation.isPending ? "Creating..." : "Create Examination"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
     </div>
   );
 }

@@ -25,13 +25,9 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageActionBar,
+} from "@/components/ui/full-page-crud";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { BackendExaminationDto, BackendExamRevisionDto } from "@/lib/api-services";
 import { notify } from "@/lib/notifications";
@@ -285,7 +281,200 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
   );
 
   return (
-    <div className="space-y-8 p-6 max-w-7xl mx-auto">
+    <div className="w-full max-w-none min-w-0 space-y-8 p-6">
+      {isDuplicateOpen ? (
+        <DuplicateExaminationDialog
+          open={isDuplicateOpen}
+          onOpenChange={setIsDuplicateOpen}
+          examinationId={examination.id}
+          examinationCode={examination.code}
+          examinationTitle={examination.title}
+          examinationPathway={examination.pathway}
+          eligibleRevisions={eligibleRevisions}
+          defaultSourceRevisionId={duplicateSourceRevId}
+        />
+      ) : isEditFamilyOpen ? (
+        <FullPageFormLayout
+          data-testid="edit-family-title-fullpage"
+          eyebrow={`Examination Family • ${examination.code}`}
+          title="Edit Examination Family Title"
+          description="Updates the family-level stable title across all revision lineages."
+          backLabel="Return to Family Lineage"
+          onBack={() => setIsEditFamilyOpen(false)}
+          footer={
+            <FullPageActionBar
+              onCancel={() => setIsEditFamilyOpen(false)}
+              primaryAction={
+                <Button
+                  onClick={() => updateFamilyMutation.mutate()}
+                  disabled={!familyTitle.trim() || updateFamilyMutation.isPending}
+                  className="bg-[#0D9488] hover:bg-[#0F766E] text-white"
+                >
+                  {updateFamilyMutation.isPending ? "Saving..." : "Save Title"}
+                </Button>
+              }
+            />
+          }
+        >
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="fam-title" className="text-xs font-semibold">
+                Family Title
+              </Label>
+              <span className="text-[10px] text-slate-400 font-mono">
+                {familyTitle.length}/128
+              </span>
+            </div>
+            <Input
+              id="fam-title"
+              value={familyTitle}
+              onChange={(e) => setFamilyTitle(e.target.value)}
+              className="mt-1"
+              maxLength={128}
+            />
+          </div>
+        </FullPageFormLayout>
+      ) : isCreateRevisionOpen ? (
+        <FullPageFormLayout
+          data-testid="create-revision-fullpage"
+          eyebrow={`Examination Family • ${examination.code}`}
+          title="Create New Draft Revision"
+          description={`Initializes monotonically incremented Revision ${(examination.revisions?.length || 0) + 1} under permanent code ${examination.code}.`}
+          backLabel="Return to Family Lineage"
+          onBack={() => setIsCreateRevisionOpen(false)}
+          footer={
+            <FullPageActionBar
+              onCancel={() => setIsCreateRevisionOpen(false)}
+              primaryAction={
+                <Button
+                  onClick={() => createRevisionMutation.mutate()}
+                  disabled={!newRevTitle.trim() || createRevisionMutation.isPending || hasActiveDraft}
+                  className="bg-[#0D9488] hover:bg-[#0F766E] text-white"
+                >
+                  {createRevisionMutation.isPending ? "Creating..." : "Create Draft"}
+                </Button>
+              }
+            />
+          }
+        >
+          <div className="space-y-6">
+            <div className="p-4 rounded-xl bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-800 text-xs text-teal-900 dark:text-teal-200">
+              <p className="font-semibold mb-1">Family Identity Preserved</p>
+              <p>
+                This operation creates a new revision within family <span className="font-mono font-bold">{examination.code}</span>.
+                The permanent code and examination identity remain unchanged. Candidate attempts linked to previous revisions remain immutable.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="rev-source" className="text-xs font-semibold">
+                Source Revision (Template)
+              </Label>
+              <select
+                id="rev-source"
+                value={sourceRevisionId}
+                onChange={(e) => handleSourceRevisionChange(e.target.value)}
+                className="w-full mt-1.5 px-3 py-2 text-xs border rounded-md border-slate-300 dark:border-slate-800 bg-background text-foreground h-10"
+              >
+                {eligibleRevisions.length > 0 ? (
+                  eligibleRevisions.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      Rev {r.revisionNumber} ({r.lifecycleState}) — {r.questionCount} Questions — {r.title}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>No eligible source revisions (Published, Approved, or Archived required)</option>
+                )}
+                <option value="">Start with blank revision (no copied questions)</option>
+              </select>
+              <p className="text-[11px] text-slate-500 mt-1">
+                Only Published, Approved, or Archived revisions can be used as a template.
+              </p>
+            </div>
+
+            {sourceRevisionId && (
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={copyQuestions}
+                  onChange={(e) => setCopyQuestions(e.target.checked)}
+                  className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                />
+                <span>
+                  Copy question memberships and maintain display ordering (
+                  {eligibleRevisions.find((r) => r.id === sourceRevisionId)?.questionCount || 0} questions)
+                </span>
+              </label>
+            )}
+
+            <div>
+              <Label htmlFor="rev-title" className="text-xs font-semibold">
+                Revision Title *
+              </Label>
+              <Input
+                id="rev-title"
+                value={newRevTitle}
+                onChange={(e) => setNewRevTitle(e.target.value)}
+                className="mt-1.5"
+                maxLength={128}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="rev-desc" className="text-xs font-semibold">
+                Revision Description
+              </Label>
+              <textarea
+                id="rev-desc"
+                value={newRevDescription}
+                onChange={(e) => setNewRevDescription(e.target.value)}
+                className="w-full mt-1.5 px-3 py-2 text-sm border rounded-md border-slate-300 dark:border-slate-800 bg-transparent"
+                rows={3}
+                maxLength={1024}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="rev-time" className="text-xs font-semibold">
+                  Time Limit (Minutes)
+                </Label>
+                <Input
+                  id="rev-time"
+                  type="number"
+                  min={0}
+                  max={720}
+                  value={newRevTimeLimit}
+                  onChange={(e) => setNewRevTimeLimit(Number(e.target.value))}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="rev-pass" className="text-xs font-semibold">
+                  Passing Score (%)
+                </Label>
+                <Input
+                  id="rev-pass"
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={newRevPassingScore}
+                  onChange={(e) => setNewRevPassingScore(Number(e.target.value))}
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+
+            {hasActiveDraft && (
+              <div className="p-3 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
+                An active draft already exists for this examination family. You must publish, approve, or discard it before creating a new revision.
+              </div>
+            )}
+          </div>
+        </FullPageFormLayout>
+      ) : (
+        <>
       {/* Back button */}
       <Link
         href="/admin/examinations"
@@ -492,202 +681,8 @@ export function AdminExaminationFamilyClient({ id }: { id: string }) {
           )}
         </div>
       </div>
-
-      {/* Edit Family Title Dialog */}
-      <Dialog open={isEditFamilyOpen} onOpenChange={setIsEditFamilyOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit Examination Family Title</DialogTitle>
-            <DialogDescription>
-              Updates the family-level stable title across all revision lineages.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="py-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="fam-title" className="text-xs font-semibold">
-                Family Title
-              </Label>
-              <span className="text-[10px] text-slate-400 font-mono">
-                {familyTitle.length}/128
-              </span>
-            </div>
-            <Input
-              id="fam-title"
-              value={familyTitle}
-              onChange={(e) => setFamilyTitle(e.target.value)}
-              className="mt-1"
-              maxLength={128}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsEditFamilyOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => updateFamilyMutation.mutate()}
-              disabled={!familyTitle.trim() || updateFamilyMutation.isPending}
-              className="bg-[#0D9488] hover:bg-[#0F766E] text-white"
-            >
-              {updateFamilyMutation.isPending ? "Saving..." : "Save Title"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create New Revision Dialog */}
-      <Dialog open={isCreateRevisionOpen} onOpenChange={setIsCreateRevisionOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Create New Draft Revision</DialogTitle>
-            <DialogDescription>
-              Initializes monotonically incremented Revision {(examination.revisions?.length || 0) + 1} under permanent code {examination.code}.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div className="p-3 rounded-lg bg-teal-50/50 dark:bg-teal-950/20 border border-teal-200 dark:border-teal-800 text-xs text-teal-900 dark:text-teal-200">
-              <p className="font-semibold mb-1">Family Identity Preserved</p>
-              <p>
-                This operation creates a new revision within family <span className="font-mono font-bold">{examination.code}</span>.
-                The permanent code and examination identity remain unchanged. Candidate attempts linked to previous revisions remain immutable.
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="rev-source" className="text-xs font-semibold">
-                Source Revision (Template)
-              </Label>
-              <select
-                id="rev-source"
-                value={sourceRevisionId}
-                onChange={(e) => handleSourceRevisionChange(e.target.value)}
-                className="w-full mt-1 px-3 py-2 text-xs border rounded-md border-slate-300 dark:border-slate-800 bg-background text-foreground"
-              >
-                {eligibleRevisions.length > 0 ? (
-                  eligibleRevisions.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      Rev {r.revisionNumber} ({r.lifecycleState}) — {r.questionCount} Questions — {r.title}
-                    </option>
-                  ))
-                ) : (
-                  <option value="" disabled>No eligible source revisions (Published, Approved, or Archived required)</option>
-                )}
-                <option value="">Start with blank revision (no copied questions)</option>
-              </select>
-              <p className="text-[11px] text-slate-500 mt-1">
-                Only Published, Approved, or Archived revisions can be used as a template.
-              </p>
-            </div>
-
-            {sourceRevisionId && (
-              <label className="flex items-center gap-2 cursor-pointer text-xs text-slate-700 dark:text-slate-300">
-                <input
-                  type="checkbox"
-                  checked={copyQuestions}
-                  onChange={(e) => setCopyQuestions(e.target.checked)}
-                  className="rounded border-slate-300 text-teal-600 focus:ring-teal-500"
-                />
-                <span>
-                  Copy question memberships and maintain display ordering (
-                  {eligibleRevisions.find((r) => r.id === sourceRevisionId)?.questionCount || 0} questions)
-                </span>
-              </label>
-            )}
-
-            <div>
-              <Label htmlFor="rev-title" className="text-xs font-semibold">
-                Revision Title *
-              </Label>
-              <Input
-                id="rev-title"
-                value={newRevTitle}
-                onChange={(e) => setNewRevTitle(e.target.value)}
-                className="mt-1"
-                maxLength={128}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="rev-desc" className="text-xs font-semibold">
-                Revision Description
-              </Label>
-              <textarea
-                id="rev-desc"
-                value={newRevDescription}
-                onChange={(e) => setNewRevDescription(e.target.value)}
-                className="w-full mt-1 px-3 py-2 text-sm border rounded-md border-slate-300 dark:border-slate-800 bg-transparent"
-                rows={3}
-                maxLength={1024}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="rev-time" className="text-xs font-semibold">
-                  Time Limit (Minutes)
-                </Label>
-                <Input
-                  id="rev-time"
-                  type="number"
-                  min={0}
-                  max={720}
-                  value={newRevTimeLimit}
-                  onChange={(e) => setNewRevTimeLimit(Number(e.target.value))}
-                  className="mt-1"
-                />
-              </div>
-              <div>
-                <Label htmlFor="rev-pass" className="text-xs font-semibold">
-                  Passing Score (%)
-                </Label>
-                <Input
-                  id="rev-pass"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={0.5}
-                  value={newRevPassingScore}
-                  onChange={(e) => setNewRevPassingScore(Number(e.target.value))}
-                  className="mt-1"
-                />
-              </div>
-            </div>
-
-            {hasActiveDraft && (
-              <div className="p-2.5 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 text-xs text-amber-800 dark:text-amber-300">
-                An active draft already exists for this examination family. You must publish, approve, or discard it before creating a new revision.
-              </div>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateRevisionOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => createRevisionMutation.mutate()}
-              disabled={!newRevTitle.trim() || createRevisionMutation.isPending || hasActiveDraft}
-              className="bg-[#0D9488] hover:bg-[#0F766E] text-white"
-            >
-              {createRevisionMutation.isPending ? "Creating..." : "Create Draft"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Duplicate as New Examination Dialog */}
-      <DuplicateExaminationDialog
-        open={isDuplicateOpen}
-        onOpenChange={setIsDuplicateOpen}
-        examinationId={examination.id}
-        examinationCode={examination.code}
-        examinationTitle={examination.title}
-        examinationPathway={examination.pathway}
-        eligibleRevisions={eligibleRevisions}
-        defaultSourceRevisionId={duplicateSourceRevId}
-      />
+        </>
+      )}
     </div>
   );
 }
