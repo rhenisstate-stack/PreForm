@@ -38,6 +38,11 @@ export interface ProfilePictureMeta {
 export function resolveBrowserPictureUrl(meta: ProfilePictureMeta): string | undefined {
   const explicit = typeof meta.picture === "string" ? meta.picture.trim() : "";
 
+  if (explicit && explicit.startsWith("/api/v1/profile/image")) {
+    const query = explicit.includes("?") ? explicit.substring(explicit.indexOf("?")) : "";
+    return `/api/profile/image${query}`;
+  }
+
   if (explicit && (explicit.startsWith(BFF_PICTURE_PREFIX) || /^https?:\/\//i.test(explicit))) {
     return explicit;
   }
