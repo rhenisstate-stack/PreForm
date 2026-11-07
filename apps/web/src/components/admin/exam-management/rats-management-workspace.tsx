@@ -21,13 +21,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDeleteLayout,
+  FullPageActionBar,
+} from "@/components/ui/full-page-crud";
 import { ExaminationPreviewDialog } from "@/components/admin/examination-preview-dialog";
 
 export interface ReadinessThresholdsState {
@@ -390,7 +387,360 @@ export function RatsManagementWorkspace({
   };
 
   return (
-    <div className="space-y-6" data-testid="rats-management-workspace">
+    <div className="w-full max-w-none min-w-0 space-y-6" data-testid="rats-management-workspace">
+      {previewRevisionId ? (
+        <ExaminationPreviewDialog
+          revisionId={previewRevisionId}
+          open={!!previewRevisionId}
+          onOpenChange={(open) => !open && setPreviewRevisionId(null)}
+        />
+      ) : deleteTarget ? (
+        <FullPageDeleteLayout
+          data-testid="rats-delete-fullpage"
+          title="Delete Readiness Assessment Test"
+          description={`Confirm removal of ${deleteTarget.title} (${deleteTarget.code}).`}
+          recordTitle={deleteTarget.title}
+          recordSubtitle={`Code: ${deleteTarget.code}`}
+          consequences={[
+            "Draft Readiness Assessment Tests with zero learner attempts are permanently deleted.",
+            "Published RATS or RATS with historical learner readiness scores are protected and must be archived instead.",
+          ]}
+          dependencyNotice={
+            deleteError && (
+              <div className="text-amber-800 dark:text-amber-300 font-medium">
+                {deleteError}
+              </div>
+            )
+          }
+          onCancel={() => setDeleteTarget(null)}
+          onConfirmDelete={handleDeleteRat}
+          confirmDeleteLabel={deleteSubmitting ? "Deleting..." : "Confirm Delete"}
+          isSubmitting={deleteSubmitting}
+        />
+      ) : modalOpen ? (
+        <FullPageFormLayout
+          data-testid="rats-form-fullpage"
+          eyebrow="Module 2 — Readiness Assessment Tests (RATS)"
+          title={
+            editingExam
+              ? "Configure Readiness Assessment Test (RAT)"
+              : "Create Readiness Assessment Test (RAT)"
+          }
+          description="Configure RAT clinical parameters and non-overlapping Readiness Classification Thresholds (Low, Borderline, High, Very High)."
+          backLabel="Return to RATS Catalogue"
+          onBack={() => setModalOpen(false)}
+        >
+          <form onSubmit={handleSaveRat} className="w-full max-w-none space-y-6">
+            {formError && (
+              <div
+                data-testid="rat-form-error"
+                className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-600 dark:text-red-400"
+              >
+                {formError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="sm:col-span-2 space-y-2">
+                <Label htmlFor="rat-title">RAT Title *</Label>
+                <Input
+                  id="rat-title"
+                  placeholder="e.g., NCLEX-RN Comprehensive Readiness Assessment #1"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rat-pathway">Programme *</Label>
+                <select
+                  id="rat-pathway"
+                  value={pathway}
+                  disabled={!!editingExam}
+                  onChange={(e) => setPathway(e.target.value as "rn" | "pn")}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="rn">NCLEX-RN</option>
+                  <option value="pn">NCLEX-PN</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="rat-desc">Instructions & Description</Label>
+                <textarea
+                  id="rat-desc"
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Candidate instructions for this Readiness Assessment..."
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="rat-objectives">Assessment Objectives</Label>
+                <textarea
+                  id="rat-objectives"
+                  rows={3}
+                  value={assessmentObjectives}
+                  onChange={(e) => setAssessmentObjectives(e.target.value)}
+                  placeholder="One objective per line..."
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="rat-qcount" className="text-xs">
+                  Question Count
+                </Label>
+                <Input
+                  id="rat-qcount"
+                  type="number"
+                  min={1}
+                  max={265}
+                  value={targetQuestionCount}
+                  onChange={(e) => setTargetQuestionCount(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="rat-duration" className="text-xs">
+                  Duration (Min)
+                </Label>
+                <Input
+                  id="rat-duration"
+                  type="number"
+                  min={0}
+                  max={720}
+                  value={timeLimitMinutes}
+                  onChange={(e) => setTimeLimitMinutes(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="rat-pass" className="text-xs">
+                  Benchmark (%)
+                </Label>
+                <Input
+                  id="rat-pass"
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={passingScorePercent}
+                  onChange={(e) => setPassingScorePercent(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="rat-attempts" className="text-xs">
+                  Max Attempts
+                </Label>
+                <Input
+                  id="rat-attempts"
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={maxAttemptsAllowed}
+                  onChange={(e) => setMaxAttemptsAllowed(Number(e.target.value))}
+                />
+              </div>
+            </div>
+
+            {/* Readiness Classification Thresholds */}
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                  <Gauge className="w-4 h-4" />
+                  Readiness Classification Thresholds (0% – 100%)
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  Must be non-overlapping and strictly ordered
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
+                <div className="p-3 rounded-lg border border-red-500/25 bg-background space-y-1.5">
+                  <div className="font-semibold text-red-600 dark:text-red-400">
+                    1. Low Readiness (%)
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      aria-label="Low Readiness Min"
+                      type="number"
+                      value={thresholds.lowMin}
+                      onChange={(e) =>
+                        setThresholds((t) => ({ ...t, lowMin: Number(e.target.value) }))
+                      }
+                      className="h-8 text-xs"
+                    />
+                    <span>–</span>
+                    <Input
+                      aria-label="Low Readiness Max"
+                      type="number"
+                      value={thresholds.lowMax}
+                      onChange={(e) =>
+                        setThresholds((t) => ({ ...t, lowMax: Number(e.target.value) }))
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg border border-amber-500/25 bg-background space-y-1.5">
+                  <div className="font-semibold text-amber-600 dark:text-amber-400">
+                    2. Borderline (%)
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      aria-label="Borderline Readiness Min"
+                      type="number"
+                      value={thresholds.borderlineMin}
+                      onChange={(e) =>
+                        setThresholds((t) => ({
+                          ...t,
+                          borderlineMin: Number(e.target.value),
+                        }))
+                      }
+                      className="h-8 text-xs"
+                    />
+                    <span>–</span>
+                    <Input
+                      aria-label="Borderline Readiness Max"
+                      type="number"
+                      value={thresholds.borderlineMax}
+                      onChange={(e) =>
+                        setThresholds((t) => ({
+                          ...t,
+                          borderlineMax: Number(e.target.value),
+                        }))
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg border border-indigo-500/25 bg-background space-y-1.5">
+                  <div className="font-semibold text-indigo-600 dark:text-indigo-400">
+                    3. High Readiness (%)
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      aria-label="High Readiness Min"
+                      type="number"
+                      value={thresholds.highMin}
+                      onChange={(e) =>
+                        setThresholds((t) => ({ ...t, highMin: Number(e.target.value) }))
+                      }
+                      className="h-8 text-xs"
+                    />
+                    <span>–</span>
+                    <Input
+                      aria-label="High Readiness Max"
+                      type="number"
+                      value={thresholds.highMax}
+                      onChange={(e) =>
+                        setThresholds((t) => ({ ...t, highMax: Number(e.target.value) }))
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-3 rounded-lg border border-emerald-500/25 bg-background space-y-1.5">
+                  <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    4. Very High (%)
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Input
+                      aria-label="Very High Readiness Min"
+                      type="number"
+                      value={thresholds.veryHighMin}
+                      onChange={(e) =>
+                        setThresholds((t) => ({
+                          ...t,
+                          veryHighMin: Number(e.target.value),
+                        }))
+                      }
+                      className="h-8 text-xs"
+                    />
+                    <span>–</span>
+                    <Input
+                      aria-label="Very High Readiness Max"
+                      type="number"
+                      value={thresholds.veryHighMax}
+                      onChange={(e) =>
+                        setThresholds((t) => ({
+                          ...t,
+                          veryHighMax: Number(e.target.value),
+                        }))
+                      }
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {!editingExam && eligibleQuestions.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <Label>Optional Curated Questions from Question Repository</Label>
+                  <span className="text-muted-foreground">
+                    {selectedQuestionIds.length} selected
+                  </span>
+                </div>
+                <div className="border border-border rounded-xl divide-y divide-border text-xs">
+                  {eligibleQuestions.slice(0, 20).map((q) => {
+                    const qId = q.questionId || q.id;
+                    const checked = selectedQuestionIds.includes(qId);
+                    return (
+                      <label
+                        key={qId}
+                        className="flex items-center gap-2.5 px-3.5 py-2.5 cursor-pointer hover:bg-muted/20"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setSelectedQuestionIds((prev) =>
+                              prev.includes(qId)
+                                ? prev.filter((x) => x !== qId)
+                                : [...prev, qId]
+                            )
+                          }
+                        />
+                        <span className="flex-1">{q.stem}</span>
+                        <Badge variant="outline" className="text-[10px]">
+                          {q.difficulty}
+                        </Badge>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <FullPageActionBar
+              onCancel={() => setModalOpen(false)}
+              primaryAction={
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  data-testid="save-rat-btn"
+                  className="bg-amber-600 hover:bg-amber-500 text-white"
+                >
+                  {submitting
+                    ? "Saving..."
+                    : editingExam
+                      ? "Save RAT Configuration"
+                      : "Create Readiness Assessment"}
+                </Button>
+              }
+            />
+          </form>
+        </FullPageFormLayout>
+      ) : (
+        <>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border rounded-xl p-5 shadow-xs">
         <div>
@@ -646,387 +996,8 @@ export function RatsManagementWorkspace({
           </div>
         )}
       </div>
-
-      {/* Create / Edit RAT Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Activity className="w-5 h-5 text-amber-500" />
-              {editingExam
-                ? "Configure Readiness Assessment Test (RAT)"
-                : "Create Readiness Assessment Test (RAT)"}
-            </DialogTitle>
-            <DialogDescription>
-              Configure RAT clinical parameters and non-overlapping Readiness Classification Thresholds (Low, Borderline, High, Very High).
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSaveRat} className="space-y-4">
-            {formError && (
-              <div
-                data-testid="rat-form-error"
-                className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400"
-              >
-                {formError}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="rat-title">RAT Title *</Label>
-                <Input
-                  id="rat-title"
-                  placeholder="e.g., NCLEX-RN Comprehensive Readiness Assessment #1"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="rat-pathway">Programme *</Label>
-                <select
-                  id="rat-pathway"
-                  value={pathway}
-                  disabled={!!editingExam}
-                  onChange={(e) => setPathway(e.target.value as "rn" | "pn")}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="rn">NCLEX-RN</option>
-                  <option value="pn">NCLEX-PN</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="rat-desc">Instructions & Description</Label>
-                <textarea
-                  id="rat-desc"
-                  rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Candidate instructions for this Readiness Assessment..."
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="rat-objectives">Assessment Objectives</Label>
-                <textarea
-                  id="rat-objectives"
-                  rows={2}
-                  value={assessmentObjectives}
-                  onChange={(e) => setAssessmentObjectives(e.target.value)}
-                  placeholder="One objective per line..."
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="rat-qcount" className="text-xs">
-                  Question Count
-                </Label>
-                <Input
-                  id="rat-qcount"
-                  type="number"
-                  min={1}
-                  max={265}
-                  value={targetQuestionCount}
-                  onChange={(e) => setTargetQuestionCount(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="rat-duration" className="text-xs">
-                  Duration (Min)
-                </Label>
-                <Input
-                  id="rat-duration"
-                  type="number"
-                  min={0}
-                  max={720}
-                  value={timeLimitMinutes}
-                  onChange={(e) => setTimeLimitMinutes(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="rat-pass" className="text-xs">
-                  Benchmark (%)
-                </Label>
-                <Input
-                  id="rat-pass"
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={passingScorePercent}
-                  onChange={(e) => setPassingScorePercent(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="rat-attempts" className="text-xs">
-                  Max Attempts
-                </Label>
-                <Input
-                  id="rat-attempts"
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={maxAttemptsAllowed}
-                  onChange={(e) => setMaxAttemptsAllowed(Number(e.target.value))}
-                />
-              </div>
-            </div>
-
-            {/* Readiness Classification Thresholds */}
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
-                  <Gauge className="w-4 h-4" />
-                  Readiness Classification Thresholds (0% – 100%)
-                </div>
-                <span className="text-[11px] text-muted-foreground">
-                  Must be non-overlapping and strictly ordered
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
-                <div className="p-2.5 rounded-lg border border-red-500/25 bg-background space-y-1.5">
-                  <div className="font-semibold text-red-600 dark:text-red-400">
-                    1. Low Readiness (%)
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      aria-label="Low Readiness Min"
-                      type="number"
-                      value={thresholds.lowMin}
-                      onChange={(e) =>
-                        setThresholds((t) => ({ ...t, lowMin: Number(e.target.value) }))
-                      }
-                      className="h-7 text-xs"
-                    />
-                    <span>–</span>
-                    <Input
-                      aria-label="Low Readiness Max"
-                      type="number"
-                      value={thresholds.lowMax}
-                      onChange={(e) =>
-                        setThresholds((t) => ({ ...t, lowMax: Number(e.target.value) }))
-                      }
-                      className="h-7 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg border border-amber-500/25 bg-background space-y-1.5">
-                  <div className="font-semibold text-amber-600 dark:text-amber-400">
-                    2. Borderline (%)
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      aria-label="Borderline Readiness Min"
-                      type="number"
-                      value={thresholds.borderlineMin}
-                      onChange={(e) =>
-                        setThresholds((t) => ({
-                          ...t,
-                          borderlineMin: Number(e.target.value),
-                        }))
-                      }
-                      className="h-7 text-xs"
-                    />
-                    <span>–</span>
-                    <Input
-                      aria-label="Borderline Readiness Max"
-                      type="number"
-                      value={thresholds.borderlineMax}
-                      onChange={(e) =>
-                        setThresholds((t) => ({
-                          ...t,
-                          borderlineMax: Number(e.target.value),
-                        }))
-                      }
-                      className="h-7 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg border border-indigo-500/25 bg-background space-y-1.5">
-                  <div className="font-semibold text-indigo-600 dark:text-indigo-400">
-                    3. High Readiness (%)
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      aria-label="High Readiness Min"
-                      type="number"
-                      value={thresholds.highMin}
-                      onChange={(e) =>
-                        setThresholds((t) => ({ ...t, highMin: Number(e.target.value) }))
-                      }
-                      className="h-7 text-xs"
-                    />
-                    <span>–</span>
-                    <Input
-                      aria-label="High Readiness Max"
-                      type="number"
-                      value={thresholds.highMax}
-                      onChange={(e) =>
-                        setThresholds((t) => ({ ...t, highMax: Number(e.target.value) }))
-                      }
-                      className="h-7 text-xs"
-                    />
-                  </div>
-                </div>
-
-                <div className="p-2.5 rounded-lg border border-emerald-500/25 bg-background space-y-1.5">
-                  <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-                    4. Very High (%)
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      aria-label="Very High Readiness Min"
-                      type="number"
-                      value={thresholds.veryHighMin}
-                      onChange={(e) =>
-                        setThresholds((t) => ({
-                          ...t,
-                          veryHighMin: Number(e.target.value),
-                        }))
-                      }
-                      className="h-7 text-xs"
-                    />
-                    <span>–</span>
-                    <Input
-                      aria-label="Very High Readiness Max"
-                      type="number"
-                      value={thresholds.veryHighMax}
-                      onChange={(e) =>
-                        setThresholds((t) => ({
-                          ...t,
-                          veryHighMax: Number(e.target.value),
-                        }))
-                      }
-                      className="h-7 text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {!editingExam && eligibleQuestions.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <Label>Optional Curated Questions from Question Repository</Label>
-                  <span className="text-muted-foreground">
-                    {selectedQuestionIds.length} selected
-                  </span>
-                </div>
-                <div className="max-h-36 overflow-y-auto border border-border rounded-lg divide-y divide-border text-xs">
-                  {eligibleQuestions.slice(0, 20).map((q) => {
-                    const qId = q.questionId || q.id;
-                    const checked = selectedQuestionIds.includes(qId);
-                    return (
-                      <label
-                        key={qId}
-                        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/20"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() =>
-                            setSelectedQuestionIds((prev) =>
-                              prev.includes(qId)
-                                ? prev.filter((x) => x !== qId)
-                                : [...prev, qId]
-                            )
-                          }
-                        />
-                        <span className="line-clamp-1 flex-1">{q.stem}</span>
-                        <Badge variant="outline" className="text-[10px]">
-                          {q.difficulty}
-                        </Badge>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setModalOpen(false)}
-                disabled={submitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={submitting}
-                data-testid="save-rat-btn"
-                className="bg-amber-600 hover:bg-amber-500 text-white"
-              >
-                {submitting
-                  ? "Saving..."
-                  : editingExam
-                    ? "Save RAT Configuration"
-                    : "Create Readiness Assessment"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Preview Dialog */}
-      {previewRevisionId && (
-        <ExaminationPreviewDialog
-          revisionId={previewRevisionId}
-          open={!!previewRevisionId}
-          onOpenChange={(open) => !open && setPreviewRevisionId(null)}
-        />
+        </>
       )}
-
-      {/* Delete RAT Confirmation */}
-      <Dialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <ShieldAlert className="w-5 h-5" />
-              Delete Readiness Assessment Test
-            </DialogTitle>
-            <DialogDescription>
-              Confirm removal of <strong>{deleteTarget?.title}</strong> ({deleteTarget?.code}).
-            </DialogDescription>
-          </DialogHeader>
-          {deleteError && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-              {deleteError}
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDeleteTarget(null)}
-              disabled={deleteSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDeleteRat}
-              disabled={deleteSubmitting}
-            >
-              {deleteSubmitting ? "Deleting..." : "Confirm Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

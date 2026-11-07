@@ -28,13 +28,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDetailsLayout,
+  FullPageDeleteLayout,
+  FullPageActionBar,
+} from "@/components/ui/full-page-crud";
 import {
   CourseSubjectManagement,
   type CourseItem,
@@ -441,7 +439,600 @@ export function StandaloneTestsWorkspace({
   }, [clientNeeds, pathway]);
 
   return (
-    <div className="space-y-6" data-testid="standalone-tests-workspace">
+    <div className="w-full max-w-none min-w-0 space-y-6" data-testid="standalone-tests-workspace">
+      {previewQuestion ? (
+        <FullPageDetailsLayout
+          data-testid="standalone-question-preview-fullpage"
+          eyebrow="Question Repository Preview"
+          title={previewQuestion.code || "Repository Question"}
+          description={`${previewQuestion.questionTypeKey} • ${previewQuestion.difficulty}`}
+          backLabel="Return to Standalone Test Builder"
+          onBack={() => setPreviewQuestion(null)}
+        >
+          <div className="rounded-2xl border border-border bg-card p-6 space-y-4 text-sm">
+            <div className="p-4 rounded-xl bg-muted/40 border border-border font-medium text-foreground">
+              {previewQuestion.stem}
+            </div>
+            {previewQuestion.overallRationale && (
+              <div className="text-sm text-muted-foreground">
+                <strong className="text-foreground">Clinical Rationale:</strong> {previewQuestion.overallRationale}
+              </div>
+            )}
+          </div>
+        </FullPageDetailsLayout>
+      ) : previewRevisionId ? (
+        <ExaminationPreviewDialog
+          revisionId={previewRevisionId}
+          open={!!previewRevisionId}
+          onOpenChange={(open) => !open && setPreviewRevisionId(null)}
+        />
+      ) : deleteTarget ? (
+        <FullPageDeleteLayout
+          data-testid="standalone-delete-fullpage"
+          title="Delete Standalone Custom Test"
+          description={`Confirm removal of ${deleteTarget.title} (${deleteTarget.code}).`}
+          recordTitle={deleteTarget.title}
+          recordSubtitle={`Code: ${deleteTarget.code}`}
+          consequences={[
+            "Draft standalone custom tests with zero learner attempts are permanently deleted.",
+            "Published tests or tests with learner attempt records are protected and must be archived instead.",
+          ]}
+          dependencyNotice={
+            deleteError && (
+              <div className="text-amber-800 dark:text-amber-300 font-medium">
+                {deleteError}
+              </div>
+            )
+          }
+          onCancel={() => setDeleteTarget(null)}
+          onConfirmDelete={handleDeleteExam}
+          confirmDeleteLabel={deleteSubmitting ? "Deleting..." : "Confirm Delete"}
+          isSubmitting={deleteSubmitting}
+        />
+      ) : wizardOpen ? (
+        <FullPageFormLayout
+          data-testid="standalone-wizard-fullpage"
+          eyebrow={`Create Custom Test (Stand Alone) — Stage ${wizardStep} of 6`}
+          title="Create Custom Test (Stand Alone)"
+          description="Assemble an independently configured examination from Course/Subject classifications, Client Needs, and the Question Repository."
+          backLabel="Return to Standalone Tests"
+          onBack={() => setWizardOpen(false)}
+          footer={
+            <FullPageActionBar
+              leftActions={
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    wizardStep > 1
+                      ? setWizardStep((s) => (s - 1) as any)
+                      : setWizardOpen(false)
+                  }
+                  disabled={wizardSubmitting}
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  {wizardStep > 1 ? "Previous Stage" : "Cancel"}
+                </Button>
+              }
+              primaryAction={
+                wizardStep < 6 ? (
+                  <Button
+                    type="button"
+                    onClick={() => setWizardStep((s) => (s + 1) as any)}
+                    disabled={!canProceedWizardStep()}
+                    className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                  >
+                    Next Stage
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleCreateStandaloneTest}
+                    disabled={wizardSubmitting}
+                    data-testid="submit-standalone-wizard-btn"
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white"
+                  >
+                    <Check className="w-4 h-4 mr-1.5" />
+                    {wizardSubmitting ? "Creating Standalone Test..." : "Save Standalone Custom Test"}
+                  </Button>
+                )
+              }
+            />
+          }
+        >
+          {/* Wizard Step Indicator */}
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pb-4 border-b border-border text-xs font-semibold">
+            {[
+              { step: 1, label: "1. Basic Info" },
+              { step: 2, label: "2. Subjects" },
+              { step: 3, label: "3. Client Needs" },
+              { step: 4, label: "4. Questions" },
+              { step: 5, label: "5. Policies" },
+              { step: 6, label: "6. Review" },
+            ].map((item) => (
+              <button
+                key={item.step}
+                type="button"
+                onClick={() => setWizardStep(item.step as any)}
+                className={`py-2.5 px-3 rounded-lg text-center transition-all ${
+                  wizardStep === item.step
+                    ? "bg-indigo-600 text-white"
+                    : wizardStep > item.step
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                      : "bg-muted/50 text-muted-foreground"
+                }`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+
+          {wizardError && (
+            <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-600 dark:text-red-400">
+              {wizardError}
+            </div>
+          )}
+
+          {/* Stage 1: Basic Information */}
+          {wizardStep === 1 && (
+            <div className="space-y-6 py-2">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="sa-title">Standalone Test Title *</Label>
+                  <Input
+                    id="sa-title"
+                    placeholder="e.g., RN Pharmacology & Parenteral Safety Custom Assessment"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sa-pathway">Programme / Pathway *</Label>
+                  <select
+                    id="sa-pathway"
+                    value={pathway}
+                    onChange={(e) => setPathway(e.target.value as "rn" | "pn")}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="rn">NCLEX-RN</option>
+                    <option value="pn">NCLEX-PN</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="sa-desc">Description & Candidate Instructions</Label>
+                <textarea
+                  id="sa-desc"
+                  rows={4}
+                  placeholder="Provide instructions and clinical focus areas for learners taking this standalone test..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Stage 2: Subject Configuration */}
+          {wizardStep === 2 && (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Select one or more nursing courses and subject domains to scope this standalone test.
+              </p>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="border border-border rounded-xl p-4 space-y-2.5">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Courses ({filteredCourseOptions.length})
+                  </div>
+                  {filteredCourseOptions.map((c) => {
+                    const checked = selectedCourseIds.includes(c.id);
+                    return (
+                      <label
+                        key={c.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border text-xs cursor-pointer transition-colors ${
+                          checked
+                            ? "border-indigo-500 bg-indigo-500/10"
+                            : "border-border hover:bg-muted/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleCourse(c.id)}
+                          />
+                          <div>
+                            <div className="font-semibold text-foreground">{c.title}</div>
+                            <div className="font-mono text-[10px] text-muted-foreground">
+                              {c.code}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-[10px]">
+                          {c.questionCount ?? 0} Qs
+                        </Badge>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <div className="border border-border rounded-xl p-4 space-y-2.5">
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Subject Domains ({filteredSubjectOptions.length})
+                  </div>
+                  {filteredSubjectOptions.map((s) => {
+                    const checked = selectedSubjectIds.includes(s.id);
+                    return (
+                      <label
+                        key={s.id}
+                        className={`flex items-center justify-between p-3 rounded-lg border text-xs cursor-pointer transition-colors ${
+                          checked
+                            ? "border-indigo-500 bg-indigo-500/10"
+                            : "border-border hover:bg-muted/30"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleSubject(s.id)}
+                          />
+                          <div>
+                            <div className="font-semibold text-foreground">{s.title}</div>
+                            <div className="text-[10px] text-muted-foreground">
+                              {s.code} • {s.courseTitle}
+                            </div>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-[10px]">
+                          {s.questionCount ?? 0} Qs
+                        </Badge>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Stage 3: Client Needs Configuration */}
+          {wizardStep === 3 && (
+            <div className="space-y-4 py-2">
+              <p className="text-sm text-muted-foreground">
+                Select NCLEX Client Needs categories and optional target question counts for this test.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {filteredClientNeedOptions.map((cn) => {
+                  const checked = selectedClientNeedCodes.includes(cn.code);
+                  return (
+                    <div
+                      key={cn.id}
+                      className={`flex items-center justify-between gap-3 p-3.5 rounded-xl border text-xs ${
+                        checked
+                          ? "border-indigo-500 bg-indigo-500/10"
+                          : "border-border bg-card"
+                      }`}
+                    >
+                      <label className="flex items-center gap-2.5 cursor-pointer flex-1">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleClientNeed(cn.code)}
+                        />
+                        <div>
+                          <div className="font-semibold text-foreground">
+                            {cn.name}{" "}
+                            <span className="font-mono text-indigo-500">({cn.code})</span>
+                          </div>
+                          {cn.description && (
+                            <div className="text-muted-foreground line-clamp-1">
+                              {cn.description}
+                            </div>
+                          )}
+                        </div>
+                      </label>
+
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{cn.questionCount ?? 0} available</Badge>
+                        {checked && (
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-muted-foreground">Target:</span>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={265}
+                              value={clientNeedTargetCounts[cn.code] ?? 5}
+                              onChange={(e) =>
+                                setClientNeedTargetCounts((prev) => ({
+                                  ...prev,
+                                  [cn.code]: Number(e.target.value) || 1,
+                                }))
+                              }
+                              className="w-16 h-7 text-xs"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Stage 4: Question Selection from Question Repository */}
+          {wizardStep === 4 && (
+            <div className="space-y-4 py-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm text-muted-foreground">
+                  Search and select Approved/Published questions from the centralized Question Repository.
+                </span>
+                <Badge variant="default" className="bg-indigo-600 text-white">
+                  {selectedQuestions.length} Questions Selected
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                <Input
+                  placeholder="Search question stem or code..."
+                  value={repoSearch}
+                  onChange={(e) => setRepoSearch(e.target.value)}
+                  className="sm:col-span-2 h-9 text-xs"
+                />
+                <select
+                  value={repoClientNeedFilter}
+                  onChange={(e) => setRepoClientNeedFilter(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  <option value="all">All Client Needs</option>
+                  {filteredClientNeedOptions.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.code} — {c.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={repoDifficultyFilter}
+                  onChange={(e) => setRepoDifficultyFilter(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  <option value="all">All Difficulties</option>
+                  <option value="Easy">Easy</option>
+                  <option value="Moderate">Moderate</option>
+                  <option value="Hard">Hard</option>
+                </select>
+              </div>
+
+              <div className="border border-border rounded-xl divide-y divide-border">
+                {loadingRepo ? (
+                  <div className="p-8 text-center text-xs text-muted-foreground">
+                    Loading eligible repository questions...
+                  </div>
+                ) : repoQuestions.length === 0 ? (
+                  <div className="p-8 text-center text-xs text-muted-foreground">
+                    No matching questions found in the Question Repository. You can also use Dynamic Balanced selection in Stage 5.
+                  </div>
+                ) : (
+                  repoQuestions.map((q) => {
+                    const qId = q.questionId || q.id;
+                    const isSelected = selectedQuestions.some(
+                      (item) => (item.questionId || item.id) === qId
+                    );
+                    return (
+                      <div
+                        key={qId}
+                        className={`flex items-start justify-between gap-3 p-3.5 text-xs ${
+                          isSelected ? "bg-indigo-500/10" : "hover:bg-muted/20"
+                        }`}
+                      >
+                        <label className="flex items-start gap-2.5 cursor-pointer flex-1">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleQuestionSelection(q)}
+                            className="mt-0.5"
+                          />
+                          <div className="space-y-1">
+                            <div className="font-medium text-foreground">
+                              {q.stem}
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
+                              {q.code && <span className="font-mono">{q.code}</span>}
+                              <Badge variant="outline" className="text-[10px]">
+                                {q.questionTypeKey}
+                              </Badge>
+                              <Badge variant="outline" className="text-[10px]">
+                                {q.difficulty}
+                              </Badge>
+                              {q.clientNeedCode && (
+                                <Badge variant="secondary" className="text-[10px]">
+                                  {q.clientNeedCode}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPreviewQuestion(q)}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Stage 5: Examination Configuration */}
+          {wizardStep === 5 && (
+            <div className="space-y-6 py-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="sa-qcount">Target Question Count</Label>
+                  <Input
+                    id="sa-qcount"
+                    type="number"
+                    min={1}
+                    max={265}
+                    value={targetQuestionCount}
+                    onChange={(e) => setTargetQuestionCount(Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sa-duration">Duration (Minutes, 0 = Untimed)</Label>
+                  <Input
+                    id="sa-duration"
+                    type="number"
+                    min={0}
+                    max={720}
+                    value={timeLimitMinutes}
+                    onChange={(e) => setTimeLimitMinutes(Number(e.target.value))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sa-pass">Passing Score (%)</Label>
+                  <Input
+                    id="sa-pass"
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={passingScorePercent}
+                    onChange={(e) => setPassingScorePercent(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="sa-strategy">Question Selection Mode</Label>
+                  <select
+                    id="sa-strategy"
+                    value={selectionStrategy}
+                    onChange={(e) => setSelectionStrategy(e.target.value as any)}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="Preset">Fixed / Curated Question Set</option>
+                    <option value="DynamicBalanced">Dynamic Balanced Pool</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sa-review">Result & Review Policy</Label>
+                  <select
+                    id="sa-review"
+                    value={reviewPolicy}
+                    onChange={(e) => setReviewPolicy(e.target.value)}
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="AfterExamSubmission">After Submission</option>
+                    <option value="Immediate">Immediate Feedback</option>
+                    <option value="Never">Summary Score Only</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="sa-attempts">Max Attempts Allowed</Label>
+                  <Input
+                    id="sa-attempts"
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={maxAttemptsAllowed}
+                    onChange={(e) => setMaxAttemptsAllowed(Number(e.target.value))}
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-6 pt-2 text-sm">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={randomizeQuestions}
+                    onChange={(e) => setRandomizeQuestions(e.target.checked)}
+                  />
+                  Randomize Question Order
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showRationales}
+                    onChange={(e) => setShowRationales(e.target.checked)}
+                  />
+                  Show Clinical Rationales After Completion
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showScoreImmediately}
+                    onChange={(e) => setShowScoreImmediately(e.target.checked)}
+                  />
+                  Show Score Immediately
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* Stage 6: Review & Save */}
+          {wizardStep === 6 && (
+            <div className="space-y-4 py-2 text-sm">
+              <div className="rounded-xl border border-border bg-muted/20 p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs uppercase text-muted-foreground font-semibold">
+                      Standalone Custom Test Summary
+                    </div>
+                    <h4 className="text-lg font-bold text-foreground">
+                      {title || "Untitled Test"}
+                    </h4>
+                  </div>
+                  <Badge variant="outline" className="uppercase">
+                    NCLEX-{pathway}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {description || "No additional candidate instructions specified."}
+                </p>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-3 border-t border-border text-xs">
+                  <div>
+                    <span className="text-muted-foreground block">Courses / Subjects</span>
+                    <strong>
+                      {selectedCourseIds.length} courses, {selectedSubjectIds.length} subjects
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">Client Needs</span>
+                    <strong>{selectedClientNeedCodes.length} categories</strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">Selected Questions</span>
+                    <strong>
+                      {selectedQuestions.length > 0
+                        ? `${selectedQuestions.length} curated Qs`
+                        : `${targetQuestionCount} dynamic Qs`}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground block">Timing & Passing</span>
+                    <strong>
+                      {timeLimitMinutes} min • {passingScorePercent}% pass
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </FullPageFormLayout>
+      ) : (
+        <>
       {/* Module 1 Sub-Navigation Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border rounded-xl p-4 shadow-xs">
         <div className="flex flex-wrap items-center gap-2">
@@ -716,628 +1307,8 @@ export function StandaloneTestsWorkspace({
           </div>
         </div>
       )}
-
-      {/* 6-Stage Standalone Custom Test Creation Wizard */}
-      <Dialog open={wizardOpen} onOpenChange={setWizardOpen}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-indigo-500" />
-              Create Custom Test (Stand Alone) — Stage {wizardStep} of 6
-            </DialogTitle>
-            <DialogDescription>
-              Assemble an independently configured examination from Course/Subject classifications, Client Needs, and the Question Repository.
-            </DialogDescription>
-          </DialogHeader>
-
-          {/* Wizard Step Indicator */}
-          <div className="grid grid-cols-6 gap-1.5 py-2 border-b border-border text-[11px] font-semibold">
-            {[
-              { step: 1, label: "1. Basic Info" },
-              { step: 2, label: "2. Subjects" },
-              { step: 3, label: "3. Client Needs" },
-              { step: 4, label: "4. Questions" },
-              { step: 5, label: "5. Policies" },
-              { step: 6, label: "6. Review" },
-            ].map((item) => (
-              <button
-                key={item.step}
-                type="button"
-                onClick={() => setWizardStep(item.step as any)}
-                className={`py-2 px-2 rounded-md text-center transition-all ${
-                  wizardStep === item.step
-                    ? "bg-indigo-600 text-white"
-                    : wizardStep > item.step
-                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
-                      : "bg-muted/50 text-muted-foreground"
-                }`}
-              >
-                {item.label}
-              </button>
-            ))}
-          </div>
-
-          {wizardError && (
-            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400">
-              {wizardError}
-            </div>
-          )}
-
-          {/* Stage 1: Basic Information */}
-          {wizardStep === 1 && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2 space-y-1.5">
-                  <Label htmlFor="sa-title">Standalone Test Title *</Label>
-                  <Input
-                    id="sa-title"
-                    placeholder="e.g., RN Pharmacology & Parenteral Safety Custom Assessment"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="sa-pathway">Programme / Pathway *</Label>
-                  <select
-                    id="sa-pathway"
-                    value={pathway}
-                    onChange={(e) => setPathway(e.target.value as "rn" | "pn")}
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="rn">NCLEX-RN</option>
-                    <option value="pn">NCLEX-PN</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="sa-desc">Description & Candidate Instructions</Label>
-                <textarea
-                  id="sa-desc"
-                  rows={3}
-                  placeholder="Provide instructions and clinical focus areas for learners taking this standalone test..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Stage 2: Subject Configuration */}
-          {wizardStep === 2 && (
-            <div className="space-y-4 py-2">
-              <p className="text-xs text-muted-foreground">
-                Select one or more nursing courses and subject domains to scope this standalone test.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="border border-border rounded-lg p-3.5 space-y-2 max-h-64 overflow-y-auto">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Courses ({filteredCourseOptions.length})
-                  </div>
-                  {filteredCourseOptions.map((c) => {
-                    const checked = selectedCourseIds.includes(c.id);
-                    return (
-                      <label
-                        key={c.id}
-                        className={`flex items-center justify-between p-2 rounded-md border text-xs cursor-pointer transition-colors ${
-                          checked
-                            ? "border-indigo-500 bg-indigo-500/10"
-                            : "border-border hover:bg-muted/30"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleCourse(c.id)}
-                          />
-                          <div>
-                            <div className="font-semibold text-foreground">{c.title}</div>
-                            <div className="font-mono text-[10px] text-muted-foreground">
-                              {c.code}
-                            </div>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-[10px]">
-                          {c.questionCount ?? 0} Qs
-                        </Badge>
-                      </label>
-                    );
-                  })}
-                </div>
-
-                <div className="border border-border rounded-lg p-3.5 space-y-2 max-h-64 overflow-y-auto">
-                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Subject Domains ({filteredSubjectOptions.length})
-                  </div>
-                  {filteredSubjectOptions.map((s) => {
-                    const checked = selectedSubjectIds.includes(s.id);
-                    return (
-                      <label
-                        key={s.id}
-                        className={`flex items-center justify-between p-2 rounded-md border text-xs cursor-pointer transition-colors ${
-                          checked
-                            ? "border-indigo-500 bg-indigo-500/10"
-                            : "border-border hover:bg-muted/30"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => toggleSubject(s.id)}
-                          />
-                          <div>
-                            <div className="font-semibold text-foreground">{s.title}</div>
-                            <div className="text-[10px] text-muted-foreground">
-                              {s.code} • {s.courseTitle}
-                            </div>
-                          </div>
-                        </div>
-                        <Badge variant="outline" className="text-[10px]">
-                          {s.questionCount ?? 0} Qs
-                        </Badge>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Stage 3: Client Needs Configuration */}
-          {wizardStep === 3 && (
-            <div className="space-y-4 py-2">
-              <p className="text-xs text-muted-foreground">
-                Select NCLEX Client Needs categories and optional target question counts for this test.
-              </p>
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
-                {filteredClientNeedOptions.map((cn) => {
-                  const checked = selectedClientNeedCodes.includes(cn.code);
-                  return (
-                    <div
-                      key={cn.id}
-                      className={`flex items-center justify-between gap-3 p-3 rounded-lg border text-xs ${
-                        checked
-                          ? "border-indigo-500 bg-indigo-500/10"
-                          : "border-border bg-card"
-                      }`}
-                    >
-                      <label className="flex items-center gap-2.5 cursor-pointer flex-1">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleClientNeed(cn.code)}
-                        />
-                        <div>
-                          <div className="font-semibold text-foreground">
-                            {cn.name}{" "}
-                            <span className="font-mono text-indigo-500">({cn.code})</span>
-                          </div>
-                          {cn.description && (
-                            <div className="text-muted-foreground line-clamp-1">
-                              {cn.description}
-                            </div>
-                          )}
-                        </div>
-                      </label>
-
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{cn.questionCount ?? 0} available</Badge>
-                        {checked && (
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-muted-foreground">Target:</span>
-                            <Input
-                              type="number"
-                              min={1}
-                              max={265}
-                              value={clientNeedTargetCounts[cn.code] ?? 5}
-                              onChange={(e) =>
-                                setClientNeedTargetCounts((prev) => ({
-                                  ...prev,
-                                  [cn.code]: Number(e.target.value) || 1,
-                                }))
-                              }
-                              className="w-16 h-7 text-xs"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Stage 4: Question Selection from Question Repository */}
-          {wizardStep === 4 && (
-            <div className="space-y-4 py-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-xs text-muted-foreground">
-                  Search and select Approved/Published questions from the centralized Question Repository.
-                </span>
-                <Badge variant="default" className="bg-indigo-600 text-white">
-                  {selectedQuestions.length} Questions Selected
-                </Badge>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
-                <Input
-                  placeholder="Search question stem or code..."
-                  value={repoSearch}
-                  onChange={(e) => setRepoSearch(e.target.value)}
-                  className="sm:col-span-2 h-8 text-xs"
-                />
-                <select
-                  value={repoClientNeedFilter}
-                  onChange={(e) => setRepoClientNeedFilter(e.target.value)}
-                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                >
-                  <option value="all">All Client Needs</option>
-                  {filteredClientNeedOptions.map((c) => (
-                    <option key={c.code} value={c.code}>
-                      {c.code} — {c.name}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={repoDifficultyFilter}
-                  onChange={(e) => setRepoDifficultyFilter(e.target.value)}
-                  className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                >
-                  <option value="all">All Difficulties</option>
-                  <option value="Easy">Easy</option>
-                  <option value="Moderate">Moderate</option>
-                  <option value="Hard">Hard</option>
-                </select>
-              </div>
-
-              <div className="border border-border rounded-lg max-h-64 overflow-y-auto divide-y divide-border">
-                {loadingRepo ? (
-                  <div className="p-8 text-center text-xs text-muted-foreground">
-                    Loading eligible repository questions...
-                  </div>
-                ) : repoQuestions.length === 0 ? (
-                  <div className="p-8 text-center text-xs text-muted-foreground">
-                    No matching questions found in the Question Repository. You can also use Dynamic Balanced selection in Stage 5.
-                  </div>
-                ) : (
-                  repoQuestions.map((q) => {
-                    const qId = q.questionId || q.id;
-                    const isSelected = selectedQuestions.some(
-                      (item) => (item.questionId || item.id) === qId
-                    );
-                    return (
-                      <div
-                        key={qId}
-                        className={`flex items-start justify-between gap-3 p-3 text-xs ${
-                          isSelected ? "bg-indigo-500/10" : "hover:bg-muted/20"
-                        }`}
-                      >
-                        <label className="flex items-start gap-2.5 cursor-pointer flex-1">
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleQuestionSelection(q)}
-                            className="mt-0.5"
-                          />
-                          <div className="space-y-1">
-                            <div className="font-medium text-foreground line-clamp-2">
-                              {q.stem}
-                            </div>
-                            <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted-foreground">
-                              {q.code && <span className="font-mono">{q.code}</span>}
-                              <Badge variant="outline" className="text-[10px]">
-                                {q.questionTypeKey}
-                              </Badge>
-                              <Badge variant="outline" className="text-[10px]">
-                                {q.difficulty}
-                              </Badge>
-                              {q.clientNeedCode && (
-                                <Badge variant="secondary" className="text-[10px]">
-                                  {q.clientNeedCode}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                        </label>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setPreviewQuestion(q)}
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Stage 5: Examination Configuration */}
-          {wizardStep === 5 && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="sa-qcount">Target Question Count</Label>
-                  <Input
-                    id="sa-qcount"
-                    type="number"
-                    min={1}
-                    max={265}
-                    value={targetQuestionCount}
-                    onChange={(e) => setTargetQuestionCount(Number(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="sa-duration">Duration (Minutes, 0 = Untimed)</Label>
-                  <Input
-                    id="sa-duration"
-                    type="number"
-                    min={0}
-                    max={720}
-                    value={timeLimitMinutes}
-                    onChange={(e) => setTimeLimitMinutes(Number(e.target.value))}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="sa-pass">Passing Score (%)</Label>
-                  <Input
-                    id="sa-pass"
-                    type="number"
-                    min={1}
-                    max={100}
-                    value={passingScorePercent}
-                    onChange={(e) => setPassingScorePercent(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="sa-strategy">Question Selection Mode</Label>
-                  <select
-                    id="sa-strategy"
-                    value={selectionStrategy}
-                    onChange={(e) => setSelectionStrategy(e.target.value as any)}
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="Preset">Fixed / Curated Question Set</option>
-                    <option value="DynamicBalanced">Dynamic Balanced Pool</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="sa-review">Result & Review Policy</Label>
-                  <select
-                    id="sa-review"
-                    value={reviewPolicy}
-                    onChange={(e) => setReviewPolicy(e.target.value)}
-                    className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                  >
-                    <option value="AfterExamSubmission">After Submission</option>
-                    <option value="Immediate">Immediate Feedback</option>
-                    <option value="Never">Summary Score Only</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="sa-attempts">Max Attempts Allowed</Label>
-                  <Input
-                    id="sa-attempts"
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={maxAttemptsAllowed}
-                    onChange={(e) => setMaxAttemptsAllowed(Number(e.target.value))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-6 pt-2 text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={randomizeQuestions}
-                    onChange={(e) => setRandomizeQuestions(e.target.checked)}
-                  />
-                  Randomize Question Order
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showRationales}
-                    onChange={(e) => setShowRationales(e.target.checked)}
-                  />
-                  Show Clinical Rationales After Completion
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showScoreImmediately}
-                    onChange={(e) => setShowScoreImmediately(e.target.checked)}
-                  />
-                  Show Score Immediately
-                </label>
-              </div>
-            </div>
-          )}
-
-          {/* Stage 6: Review & Save */}
-          {wizardStep === 6 && (
-            <div className="space-y-4 py-2 text-sm">
-              <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-xs uppercase text-muted-foreground font-semibold">
-                      Standalone Custom Test Summary
-                    </div>
-                    <h4 className="text-base font-bold text-foreground">
-                      {title || "Untitled Test"}
-                    </h4>
-                  </div>
-                  <Badge variant="outline" className="uppercase">
-                    NCLEX-{pathway}
-                  </Badge>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {description || "No additional candidate instructions specified."}
-                </p>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-border text-xs">
-                  <div>
-                    <span className="text-muted-foreground block">Courses / Subjects</span>
-                    <strong>
-                      {selectedCourseIds.length} courses, {selectedSubjectIds.length} subjects
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Client Needs</span>
-                    <strong>{selectedClientNeedCodes.length} categories</strong>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Selected Questions</span>
-                    <strong>
-                      {selectedQuestions.length > 0
-                        ? `${selectedQuestions.length} curated Qs`
-                        : `${targetQuestionCount} dynamic Qs`}
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="text-muted-foreground block">Timing & Passing</span>
-                    <strong>
-                      {timeLimitMinutes} min • {passingScorePercent}% pass
-                    </strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="flex items-center justify-between sm:justify-between border-t border-border pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                wizardStep > 1
-                  ? setWizardStep((s) => (s - 1) as any)
-                  : setWizardOpen(false)
-              }
-              disabled={wizardSubmitting}
-            >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              {wizardStep > 1 ? "Previous Stage" : "Cancel"}
-            </Button>
-
-            {wizardStep < 6 ? (
-              <Button
-                type="button"
-                onClick={() => setWizardStep((s) => (s + 1) as any)}
-                disabled={!canProceedWizardStep()}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white"
-              >
-                Next Stage
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                onClick={handleCreateStandaloneTest}
-                disabled={wizardSubmitting}
-                data-testid="submit-standalone-wizard-btn"
-                className="bg-emerald-600 hover:bg-emerald-500 text-white"
-              >
-                <Check className="w-4 h-4 mr-1.5" />
-                {wizardSubmitting ? "Creating Standalone Test..." : "Save Standalone Custom Test"}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Question Preview Modal */}
-      <Dialog
-        open={!!previewQuestion}
-        onOpenChange={(open) => !open && setPreviewQuestion(null)}
-      >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Question Repository Preview</DialogTitle>
-            <DialogDescription>
-              {previewQuestion?.code} • {previewQuestion?.questionTypeKey} •{" "}
-              {previewQuestion?.difficulty}
-            </DialogDescription>
-          </DialogHeader>
-          {previewQuestion && (
-            <div className="space-y-3 text-sm">
-              <div className="p-3 rounded-lg bg-muted/40 border border-border">
-                {previewQuestion.stem}
-              </div>
-              {previewQuestion.overallRationale && (
-                <div className="text-xs text-muted-foreground">
-                  <strong>Clinical Rationale:</strong> {previewQuestion.overallRationale}
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Examination Preview Dialog */}
-      {previewRevisionId && (
-        <ExaminationPreviewDialog
-          revisionId={previewRevisionId}
-          open={!!previewRevisionId}
-          onOpenChange={(open) => !open && setPreviewRevisionId(null)}
-        />
+        </>
       )}
-
-      {/* Delete Standalone Test Confirmation Dialog */}
-      <Dialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <ShieldAlert className="w-5 h-5" />
-              Delete Standalone Custom Test
-            </DialogTitle>
-            <DialogDescription>
-              Confirm removal of <strong>{deleteTarget?.title}</strong> ({deleteTarget?.code}).
-            </DialogDescription>
-          </DialogHeader>
-          {deleteError && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-              {deleteError}
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDeleteTarget(null)}
-              disabled={deleteSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDeleteExam}
-              disabled={deleteSubmitting}
-            >
-              {deleteSubmitting ? "Deleting..." : "Confirm Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

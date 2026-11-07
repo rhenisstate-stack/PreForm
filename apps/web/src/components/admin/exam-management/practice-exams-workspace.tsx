@@ -21,13 +21,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDeleteLayout,
+  FullPageActionBar,
+} from "@/components/ui/full-page-crud";
 import { ExaminationPreviewDialog } from "@/components/admin/examination-preview-dialog";
 import { DuplicateExaminationDialog } from "@/components/admin/duplicate-examination-dialog";
 
@@ -344,7 +341,282 @@ export function PracticeExamsWorkspace({
   };
 
   return (
-    <div className="space-y-6" data-testid="practice-exams-workspace">
+    <div className="w-full max-w-none min-w-0 space-y-6" data-testid="practice-exams-workspace">
+      {previewRevisionId ? (
+        <ExaminationPreviewDialog
+          revisionId={previewRevisionId}
+          open={!!previewRevisionId}
+          onOpenChange={(open) => !open && setPreviewRevisionId(null)}
+        />
+      ) : duplicateTarget ? (
+        <DuplicateExaminationDialog
+          open={!!duplicateTarget}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDuplicateTarget(null);
+              loadPracticeExams();
+              onExamCatalogChanged?.();
+            }
+          }}
+          examinationId={duplicateTarget.id}
+          examinationCode={duplicateTarget.code}
+          examinationTitle={duplicateTarget.title}
+          examinationPathway={duplicateTarget.pathway}
+          eligibleRevisions={
+            [
+              duplicateTarget.publishedRevision ||
+                duplicateTarget.latestRevision ||
+                duplicateTarget.currentRevision,
+            ].filter(Boolean)
+          }
+        />
+      ) : deleteTarget ? (
+        <FullPageDeleteLayout
+          data-testid="practice-exam-delete-fullpage"
+          title="Delete Practice Exam"
+          description={`Confirm removal of ${deleteTarget.title} (${deleteTarget.code}).`}
+          recordTitle={deleteTarget.title}
+          recordSubtitle={`Code: ${deleteTarget.code}`}
+          consequences={[
+            "Draft Practice Exams with zero learner attempts are permanently deleted.",
+            "Published Practice Exams or exams with learner attempt records are protected and must be archived instead.",
+          ]}
+          dependencyNotice={
+            deleteError && (
+              <div className="text-amber-800 dark:text-amber-300 font-medium">
+                {deleteError}
+              </div>
+            )
+          }
+          onCancel={() => setDeleteTarget(null)}
+          onConfirmDelete={handleDeletePracticeExam}
+          confirmDeleteLabel={deleteSubmitting ? "Deleting..." : "Confirm Delete"}
+          isSubmitting={deleteSubmitting}
+        />
+      ) : modalOpen ? (
+        <FullPageFormLayout
+          data-testid="practice-exam-form-fullpage"
+          eyebrow="Module 3 — Practice Exams (NCLEX-RN & NCLEX-PN)"
+          title={editingExam ? "Edit Practice Exam" : "Create Practice Exam"}
+          description="Configure an NCLEX-RN or NCLEX-PN Practice Exam with Traditional and Next Generation NCLEX (NGN) question selection, difficulty distribution, and review policies."
+          backLabel="Return to Practice Exams"
+          onBack={() => setModalOpen(false)}
+        >
+          <form onSubmit={handleSavePracticeExam} className="w-full max-w-none space-y-6">
+            {formError && (
+              <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-600 dark:text-red-400">
+                {formError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="sm:col-span-2 space-y-2">
+                <Label htmlFor="pe-title">Practice Exam Title *</Label>
+                <Input
+                  id="pe-title"
+                  placeholder="e.g., NCLEX-RN Full-Length Practice Examination #1"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="pe-pathway">Programme / Track *</Label>
+                <select
+                  id="pe-pathway"
+                  value={pathway}
+                  disabled={!!editingExam}
+                  onChange={(e) => setPathway(e.target.value as "rn" | "pn")}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="rn">NCLEX-RN</option>
+                  <option value="pn">NCLEX-PN</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pe-desc">Description & Candidate Instructions</Label>
+              <textarea
+                id="pe-desc"
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Instructions for candidates taking this Practice Exam..."
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="pe-qcount" className="text-xs">
+                  Total Questions
+                </Label>
+                <Input
+                  id="pe-qcount"
+                  type="number"
+                  min={1}
+                  max={265}
+                  value={targetQuestionCount}
+                  onChange={(e) => setTargetQuestionCount(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pe-duration" className="text-xs">
+                  Duration (Min)
+                </Label>
+                <Input
+                  id="pe-duration"
+                  type="number"
+                  min={0}
+                  max={720}
+                  value={timeLimitMinutes}
+                  onChange={(e) => setTimeLimitMinutes(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pe-pass" className="text-xs">
+                  Passing Score (%)
+                </Label>
+                <Input
+                  id="pe-pass"
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={passingScorePercent}
+                  onChange={(e) => setPassingScorePercent(Number(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pe-format" className="text-xs">
+                  Question Formats
+                </Label>
+                <select
+                  id="pe-format"
+                  value={questionFormatFilter}
+                  onChange={(e) => setQuestionFormatFilter(e.target.value as any)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-2 text-xs"
+                >
+                  <option value="all">Traditional + NGN</option>
+                  <option value="traditional">Traditional NCLEX Only</option>
+                  <option value="ngn">NGN & Multi-Response</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Difficulty Distribution */}
+            <div className="rounded-xl border border-border bg-muted/20 p-4 space-y-3">
+              <div className="flex items-center justify-between text-xs font-semibold">
+                <span>Difficulty Distribution (Must Sum to 100%)</span>
+                <span
+                  className={
+                    easyPercent + moderatePercent + hardPercent === 100
+                      ? "text-emerald-600"
+                      : "text-red-500"
+                  }
+                >
+                  Total: {easyPercent + moderatePercent + hardPercent}%
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-xs">
+                <div>
+                  <Label className="text-[11px]">Easy (%)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={easyPercent}
+                    onChange={(e) => setEasyPercent(Number(e.target.value))}
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Moderate (%)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={moderatePercent}
+                    onChange={(e) => setModeratePercent(Number(e.target.value))}
+                    className="h-9 text-xs"
+                  />
+                </div>
+                <div>
+                  <Label className="text-[11px]">Hard (%)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={hardPercent}
+                    onChange={(e) => setHardPercent(Number(e.target.value))}
+                    className="h-9 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {!editingExam && eligibleQuestions.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <Label>
+                    Curate Specific Questions from Repository (Optional)
+                  </Label>
+                  <span className="text-muted-foreground">
+                    {selectedQuestionIds.length} selected
+                  </span>
+                </div>
+                <div className="border border-border rounded-xl divide-y divide-border text-xs">
+                  {eligibleQuestions.slice(0, 20).map((q) => {
+                    const qId = q.questionId || q.id;
+                    const checked = selectedQuestionIds.includes(qId);
+                    return (
+                      <label
+                        key={qId}
+                        className="flex items-center gap-2.5 px-3.5 py-2.5 cursor-pointer hover:bg-muted/20"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() =>
+                            setSelectedQuestionIds((prev) =>
+                              prev.includes(qId)
+                                ? prev.filter((x) => x !== qId)
+                                : [...prev, qId]
+                            )
+                          }
+                        />
+                        <span className="flex-1">{q.stem}</span>
+                        <Badge variant="outline" className="text-[10px]">
+                          {q.questionTypeKey}
+                        </Badge>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <FullPageActionBar
+              onCancel={() => setModalOpen(false)}
+              primaryAction={
+                <Button
+                  type="submit"
+                  disabled={submitting}
+                  data-testid="save-practice-exam-btn"
+                  className="bg-teal-600 hover:bg-teal-500 text-white"
+                >
+                  {submitting
+                    ? "Saving..."
+                    : editingExam
+                      ? "Save Changes"
+                      : "Create Practice Exam"}
+                </Button>
+              }
+            />
+          </form>
+        </FullPageFormLayout>
+      ) : (
+        <>
       {/* Header & Programme Switcher */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border rounded-xl p-5 shadow-xs">
         <div>
@@ -652,314 +924,8 @@ export function PracticeExamsWorkspace({
           </div>
         )}
       </div>
-
-      {/* Create / Edit Practice Exam Modal */}
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-teal-500" />
-              {editingExam ? "Edit Practice Exam" : "Create Practice Exam"}
-            </DialogTitle>
-            <DialogDescription>
-              Configure an NCLEX-RN or NCLEX-PN Practice Exam with Traditional and Next Generation NCLEX (NGN) question selection, difficulty distribution, and review policies.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleSavePracticeExam} className="space-y-4">
-            {formError && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400">
-                {formError}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="sm:col-span-2 space-y-1.5">
-                <Label htmlFor="pe-title">Practice Exam Title *</Label>
-                <Input
-                  id="pe-title"
-                  placeholder="e.g., NCLEX-RN Full-Length Practice Examination #1"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="pe-pathway">Programme / Track *</Label>
-                <select
-                  id="pe-pathway"
-                  value={pathway}
-                  disabled={!!editingExam}
-                  onChange={(e) => setPathway(e.target.value as "rn" | "pn")}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="rn">NCLEX-RN</option>
-                  <option value="pn">NCLEX-PN</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="pe-desc">Description & Candidate Instructions</Label>
-              <textarea
-                id="pe-desc"
-                rows={2}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Instructions for candidates taking this Practice Exam..."
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="space-y-1">
-                <Label htmlFor="pe-qcount" className="text-xs">
-                  Total Questions
-                </Label>
-                <Input
-                  id="pe-qcount"
-                  type="number"
-                  min={1}
-                  max={265}
-                  value={targetQuestionCount}
-                  onChange={(e) => setTargetQuestionCount(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pe-duration" className="text-xs">
-                  Duration (Min)
-                </Label>
-                <Input
-                  id="pe-duration"
-                  type="number"
-                  min={0}
-                  max={720}
-                  value={timeLimitMinutes}
-                  onChange={(e) => setTimeLimitMinutes(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pe-pass" className="text-xs">
-                  Passing Score (%)
-                </Label>
-                <Input
-                  id="pe-pass"
-                  type="number"
-                  min={1}
-                  max={100}
-                  value={passingScorePercent}
-                  onChange={(e) => setPassingScorePercent(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1">
-                <Label htmlFor="pe-format" className="text-xs">
-                  Question Formats
-                </Label>
-                <select
-                  id="pe-format"
-                  value={questionFormatFilter}
-                  onChange={(e) => setQuestionFormatFilter(e.target.value as any)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-2 text-xs"
-                >
-                  <option value="all">Traditional + NGN</option>
-                  <option value="traditional">Traditional NCLEX Only</option>
-                  <option value="ngn">NGN & Multi-Response</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Difficulty Distribution */}
-            <div className="rounded-xl border border-border bg-muted/20 p-3.5 space-y-2">
-              <div className="flex items-center justify-between text-xs font-semibold">
-                <span>Difficulty Distribution (Must Sum to 100%)</span>
-                <span
-                  className={
-                    easyPercent + moderatePercent + hardPercent === 100
-                      ? "text-emerald-600"
-                      : "text-red-500"
-                  }
-                >
-                  Total: {easyPercent + moderatePercent + hardPercent}%
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-3 text-xs">
-                <div>
-                  <Label className="text-[11px]">Easy (%)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={easyPercent}
-                    onChange={(e) => setEasyPercent(Number(e.target.value))}
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[11px]">Moderate (%)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={moderatePercent}
-                    onChange={(e) => setModeratePercent(Number(e.target.value))}
-                    className="h-8 text-xs"
-                  />
-                </div>
-                <div>
-                  <Label className="text-[11px]">Hard (%)</Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={100}
-                    value={hardPercent}
-                    onChange={(e) => setHardPercent(Number(e.target.value))}
-                    className="h-8 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {!editingExam && eligibleQuestions.length > 0 && (
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs">
-                  <Label>
-                    Curate Specific Questions from Repository (Optional)
-                  </Label>
-                  <span className="text-muted-foreground">
-                    {selectedQuestionIds.length} selected
-                  </span>
-                </div>
-                <div className="max-h-36 overflow-y-auto border border-border rounded-lg divide-y divide-border text-xs">
-                  {eligibleQuestions.slice(0, 20).map((q) => {
-                    const qId = q.questionId || q.id;
-                    const checked = selectedQuestionIds.includes(qId);
-                    return (
-                      <label
-                        key={qId}
-                        className="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-muted/20"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() =>
-                            setSelectedQuestionIds((prev) =>
-                              prev.includes(qId)
-                                ? prev.filter((x) => x !== qId)
-                                : [...prev, qId]
-                            )
-                          }
-                        />
-                        <span className="line-clamp-1 flex-1">{q.stem}</span>
-                        <Badge variant="outline" className="text-[10px]">
-                          {q.questionTypeKey}
-                        </Badge>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setModalOpen(false)}
-                disabled={submitting}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={submitting}
-                data-testid="save-practice-exam-btn"
-                className="bg-teal-600 hover:bg-teal-500 text-white"
-              >
-                {submitting
-                  ? "Saving..."
-                  : editingExam
-                    ? "Save Changes"
-                    : "Create Practice Exam"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Preview Dialog */}
-      {previewRevisionId && (
-        <ExaminationPreviewDialog
-          revisionId={previewRevisionId}
-          open={!!previewRevisionId}
-          onOpenChange={(open) => !open && setPreviewRevisionId(null)}
-        />
+        </>
       )}
-
-      {/* Duplicate Dialog */}
-      {duplicateTarget && (
-        <DuplicateExaminationDialog
-          open={!!duplicateTarget}
-          onOpenChange={(open) => {
-            if (!open) {
-              setDuplicateTarget(null);
-              loadPracticeExams();
-              onExamCatalogChanged?.();
-            }
-          }}
-          examinationId={duplicateTarget.id}
-          examinationCode={duplicateTarget.code}
-          examinationTitle={duplicateTarget.title}
-          examinationPathway={duplicateTarget.pathway}
-          eligibleRevisions={
-            [
-              duplicateTarget.publishedRevision ||
-                duplicateTarget.latestRevision ||
-                duplicateTarget.currentRevision,
-            ].filter(Boolean)
-          }
-        />
-      )}
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600">
-              <ShieldAlert className="w-5 h-5" />
-              Delete Practice Exam
-            </DialogTitle>
-            <DialogDescription>
-              Confirm removal of <strong>{deleteTarget?.title}</strong> ({deleteTarget?.code}).
-            </DialogDescription>
-          </DialogHeader>
-          {deleteError && (
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-800 dark:text-amber-300">
-              {deleteError}
-            </div>
-          )}
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setDeleteTarget(null)}
-              disabled={deleteSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={handleDeletePracticeExam}
-              disabled={deleteSubmitting}
-            >
-              {deleteSubmitting ? "Deleting..." : "Confirm Delete"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
