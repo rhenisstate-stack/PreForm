@@ -6,19 +6,23 @@ import {
   ClipboardCheck,
   CreditCard,
   FileText,
+  FolderOpen,
   GraduationCap,
   HelpCircle,
   KeyRound,
   Layers,
   LayoutDashboard,
   Library,
+  MessageSquare,
   Network,
+  Newspaper,
   RotateCcw,
   ScrollText,
   ShieldCheck,
   Sparkles,
   Target,
   Users,
+  Video,
 } from "lucide-react";
 import type { AdminCapabilities } from "@/lib/admin/authz";
 
@@ -311,12 +315,60 @@ const ANALYTICS_GROUP: NavGroup = {
   ],
 };
 
+const CONTENT_MEDIA_GROUP: NavGroup = {
+  id: "content-media",
+  label: "Media & Editorial",
+  items: [
+    {
+      id: "media-library",
+      title: "Media Library",
+      href: "/admin/media",
+      icon: FolderOpen,
+      capability: "canManageMedia",
+      description: "Manage clinical exhibits, ECG strips, diagrams, and central assets",
+    },
+    {
+      id: "video-management",
+      title: "Video Management",
+      href: "/admin/videos",
+      icon: Video,
+      capability: "canManageVideos",
+      description: "Manage privacy-enhanced video lectures and candidate playlists",
+    },
+    {
+      id: "blog-management",
+      title: "Blog & Editorial",
+      href: "/admin/blog",
+      icon: Newspaper,
+      capability: "canManageBlog",
+      description: "Publish clinical judgment articles, study strategies, and test plan updates",
+    },
+  ],
+};
+
+const COMMUNICATIONS_GROUP: NavGroup = {
+  id: "communications",
+  label: "Communications",
+  items: [
+    {
+      id: "feedback-moderation",
+      title: "Feedback & Issues",
+      href: "/admin/feedback",
+      icon: MessageSquare,
+      capability: "canManageFeedback",
+      description: "Review and resolve candidate question challenges and feedback",
+    },
+  ],
+};
+
 /** All navigation groups. */
 const ALL_GROUPS: NavGroup[] = [
   OVERVIEW_GROUP,
   IDENTITY_GROUP,
   EXAMINATION_GROUP,
   STUDY_GROUP,
+  CONTENT_MEDIA_GROUP,
+  COMMUNICATIONS_GROUP,
   MONETIZATION_GROUP,
   ANALYTICS_GROUP,
   SECURITY_GROUP,
@@ -423,6 +475,10 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/security/sessions": "Session Security & Device Management",
   "/admin/study-guides": "Study Guide Management & Authoring",
   "/admin/ai": "AI Studio Governance & Cost Control",
+  "/admin/media": "Central Media & Asset Management",
+  "/admin/videos": "Clinical Video Management",
+  "/admin/blog": "Blog & Editorial Publishing Workspace",
+  "/admin/feedback": "Feedback & Issue Moderation",
 };
 
 export function getAdminPageTitle(pathname: string): string {
