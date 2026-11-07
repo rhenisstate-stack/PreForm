@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { BRAND } from "@/lib/brand";
-import { TopicQuizClient } from "@/components/learner/study-studio/topic-quiz-client";
+import { TopicQuizzesRunner } from "@/components/learner/study-studio/topic-quizzes-runner";
 
 export const metadata: Metadata = {
-  title: `Topic Quizzes | ${BRAND.name}`,
-  description: "Unscored NCLEX topic drills with immediate clinical rationales.",
+  title: `Topic Quizzes & Practice Drills | ${BRAND.name}`,
+  description: "Targeted clinical practice drills with canonical NCLEX questions, instant rationales, and Client Needs scoring.",
   robots: {
     index: false,
     follow: false,
@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 };
 
 export default function StudyQuizzesPage() {
-  return <TopicQuizClient />;
+  return <TopicQuizzesRunner />;
 }
