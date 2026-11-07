@@ -171,7 +171,7 @@ Provide your clinical mentoring answer:";
         {
             var days = (request.TargetExamDate - DateTime.UtcNow).Days;
             var prompt = $@"Create a structured study plan for an NCLEX-{request.Programme.ToUpperInvariant()} candidate with {request.WeeklyHours} available study hours per week and exam date in {days} days.
-Return ONLY valid JSON with keys ""overview"", ""milestones"" (array of {phase, days, hoursPerWeek, focus}), and ""dailyRecommendations"" (array of strings).";
+Return ONLY valid JSON with keys ""overview"", ""milestones"" (array of {{phase, days, hoursPerWeek, focus}}), and ""dailyRecommendations"" (array of strings).";
 
             var result = await CallGeminiAsync(prompt, cancellationToken);
             return !string.IsNullOrWhiteSpace(result) ? result : await _fallback.GenerateStudyPlanAsync(request, cancellationToken);

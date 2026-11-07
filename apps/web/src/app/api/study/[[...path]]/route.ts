@@ -104,6 +104,14 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
   return proxy(request, ctx);
 }
 
+export async function PUT(request: NextRequest, ctx: RouteContext) {
+  return proxy(request, ctx);
+}
+
+export async function PATCH(request: NextRequest, ctx: RouteContext) {
+  return proxy(request, ctx);
+}
+
 export async function DELETE(request: NextRequest, ctx: RouteContext) {
   return proxy(request, ctx);
 }
