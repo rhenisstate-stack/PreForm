@@ -37,4 +37,21 @@ public interface IUserEntitlementService
         string userId,
         string? requestedPathway,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Evaluates whether a user has an active subscription that includes the specific feature entitlement.
+    /// Superadmin and admin roles bypass feature checks.
+    /// </summary>
+    Task<EntitlementEvaluationResult> EvaluateFeatureAccessAsync(
+        string userId,
+        string featureCode,
+        string? requestedPathway = null,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Retrieves all active feature entitlement codes for a user.
+    /// </summary>
+    Task<List<string>> GetUserActiveFeatureEntitlementsAsync(
+        string userId,
+        CancellationToken cancellationToken = default);
 }

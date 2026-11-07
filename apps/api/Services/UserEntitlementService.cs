@@ -204,4 +204,104 @@ public class UserEntitlementService : IUserEntitlementService
 
         return result;
     }
+
+    public async Task<EntitlementEvaluationResult> EvaluateFeatureAccessAsync(
+        string userId,
+        string featureCode,
+        string? requestedPathway = null,
+        CancellationToken cancellationToken = default)
+    {
+        var baseResult = await EvaluateEntitlementAsync(userId, requestedPathway, cancellationToken);
+        if (!baseResult.IsEntitled || baseResult.IsBypassed)
+        {
+            return baseResult;
+        }
+
+        var normalizedCode = featureCode.Trim().ToLowerInvariant();
+        var userEntitlements = await GetUserActiveFeatureEntitlementsAsync(userId, cancellationToken);
+
+        if (!userEntitlements.Contains(normalizedCode))
+        {
+            return new EntitlementEvaluationResult
+            {
+                IsEntitled = false,
+                Status = "FeatureNotEntitled",
+                ErrorCode = "FEATURE_NOT_INCLUDED",
+                ExpiryUtc = baseResult.ExpiryUtc,
+                PlanName = baseResult.PlanName,
+                Reason = $"Your current subscription ({baseResult.PlanName}) does not include access to {featureCode}. Please upgrade your subscription to unlock this feature."
+            };
+        }
+
+        return baseResult;
+    }
+
+    public async Task<List<string>> GetUserActiveFeatureEntitlementsAsync(
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var now = DateTime.UtcNow;
+        var activeSubs = await _context.UserSubscriptions
+            .Include(s => s.Plan)
+            .Where(s => s.UserId == userId && s.Status == SubscriptionStatus.Active && s.ExpiresAt > now)
+            .ToListAsync(cancellationToken);
+
+        if (activeSubs.Count == 0)
+        {
+            return new List<string>();
+        }
+
+        var entitlements = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var sub in activeSubs)
+        {
+            if (sub.Plan == null) continue;
+
+            // 1. Check configured database-backed SubscriptionPlanEntitlements
+            var planEntitlements = await _context.SubscriptionPlanEntitlements
+                .Where(spe => spe.PlanId == sub.PlanId)
+                .Select(spe => spe.EntitlementCode)
+                .ToListAsync(cancellationToken);
+
+            if (planEntitlements.Count > 0)
+            {
+                foreach (var pe in planEntitlements)
+                {
+                    entitlements.Add(pe.ToLowerInvariant());
+                }
+            }
+            else
+            {
+                // 2. Default feature mapping based on PlanType & canonical specification
+                var planType = sub.Plan.PlanType.ToLowerInvariant();
+                switch (planType)
+                {
+                    case "starter":
+                        entitlements.Add("practice_exams");
+                        entitlements.Add("quizzes");
+                        entitlements.Add("flashcards");
+                        break;
+                    case "pro":
+                    case "premium":
+                        entitlements.Add("practice_exams");
+                        entitlements.Add("custom_tests");
+                        entitlements.Add("rats");
+                        entitlements.Add("study_guide");
+                        entitlements.Add("flashcards");
+                        entitlements.Add("spaced_repetition");
+                        entitlements.Add("quizzes");
+                        entitlements.Add("performance_reports");
+                        break;
+                    case "readiness":
+                        entitlements.Add("rats");
+                        break;
+                    default:
+                        entitlements.Add("practice_exams");
+                        break;
+                }
+            }
+        }
+
+        return entitlements.ToList();
+    }
 }
