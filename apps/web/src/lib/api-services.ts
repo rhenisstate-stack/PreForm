@@ -90,6 +90,8 @@ export interface BackendSubscriptionPlan {
   badgeText?: string;
   displayOrder: number;
   isActive: boolean;
+  publicationStatus?: "draft" | "published" | "archived";
+  version?: number;
   entitlements: string[];
 }
 
@@ -398,6 +400,276 @@ export const subscriptionService = {
   ): Promise<ApiResponse<{ success: boolean; message: string }>> => {
     return apiClient.delete<{ success: boolean; message: string }>(
       `/api/v1/admin/subscriptions/${encodeURIComponent(id)}`,
+      { session }
+    );
+  },
+
+  duplicatePlan: async (
+    session: VerifiedSession,
+    id: string
+  ): Promise<ApiResponse<{ success: boolean; plan: BackendSubscriptionPlan; message: string }>> => {
+    return apiClient.post<{ success: boolean; plan: BackendSubscriptionPlan; message: string }>(
+      `/api/v1/admin/subscriptions/${encodeURIComponent(id)}/duplicate`,
+      {},
+      { session }
+    );
+  },
+
+  restorePlan: async (
+    session: VerifiedSession,
+    id: string
+  ): Promise<ApiResponse<{ success: boolean; message: string }>> => {
+    return apiClient.post<{ success: boolean; message: string }>(
+      `/api/v1/admin/subscriptions/${encodeURIComponent(id)}/restore`,
+      {},
+      { session }
+    );
+  },
+
+  hardDeletePlan: async (
+    session: VerifiedSession,
+    id: string
+  ): Promise<ApiResponse<{ success: boolean; message: string }>> => {
+    return apiClient.delete<{ success: boolean; message: string }>(
+      `/api/v1/admin/subscriptions/${encodeURIComponent(id)}/hard-delete`,
+      { session }
+    );
+  },
+
+  updatePublicationStatus: async (
+    session: VerifiedSession,
+    id: string,
+    status: "Draft" | "Published" | "Archived"
+  ): Promise<ApiResponse<{ success: boolean; message: string }>> => {
+    return apiClient.put<{ success: boolean; message: string }>(
+      `/api/v1/admin/subscriptions/${encodeURIComponent(id)}/publication-status`,
+      { status },
+      { session }
+    );
+  },
+
+  getAppearance: async (
+    session: VerifiedSession,
+    planId?: string
+  ): Promise<ApiResponse<{ success: boolean; appearance: any }>> => {
+    const query = planId ? `?planId=${encodeURIComponent(planId)}` : "";
+    return apiClient.get<{ success: boolean; appearance: any }>(
+      `/api/v1/admin/subscriptions/appearance${query}`,
+      { session }
+    );
+  },
+
+  saveAppearance: async (
+    session: VerifiedSession,
+    dto: {
+      typographyJson?: string;
+      colorsJson?: string;
+      cardStylingJson?: string;
+      buttonStylingJson?: string;
+      layoutJson?: string;
+      publishImmediately?: boolean;
+    },
+    planId?: string
+  ): Promise<ApiResponse<{ success: boolean; appearance: any; message: string }>> => {
+    const query = planId ? `?planId=${encodeURIComponent(planId)}` : "";
+    return apiClient.post<{ success: boolean; appearance: any; message: string }>(
+      `/api/v1/admin/subscriptions/appearance${query}`,
+      dto,
+      { session }
+    );
+  },
+
+  revertAppearance: async (
+    session: VerifiedSession,
+    planId?: string
+  ): Promise<ApiResponse<{ success: boolean; appearance: any; message: string }>> => {
+    const query = planId ? `?planId=${encodeURIComponent(planId)}` : "";
+    return apiClient.post<{ success: boolean; appearance: any; message: string }>(
+      `/api/v1/admin/subscriptions/appearance/revert${query}`,
+      {},
+      { session }
+    );
+  },
+
+  getEntitlementDefinitions: async (
+    session: VerifiedSession
+  ): Promise<ApiResponse<{ success: boolean; definitions: any[] }>> => {
+    return apiClient.get<{ success: boolean; definitions: any[] }>(
+      "/api/v1/admin/subscriptions/entitlements/definitions",
+      { session }
+    );
+  },
+
+  getPlanEntitlements: async (
+    session: VerifiedSession,
+    planId: string
+  ): Promise<ApiResponse<{ success: boolean; planId: string; entitlements: string[] }>> => {
+    return apiClient.get<{ success: boolean; planId: string; entitlements: string[] }>(
+      `/api/v1/admin/subscriptions/${encodeURIComponent(planId)}/entitlements`,
+      { session }
+    );
+  },
+
+  configurePlanEntitlements: async (
+    session: VerifiedSession,
+    planId: string,
+    entitlementCodes: string[]
+  ): Promise<ApiResponse<{ success: boolean; message: string }>> => {
+    return apiClient.put<{ success: boolean; message: string }>(
+      `/api/v1/admin/subscriptions/${encodeURIComponent(planId)}/entitlements`,
+      { entitlementCodes },
+      { session }
+    );
+  },
+};
+
+export const monetizationService = {
+  searchLearners: async (
+    session: VerifiedSession,
+    query: string
+  ): Promise<ApiResponse<{ success: boolean; learners: any[] }>> => {
+    return apiClient.get<{ success: boolean; learners: any[] }>(
+      `/api/v1/admin/monetization/learners/search?query=${encodeURIComponent(query)}`,
+      { session }
+    );
+  },
+
+  getManualAuthorizations: async (
+    session: VerifiedSession,
+    params?: { status?: string; paymentMethod?: string; search?: string; page?: number; pageSize?: number }
+  ): Promise<ApiResponse<{ success: boolean; totalCount: number; authorizations: any[] }>> => {
+    const q = new URLSearchParams();
+    if (params?.status) q.append("status", params.status);
+    if (params?.paymentMethod) q.append("paymentMethod", params.paymentMethod);
+    if (params?.search) q.append("search", params.search);
+    if (params?.page) q.append("page", params.page.toString());
+    if (params?.pageSize) q.append("pageSize", params.pageSize.toString());
+    return apiClient.get<{ success: boolean; totalCount: number; authorizations: any[] }>(
+      `/api/v1/admin/monetization/manual-authorizations?${q.toString()}`,
+      { session }
+    );
+  },
+
+  recordManualPayment: async (
+    session: VerifiedSession,
+    data: {
+      userId: string;
+      planId: string;
+      paymentMethod: string;
+      amount: number;
+      currency?: string;
+      transactionReference?: string;
+      receiptNumber?: string;
+      paymentDate?: string;
+      evidenceUrl?: string;
+      notes?: string;
+      autoVerifyAndActivate?: boolean;
+    }
+  ): Promise<ApiResponse<{ success: boolean; authorizationId: string; status: string; message: string }>> => {
+    return apiClient.post<{ success: boolean; authorizationId: string; status: string; message: string }>(
+      "/api/v1/admin/monetization/manual-authorizations",
+      data,
+      { session }
+    );
+  },
+
+  verifyManualPayment: async (
+    session: VerifiedSession,
+    id: string,
+    data: { approved: boolean; rejectionReason?: string; notes?: string }
+  ): Promise<ApiResponse<{ success: boolean; status: string; message: string }>> => {
+    return apiClient.post<{ success: boolean; status: string; message: string }>(
+      `/api/v1/admin/monetization/manual-authorizations/${encodeURIComponent(id)}/verify`,
+      data,
+      { session }
+    );
+  },
+
+  getLearnerSubscriptions: async (
+    session: VerifiedSession,
+    params?: { status?: string; pathway?: string; planId?: string; search?: string; page?: number; pageSize?: number }
+  ): Promise<ApiResponse<{ success: boolean; totalCount: number; subscriptions: any[] }>> => {
+    const q = new URLSearchParams();
+    if (params?.status) q.append("status", params.status);
+    if (params?.pathway) q.append("pathway", params.pathway);
+    if (params?.planId) q.append("planId", params.planId);
+    if (params?.search) q.append("search", params.search);
+    if (params?.page) q.append("page", params.page.toString());
+    if (params?.pageSize) q.append("pageSize", params.pageSize.toString());
+    return apiClient.get<{ success: boolean; totalCount: number; subscriptions: any[] }>(
+      `/api/v1/admin/monetization/learner-subscriptions?${q.toString()}`,
+      { session }
+    );
+  },
+
+  extendSubscription: async (
+    session: VerifiedSession,
+    id: string,
+    data: { additionalDays: number; notes?: string }
+  ): Promise<ApiResponse<{ success: boolean; expiresAt: string; remainingDays: number; message: string }>> => {
+    return apiClient.post<{ success: boolean; expiresAt: string; remainingDays: number; message: string }>(
+      `/api/v1/admin/monetization/learner-subscriptions/${encodeURIComponent(id)}/extend`,
+      data,
+      { session }
+    );
+  },
+
+  suspendSubscription: async (
+    session: VerifiedSession,
+    id: string,
+    data: { reason: string }
+  ): Promise<ApiResponse<{ success: boolean; status: string; message: string }>> => {
+    return apiClient.post<{ success: boolean; status: string; message: string }>(
+      `/api/v1/admin/monetization/learner-subscriptions/${encodeURIComponent(id)}/suspend`,
+      data,
+      { session }
+    );
+  },
+
+  reinstateSubscription: async (
+    session: VerifiedSession,
+    id: string
+  ): Promise<ApiResponse<{ success: boolean; status: string; message: string }>> => {
+    return apiClient.post<{ success: boolean; status: string; message: string }>(
+      `/api/v1/admin/monetization/learner-subscriptions/${encodeURIComponent(id)}/reinstate`,
+      {},
+      { session }
+    );
+  },
+
+  cancelSubscription: async (
+    session: VerifiedSession,
+    id: string,
+    data: { reason?: string }
+  ): Promise<ApiResponse<{ success: boolean; status: string; message: string }>> => {
+    return apiClient.post<{ success: boolean; status: string; message: string }>(
+      `/api/v1/admin/monetization/learner-subscriptions/${encodeURIComponent(id)}/cancel`,
+      data,
+      { session }
+    );
+  },
+
+  getAnalyticsSummary: async (
+    session: VerifiedSession,
+    courseFilter?: string
+  ): Promise<ApiResponse<any>> => {
+    const q = courseFilter ? `?courseFilter=${encodeURIComponent(courseFilter)}` : "";
+    return apiClient.get<any>(
+      `/api/v1/admin/monetization/analytics/summary${q}`,
+      { session }
+    );
+  },
+
+  getTransactions: async (
+    session: VerifiedSession,
+    params?: { search?: string; page?: number; pageSize?: number }
+  ): Promise<ApiResponse<{ success: boolean; totalCount: number; transactions: any[] }>> => {
+    const q = new URLSearchParams();
+    if (params?.search) q.append("search", params.search);
+    if (params?.page) q.append("page", params.page.toString());
+    if (params?.pageSize) q.append("pageSize", params.pageSize.toString());
+    return apiClient.get<{ success: boolean; totalCount: number; transactions: any[] }>(
+      `/api/v1/admin/monetization/transactions?${q.toString()}`,
       { session }
     );
   },
