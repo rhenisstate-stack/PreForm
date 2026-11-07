@@ -25,14 +25,7 @@ import {
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { FullPageDeleteLayout } from "@/components/ui/full-page-crud";
 import { useAuth } from "@/lib/auth-context";
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
@@ -268,9 +261,77 @@ export function SecuritySettingsClient() {
 
   const otherSessionsCount = sessions.filter((s) => !s.isCurrent).length;
 
+  if (targetSessionToRevoke) {
+    return (
+      <LearnerDashboardShell activeNav="security" breadcrumbPageTitle="Security & Sessions">
+        <FullPageDeleteLayout
+          title={targetSessionToRevoke.isCurrent ? "Sign Out Current Device?" : "Terminate Session?"}
+          subtitle={
+            targetSessionToRevoke.isCurrent
+              ? "You are about to sign out of this browser. You will need to log back in to access your dashboard and study materials."
+              : `Are you sure you want to terminate the session on ${targetSessionToRevoke.deviceLabel}? That device will be immediately signed out.`
+          }
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Security & Sessions", onClick: () => setTargetSessionToRevoke(null) },
+            { label: targetSessionToRevoke.isCurrent ? "Sign Out" : "Terminate Session" },
+          ]}
+          recordSummary={
+            <div className="space-y-1 text-sm">
+              <div className="font-semibold text-foreground">{targetSessionToRevoke.deviceLabel}</div>
+              <div className="text-xs text-muted-foreground">
+                IP: {targetSessionToRevoke.lastIpAddress || "Unknown"} • Signed in: {formatDateTime(targetSessionToRevoke.createdAt)}
+              </div>
+            </div>
+          }
+          consequences={[
+            targetSessionToRevoke.isCurrent
+              ? "You will be signed out of this browser and redirected to the sign-in screen."
+              : `The session on ${targetSessionToRevoke.deviceLabel} will be immediately invalidated.`,
+          ]}
+          onBack={() => setTargetSessionToRevoke(null)}
+          onCancel={() => setTargetSessionToRevoke(null)}
+          onConfirmDelete={handleConfirmRevokeSession}
+          confirmLabel={targetSessionToRevoke.isCurrent ? "Sign Out" : "Terminate Session"}
+          isDeleting={revokingSession}
+        />
+      </LearnerDashboardShell>
+    );
+  }
+
+  if (confirmRevokeOthersOpen) {
+    return (
+      <LearnerDashboardShell activeNav="security" breadcrumbPageTitle="Security & Sessions">
+        <FullPageDeleteLayout
+          title="Log Out All Other Sessions?"
+          subtitle={`This will immediately sign out all other devices (${otherSessionsCount} session${otherSessionsCount === 1 ? "" : "s"}) signed into your account. Your current device will remain signed in.`}
+          breadcrumbs={[
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Security & Sessions", onClick: () => setConfirmRevokeOthersOpen(false) },
+            { label: "Log Out Other Devices" },
+          ]}
+          recordSummary={
+            <div className="text-sm font-medium">
+              {otherSessionsCount} remote active session{otherSessionsCount === 1 ? "" : "s"}
+            </div>
+          }
+          consequences={[
+            "All remote devices will be immediately signed out.",
+            "Your current browser session remains active.",
+          ]}
+          onBack={() => setConfirmRevokeOthersOpen(false)}
+          onCancel={() => setConfirmRevokeOthersOpen(false)}
+          onConfirmDelete={handleConfirmRevokeOthers}
+          confirmLabel="Log Out Other Devices"
+          isDeleting={revokingOthers}
+        />
+      </LearnerDashboardShell>
+    );
+  }
+
   return (
     <LearnerDashboardShell activeNav="security" breadcrumbPageTitle="Security & Sessions">
-      <div className="space-y-8">
+      <div className="w-full max-w-none min-w-0 space-y-8">
         {/* Page Header */}
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-border pb-6">
           <div>

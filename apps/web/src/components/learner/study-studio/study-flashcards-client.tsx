@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { FullPageDeleteLayout } from "@/components/ui/full-page-crud";
 import {
   addFlashcard,
   archiveFlashcardDeck,
@@ -145,8 +146,20 @@ function DeckList({
   const [createModalOpen, setCreateModalOpen] = React.useState(false);
   const sorted = [...decks].sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
+  if (createModalOpen) {
+    return (
+      <CreateDeckModal
+        onClose={() => setCreateModalOpen(false)}
+        onCreated={() => {
+          setCreateModalOpen(false);
+          onChanged();
+        }}
+      />
+    );
+  }
+
   return (
-    <section data-testid="study-flashcards-deck-list" className="space-y-4" aria-label="Decks">
+    <section data-testid="study-flashcards-deck-list" className="w-full max-w-none min-w-0 space-y-4" aria-label="Decks">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-serif font-bold text-foreground">Decks</h2>
@@ -229,21 +242,11 @@ function DeckList({
           ))}
         </div>
       )}
-
-      {createModalOpen && (
-        <CreateDeckModal
-          onClose={() => setCreateModalOpen(false)}
-          onCreated={() => {
-            setCreateModalOpen(false);
-            onChanged();
-          }}
-        />
-      )}
     </section>
   );
 }
 
-// ── Create deck modal ──
+// ── Create deck full-page view ──
 
 function CreateDeckModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [source, setSource] = React.useState<DeckSource>("curated_guide");
@@ -315,25 +318,26 @@ function CreateDeckModal({ onClose, onCreated }: { onClose: () => void; onCreate
   };
 
   return (
-    <div data-testid="study-flashcards-create-modal" className="fixed inset-0 z-50 flex flex-col bg-background text-foreground overflow-y-auto">
-      <div className="relative w-full max-w-5xl mx-auto p-6 sm:p-10 space-y-6">
-        <div className="flex items-center justify-between border-b border-border pb-4">
-          <div>
-            <h3 className="font-serif font-bold text-lg text-foreground">Create New Flashcard Deck</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Deck source determines how cards enter the deck. Review scheduling is computed server-side.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
-            aria-label="Close modal"
-          >
-            <X className="h-5 w-5" />
-          </button>
+    <div data-testid="study-flashcards-create-modal" className="w-full max-w-none min-w-0 rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-6">
+      <div className="flex items-center justify-between border-b border-border pb-4">
+        <div>
+          <h3 className="font-serif font-bold text-lg text-foreground">Create New Flashcard Deck</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Deck source determines how cards enter the deck. Review scheduling is computed server-side.
+          </p>
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={onClose}
+          disabled={submitting}
+          aria-label="Close modal"
+        >
+          <ArrowLeft className="h-4 w-4 mr-1.5" />
+          Back to Decks
+        </Button>
+      </div>
 
         {/* Source selection */}
         <div className="space-y-2">

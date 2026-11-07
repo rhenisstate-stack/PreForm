@@ -383,8 +383,8 @@ export function ProfilePageClient() {
   const activeAvatarSrc = !avatarImageFailed ? previewUrl || savedPictureUrl || null : null;
 
   return (
-    <div className="min-h-[calc(100vh-4.5rem)] bg-background py-10 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-8">
+    <div className="min-h-[calc(100vh-4.5rem)] bg-background py-8 px-4 sm:px-6 lg:px-8 w-full max-w-none min-w-0">
+      <div className="w-full max-w-none min-w-0 space-y-8">
         {/* Enrolled Alert Banner */}
         {justEnrolled && (
           <div className="rounded-xl bg-green-500/10 p-4 text-green-900 dark:text-green-100 flex items-start gap-3">
@@ -661,7 +661,7 @@ export function ProfilePageClient() {
               )}
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-5 max-w-xl">
+            <form onSubmit={handleSaveProfile} className="space-y-5 w-full max-w-none">
               {profileMessage && (
                 <div
                   className={`p-3 rounded-md text-xs font-medium flex items-center gap-2 ${
