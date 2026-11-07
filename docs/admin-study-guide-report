@@ -1,0 +1,114 @@
+# PREPFORD NCLEX — ADMINISTRATIVE STUDY GUIDE MANAGEMENT
+## Architectural Audit, Domain Mapping & Execution Plan
+
+**Project:** PrepFord NCLEX Preparation Platform  
+**Repository Working Directory:** `C:\Users\gitau\Documents\PREform`  
+**Active Branch:** `feature/dotnet-backend-migration`  
+**Target Module:** Admin Studio — Collapsible Study Guide Management with 4 Workspaces  
+**Frontend Framework:** Next.js 16.4.3 (App Router, React 19.3.0, TypeScript 5, Tailwind CSS, shadcn/ui)  
+**Backend Framework:** ASP.NET Core 8 Web API (`net8.0`, C# 12, EF Core 8.0.10)  
+**Authoritative Database:** PostgreSQL 18 (`postgresql-x64-18`, default schema `public`)  
+**Audit Date:** November 7, 2026  
+
+---
+
+## 1. Executive Audit & Architectural Foundations
+
+### 1.1 Existing Navigation & Sidebar Model
+- `apps/web/src/lib/admin/navigation.tsx` defines `NavItem` with `collapsible?: boolean` and `children?: NavItem[]`.
+- `apps/web/src/components/admin/admin-shell.tsx` contains `CollapsibleNavParentItem`, which implements:
+  - Accessible toggle button with chevron rotation (`ChevronDown` rotates `-90deg` when collapsed).
+  - Auto-expansion when any child route is active (`isActiveRoute(child.href, pathname)`).
+  - Manual toggle state preservation (`setManualExpanded(!expanded)`).
+  - Keyboard accessibility with `aria-expanded` and `aria-controls`.
+  - Responsive mobile drawer handling (`onNavigateMobile`).
+  - Collapsed rail mode support with tooltips and screen-reader labels.
+- **Audit Findings:** The existing `STUDY_GROUP` has a single item (`/admin/study-guides`). To satisfy the specification:
+  - `admin-study-guides` must become a collapsible parent item.
+  - Its children must be:
+    1. **Notes**: `/admin/study-guides/notes`
+    2. **Flashcards**: `/admin/study-guides/flashcards`
+    3. **Review Sessions**: `/admin/study-guides/review-sessions`
+    4. **Topic Quizzes**: `/admin/study-guides/topic-quizzes`
+
+### 1.2 Domain Entities & Schema Inspection
+- **Notes:** `StudyNote` model currently supports learner notes. Need publication workflow columns: `Status` (`Draft`, `PendingReview`, `Approved`, `Published`, `Archived`), `IsOfficial` (bool), and `StudyGuideId` (link to curated guides).
+- **Flashcards:** `FlashcardDeck` and `Flashcard` currently support learner decks. Need `IsPublished` and `IsOfficial` flags on `FlashcardDeck` so administrative decks can be authored, published to all learners, and separated by RN/PN.
+- **Review Sessions:** `StudyReviewSession` and `StudyReviewSessionItem` already persist full session tracking (duration, accuracy, recall distribution, mode, programme). Need an administrative configuration model `StudyReviewConfiguration` for global session limits and defaults, plus aggregate analytics queries.
+- **Topic Quizzes:** `TopicQuizConfiguration`, `TopicQuizAttempt`, `TopicQuizResponse` exist. Need `Status`, `IsPublished`, `IsOfficial`, `Description`, `QuestionIdsJson`, `FeedbackMode`, and `MaxAttempts` to author and govern administrative quizzes sourcing canonical questions from `Questions`.
+- **RBAC:** Roles in `authz.ts` and backend `RequireAdmin` policy. Administrative study guide operations will be authorized for `superadmin`, `admin`, `content_manager`, and `exam_manager`.
+
+---
+
+## 2. Evidence-Based Implementation Roadmap
+
+```mermaid
+flowchart TD
+    subgraph UI ["Admin Studio Sidebar & Shell"]
+        Nav["navigation.tsx<br/>(Collapsible Parent Item)"] --> NotesNav["/admin/study-guides/notes"]
+        Nav --> FlashcardsNav["/admin/study-guides/flashcards"]
+        Nav --> ReviewNav["/admin/study-guides/review-sessions"]
+        Nav --> QuizzesNav["/admin/study-guides/topic-quizzes"]
+    end
+
+    subgraph Workspaces ["Admin Workspaces (Next.js 16 + shadcn/ui)"]
+        NotesNav --> W1["Notes Management Workspace<br/>(Rich-Text, Taxonomy, Publication Lifecycle)"]
+        FlashcardsNav --> W2["Flashcards Management Workspace<br/>(Deck & Card CRUD, Reordering, Publishing)"]
+        ReviewNav --> W3["Review Sessions Management Workspace<br/>(Config, Real Retention Analytics, Audit)"]
+        QuizzesNav --> W4["Topic Quizzes Management Workspace<br/>(Canonical Question Bank, AI Drafts, Analytics)"]
+    end
+
+    subgraph BFF ["Next.js BFF Gateway"]
+        W1 & W2 & W3 & W4 --> Proxy["/api/admin/study-guides/*<br/>(HMAC Authenticated Proxy)"]
+    end
+
+    subgraph Backend ["ASP.NET Core 8 Web API"]
+        Proxy --> AdminController["AdminStudyGuidesController<br/>(/api/v1/admin/study-guides/*)"]
+        AdminController --> NotesSvc["NotesService & Admin Extension"]
+        AdminController --> FlashcardSvc["FlashcardService & Admin Extension"]
+        AdminController --> ReviewSvc["ReviewSessionService & Analytics"]
+        AdminController --> QuizSvc["TopicQuizService & Question Bank"]
+    end
+
+    subgraph DB ["PostgreSQL Database"]
+        NotesSvc --> T1["StudyNotes & StudyFolders"]
+        FlashcardSvc --> T2["FlashcardDecks & Flashcards"]
+        ReviewSvc --> T3["StudyReviewSessions & StudyReviewConfigurations"]
+        QuizSvc --> T4["TopicQuizConfigurations & Canonical Questions"]
+    end
+```
+
+---
+
+## 3. Detailed Workspace Specifications
+
+### Workspace 1: Administrative Notes Management (`/admin/study-guides/notes`)
+- **CRUD & Filtering:** Table and edit views for administrative study notes. Filter by Status (`Draft`, `PendingReview`, `Approved`, `Published`, `Archived`), Programme (`rn`, `pn`, `both`), Client Needs category, and Subject.
+- **Rich-Text Editor:** Full formatting suite (headings, lists, checklists, tables, colors, quotes, alignment) with persistent structured JSON storage and autosave.
+- **Publication Lifecycle:** State transitions (`Draft` → `PendingReview` → `Approved` → `Published` → `Archived`). Published notes are exposed to learners in Study Studio.
+
+### Workspace 2: Administrative Flashcards Management (`/admin/study-guides/flashcards`)
+- **Deck Management:** Create, edit, duplicate, archive, publish/unpublish official flashcard decks. Scope by RN/PN and Client Needs.
+- **Card Management:** Author cards with Front, Back, Clinical Explanation, Difficulty (`fundamental`, `medium`, `high_yield`), Card Style (`qa`, `term_def`, `clinical_scenario`), image URL, and drag/order position.
+
+### Workspace 3: Review Sessions Management (`/admin/study-guides/review-sessions`)
+- **Administrative Configuration:** Global review session parameters: maximum cards per session, default card limit, allowed modes, RN/PN availability, SM-2 baseline settings.
+- **Persisted Analytics:** Real calculations from `StudyReviewSessions` and `StudyReviewSessionItems`:
+  - Total sessions, completion rate, average duration, recall accuracy.
+  - Performance by Subject Domain and RN vs PN program.
+  - High-difficulty cards with highest "Again" failure rates.
+- **Session Record Audit:** Inspect learner sessions, status, duration, item-level responses, and scheduling updates.
+
+### Workspace 4: Topic Quizzes Management (`/admin/study-guides/topic-quizzes`)
+- **Quiz Management:** CRUD for official topic quizzes with time limits, question counts, feedback behavior (`immediate` vs `delayed`), and retake policies.
+- **Canonical Question Bank Picker:** Reusable dialog to browse, filter (by question type, difficulty, subject, topic), preview, select, and reorder questions from the canonical `Questions` table.
+- **AI-Assisted Question Generator:** Generate draft quiz questions via `IAIStudyProvider` with validation, preview, editing, and an explicit review-approval step before publication.
+- **Real Quiz Analytics:** Aggregate stats from `TopicQuizAttempts` and `TopicQuizResponses` (completion rate, score distribution, question-level accuracy, frequently missed questions).
+
+---
+
+## 4. Verification & Testing Criteria
+1. **Sidebar Navigation:** Collapsible item expands/collapses on click and auto-expands when child route is active.
+2. **Backend API Endpoints:** Controllers and domain services compile and pass integration tests.
+3. **Frontend Compilation:** `tsc --noEmit` exits 0 with zero type errors.
+4. **Automated Vitest & xUnit Tests:** Regression tests for Admin Shell, Notes, Flashcards, Review Sessions, and Topic Quizzes pass.
