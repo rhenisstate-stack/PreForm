@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Preform.Api.Data;
 using Preform.Api.DTOs;
 using Preform.Api.Models;
+using Preform.Api.Services.AI;
 
 namespace Preform.Api.Services;
 
@@ -850,7 +851,7 @@ public class AdminStudyGuideService : IAdminStudyGuideService
         if (!string.IsNullOrWhiteSpace(search))
         {
             var s = search.Trim().ToLower();
-            query = query.Where(x => x.User.Email.ToLower().Contains(s) || x.User.Name.ToLower().Contains(s) || (x.Deck != null && x.Deck.Name.ToLower().Contains(s)));
+            query = query.Where(x => x.User.Email.ToLower().Contains(s) || x.User.DisplayName.ToLower().Contains(s) || (x.Deck != null && x.Deck.Name.ToLower().Contains(s)));
         }
 
         var totalCount = await query.CountAsync();
@@ -866,7 +867,7 @@ public class AdminStudyGuideService : IAdminStudyGuideService
                 Id = s.Id,
                 UserId = s.UserId,
                 UserEmail = s.User.Email,
-                UserName = s.User.Name,
+                UserName = s.User.DisplayName,
                 DeckId = s.DeckId,
                 DeckName = s.Deck != null ? s.Deck.Name : "All Decks",
                 Mode = s.Mode,
@@ -911,7 +912,7 @@ public class AdminStudyGuideService : IAdminStudyGuideService
             Id = s.Id,
             UserId = s.UserId,
             UserEmail = s.User.Email,
-            UserName = s.User.Name,
+            UserName = s.User.DisplayName,
             DeckId = s.DeckId,
             DeckName = s.Deck != null ? s.Deck.Name : "All Decks",
             Mode = s.Mode,
@@ -1298,20 +1299,24 @@ public class AdminStudyGuideService : IAdminStudyGuideService
     {
         try
         {
-            var generated = await _aiProvider.GenerateQuizQuestionsAsync(
-                request.Topic,
-                request.Programme,
-                request.QuestionCount,
-                request.ClientNeedId);
+            var aiRequest = new AIGenerateQuizRequest
+            {
+                Topic = request.Topic,
+                Programme = request.Programme,
+                ClientNeedId = request.ClientNeedId,
+                Count = Math.Clamp(request.QuestionCount, 1, 10)
+            };
+
+            var generated = await _aiProvider.GenerateQuizAsync(aiRequest);
 
             return generated.Select(q => new AIDraftQuestionDto
             {
-                Stem = q.Question,
+                Stem = q.Stem,
                 Options = q.Options,
-                CorrectOptionIndex = q.CorrectOptionIndex,
-                Rationale = q.Explanation,
-                Difficulty = request.Difficulty ?? "moderate",
-                QuestionTypeKey = "single-choice",
+                CorrectOptionIndex = q.CorrectAnswerIndices.FirstOrDefault(),
+                Rationale = q.Rationale,
+                Difficulty = q.Difficulty.ToLowerInvariant(),
+                QuestionTypeKey = q.QuestionTypeKey,
                 IsAiGenerated = true
             }).ToList();
         }
@@ -1349,7 +1354,7 @@ public class AdminStudyGuideService : IAdminStudyGuideService
             Id = n.Id,
             UserId = n.UserId,
             AuthorEmail = n.User?.Email ?? string.Empty,
-            AuthorName = n.User?.Name ?? string.Empty,
+            AuthorName = n.User?.DisplayName ?? string.Empty,
             FolderId = n.FolderId,
             FolderName = n.Folder?.Name,
             Title = n.Title,

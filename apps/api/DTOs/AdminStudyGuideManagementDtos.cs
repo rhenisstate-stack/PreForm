@@ -2,6 +2,15 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Preform.Api.DTOs;
 
+public class PagedResult<T>
+{
+    public List<T> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+    public int TotalPages { get; set; }
+}
+
 // ==========================================
 // 1. Administrative Notes Management DTOs
 // ==========================================
@@ -248,11 +257,7 @@ public class AdminUpdateCardRequest
     public string SourceReference { get; set; } = string.Empty;
 }
 
-public class MoveFlashcardRequest
-{
-    [Required]
-    public string TargetDeckId { get; set; } = string.Empty;
-}
+
 
 // ==========================================
 // 3. Administrative Review Sessions DTOs
