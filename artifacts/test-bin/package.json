@@ -1,0 +1,18 @@
+{
+  "name": "@prepford/api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PrepFord ASP.NET Core Web API orchestration manifest",
+  "scripts": {
+    "build": "dotnet build Preform.Api.csproj",
+    "dev": "dotnet run --project Preform.Api.csproj",
+    "watch": "dotnet watch --project Preform.Api.csproj run",
+    "test": "dotnet test Tests/Preform.Api.Tests.csproj",
+    "test:unit": "dotnet test Tests/Preform.Api.Tests.csproj --filter FullyQualifiedName~ProgrammeServiceTests",
+    "test:integration": "dotnet test Tests/Preform.Api.Tests.csproj --filter FullyQualifiedName~ControllerTests",
+    "restore": "dotnet restore Preform.Api.csproj",
+    "publish": "dotnet publish Preform.Api.csproj -c Release",
+    "ef:migrations:list": "dotnet ef migrations list --project Preform.Api.csproj",
+    "ef:database:update": "dotnet ef database update --project Preform.Api.csproj"
+  }
+}
