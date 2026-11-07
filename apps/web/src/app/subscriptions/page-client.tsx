@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useProgrammes } from "@/hooks/use-api";
 import { CourseFinderQuiz } from "@/components/home/course-finder";
 import { FAQPreview } from "@/components/home/faq-preview";
-import { PRODUCTS, type Product } from "@/lib/products";
+import { PRODUCTS, type Product, registerDynamicProducts } from "@/lib/products";
 
 interface SubscriptionsPageClientProps {
   initialPlans?: Product[];
@@ -41,6 +41,7 @@ export function SubscriptionsPageClient({ initialPlans }: SubscriptionsPageClien
           const data = await plansRes.json();
           if (isMounted && data.success && Array.isArray(data.plans) && data.plans.length > 0) {
             setPlans(data.plans.filter((p: Product) => p.planType !== "readiness"));
+            registerDynamicProducts(data.plans);
           }
         }
 

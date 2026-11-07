@@ -716,7 +716,7 @@ public class FlashcardService : IFlashcardService
     public async Task<StudyFlashcardsOverviewDto> GetOverviewAsync(string userId, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
-        var dayStart = now.Date;
+        var dayStart = DateTime.SpecifyKind(now.Date, DateTimeKind.Utc);
 
         var cards = _context.Flashcards.Where(c => c.UserId == userId && c.Status != "archived");
 

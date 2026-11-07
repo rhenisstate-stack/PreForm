@@ -445,6 +445,7 @@ public class ExamAttemptsController : ControllerBase
         var targetUserId = isPrivileged && !string.IsNullOrWhiteSpace(userId) ? userId : caller.userId;
 
         var attempts = await _context.ExamAttempts
+            .AsNoTracking()
             .Include(ea => ea.Exam)
             .Include(ea => ea.Responses)
             .Where(ea => ea.UserId == targetUserId)
@@ -453,19 +454,23 @@ public class ExamAttemptsController : ControllerBase
 
         var dtos = attempts.Select(a =>
         {
-            var correctCount = a.Responses.Count(r => r.IsCorrect);
-            var totalCount = a.Responses.Count;
-            var duration = a.CompletedAt.HasValue
-                ? (int)Math.Max(1, (a.CompletedAt.Value - a.StartedAt).TotalMinutes)
+            var correctCount = a.Responses != null ? a.Responses.Count(r => r.IsCorrect) : 0;
+            var totalCount = a.Responses != null ? a.Responses.Count : 0;
+            var duration = a.CompletedAt.HasValue && a.CompletedAt.Value >= a.StartedAt
+                ? (int)Math.Max(1, Math.Min(1440, (a.CompletedAt.Value - a.StartedAt).TotalMinutes))
                 : 0;
+
+            var attemptType = a.Exam != null
+                ? (a.Exam.ExamType == ExamType.DiagnosticReadiness ? "rat" : (a.Exam.ExamType == ExamType.Practice ? "practice" : "tutored_cat"))
+                : "tutored_cat";
 
             return new AttemptSummaryDto
             {
                 Id = a.Id,
                 UserId = a.UserId,
-                ExamId = a.ExamId,
-                Name = a.Exam?.Title ?? "Adaptive Practice CAT",
-                Type = a.Exam?.ExamType == ExamType.CAT ? "tutored_cat" : "rat",
+                ExamId = a.ExamId ?? string.Empty,
+                Name = a.Exam?.Title ?? "Adaptive Practice Assessment",
+                Type = attemptType,
                 Status = a.Status.ToString(),
                 ScorePercent = a.ScorePercent,
                 PerformanceTier = GetPerformanceTier(a.ScorePercent),

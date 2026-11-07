@@ -323,8 +323,22 @@ export const PRODUCTS: Product[] = [
   },
 ];
 
+let dynamicProductsCache: Product[] = [];
+
+export function registerDynamicProducts(products: Product[]): void {
+  if (Array.isArray(products) && products.length > 0) {
+    dynamicProductsCache = products;
+  }
+}
+
 export function getAllProducts(): Product[] {
-  return PRODUCTS.filter((p) => p.isActive !== false);
+  const combined = [...PRODUCTS];
+  for (const p of dynamicProductsCache) {
+    if (!combined.some((existing) => existing.id === p.id)) {
+      combined.push(p);
+    }
+  }
+  return combined.filter((p) => p.isActive !== false);
 }
 
 export function getProductById(id: string): Product | undefined {
@@ -339,7 +353,12 @@ export function getProductById(id: string): Product | undefined {
   if (normalizedId === "rn") return PRODUCTS.find((p) => p.id === "rn-pro");
   if (normalizedId === "pn") return PRODUCTS.find((p) => p.id === "pn-pro");
 
-  return PRODUCTS.find(
-    (p) => p.id.toLowerCase() === normalizedId || (p.slug && p.slug.toLowerCase() === normalizedId)
+  return (
+    PRODUCTS.find(
+      (p) => p.id.toLowerCase() === normalizedId || (p.slug && p.slug.toLowerCase() === normalizedId)
+    ) ||
+    dynamicProductsCache.find(
+      (p) => p.id.toLowerCase() === normalizedId || (p.slug && p.slug.toLowerCase() === normalizedId)
+    )
   );
 }
