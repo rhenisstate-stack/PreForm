@@ -248,6 +248,15 @@ const STUDY_GROUP: NavGroup = {
       description: "Manage official study guide notes, flashcards, review sessions, and topic quizzes",
       children: [
         {
+          id: "admin-study-guides-curated",
+          title: "Curated Study Guides",
+          href: "/admin/study-guides",
+          icon: BookOpen,
+          exact: true,
+          capability: "canViewExaminations",
+          description: "Curated official study guides, category taxonomy, and editorial publication",
+        },
+        {
           id: "admin-study-guides-notes",
           title: "Notes",
           href: "/admin/study-guides/notes",
