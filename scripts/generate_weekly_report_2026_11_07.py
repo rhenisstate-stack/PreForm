@@ -1367,6 +1367,215 @@ def build_docx_report(logo_bytes, output_path):
 # ==============================================================================
 # 3. VECTOR PDF BUILDER (14 Pages Publication Quality)
 # ==============================================================================
+class SimplePdfWriter:
+    def __init__(self):
+        self.objects = []
+        self.pages = []
+        self.images = {}
+        self.fonts = {}
+        
+    def add_object(self, data):
+        self.objects.append(data)
+        return len(self.objects)
+        
+    def add_font(self, base_font):
+        if base_font in self.fonts:
+            return self.fonts[base_font]
+        data = f"<< /Type /Font /Subtype /Type1 /BaseFont /{base_font} /Encoding /WinAnsiEncoding >>".encode("ascii")
+        obj_id = self.add_object(data)
+        self.fonts[base_font] = obj_id
+        return obj_id
+
+    def add_image(self, w, h, rgb_bytes, alpha_bytes):
+        alpha_comp = zlib.compress(alpha_bytes, level=6)
+        smask_dict = f"<< /Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace /DeviceGray /BitsPerComponent 8 /Filter /FlateDecode /Length {len(alpha_comp)} >>\\nstream\\n".encode("ascii") + alpha_comp + b"\\nendstream"
+        smask_id = self.add_object(smask_dict)
+        
+        rgb_comp = zlib.compress(rgb_bytes, level=6)
+        rgb_dict = f"<< /Type /XObject /Subtype /Image /Width {w} /Height {h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /SMask {smask_id} 0 R /Length {len(rgb_comp)} >>\\nstream\\n".encode("ascii") + rgb_comp + b"\\nendstream"
+        img_id = self.add_object(rgb_dict)
+        return img_id
+
+    def write_pdf(self, output_path):
+        pages_id = len(self.objects) + 2 * len(self.pages) + 1
+        page_ids = []
+        
+        for p in self.pages:
+            content_bytes = p.get_stream()
+            comp_content = zlib.compress(content_bytes, level=6)
+            c_dict = f"<< /Length {len(comp_content)} /Filter /FlateDecode >>\\nstream\\n".encode("ascii") + comp_content + b"\\nendstream"
+            content_id = self.add_object(c_dict)
+            
+            font_entries = " ".join([f"/F1 {self.fonts['Helvetica']} 0 R", f"/F2 {self.fonts['Helvetica-Bold']} 0 R", f"/F3 {self.fonts['Helvetica-Oblique']} 0 R"])
+            xobj_entries = ""
+            if p.has_image and "Im1" in p.images:
+                xobj_entries = f"/Im1 {p.images['Im1']} 0 R"
+                
+            res_dict = f"<< /Font << {font_entries} >>"
+            if xobj_entries:
+                res_dict += f" /XObject << {xobj_entries} >>"
+            res_dict += " >>"
+            
+            page_data = f"<< /Type /Page /Parent {pages_id} 0 R /MediaBox [0 0 595.28 841.89] /Resources {res_dict} /Contents {content_id} 0 R >>".encode("ascii")
+            page_id = self.add_object(page_data)
+            page_ids.append(page_id)
+            
+        kids_str = " ".join([f"{pid} 0 R" for pid in page_ids])
+        pages_data = f"<< /Type /Pages /Kids [{kids_str}] /Count {len(page_ids)} >>".encode("ascii")
+        actual_pages_id = self.add_object(pages_data)
+        assert actual_pages_id == pages_id
+        
+        catalog_id = self.add_object(f"<< /Type /Catalog /Pages {pages_id} 0 R >>".encode("ascii"))
+        
+        header = b"%PDF-1.4\\n%\\xe2\\xe3\\xcf\\xd3\\n"
+        offsets = [0]
+        body = b""
+        
+        for i, obj in enumerate(self.objects):
+            obj_num = i + 1
+            offsets.append(len(header) + len(body))
+            body += f"{obj_num} 0 obj\\n".encode("ascii") + obj + b"\\nendobj\\n"
+            
+        xref_pos = len(header) + len(body)
+        total_objs = len(self.objects) + 1
+        xref = f"xref\\n0 {total_objs}\\n0000000000 65535 f \\n".encode("ascii")
+        for off in offsets[1:]:
+            xref += f"{off:010d} 00000 n \\n".encode("ascii")
+            
+        trailer = f"trailer\\n<< /Size {total_objs} /Root {catalog_id} 0 R >>\\nstartxref\\n{xref_pos}\\n%%EOF\\n".encode("ascii")
+        
+        pdf_bytes = header + body + xref + trailer
+        with open(output_path, "wb") as f:
+            f.write(pdf_bytes)
+        print(f"Generated PDF ({len(pdf_bytes)} bytes): {output_path}")
+
+class PdfCanvas:
+    def __init__(self, page_w=595.28, page_h=841.89):
+        self.page_w = page_w
+        self.page_h = page_h
+        self.commands = []
+        self.has_image = False
+        self.images = {}
+        
+    def to_pdf_y(self, y_top):
+        return self.page_h - y_top
+        
+    def rect(self, x, y, w, h, fill_rgb=None, stroke_rgb=None, line_width=1):
+        self.commands.append("q")
+        if stroke_rgb:
+            r, g, b = stroke_rgb
+            self.commands.append(f"{r:.3f} {g:.3f} {b:.3f} RG {line_width:.2f} w")
+        if fill_rgb:
+            r, g, b = fill_rgb
+            self.commands.append(f"{r:.3f} {g:.3f} {b:.3f} rg")
+            
+        pdf_y = self.to_pdf_y(y + h)
+        self.commands.append(f"{x:.2f} {pdf_y:.2f} {w:.2f} {h:.2f} re")
+        
+        if fill_rgb and stroke_rgb:
+            self.commands.append("B")
+        elif fill_rgb:
+            self.commands.append("f")
+        elif stroke_rgb:
+            self.commands.append("s")
+        self.commands.append("Q")
+
+    def line(self, x1, y1, x2, y2, stroke_rgb, line_width=1):
+        r, g, b = stroke_rgb
+        pdf_y1 = self.to_pdf_y(y1)
+        pdf_y2 = self.to_pdf_y(y2)
+        self.commands.append(f"q {r:.3f} {g:.3f} {b:.3f} RG {line_width:.2f} w {x1:.2f} {pdf_y1:.2f} m {x2:.2f} {pdf_y2:.2f} l s Q")
+
+    def text_width(self, text, size, bold=False):
+        w = 0
+        for ch in text:
+            if ch in "ijl|!:,.'": cw = 0.28
+            elif ch in "fkt ": cw = 0.33
+            elif ch in "abcdeghnopqrsuvxyz": cw = 0.52
+            elif ch in "mwMW": cw = 0.82
+            elif ch in "ABCDEFGHJKLMNOPQRSTUVXYZ": cw = 0.68
+            else: cw = 0.55
+            w += cw * size * (1.08 if bold else 1.0)
+        return w
+
+    def text(self, text, x, y, font="F1", size=10, fill_rgb=PDF_SLATE, align="left"):
+        bold = (font == "F2")
+        w = self.text_width(text, size, bold)
+        if align == "center":
+            draw_x = x - w / 2.0
+        elif align == "right":
+            draw_x = x - w
+        else:
+            draw_x = x
+            
+        pdf_y = self.to_pdf_y(y + size * 0.82)
+        r, g, b = fill_rgb
+        
+        clean_text = text.replace("\\\\", "\\\\\\\\").replace("(", "\\\\(").replace(")", "\\\\)")
+        clean_text = clean_text.replace("—", " - ").replace("–", "-").replace("“", '"').replace("”", '"').replace("’", "'").replace("‘", "'")
+        clean_text = clean_text.replace("→", "->").replace("↓", "v").replace("•", "*").replace("✓", "[PASS]")
+        
+        self.commands.append(f"BT /{font} {size:.2f} Tf {r:.3f} {g:.3f} {b:.3f} rg 1 0 0 1 {draw_x:.2f} {pdf_y:.2f} Tm ({clean_text}) Tj ET")
+
+    def multiline_text(self, text, x, y, max_w, line_h, font="F1", size=10, fill_rgb=PDF_SLATE):
+        bold = (font == "F2")
+        words = text.split(" ")
+        lines = []
+        cur_line = []
+        for word in words:
+            test_line = " ".join(cur_line + [word])
+            if self.text_width(test_line, size, bold) <= max_w or not cur_line:
+                cur_line.append(word)
+            else:
+                lines.append(" ".join(cur_line))
+                cur_line = [word]
+        if cur_line:
+            lines.append(" ".join(cur_line))
+            
+        cur_y = y
+        for l in lines:
+            self.text(l, x, cur_y, font, size, fill_rgb)
+            cur_y += line_h
+        return cur_y - y
+
+    def badge(self, text, x, y, bg_rgb, text_rgb, font_size=7.5, pad_x=5, pad_y=2):
+        w = self.text_width(text, font_size, bold=True) + pad_x * 2
+        h = font_size + pad_y * 2
+        self.rect(x, y, w, h, fill_rgb=bg_rgb)
+        self.text(text, x + pad_x, y + pad_y, font="F2", size=font_size, fill_rgb=text_rgb)
+        return w, h
+
+    def card(self, x, y, w, h, fill_rgb=PDF_LIGHT_BG, stroke_rgb=PDF_BORDER, top_accent=None):
+        self.rect(x, y, w, h, fill_rgb=fill_rgb, stroke_rgb=stroke_rgb, line_width=0.75)
+        if top_accent:
+            self.rect(x, y, w, 3.0, fill_rgb=top_accent)
+
+    def draw_image(self, img_ref, x, y, w, h):
+        self.has_image = True
+        self.images["Im1"] = img_ref
+        pdf_y = self.to_pdf_y(y + h)
+        self.commands.append(f"q {w:.2f} 0 0 {h:.2f} {x:.2f} {pdf_y:.2f} cm /Im1 Do Q")
+
+    def draw_header(self, page_num, total_pages, title="PREPFORD NCLEX — WEEKLY ENGINEERING REPORT | NOVEMBER 1–7, 2026"):
+        self.text(title, 44, 25, font="F2", size=8, fill_rgb=PDF_MUTED)
+        self.text("CONFIDENTIAL & AUTHORITATIVE", 551, 25, font="F2", size=8, fill_rgb=PDF_TEAL, align="right")
+        self.line(44, 34, 551, 34, stroke_rgb=PDF_BORDER, line_width=0.75)
+
+    def draw_footer(self, page_num, total_pages):
+        self.line(44, 808, 551, 808, stroke_rgb=PDF_BORDER, line_width=0.75)
+        self.text("PrepFord NCLEX — Licensure Preparation Platform | Weekly Report (Nov 1-7, 2026)", 44, 815, font="F1", size=8, fill_rgb=PDF_MUTED)
+        self.text(f"Page {page_num} of {total_pages}", 551, 815, font="F2", size=8, fill_rgb=PDF_MUTED, align="right")
+
+    def draw_section_header(self, num_str, title_str, y):
+        self.rect(44, y, 24, 18, fill_rgb=PDF_NAVY)
+        self.text(num_str, 56, y + 4, font="F2", size=10, fill_rgb=PDF_WHITE, align="center")
+        self.text(title_str, 76, y + 2, font="F2", size=14, fill_rgb=PDF_NAVY)
+        self.line(44, y + 24, 551, y + 24, stroke_rgb=PDF_BORDER, line_width=1.0)
+        return y + 32
+
+    def get_stream(self):
+        return "\\n".join(self.commands).encode("latin1")
+
 def build_pdf_document(writer, logo_img_id, output_path):
     TOTAL_PAGES = 14
 
