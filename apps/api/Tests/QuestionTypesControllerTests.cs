@@ -112,6 +112,7 @@ public class QuestionTypesControllerTests : IClassFixture<WebApplicationFactory<
         Assert.Equal("automatic-exact-match",
             sata.GetProperty("supportedScoringModes")[0].GetString());
         var partialCredit = sata.GetProperty("capabilityDetails").GetProperty("supportsPartialCredit").GetBoolean();
+        Console.WriteLine(await response.Content.ReadAsStringAsync());
         Assert.False(partialCredit, await response.Content.ReadAsStringAsync());
         Assert.False(sata.TryGetProperty("id", out _));
         Assert.DoesNotContain("isCorrect", sata.GetRawText(), StringComparison.OrdinalIgnoreCase);
