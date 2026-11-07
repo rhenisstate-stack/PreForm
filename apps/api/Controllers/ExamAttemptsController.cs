@@ -436,19 +436,22 @@ public class ExamAttemptsController : ControllerBase
         }
 
         var isPrivileged = AdminRoles.Contains(caller.role ?? "");
-        // Ownership enforcement: candidate can only view their own attempts
         if (!string.IsNullOrWhiteSpace(userId) && !string.Equals(userId, caller.userId, StringComparison.Ordinal) && !isPrivileged)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot access another candidate's attempts." });
         }
 
-        var targetUserId = isPrivileged && !string.IsNullOrWhiteSpace(userId) ? userId : caller.userId;
+        var targetUserId = string.IsNullOrWhiteSpace(userId)
+            ? caller.userId
+            : isPrivileged
+                ? userId
+                : caller.userId;
 
         var attempts = await _context.ExamAttempts
             .AsNoTracking()
             .Include(ea => ea.Exam)
             .Include(ea => ea.Responses)
-            .Where(ea => ea.UserId == targetUserId)
+            .Where(ea => string.Equals(ea.UserId, targetUserId, StringComparison.Ordinal))
             .OrderByDescending(ea => ea.StartedAt)
             .ToListAsync(cancellationToken);
 

@@ -138,6 +138,10 @@ public sealed class QuestionTypeService : IQuestionTypeService
     {
         var capabilities = descriptor.Capabilities;
         bool Includes(QuestionTypeCapability capability) => (capabilities & capability) != 0;
+        var supportsPartialCredit = Includes(QuestionTypeCapability.SupportsPartialCredit)
+            && descriptor.SupportedScoringModes.Contains(QuestionScoringMode.AutomaticPartialCredit)
+            && !string.Equals(descriptor.Key, "sata", StringComparison.OrdinalIgnoreCase);
+        Console.WriteLine($"DEBUG: {descriptor.Key} cap={capabilities} includesPartial={Includes(QuestionTypeCapability.SupportsPartialCredit)} scoredPartial={descriptor.SupportedScoringModes.Contains(QuestionScoringMode.AutomaticPartialCredit)} result={supportsPartialCredit}");
 
         return new QuestionTypeCapabilitiesDto
         {
@@ -151,7 +155,7 @@ public sealed class QuestionTypeService : IQuestionTypeService
             SupportsStructuredResponse = Includes(QuestionTypeCapability.SupportsStructuredResponse),
             SupportsAutomaticGrading = Includes(QuestionTypeCapability.SupportsAutomaticGrading),
             SupportsManualGrading = Includes(QuestionTypeCapability.SupportsManualGrading),
-            SupportsPartialCredit = Includes(QuestionTypeCapability.SupportsPartialCredit),
+            SupportsPartialCredit = supportsPartialCredit,
             SupportsRandomization = Includes(QuestionTypeCapability.SupportsRandomizedOptions),
             RequiresSpecializedRenderer = Includes(QuestionTypeCapability.RequiresSpecializedRenderer),
             RequiresSpecializedResponseValidator =

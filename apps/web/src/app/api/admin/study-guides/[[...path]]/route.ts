@@ -34,7 +34,10 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
     let payload: unknown = undefined;
     if (method === "POST" || method === "PUT" || method === "PATCH") {
       try {
-        payload = await request.json();
+        const text = await request.text();
+        if (text && text.trim().length > 0) {
+          payload = JSON.parse(text);
+        }
       } catch {
         return NextResponse.json({ success: false, error: "Request body must be valid JSON." }, { status: 400 });
       }
