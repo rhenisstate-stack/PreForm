@@ -171,7 +171,7 @@ export function CuratedGuidesBrowser() {
       </div>
 
       {selectedGuide ? (
-        /* ── Guide Detail Reader ── */}
+        /* ── Guide Detail Reader ── */
         <div className="space-y-6 animate-in fade-in duration-200">
           <div className="flex items-center justify-between">
             <Button
@@ -256,7 +256,7 @@ export function CuratedGuidesBrowser() {
           </div>
         </div>
       ) : (
-        /* ── Guides List & Categories ── */}
+        /* ── Guides List & Categories ── */
         <div className="space-y-6">
           {/* Categories Horizontal Scroller */}
           <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
