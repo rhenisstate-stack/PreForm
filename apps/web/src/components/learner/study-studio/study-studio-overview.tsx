@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   BookOpen,
+  Compass,
   FileQuestion,
   Layers,
   RotateCcw,
@@ -58,22 +59,34 @@ export function StudyStudioOverview() {
 
   const subPages = [
     {
+      href: "/dashboard/study/notes",
+      icon: BookOpen,
+      title: "Personal Study Notes",
+      description: "Rich-text clinical notebook with checklists, tables, color highlights, and AI summaries.",
+    },
+    {
       href: "/dashboard/study/flashcards",
       icon: Layers,
       title: "Flashcard Decks",
-      description: "Create personal decks manually or generate cards from the curated PrepFord study guide.",
+      description: "Organize clinical concepts into customizable decks with 3D flip recall and difficulty filters.",
     },
     {
       href: "/dashboard/study/review",
       icon: RotateCcw,
-      title: "Review Session",
-      description: "Work through cards that are scheduled for today with server-side spaced repetition (SM-2).",
+      title: "Spaced Repetition Review",
+      description: "Server-authoritative SM-2 memory optimization with automated interval growth.",
     },
     {
       href: "/dashboard/study/quizzes",
       icon: FileQuestion,
-      title: "Topic Quizzes",
-      description: "Unscored quick drills across NCLEX client-need domains with immediate clinical rationales.",
+      title: "Topic Quizzes & Practice Drills",
+      description: "Targeted drills from the canonical question bank with instant explanations and scoring.",
+    },
+    {
+      href: "/dashboard/study/guides",
+      icon: Compass,
+      title: "Curated Study Guides",
+      description: "Peer-reviewed NCLEX guides with clinical takeaways and one-tap flashcard generation.",
     },
   ];
 
@@ -219,10 +232,10 @@ export function StudyStudioOverview() {
         <div>
           <h2 className="text-lg sm:text-xl font-serif font-bold text-foreground">Studio Tools</h2>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Three focused tools — decks, review and drills — built around active recall
+            Complete active-learning ecosystem — notes, flashcards, review sessions, quizzes, and curated guides
           </p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {subPages.map((tool) => (
             <Link
               key={tool.href}

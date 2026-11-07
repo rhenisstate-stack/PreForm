@@ -229,6 +229,29 @@ const GOVERNANCE_GROUP: NavGroup = {
   ],
 };
 
+const STUDY_GROUP: NavGroup = {
+  id: "study-guides-group",
+  label: "Study Guides & AI",
+  items: [
+    {
+      id: "admin-study-guides",
+      title: "Study Guide Management",
+      href: "/admin/study-guides",
+      icon: BookOpen,
+      capability: "canViewExaminations",
+      description: "Manage official study guide categories, clinical notes, and published guides",
+    },
+    {
+      id: "admin-ai-governance",
+      title: "AI Studio Governance",
+      href: "/admin/ai",
+      icon: Sparkles,
+      capability: "canManageSessionSecurity",
+      description: "Configure Gemini provider, feature toggles, quotas, and monitor token usage",
+    },
+  ],
+};
+
 const ANALYTICS_GROUP: NavGroup = {
   id: "analytics",
   label: "Analytics & Monitoring",
@@ -257,6 +280,7 @@ const ALL_GROUPS: NavGroup[] = [
   OVERVIEW_GROUP,
   IDENTITY_GROUP,
   EXAMINATION_GROUP,
+  STUDY_GROUP,
   MONETIZATION_GROUP,
   ANALYTICS_GROUP,
   SECURITY_GROUP,
@@ -361,6 +385,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/audit-logs": "Administrative Audit Trail",
   "/admin/security/ip-rules": "IP Access Rule Governance",
   "/admin/security/sessions": "Session Security & Device Management",
+  "/admin/study-guides": "Study Guide Management & Authoring",
+  "/admin/ai": "AI Studio Governance & Cost Control",
 };
 
 export function getAdminPageTitle(pathname: string): string {
