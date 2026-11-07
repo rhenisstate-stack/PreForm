@@ -21,6 +21,7 @@ import { BrandedLoading } from "@/components/layout/branded-loading";
 import { formatRoleTitle } from "@/components/layout/personalized-welcome";
 import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import { NotificationPanel } from "@/components/layout/notification-panel";
+import { LearnerAvatar } from "@/components/learner/learner-avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -352,6 +353,7 @@ interface SidebarInnerProps {
   pathname: string;
   displayName: string;
   roleTitle: string;
+  picture?: string;
   collapsed?: boolean;
   onNavigateMobile?: () => void;
 }
@@ -361,23 +363,45 @@ function SidebarInner({
   pathname,
   displayName,
   roleTitle,
+  picture,
   collapsed = false,
   onNavigateMobile,
 }: SidebarInnerProps) {
   return (
     <>
       <SidebarBrand collapsed={collapsed} />
-      <div
-        className={`rounded-xl bg-muted/45 p-3 ${collapsed ? "hidden" : "space-y-1"}`}
-      >
-        <p className="text-xs font-semibold text-foreground truncate" title={displayName}>
-          {displayName}
-        </p>
-        <span className="inline-flex items-center gap-1 rounded-sm bg-secondary/15 px-1.5 py-0.5 text-[10px] font-semibold text-secondary">
-          <ShieldCheck aria-hidden="true" className="h-2.5 w-2.5" />
-          {roleTitle}
-        </span>
-      </div>
+      {collapsed ? (
+        <div className="flex justify-center py-1" title={`${displayName} (${roleTitle})`}>
+          <LearnerAvatar
+            picture={picture}
+            name={displayName}
+            sizeClassName="h-9 w-9"
+            fallbackClassName="bg-secondary text-secondary-foreground text-xs font-bold border-transparent"
+            testIdPrefix="admin-sidebar-collapsed"
+            alt={`${displayName} profile picture`}
+          />
+        </div>
+      ) : (
+        <div className="rounded-xl bg-muted/45 p-3 flex items-center gap-3">
+          <LearnerAvatar
+            picture={picture}
+            name={displayName}
+            sizeClassName="h-9 w-9"
+            fallbackClassName="bg-secondary text-secondary-foreground text-xs font-bold border-transparent"
+            testIdPrefix="admin-sidebar"
+            alt={`${displayName} profile picture`}
+          />
+          <div className="flex-1 min-w-0 space-y-0.5">
+            <p className="text-xs font-semibold text-foreground truncate" title={displayName}>
+              {displayName}
+            </p>
+            <span className="inline-flex items-center gap-1 rounded-sm bg-secondary/15 px-1.5 py-0.5 text-[10px] font-semibold text-secondary">
+              <ShieldCheck aria-hidden="true" className="h-2.5 w-2.5" />
+              {roleTitle}
+            </span>
+          </div>
+        </div>
+      )}
       <SidebarNav groups={groups} pathname={pathname} collapsed={collapsed} />
       <div className="mt-auto pt-6">
         <Link
