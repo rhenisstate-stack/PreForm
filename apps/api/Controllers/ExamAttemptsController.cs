@@ -447,6 +447,7 @@ public class ExamAttemptsController : ControllerBase
                 ? userId
                 : caller.userId;
 
+        Console.WriteLine($"DEBUG GetAttempts callerUserId={caller.userId} targetUserId={targetUserId} role={caller.role} isPrivileged={isPrivileged}");
         var attempts = await _context.ExamAttempts
             .AsNoTracking()
             .Include(ea => ea.Exam)
@@ -454,6 +455,7 @@ public class ExamAttemptsController : ControllerBase
             .Where(ea => string.Equals(ea.UserId, targetUserId, StringComparison.Ordinal))
             .OrderByDescending(ea => ea.StartedAt)
             .ToListAsync(cancellationToken);
+        Console.WriteLine($"DEBUG GetAttempts rows={attempts.Count} first={attempts.FirstOrDefault()?.Id ?? "<none>"}");
 
         var dtos = attempts.Select(a =>
         {
