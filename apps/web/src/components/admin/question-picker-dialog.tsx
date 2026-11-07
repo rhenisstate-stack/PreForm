@@ -6,13 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageDetailsLayout,
+  FullPageActionBar,
+} from "@/components/ui/full-page-crud";
 import { useQuery } from "@tanstack/react-query";
 import type { BackendExamQuestionMembershipDto } from "@/lib/api-services";
 import { notify } from "@/lib/notifications";
@@ -112,22 +108,30 @@ export function QuestionPickerDialog({
     }
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col">
-        <DialogHeader>
-          <div className="flex items-center gap-2">
-            <DialogTitle>Question Bank Selector</DialogTitle>
-            <Badge variant="outline" className="uppercase text-xs font-bold border-teal-500/30 text-teal-700 dark:text-teal-300">
-              {revisionPathway.toUpperCase()} Pathway Only
-            </Badge>
-          </div>
-          <DialogDescription>
-            Select approved and published questions from the item bank to compose this examination revision.
-          </DialogDescription>
-        </DialogHeader>
+  if (!open) return null;
 
-        <div className="space-y-2 my-2">
+  return (
+    <FullPageDetailsLayout
+      data-testid="question-picker-fullpage"
+      eyebrow="Centralized Question Repository"
+      title="Question Bank Selector"
+      description="Select approved and published questions from the item bank to compose this examination revision."
+      badge={
+        <Badge variant="outline" className="uppercase text-xs font-bold border-teal-500/30 text-teal-700 dark:text-teal-300">
+          {revisionPathway.toUpperCase()} Pathway Only
+        </Badge>
+      }
+      backLabel="Back to Revision Studio"
+      onBack={() => onOpenChange(false)}
+      footer={
+        <FullPageActionBar
+          onCancel={() => onOpenChange(false)}
+          cancelLabel="Close"
+        />
+      }
+    >
+      <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+        <div className="space-y-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
             <Input
@@ -144,7 +148,7 @@ export function QuestionPickerDialog({
               <button
                 type="button"
                 onClick={() => setFormatFilter("all")}
-                className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                   formatFilter === "all"
                     ? "bg-[#142B4A] text-white dark:bg-slate-700"
                     : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300"
@@ -157,7 +161,7 @@ export function QuestionPickerDialog({
                   key={fmt}
                   type="button"
                   onClick={() => setFormatFilter(fmt)}
-                  className={`px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
                     formatFilter === fmt
                       ? "bg-[#0D9488] text-white"
                       : "bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300"
@@ -168,13 +172,13 @@ export function QuestionPickerDialog({
               ))}
             </div>
 
-            <span className="text-[11px] text-slate-400 shrink-0">
+            <span className="text-xs text-slate-400 shrink-0">
               Showing {filteredQuestions.length} item{filteredQuestions.length === 1 ? "" : "s"}
             </span>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto min-h-[300px] max-h-[450px] divide-y divide-slate-100 dark:divide-slate-800 border rounded-lg border-slate-200 dark:border-slate-800">
+        <div className="divide-y divide-slate-100 dark:divide-slate-800 border rounded-xl border-slate-200 dark:border-slate-800">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center h-48 text-slate-400">
               <Loader2 className="h-6 w-6 animate-spin mb-2" />
@@ -197,7 +201,7 @@ export function QuestionPickerDialog({
               return (
                 <div
                   key={q.questionId}
-                  className={`p-3.5 flex items-start justify-between gap-3 transition-colors ${
+                  className={`p-4 flex items-start justify-between gap-4 transition-colors ${
                     isAlreadyAdded
                       ? "bg-slate-50/60 dark:bg-slate-900/30 opacity-70"
                       : "hover:bg-slate-50 dark:hover:bg-slate-800/40"
@@ -218,14 +222,14 @@ export function QuestionPickerDialog({
                         {q.status}
                       </Badge>
                     </div>
-                    <p className="text-xs text-slate-800 dark:text-slate-200 line-clamp-2 leading-relaxed">
+                    <p className="text-sm text-slate-800 dark:text-slate-200 leading-relaxed">
                       {q.stem}
                     </p>
                   </div>
 
                   <div className="shrink-0 pt-1">
                     {isAlreadyAdded ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                         <Check className="h-3.5 w-3.5" /> Added
                       </span>
                     ) : (
@@ -233,7 +237,7 @@ export function QuestionPickerDialog({
                         size="sm"
                         onClick={() => handleAddQuestion(q)}
                         disabled={isBusy}
-                        className="h-7 px-2.5 text-xs bg-[#0D9488] hover:bg-[#0F766E] text-white gap-1"
+                        className="h-8 px-3 text-xs bg-[#0D9488] hover:bg-[#0F766E] text-white gap-1"
                       >
                         {isBusy ? (
                           <Loader2 className="h-3 w-3 animate-spin" />
@@ -249,13 +253,7 @@ export function QuestionPickerDialog({
             })
           )}
         </div>
-
-        <DialogFooter className="pt-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FullPageDetailsLayout>
   );
 }

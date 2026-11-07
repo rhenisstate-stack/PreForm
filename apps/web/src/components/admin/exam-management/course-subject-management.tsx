@@ -23,13 +23,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDetailsLayout,
+  FullPageDeleteLayout,
+  FullPageActionBar,
+} from "@/components/ui/full-page-crud";
+import { notify } from "@/lib/notifications";
 
 export interface CourseItem {
   id: string;
@@ -517,7 +516,469 @@ export function CourseSubjectManagement({
   };
 
   return (
-    <div className="space-y-6" data-testid="course-subject-management">
+    <div className="w-full max-w-none min-w-0 space-y-6" data-testid="course-subject-management">
+      {courseDialogOpen ? (
+        <FullPageFormLayout
+          data-testid="course-fullpage-form"
+          eyebrow="Course / Subject Classification System"
+          title={editingCourse ? `Edit Course: ${editingCourse.title}` : "Create Nursing Course"}
+          description="Configure a nursing course classification for the centralized Question Repository and examination blueprints."
+          breadcrumbs={[
+            { label: "Exam Management", onClick: () => setCourseDialogOpen(false) },
+            { label: "Courses & Subjects", onClick: () => setCourseDialogOpen(false) },
+            { label: editingCourse ? "Edit Course" : "Create Course" },
+          ]}
+          backLabel="Back to Courses & Subjects"
+          onBack={() => setCourseDialogOpen(false)}
+        >
+          <form onSubmit={handleSaveCourse} className="w-full max-w-none space-y-6">
+            {courseFormError && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-600 dark:text-red-400">
+                {courseFormError}
+              </div>
+            )}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="course-code">Course Code *</Label>
+                <Input
+                  id="course-code"
+                  placeholder="e.g., MED-SURG-RN"
+                  value={courseCode}
+                  onChange={(e) => setCourseCode(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="course-pathway">Programme / Pathway *</Label>
+                <select
+                  id="course-pathway"
+                  value={coursePathway}
+                  onChange={(e) => setCoursePathway(e.target.value as any)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="rn">NCLEX-RN</option>
+                  <option value="pn">NCLEX-PN</option>
+                  <option value="both">Both (NCLEX-RN & NCLEX-PN)</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="course-order">Display Order</Label>
+                <Input
+                  id="course-order"
+                  type="number"
+                  min={0}
+                  value={courseOrder}
+                  onChange={(e) => setCourseOrder(Number(e.target.value))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="course-title">Course Name *</Label>
+              <Input
+                id="course-title"
+                placeholder="e.g., Adult Medical-Surgical Nursing"
+                value={courseTitle}
+                onChange={(e) => setCourseTitle(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="course-desc">Description</Label>
+              <textarea
+                id="course-desc"
+                rows={4}
+                placeholder="Clinical scope and learning objectives for this course..."
+                value={courseDescription}
+                onChange={(e) => setCourseDescription(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                id="course-active"
+                type="checkbox"
+                checked={courseActive}
+                onChange={(e) => setCourseActive(e.target.checked)}
+                className="rounded border-input"
+              />
+              <Label htmlFor="course-active" className="cursor-pointer">
+                Active for new questions & tests
+              </Label>
+            </div>
+
+            <FullPageActionBar
+              onCancel={() => setCourseDialogOpen(false)}
+              primaryAction={
+                <Button
+                  type="submit"
+                  disabled={courseSaving}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                >
+                  {courseSaving ? "Saving..." : editingCourse ? "Save Changes" : "Create Course"}
+                </Button>
+              }
+            />
+          </form>
+        </FullPageFormLayout>
+      ) : subjectDialogOpen ? (
+        <FullPageFormLayout
+          data-testid="subject-fullpage-form"
+          eyebrow="Course / Subject Classification System"
+          title={editingSubject ? `Edit Subject Domain: ${editingSubject.title}` : "Create Subject Domain"}
+          description="Configure a subject domain under a nursing course for granular question and blueprint tagging."
+          breadcrumbs={[
+            { label: "Exam Management", onClick: () => setSubjectDialogOpen(false) },
+            { label: "Courses & Subjects", onClick: () => setSubjectDialogOpen(false) },
+            { label: editingSubject ? "Edit Subject Domain" : "Create Subject Domain" },
+          ]}
+          backLabel="Back to Courses & Subjects"
+          onBack={() => setSubjectDialogOpen(false)}
+        >
+          <form onSubmit={handleSaveSubject} className="w-full max-w-none space-y-6">
+            {subjectFormError && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-600 dark:text-red-400">
+                {subjectFormError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="space-y-2 lg:col-span-2">
+                <Label htmlFor="subject-course">Parent Course *</Label>
+                <select
+                  id="subject-course"
+                  value={subjectCourseId}
+                  onChange={(e) => setSubjectCourseId(e.target.value)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                  required
+                >
+                  <option value="">Select a course...</option>
+                  {courses.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.code} — {c.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subject-code">Subject Code *</Label>
+                <Input
+                  id="subject-code"
+                  placeholder="e.g., CARDIO-01"
+                  value={subjectCode}
+                  onChange={(e) => setSubjectCode(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="subject-pathway">Programme / Pathway *</Label>
+                <select
+                  id="subject-pathway"
+                  value={subjectPathway}
+                  onChange={(e) => setSubjectPathway(e.target.value as any)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="rn">NCLEX-RN</option>
+                  <option value="pn">NCLEX-PN</option>
+                  <option value="both">Both (NCLEX-RN & NCLEX-PN)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="space-y-2 md:col-span-3">
+                <Label htmlFor="subject-title">Subject Domain Name *</Label>
+                <Input
+                  id="subject-title"
+                  placeholder="e.g., Cardiovascular & Hemodynamic Disorders"
+                  value={subjectTitle}
+                  onChange={(e) => setSubjectTitle(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject-order">Display Order</Label>
+                <Input
+                  id="subject-order"
+                  type="number"
+                  min={0}
+                  value={subjectOrder}
+                  onChange={(e) => setSubjectOrder(Number(e.target.value))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="subject-desc">Description</Label>
+              <textarea
+                id="subject-desc"
+                rows={4}
+                placeholder="Clinical topics covered under this subject domain..."
+                value={subjectDescription}
+                onChange={(e) => setSubjectDescription(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                id="subject-active"
+                type="checkbox"
+                checked={subjectActive}
+                onChange={(e) => setSubjectActive(e.target.checked)}
+                className="rounded border-input"
+              />
+              <Label htmlFor="subject-active" className="cursor-pointer">
+                Active for new questions & tests
+              </Label>
+            </div>
+
+            <FullPageActionBar
+              onCancel={() => setSubjectDialogOpen(false)}
+              primaryAction={
+                <Button
+                  type="submit"
+                  disabled={subjectSaving}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                >
+                  {subjectSaving
+                    ? "Saving..."
+                    : editingSubject
+                      ? "Save Changes"
+                      : "Create Subject Domain"}
+                </Button>
+              }
+            />
+          </form>
+        </FullPageFormLayout>
+      ) : detailCourse ? (
+        <FullPageDetailsLayout
+          data-testid="course-fullpage-details"
+          eyebrow="Course Classification Details"
+          title={detailCourse.title}
+          description={`Course Code: ${detailCourse.code}`}
+          badge={
+            <div className="flex flex-wrap items-center gap-2">
+              {renderPathwayBadge(detailCourse.pathway)}
+              <Badge variant={detailCourse.isActive ? "default" : "secondary"}>
+                {detailCourse.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+          }
+          breadcrumbs={[
+            { label: "Exam Management", onClick: () => setDetailCourse(null) },
+            { label: "Courses & Subjects", onClick: () => setDetailCourse(null) },
+            { label: detailCourse.title },
+          ]}
+          backLabel="Back to Courses & Subjects"
+          onBack={() => setDetailCourse(null)}
+          actions={
+            canModify ? (
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const c = detailCourse;
+                    setDetailCourse(null);
+                    openEditCourse(c);
+                  }}
+                >
+                  <Edit3 className="w-4 h-4 mr-1.5" />
+                  Edit Course
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    const cId = detailCourse.id;
+                    setDetailCourse(null);
+                    openCreateSubject(cId);
+                  }}
+                  className="bg-indigo-600 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-1.5" />
+                  Add Subject Domain
+                </Button>
+              </div>
+            ) : undefined
+          }
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                Course Metadata
+              </h3>
+              <p className="text-sm text-foreground leading-relaxed">
+                {detailCourse.description || "No description provided."}
+              </p>
+              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border text-sm">
+                <div>
+                  <div className="text-xs text-muted-foreground">Subject Domains</div>
+                  <div className="font-bold text-foreground">
+                    {detailCourse.subjectDomainCount ?? 0}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Linked Questions</div>
+                  <div className="font-bold text-foreground">
+                    {detailCourse.questionCount ?? 0}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                  Linked Subject Domains
+                </h3>
+                <Badge variant="outline">
+                  {subjects.filter((s) => s.courseId === detailCourse.id).length} Domains
+                </Badge>
+              </div>
+              <div className="space-y-2">
+                {subjects
+                  .filter((s) => s.courseId === detailCourse.id)
+                  .map((s) => (
+                    <div
+                      key={s.id}
+                      className="flex items-center justify-between rounded-xl border border-border px-4 py-3 text-sm"
+                    >
+                      <div>
+                        <strong className="font-mono text-indigo-500">{s.code}</strong> —{" "}
+                        <span className="font-semibold text-foreground">{s.title}</span>
+                      </div>
+                      <Badge variant="outline">{s.questionCount ?? 0} Qs</Badge>
+                    </div>
+                  ))}
+                {subjects.filter((s) => s.courseId === detailCourse.id).length === 0 && (
+                  <p className="text-sm text-muted-foreground italic">
+                    No subject domains assigned to this course yet.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        </FullPageDetailsLayout>
+      ) : detailSubject ? (
+        <FullPageDetailsLayout
+          data-testid="subject-fullpage-details"
+          eyebrow="Subject Domain Details"
+          title={detailSubject.title}
+          description={`Subject Code: ${detailSubject.code} • Parent Course: ${detailSubject.courseTitle || "—"}`}
+          badge={
+            <div className="flex flex-wrap items-center gap-2">
+              {renderPathwayBadge(detailSubject.pathway)}
+              <Badge variant={detailSubject.isActive ? "default" : "secondary"}>
+                {detailSubject.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+          }
+          breadcrumbs={[
+            { label: "Exam Management", onClick: () => setDetailSubject(null) },
+            { label: "Courses & Subjects", onClick: () => setDetailSubject(null) },
+            { label: detailSubject.title },
+          ]}
+          backLabel="Back to Courses & Subjects"
+          onBack={() => setDetailSubject(null)}
+          actions={
+            canModify ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const s = detailSubject;
+                  setDetailSubject(null);
+                  openEditSubject(s);
+                }}
+              >
+                <Edit3 className="w-4 h-4 mr-1.5" />
+                Edit Subject Domain
+              </Button>
+            ) : undefined
+          }
+        >
+          <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              Subject Domain Scope
+            </h3>
+            <p className="text-sm text-foreground leading-relaxed">
+              {detailSubject.description || "No description provided."}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border text-sm">
+              <div>
+                <div className="text-xs text-muted-foreground">Parent Course</div>
+                <div className="font-semibold text-foreground">{detailSubject.courseTitle || "—"}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Linked Repository Questions</div>
+                <div className="font-semibold text-foreground">{detailSubject.questionCount ?? 0} Qs</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Display Order</div>
+                <div className="font-semibold text-foreground">#{detailSubject.displayOrder ?? 1}</div>
+              </div>
+            </div>
+          </div>
+        </FullPageDetailsLayout>
+      ) : deleteTarget ? (
+        <FullPageDeleteLayout
+          data-testid="course-subject-fullpage-delete"
+          title={`Delete ${deleteTarget.kind === "course" ? "Course" : "Subject Domain"}`}
+          description={`Confirm removal or retirement of ${deleteTarget.title} (${deleteTarget.code}).`}
+          recordTitle={deleteTarget.title}
+          recordSubtitle={`Code: ${deleteTarget.code}`}
+          recordMetadata={[
+            {
+              label: "Entity Type",
+              value: deleteTarget.kind === "course" ? "Course" : "Subject Domain",
+            },
+            {
+              label: "Linked Questions",
+              value: `${deleteTarget.questionCount} repository question(s)`,
+            },
+            {
+              label: "Child Classifications",
+              value: `${deleteTarget.childCount} dependent record(s)`,
+            },
+            {
+              label: "Current Status",
+              value: deleteTarget.isActive ? "Active" : "Inactive",
+            },
+          ]}
+          consequences={[
+            "Permanent deletion removes this classification record if no dependent questions or child domains exist.",
+            "If questions or historical exams reference this classification, hard deletion is blocked and you can safely deactivate it instead.",
+          ]}
+          dependencyNotice={
+            (deleteTarget.questionCount > 0 ||
+              deleteTarget.childCount > 0 ||
+              deleteConflictError) && (
+              <div className="space-y-1.5 text-amber-800 dark:text-amber-300">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  Historical & Dependency Protection Active
+                </div>
+                <p>
+                  {deleteConflictError ||
+                    `This record is linked to ${deleteTarget.questionCount} repository question(s) and ${deleteTarget.childCount} child classification(s). Deactivating is recommended to preserve historical examination integrity.`}
+                </p>
+              </div>
+            )
+          }
+          onCancel={() => setDeleteTarget(null)}
+          onConfirmDelete={handleExecuteDelete}
+          confirmDeleteLabel={deleteSubmitting ? "Processing..." : "Delete Permanently"}
+          onArchiveInstead={deleteTarget.isActive ? handleDeactivateInstead : undefined}
+          archiveInsteadLabel="Deactivate Instead"
+          isSubmitting={deleteSubmitting}
+        />
+      ) : (
+        <>
       {/* Header & Entity Switcher */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border rounded-xl p-5 shadow-xs">
         <div>
@@ -979,397 +1440,8 @@ export function CourseSubjectManagement({
           </div>
         )}
       </div>
-
-      {/* Create / Edit Course Dialog */}
-      <Dialog open={courseDialogOpen} onOpenChange={setCourseDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{editingCourse ? "Edit Course" : "Create Course"}</DialogTitle>
-            <DialogDescription>
-              Configure a nursing course classification for the Question Repository and examination blueprints.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSaveCourse} className="space-y-4">
-            {courseFormError && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400">
-                {courseFormError}
-              </div>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="course-code">Course Code *</Label>
-                <Input
-                  id="course-code"
-                  placeholder="e.g., MED-SURG-RN"
-                  value={courseCode}
-                  onChange={(e) => setCourseCode(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="course-pathway">Programme / Pathway *</Label>
-                <select
-                  id="course-pathway"
-                  value={coursePathway}
-                  onChange={(e) => setCoursePathway(e.target.value as any)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="rn">NCLEX-RN</option>
-                  <option value="pn">NCLEX-PN</option>
-                  <option value="both">Both (NCLEX-RN & NCLEX-PN)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="course-title">Course Name *</Label>
-              <Input
-                id="course-title"
-                placeholder="e.g., Adult Medical-Surgical Nursing"
-                value={courseTitle}
-                onChange={(e) => setCourseTitle(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="course-desc">Description</Label>
-              <textarea
-                id="course-desc"
-                rows={3}
-                placeholder="Clinical scope and learning objectives for this course..."
-                value={courseDescription}
-                onChange={(e) => setCourseDescription(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="course-order">Display Order</Label>
-                <Input
-                  id="course-order"
-                  type="number"
-                  min={0}
-                  value={courseOrder}
-                  onChange={(e) => setCourseOrder(Number(e.target.value))}
-                />
-              </div>
-              <div className="flex items-center gap-2 pt-6">
-                <input
-                  id="course-active"
-                  type="checkbox"
-                  checked={courseActive}
-                  onChange={(e) => setCourseActive(e.target.checked)}
-                  className="rounded border-input"
-                />
-                <Label htmlFor="course-active" className="cursor-pointer">
-                  Active for new questions & tests
-                </Label>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCourseDialogOpen(false)}
-                disabled={courseSaving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={courseSaving}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white"
-              >
-                {courseSaving ? "Saving..." : editingCourse ? "Save Changes" : "Create Course"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create / Edit Subject Domain Dialog */}
-      <Dialog open={subjectDialogOpen} onOpenChange={setSubjectDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingSubject ? "Edit Subject Domain" : "Create Subject Domain"}
-            </DialogTitle>
-            <DialogDescription>
-              Configure a subject domain under a nursing course for granular question and blueprint tagging.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSaveSubject} className="space-y-4">
-            {subjectFormError && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400">
-                {subjectFormError}
-              </div>
-            )}
-
-            <div className="space-y-1.5">
-              <Label htmlFor="subject-course">Parent Course *</Label>
-              <select
-                id="subject-course"
-                value={subjectCourseId}
-                onChange={(e) => setSubjectCourseId(e.target.value)}
-                className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                required
-              >
-                <option value="">Select a course...</option>
-                {courses.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code} — {c.title}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="subject-code">Subject Code *</Label>
-                <Input
-                  id="subject-code"
-                  placeholder="e.g., CARDIO-01"
-                  value={subjectCode}
-                  onChange={(e) => setSubjectCode(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="subject-pathway">Programme / Pathway *</Label>
-                <select
-                  id="subject-pathway"
-                  value={subjectPathway}
-                  onChange={(e) => setSubjectPathway(e.target.value as any)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="rn">NCLEX-RN</option>
-                  <option value="pn">NCLEX-PN</option>
-                  <option value="both">Both (NCLEX-RN & NCLEX-PN)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="subject-title">Subject Domain Name *</Label>
-              <Input
-                id="subject-title"
-                placeholder="e.g., Cardiovascular & Hemodynamic Disorders"
-                value={subjectTitle}
-                onChange={(e) => setSubjectTitle(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="subject-desc">Description</Label>
-              <textarea
-                id="subject-desc"
-                rows={3}
-                placeholder="Clinical topics covered under this subject domain..."
-                value={subjectDescription}
-                onChange={(e) => setSubjectDescription(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="subject-order">Display Order</Label>
-                <Input
-                  id="subject-order"
-                  type="number"
-                  min={0}
-                  value={subjectOrder}
-                  onChange={(e) => setSubjectOrder(Number(e.target.value))}
-                />
-              </div>
-              <div className="flex items-center gap-2 pt-6">
-                <input
-                  id="subject-active"
-                  type="checkbox"
-                  checked={subjectActive}
-                  onChange={(e) => setSubjectActive(e.target.checked)}
-                  className="rounded border-input"
-                />
-                <Label htmlFor="subject-active" className="cursor-pointer">
-                  Active for new questions & tests
-                </Label>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setSubjectDialogOpen(false)}
-                disabled={subjectSaving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={subjectSaving}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white"
-              >
-                {subjectSaving
-                  ? "Saving..."
-                  : editingSubject
-                    ? "Save Changes"
-                    : "Create Subject Domain"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Course Details Dialog */}
-      <Dialog open={!!detailCourse} onOpenChange={(open) => !open && setDetailCourse(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{detailCourse?.title}</DialogTitle>
-            <DialogDescription>
-              Course Code: <span className="font-mono font-semibold">{detailCourse?.code}</span>
-            </DialogDescription>
-          </DialogHeader>
-          {detailCourse && (
-            <div className="space-y-4 text-sm">
-              <div className="flex flex-wrap gap-2">
-                {renderPathwayBadge(detailCourse.pathway)}
-                <Badge variant={detailCourse.isActive ? "default" : "secondary"}>
-                  {detailCourse.isActive ? "Active" : "Inactive"}
-                </Badge>
-                <Badge variant="outline">{detailCourse.subjectDomainCount ?? 0} Subject Domains</Badge>
-                <Badge variant="outline">{detailCourse.questionCount ?? 0} Linked Questions</Badge>
-              </div>
-              <p className="text-muted-foreground">
-                {detailCourse.description || "No description provided."}
-              </p>
-              <div className="border-t border-border pt-3">
-                <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                  Linked Subject Domains
-                </div>
-                <div className="space-y-1.5 max-h-40 overflow-y-auto">
-                  {subjects
-                    .filter((s) => s.courseId === detailCourse.id)
-                    .map((s) => (
-                      <div
-                        key={s.id}
-                        className="flex items-center justify-between rounded-md border border-border px-3 py-1.5 text-xs"
-                      >
-                        <span>
-                          <strong className="font-mono text-indigo-500">{s.code}</strong> — {s.title}
-                        </span>
-                        <Badge variant="outline" className="text-[10px]">
-                          {s.questionCount ?? 0} Qs
-                        </Badge>
-                      </div>
-                    ))}
-                  {subjects.filter((s) => s.courseId === detailCourse.id).length === 0 && (
-                    <p className="text-xs text-muted-foreground italic">
-                      No subject domains assigned to this course yet.
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Subject Details Dialog */}
-      <Dialog open={!!detailSubject} onOpenChange={(open) => !open && setDetailSubject(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{detailSubject?.title}</DialogTitle>
-            <DialogDescription>
-              Subject Code: <span className="font-mono font-semibold">{detailSubject?.code}</span>
-            </DialogDescription>
-          </DialogHeader>
-          {detailSubject && (
-            <div className="space-y-3 text-sm">
-              <div className="flex flex-wrap gap-2">
-                {renderPathwayBadge(detailSubject.pathway)}
-                <Badge variant={detailSubject.isActive ? "default" : "secondary"}>
-                  {detailSubject.isActive ? "Active" : "Inactive"}
-                </Badge>
-                <Badge variant="outline">{detailSubject.questionCount ?? 0} Linked Questions</Badge>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Parent Course: <strong className="text-foreground">{detailSubject.courseTitle || "—"}</strong>
-              </div>
-              <p className="text-muted-foreground">
-                {detailSubject.description || "No description provided."}
-              </p>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete / Dependency Protection Dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-              <ShieldAlert className="w-5 h-5" />
-              Delete {deleteTarget?.kind === "course" ? "Course" : "Subject Domain"}
-            </DialogTitle>
-            <DialogDescription>
-              Confirm removal of <strong>{deleteTarget?.title}</strong> ({deleteTarget?.code}).
-            </DialogDescription>
-          </DialogHeader>
-
-          {deleteTarget && (
-            <div className="space-y-4 text-sm">
-              {(deleteTarget.questionCount > 0 ||
-                deleteTarget.childCount > 0 ||
-                deleteConflictError) && (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-300 space-y-1.5">
-                  <div className="font-semibold flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                    Historical & Dependency Protection Active
-                  </div>
-                  <p>
-                    {deleteConflictError ||
-                      `This record is linked to ${deleteTarget.questionCount} repository question(s) and ${deleteTarget.childCount} child classification(s). Deactivating is recommended to preserve historical examination integrity.`}
-                  </p>
-                </div>
-              )}
-
-              <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDeleteTarget(null)}
-                  disabled={deleteSubmitting}
-                >
-                  Cancel
-                </Button>
-                {deleteTarget.isActive && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleDeactivateInstead}
-                    disabled={deleteSubmitting}
-                  >
-                    Deactivate Instead
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={handleExecuteDelete}
-                  disabled={deleteSubmitting}
-                >
-                  {deleteSubmitting ? "Processing..." : "Delete Permanently"}
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
     </div>
   );
 }

@@ -21,13 +21,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDetailsLayout,
+  FullPageDeleteLayout,
+  FullPageActionBar,
+} from "@/components/ui/full-page-crud";
+import { notify } from "@/lib/notifications";
 
 export interface ClientNeedItem {
   id: string;
@@ -313,7 +312,221 @@ export function ClientNeedsManagement({
   };
 
   return (
-    <div className="space-y-6" data-testid="client-needs-management">
+    <div className="w-full max-w-none min-w-0 space-y-6" data-testid="client-needs-management">
+      {dialogOpen ? (
+        <FullPageFormLayout
+          data-testid="client-needs-fullpage-form"
+          eyebrow="NCLEX Client Needs Classification System"
+          title={editingItem ? `Edit Client Needs Category: ${editingItem.name}` : "Create Client Needs Category"}
+          description="Configure an NCLEX Client Needs classification for question tagging and examination blueprint quotas."
+          breadcrumbs={[
+            { label: "Exam Management", onClick: () => setDialogOpen(false) },
+            { label: "Client Needs", onClick: () => setDialogOpen(false) },
+            { label: editingItem ? "Edit Category" : "Create Category" },
+          ]}
+          backLabel="Back to Client Needs"
+          onBack={() => setDialogOpen(false)}
+        >
+          <form onSubmit={handleSave} className="w-full max-w-none space-y-6">
+            {formError && (
+              <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-600 dark:text-red-400">
+                {formError}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="space-y-2">
+                <Label htmlFor="cn-code">Category Code *</Label>
+                <Input
+                  id="cn-code"
+                  placeholder="e.g., PHARM-THERAPIES"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cn-pathway">Programme Scope *</Label>
+                <select
+                  id="cn-pathway"
+                  value={pathway}
+                  onChange={(e) => setPathway(e.target.value as any)}
+                  className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                >
+                  <option value="both">Both (NCLEX-RN & NCLEX-PN)</option>
+                  <option value="rn">NCLEX-RN Only</option>
+                  <option value="pn">NCLEX-PN Only</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cn-order">Display Order</Label>
+                <Input
+                  id="cn-order"
+                  type="number"
+                  min={0}
+                  value={displayOrder}
+                  onChange={(e) => setDisplayOrder(Number(e.target.value))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cn-name">Category Name *</Label>
+              <Input
+                id="cn-name"
+                placeholder="e.g., Pharmacological and Parenteral Therapies"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="cn-desc">Description</Label>
+              <textarea
+                id="cn-desc"
+                rows={4}
+                placeholder="Describe the NCLEX test plan competencies assessed in this category..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                id="cn-active"
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="rounded border-input"
+              />
+              <Label htmlFor="cn-active" className="cursor-pointer">
+                Active for questions & blueprints
+              </Label>
+            </div>
+
+            <FullPageActionBar
+              onCancel={() => setDialogOpen(false)}
+              primaryAction={
+                <Button
+                  type="submit"
+                  disabled={saving}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white"
+                >
+                  {saving
+                    ? "Saving..."
+                    : editingItem
+                      ? "Save Changes"
+                      : "Create Client Need"}
+                </Button>
+              }
+            />
+          </form>
+        </FullPageFormLayout>
+      ) : detailItem ? (
+        <FullPageDetailsLayout
+          data-testid="client-needs-fullpage-details"
+          eyebrow="Client Needs Category Details"
+          title={detailItem.name}
+          description={`Code: ${detailItem.code}`}
+          badge={
+            <div className="flex flex-wrap items-center gap-2">
+              {renderPathwayBadge(detailItem.pathway)}
+              <Badge variant={detailItem.isActive ? "default" : "secondary"}>
+                {detailItem.isActive ? "Active" : "Inactive"}
+              </Badge>
+            </div>
+          }
+          breadcrumbs={[
+            { label: "Exam Management", onClick: () => setDetailItem(null) },
+            { label: "Client Needs", onClick: () => setDetailItem(null) },
+            { label: detailItem.name },
+          ]}
+          backLabel="Back to Client Needs"
+          onBack={() => setDetailItem(null)}
+          actions={
+            canModify ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const item = detailItem;
+                  setDetailItem(null);
+                  openEditDialog(item);
+                }}
+              >
+                <Edit3 className="w-4 h-4 mr-1.5" />
+                Edit Client Need
+              </Button>
+            ) : undefined
+          }
+        >
+          <div className="rounded-2xl border border-border bg-card p-6 space-y-4">
+            <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              Category Description & Repository Linkage
+            </h3>
+            <p className="text-sm text-foreground leading-relaxed">
+              {detailItem.description || "No description provided."}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-border text-sm">
+              <div>
+                <div className="text-xs text-muted-foreground">Category Code</div>
+                <div className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                  {detailItem.code}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Linked Repository Questions</div>
+                <div className="font-bold text-foreground">{detailItem.questionCount ?? 0} Qs</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Display Order</div>
+                <div className="font-bold text-foreground">#{detailItem.displayOrder ?? 1}</div>
+              </div>
+            </div>
+          </div>
+        </FullPageDetailsLayout>
+      ) : deleteTarget ? (
+        <FullPageDeleteLayout
+          data-testid="client-needs-fullpage-delete"
+          title="Delete Client Needs Category"
+          description={`Confirm removal or deactivation of ${deleteTarget.name} (${deleteTarget.code}).`}
+          recordTitle={deleteTarget.name}
+          recordSubtitle={`Code: ${deleteTarget.code}`}
+          recordMetadata={[
+            { label: "Category Code", value: deleteTarget.code },
+            { label: "Programme Scope", value: renderPathwayBadge(deleteTarget.pathway) },
+            { label: "Linked Questions", value: `${deleteTarget.questionCount ?? 0} Qs` },
+            { label: "Status", value: deleteTarget.isActive ? "Active" : "Inactive" },
+          ]}
+          consequences={[
+            "Permanent deletion removes this Client Needs category if no questions or exam blueprints reference it.",
+            "If questions or historical exams reference this category, hard deletion is blocked and you can safely deactivate it instead.",
+          ]}
+          dependencyNotice={
+            ((deleteTarget.questionCount ?? 0) > 0 || deleteConflictError) && (
+              <div className="space-y-1.5 text-amber-800 dark:text-amber-300">
+                <div className="font-semibold flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 shrink-0" />
+                  Historical & Dependency Protection Active
+                </div>
+                <p>
+                  {deleteConflictError ||
+                    `This Client Needs category is referenced by ${deleteTarget.questionCount ?? 0} question(s) in the Question Repository. Deactivating is recommended to preserve historical examination integrity.`}
+                </p>
+              </div>
+            )
+          }
+          onCancel={() => setDeleteTarget(null)}
+          onConfirmDelete={handleExecuteDelete}
+          confirmDeleteLabel={deleteSubmitting ? "Processing..." : "Delete Permanently"}
+          onArchiveInstead={deleteTarget.isActive ? handleDeactivateInstead : undefined}
+          archiveInsteadLabel="Deactivate Instead"
+          isSubmitting={deleteSubmitting}
+        />
+      ) : (
+        <>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-card border border-border rounded-xl p-5 shadow-xs">
         <div>
@@ -584,210 +797,8 @@ export function ClientNeedsManagement({
           </div>
         )}
       </div>
-
-      {/* Create / Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              {editingItem ? "Edit Client Needs Category" : "Create Client Needs Category"}
-            </DialogTitle>
-            <DialogDescription>
-              Configure an NCLEX Client Needs classification for question tagging and examination blueprint quotas.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSave} className="space-y-4">
-            {formError && (
-              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-xs text-red-600 dark:text-red-400">
-                {formError}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="cn-code">Category Code *</Label>
-                <Input
-                  id="cn-code"
-                  placeholder="e.g., PHARM-THERAPIES"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cn-pathway">Programme Scope *</Label>
-                <select
-                  id="cn-pathway"
-                  value={pathway}
-                  onChange={(e) => setPathway(e.target.value as any)}
-                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
-                >
-                  <option value="both">Both (NCLEX-RN & NCLEX-PN)</option>
-                  <option value="rn">NCLEX-RN Only</option>
-                  <option value="pn">NCLEX-PN Only</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="cn-name">Category Name *</Label>
-              <Input
-                id="cn-name"
-                placeholder="e.g., Pharmacological and Parenteral Therapies"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="cn-desc">Description</Label>
-              <textarea
-                id="cn-desc"
-                rows={3}
-                placeholder="Describe the NCLEX test plan competencies assessed in this category..."
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="cn-order">Display Order</Label>
-                <Input
-                  id="cn-order"
-                  type="number"
-                  min={0}
-                  value={displayOrder}
-                  onChange={(e) => setDisplayOrder(Number(e.target.value))}
-                />
-              </div>
-              <div className="flex items-center gap-2 pt-6">
-                <input
-                  id="cn-active"
-                  type="checkbox"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="rounded border-input"
-                />
-                <Label htmlFor="cn-active" className="cursor-pointer">
-                  Active for questions & blueprints
-                </Label>
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-                disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={saving}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white"
-              >
-                {saving
-                  ? "Saving..."
-                  : editingItem
-                    ? "Save Changes"
-                    : "Create Client Need"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Details Dialog */}
-      <Dialog open={!!detailItem} onOpenChange={(open) => !open && setDetailItem(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>{detailItem?.name}</DialogTitle>
-            <DialogDescription>
-              Code: <span className="font-mono font-semibold">{detailItem?.code}</span>
-            </DialogDescription>
-          </DialogHeader>
-          {detailItem && (
-            <div className="space-y-3 text-sm">
-              <div className="flex flex-wrap gap-2">
-                {renderPathwayBadge(detailItem.pathway)}
-                <Badge variant={detailItem.isActive ? "default" : "secondary"}>
-                  {detailItem.isActive ? "Active" : "Inactive"}
-                </Badge>
-                <Badge variant="outline">{detailItem.questionCount ?? 0} Linked Questions</Badge>
-              </div>
-              <p className="text-muted-foreground">
-                {detailItem.description || "No description provided."}
-              </p>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete / Dependency Protection Dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-red-600 dark:text-red-400">
-              <ShieldAlert className="w-5 h-5" />
-              Delete Client Needs Category
-            </DialogTitle>
-            <DialogDescription>
-              Confirm removal of <strong>{deleteTarget?.name}</strong> ({deleteTarget?.code}).
-            </DialogDescription>
-          </DialogHeader>
-
-          {deleteTarget && (
-            <div className="space-y-4 text-sm">
-              {((deleteTarget.questionCount ?? 0) > 0 || deleteConflictError) && (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-800 dark:text-amber-300 space-y-1.5">
-                  <div className="font-semibold flex items-center gap-1.5">
-                    <AlertTriangle className="w-4 h-4 shrink-0" />
-                    Historical & Dependency Protection Active
-                  </div>
-                  <p>
-                    {deleteConflictError ||
-                      `This Client Needs category is referenced by ${deleteTarget.questionCount ?? 0} question(s) in the Question Repository. Deactivating is recommended to preserve historical examination integrity.`}
-                  </p>
-                </div>
-              )}
-
-              <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDeleteTarget(null)}
-                  disabled={deleteSubmitting}
-                >
-                  Cancel
-                </Button>
-                {deleteTarget.isActive && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={handleDeactivateInstead}
-                    disabled={deleteSubmitting}
-                  >
-                    Deactivate Instead
-                  </Button>
-                )}
-                <Button
-                  type="button"
-                  variant="destructive"
-                  onClick={handleExecuteDelete}
-                  disabled={deleteSubmitting}
-                >
-                  {deleteSubmitting ? "Processing..." : "Delete Permanently"}
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
     </div>
   );
 }
