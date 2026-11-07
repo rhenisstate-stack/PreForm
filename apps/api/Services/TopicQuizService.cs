@@ -107,7 +107,7 @@ public class TopicQuizService : ITopicQuizService
                     var assignedQuestions = await _context.Questions
                         .Include(q => q.Options)
                         .Include(q => q.Topic)
-                        .Where(q => assignedQuestionIds.Contains(q.Id))
+                        .Where(q => assignedQuestionIds.Contains(q.Id) && q.Status != QuestionStatus.Archived)
                         .ToListAsync();
 
                     if (assignedQuestions.Count > 0)
