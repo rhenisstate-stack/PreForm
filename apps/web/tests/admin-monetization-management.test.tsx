@@ -324,7 +324,7 @@ describe("Learner Subscriptions Management", () => {
 
     expect(screen.getByRole("button", { name: /Extend/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Suspend" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Cancel/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument();
   });
 
   it("opens extension modal and offers preset day options", async () => {
@@ -360,8 +360,8 @@ describe("Transactions Ledger & Revenue Analytics", () => {
       expect(screen.getByText(/28,450/)).toBeInTheDocument();
       expect(screen.getByText(/28,100/)).toBeInTheDocument();
       expect(screen.getByText(/14,200/)).toBeInTheDocument();
-      expect(screen.getByText(/Course Revenue Distribution/i)).toBeInTheDocument();
-      expect(screen.getByText(/Payment Channel Share/i)).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Course Revenue Distribution/i })).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: /Payment Channel Share/i })).toBeInTheDocument();
     });
   });
 });
