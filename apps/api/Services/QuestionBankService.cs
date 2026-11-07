@@ -162,13 +162,34 @@ public class QuestionBankService : IQuestionBankService
             })
             .ToListAsync(ct);
 
-        // Populate friendly QuestionType names from registry
+        // Populate friendly QuestionType names from registry and dependency counts
+        var questionIds = items.Select(i => i.Id).ToList();
+        var examRefCounts = questionIds.Count > 0
+            ? await _context.ExamQuestions
+                .AsNoTracking()
+                .Where(eq => questionIds.Contains(eq.QuestionId))
+                .GroupBy(eq => eq.QuestionId)
+                .Select(g => new { QuestionId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.QuestionId, x => x.Count, ct)
+            : new Dictionary<string, int>();
+
+        var attemptRefCounts = questionIds.Count > 0
+            ? await _context.AttemptResponses
+                .AsNoTracking()
+                .Where(ar => questionIds.Contains(ar.QuestionId))
+                .GroupBy(ar => ar.QuestionId)
+                .Select(g => new { QuestionId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.QuestionId, x => x.Count, ct)
+            : new Dictionary<string, int>();
+
         foreach (var item in items)
         {
             if (QuestionTypeRegistry.Instance.TryGet(item.QuestionTypeKey, out var descriptor))
             {
                 item.QuestionTypeName = descriptor.DefaultName;
             }
+            item.ReferencedByExamCount = examRefCounts.TryGetValue(item.Id, out var ec) ? ec : 0;
+            item.ReferencedByAttemptCount = attemptRefCounts.TryGetValue(item.Id, out var ac) ? ac : 0;
         }
 
         return new PaginatedResponse<QuestionSummaryDto>
@@ -203,6 +224,29 @@ public class QuestionBankService : IQuestionBankService
         {
             typeName = descriptor.DefaultName;
         }
+
+        var referencedExams = await _context.ExamQuestions
+            .AsNoTracking()
+            .Include(eq => eq.Exam)
+                .ThenInclude(e => e.Examination)
+            .Where(eq => eq.QuestionId == id && eq.Exam != null)
+            .Select(eq => new QuestionDependencyExamDto
+            {
+                RevisionId = eq.ExamId,
+                ExaminationId = eq.Exam.ExaminationId ?? string.Empty,
+                ExaminationCode = eq.Exam.Examination != null ? eq.Exam.Examination.Code : null,
+                Title = eq.Exam.Title,
+                LifecycleState = eq.Exam.LifecycleState.ToString()
+            })
+            .ToListAsync(ct);
+
+        var attemptResponseCount = await _context.AttemptResponses
+            .AsNoTracking()
+            .CountAsync(ar => ar.QuestionId == id, ct);
+
+        var attemptSnapshotCount = await _context.ExamAttemptQuestions
+            .AsNoTracking()
+            .CountAsync(eaq => eaq.QuestionId == id, ct);
 
         return new QuestionDetailDto
         {
@@ -245,6 +289,9 @@ public class QuestionBankService : IQuestionBankService
             CreatedAt = q.CreatedAt,
             UpdatedAt = q.UpdatedAt,
             VersionsCount = q.Versions.Count,
+            ReferencedByExamCount = referencedExams.Count,
+            ReferencedByAttemptCount = Math.Max(attemptResponseCount, attemptSnapshotCount),
+            ReferencedExams = referencedExams,
             Options = q.Options
                 .OrderBy(o => o.DisplayOrder)
                 .ThenBy(o => o.OptionKey)
@@ -324,10 +371,14 @@ public class QuestionBankService : IQuestionBankService
             UpdatedAt = now
         };
 
-        if (request.Options.Count > 0)
+        var nonEmptyOptions = request.Options
+            .Where(o => !string.IsNullOrWhiteSpace(o.Content) || !string.IsNullOrWhiteSpace(o.MediaUrl))
+            .ToList();
+
+        if (nonEmptyOptions.Count > 0)
         {
             int order = 0;
-            foreach (var opt in request.Options)
+            foreach (var opt in nonEmptyOptions)
             {
                 question.Options.Add(new QuestionOption
                 {
@@ -426,29 +477,33 @@ public class QuestionBankService : IQuestionBankService
             question.Status = QuestionStatus.Draft;
         }
 
-        // Update properties
+        // Update properties (preserve existing ExhibitsJson and StructuredContentJson when omitted in partial updates)
         question.Pathway = (request.Pathway ?? "rn").Trim().ToLowerInvariant();
         question.TopicId = string.IsNullOrWhiteSpace(request.TopicId) ? null : request.TopicId;
         question.ClientNeedId = string.IsNullOrWhiteSpace(request.ClientNeedId) ? null : request.ClientNeedId;
         question.QuestionTypeKey = request.QuestionTypeKey.Trim();
         question.Stem = request.Stem.Trim();
-        question.Instructions = request.Instructions?.Trim();
+        question.Instructions = request.Instructions != null ? (string.IsNullOrWhiteSpace(request.Instructions) ? null : request.Instructions.Trim()) : question.Instructions;
         question.Difficulty = request.Difficulty;
-        question.ClinicalScenario = request.ClinicalScenario?.Trim();
-        question.ExhibitsJson = request.ExhibitsJson?.Trim();
-        question.StructuredContentJson = request.StructuredContentJson?.Trim();
-        question.OverallRationale = request.OverallRationale?.Trim();
-        question.CognitiveLevel = request.CognitiveLevel?.Trim();
-        question.ClinicalJudgmentStep = request.ClinicalJudgmentStep?.Trim();
-        question.Source = request.Source?.Trim();
+        question.ClinicalScenario = request.ClinicalScenario != null ? (string.IsNullOrWhiteSpace(request.ClinicalScenario) ? null : request.ClinicalScenario.Trim()) : question.ClinicalScenario;
+        question.ExhibitsJson = request.ExhibitsJson != null ? (string.IsNullOrWhiteSpace(request.ExhibitsJson) ? null : request.ExhibitsJson.Trim()) : question.ExhibitsJson;
+        question.StructuredContentJson = request.StructuredContentJson != null ? (string.IsNullOrWhiteSpace(request.StructuredContentJson) ? null : request.StructuredContentJson.Trim()) : question.StructuredContentJson;
+        question.OverallRationale = request.OverallRationale != null ? (string.IsNullOrWhiteSpace(request.OverallRationale) ? null : request.OverallRationale.Trim()) : question.OverallRationale;
+        question.CognitiveLevel = request.CognitiveLevel != null ? (string.IsNullOrWhiteSpace(request.CognitiveLevel) ? null : request.CognitiveLevel.Trim()) : question.CognitiveLevel;
+        question.ClinicalJudgmentStep = request.ClinicalJudgmentStep != null ? (string.IsNullOrWhiteSpace(request.ClinicalJudgmentStep) ? null : request.ClinicalJudgmentStep.Trim()) : question.ClinicalJudgmentStep;
+        question.Source = request.Source != null ? (string.IsNullOrWhiteSpace(request.Source) ? null : request.Source.Trim()) : question.Source;
         question.UpdatedAt = now;
 
         // Update options
         _context.QuestionOptions.RemoveRange(question.Options);
         question.Options.Clear();
 
+        var validOptions = request.Options
+            .Where(o => !string.IsNullOrWhiteSpace(o.Content) || !string.IsNullOrWhiteSpace(o.MediaUrl))
+            .ToList();
+
         int order = 0;
-        foreach (var opt in request.Options)
+        foreach (var opt in validOptions)
         {
             question.Options.Add(new QuestionOption
             {

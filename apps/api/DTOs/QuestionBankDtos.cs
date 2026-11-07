@@ -61,9 +61,21 @@ public class QuestionSummaryDto
     public string? ReviewedById { get; set; }
     public string? ReviewerName { get; set; }
     public int OptionsCount { get; set; }
+    public int ReferencedByExamCount { get; set; }
+    public int ReferencedByAttemptCount { get; set; }
+    public bool CanDelete => ReferencedByExamCount == 0 && ReferencedByAttemptCount == 0;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public DateTime? PublishedAt { get; set; }
+}
+
+public class QuestionDependencyExamDto
+{
+    public string RevisionId { get; set; } = string.Empty;
+    public string ExaminationId { get; set; } = string.Empty;
+    public string? ExaminationCode { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string LifecycleState { get; set; } = string.Empty;
 }
 
 public class QuestionDetailDto
@@ -107,6 +119,10 @@ public class QuestionDetailDto
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public int VersionsCount { get; set; }
+    public int ReferencedByExamCount { get; set; }
+    public int ReferencedByAttemptCount { get; set; }
+    public bool CanDelete => ReferencedByExamCount == 0 && ReferencedByAttemptCount == 0;
+    public List<QuestionDependencyExamDto> ReferencedExams { get; set; } = new();
     public List<QuestionOptionDto> Options { get; set; } = new();
 }
 

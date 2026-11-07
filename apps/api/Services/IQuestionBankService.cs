@@ -9,5 +9,6 @@ public interface IQuestionBankService
     Task<QuestionDetailDto> CreateQuestionAsync(CreateQuestionRequest request, string authorUserId, CancellationToken ct = default);
     Task<QuestionDetailDto?> UpdateQuestionAsync(string id, UpdateQuestionRequest request, string editorUserId, CancellationToken ct = default);
     Task<QuestionDetailDto?> TransitionStatusAsync(string id, QuestionStatusTransitionRequest request, string actorUserId, bool isSuperAdmin, CancellationToken ct = default);
+    Task<bool> DeleteQuestionAsync(string id, string actorUserId, CancellationToken ct = default);
     Task<List<QuestionVersionDto>> GetQuestionVersionsAsync(string questionId, CancellationToken ct = default);
 }
