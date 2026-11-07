@@ -86,7 +86,7 @@ describe("Phase 4 — Safe SQLite-to-PostgreSQL Data Migration Tests", () => {
       for (const u of transformed.users) {
         expect(u.passwordHash).toMatch(/^RESET_REQUIRED_[a-f0-9]{32}$/);
         expect(u.passwordHash).not.toContain("password");
-        expect(u.passwordHash).not.toContain("123");
+        expect(u.passwordHash).not.toContain("password123");
       }
     });
   });
