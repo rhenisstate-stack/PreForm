@@ -47,7 +47,7 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
     const method = request.method.toUpperCase();
 
     let payload: unknown = undefined;
-    if (method === "POST") {
+    if (method === "POST" || method === "PUT" || method === "PATCH") {
       try {
         payload = await request.json();
       } catch {
@@ -68,6 +68,12 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
         break;
       case "POST":
         res = await apiClient.post<unknown>(backendPath, payload, { session });
+        break;
+      case "PUT":
+        res = await apiClient.put<unknown>(backendPath, payload, { session });
+        break;
+      case "PATCH":
+        res = await apiClient.patch<unknown>(backendPath, payload, { session });
         break;
       case "DELETE":
         res = await apiClient.delete<unknown>(backendPath, { session });
