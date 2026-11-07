@@ -136,7 +136,7 @@ function SidebarNav({
 }
 
 function defaultGroupExpanded(group: NavGroup, pathname: string): boolean {
-  if (group.id === "examination") return true;
+  if (group.id === "examination" || group.id === "study-guides-group") return true;
   return group.items.some(
     (item) =>
       isActiveRoute(item.href, pathname, item.exact) ||

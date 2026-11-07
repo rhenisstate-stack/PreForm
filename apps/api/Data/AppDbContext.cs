@@ -77,6 +77,7 @@ public class AppDbContext : DbContext
     public DbSet<StudyGuideCategory> StudyGuideCategories => Set<StudyGuideCategory>();
     public DbSet<CuratedStudyGuide> CuratedStudyGuides => Set<CuratedStudyGuide>();
     public DbSet<CuratedGuideVersion> CuratedGuideVersions => Set<CuratedGuideVersion>();
+    public DbSet<StudyReviewConfiguration> StudyReviewConfigurations => Set<StudyReviewConfiguration>();
 
     // AI Study Studio & Governance
     public DbSet<AIProviderConfiguration> AIProviderConfigurations => Set<AIProviderConfiguration>();
@@ -802,6 +803,11 @@ public class AppDbContext : DbContext
                   .WithMany(g => g.Versions)
                   .HasForeignKey(v => v.GuideId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<StudyReviewConfiguration>(entity =>
+        {
+            entity.HasKey(c => c.Id);
         });
 
         // ── AI Study Studio & Governance ──

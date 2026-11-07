@@ -18,8 +18,8 @@ async function proxy(request: NextRequest, ctx: RouteContext) {
       return NextResponse.json({ success: false, error: "Authentication required." }, { status: 401 });
     }
 
-    const role = (session.role || "").toLowerCase();
-    if (!["admin", "superadmin", "administrator"].includes(role)) {
+    const role = (session.role || "").toLowerCase().trim();
+    if (!["admin", "superadmin", "administrator", "content_manager", "exam_manager", "manager"].includes(role)) {
       return NextResponse.json({ success: false, error: "Administrative authorization required." }, { status: 403 });
     }
 

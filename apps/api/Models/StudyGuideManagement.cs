@@ -93,6 +93,15 @@ public class StudyNote
     public bool IsArchived { get; set; } = false;
     public bool IsDeleted { get; set; } = false; // Soft deletion support
 
+    /// <summary>"Draft" | "PendingReview" | "Approved" | "Published" | "Archived"</summary>
+    [MaxLength(32)]
+    public string Status { get; set; } = "Draft";
+
+    public bool IsOfficial { get; set; } = false;
+
+    [MaxLength(128)]
+    public string? StudyGuideId { get; set; }
+
     public int WordCount { get; set; } = 0;
     public int CharacterCount { get; set; } = 0;
 
@@ -256,6 +265,25 @@ public class TopicQuizConfiguration
     public int TimeLimitMinutes { get; set; } = 0; // 0 = untimed
 
     public bool ImmediateFeedback { get; set; } = true;
+
+    [MaxLength(1024)]
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>"Draft" | "Published" | "Archived"</summary>
+    [MaxLength(32)]
+    public string Status { get; set; } = "Draft";
+
+    public bool IsPublished { get; set; } = false;
+    public bool IsOfficial { get; set; } = false;
+
+    /// <summary>JSON array of specific question IDs assigned to this quiz.</summary>
+    public string QuestionIdsJson { get; set; } = "[]";
+
+    /// <summary>"immediate" | "delayed"</summary>
+    [MaxLength(32)]
+    public string FeedbackMode { get; set; } = "immediate";
+
+    public int MaxAttempts { get; set; } = 0; // 0 = unlimited
 
     public bool IsActive { get; set; } = true;
 
@@ -478,4 +506,31 @@ public class CuratedGuideVersion
     public string ChangeSummary { get; set; } = string.Empty;
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+/// <summary>
+/// Global review session configuration and defaults administered by staff.
+/// </summary>
+[Table("StudyReviewConfigurations", Schema = "public")]
+public class StudyReviewConfiguration
+{
+    [Key]
+    public string Id { get; set; } = "global_config";
+
+    public int MaxCardsPerSession { get; set; } = 50;
+    public int DefaultCardLimit { get; set; } = 20;
+
+    /// <summary>JSON array of supported modes: ["all_due", "deck", "difficult", "favourites", "random"]</summary>
+    public string SupportedModesJson { get; set; } = "[\"all_due\", \"deck\", \"difficult\", \"favourites\", \"random\"]";
+
+    public bool EnableRn { get; set; } = true;
+    public bool EnablePn { get; set; } = true;
+    public bool RequireSubscription { get; set; } = false;
+    public bool AllowCustomDrills { get; set; } = true;
+
+    public int MinIntervalDays { get; set; } = 1;
+    public double DefaultEaseFactor { get; set; } = 2.5;
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public string UpdatedBy { get; set; } = "admin";
 }

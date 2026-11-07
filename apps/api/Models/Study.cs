@@ -63,6 +63,8 @@ public class FlashcardDeck
 
     public bool IsArchived { get; set; } = false;
     public bool IsFavourite { get; set; } = false;
+    public bool IsPublished { get; set; } = true;
+    public bool IsOfficial { get; set; } = false;
 
     [MaxLength(32)]
     public string? ClientNeedId { get; set; }
