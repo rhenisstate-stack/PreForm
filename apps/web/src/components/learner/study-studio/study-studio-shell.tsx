@@ -269,7 +269,7 @@ export function StudyStudioShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-[1600px] w-full mx-auto">{children}</main>
+        <main className="flex-1 w-full max-w-none min-w-0 p-4 sm:p-6 lg:p-8 space-y-8">{children}</main>
       </div>
     </div>
   );

@@ -130,7 +130,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <PublicFooter />
           </Suspense>
-          <Toaster position="bottom-right" richColors />
+          <Toaster position="top-center" richColors />
         </Providers>
       </body>
     </html>
