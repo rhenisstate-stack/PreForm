@@ -394,8 +394,8 @@ public class ExamManagementModulesCrudTests
             ClientNeedId = "PHA",
             Options = new List<QuestionOption>
             {
-                new QuestionOption { Id = "opt_rn_1", Label = "A", Content = "Administer broad-spectrum antibiotics", IsCorrect = true },
-                new QuestionOption { Id = "opt_rn_2", Label = "B", Content = "Document hourly urine output", IsCorrect = false }
+                new QuestionOption { Id = "opt_rn_1", Content = "Administer broad-spectrum antibiotics", IsCorrect = true, DisplayOrder = 1 },
+                new QuestionOption { Id = "opt_rn_2", Content = "Document hourly urine output", IsCorrect = false, DisplayOrder = 2 }
             }
         };
         var pnQuestion = new Question
@@ -410,8 +410,8 @@ public class ExamManagementModulesCrudTests
             ClientNeedId = "PHA",
             Options = new List<QuestionOption>
             {
-                new QuestionOption { Id = "opt_pn_1", Label = "A", Content = "I will use a soft-bristled toothbrush", IsCorrect = true },
-                new QuestionOption { Id = "opt_pn_2", Label = "B", Content = "I will double my dose if I miss one", IsCorrect = false }
+                new QuestionOption { Id = "opt_pn_1", Content = "I will use a soft-bristled toothbrush", IsCorrect = true, DisplayOrder = 1 },
+                new QuestionOption { Id = "opt_pn_2", Content = "I will double my dose if I miss one", IsCorrect = false, DisplayOrder = 2 }
             }
         };
         db.Questions.AddRange(rnQuestion, pnQuestion);
