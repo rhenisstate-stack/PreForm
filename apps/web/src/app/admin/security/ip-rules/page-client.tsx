@@ -18,13 +18,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDeleteLayout,
+} from "@/components/ui/full-page-crud";
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
 import type { AdminIpRuleItem } from "@/lib/api-services";
@@ -34,7 +30,7 @@ export function AdminIpRulesClient() {
   const [loading, setLoading] = React.useState(true);
   const [filterType, setFilterType] = React.useState("");
 
-  // Create modal
+  // Full-Page CRUD states
   const [createModalOpen, setCreateModalOpen] = React.useState(false);
   const [createForm, setCreateForm] = React.useState({
     ipAddressOrCidr: "",
@@ -43,6 +39,9 @@ export function AdminIpRulesClient() {
     expiresAt: "",
   });
   const [createLoading, setCreateLoading] = React.useState(false);
+
+  const [ruleToDelete, setRuleToDelete] = React.useState<AdminIpRuleItem | null>(null);
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
 
   const fetchRules = React.useCallback(async () => {
     setLoading(true);
@@ -80,15 +79,23 @@ export function AdminIpRulesClient() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to remove this IP access rule?")) return;
+  const handleDelete = (rule: AdminIpRuleItem) => {
+    setRuleToDelete(rule);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!ruleToDelete) return;
+    setDeleteLoading(true);
     try {
-      const res = await fetch(`/api/admin/security/ip-rules/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/security/ip-rules/${ruleToDelete.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete rule");
       notify.success("IP rule removed");
+      setRuleToDelete(null);
       fetchRules();
     } catch (err) {
       notify.error(sanitizeErrorMessage(err, "Delete failed"));
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -118,8 +125,102 @@ export function AdminIpRulesClient() {
     }
   };
 
+  if (ruleToDelete) {
+    return (
+      <FullPageDeleteLayout
+        title="Delete IP Access Rule"
+        subtitle="Permanently remove this IP or CIDR access control rule."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Security", href: "/admin/security" },
+          { label: "IP Access Rules", onClick: () => setRuleToDelete(null) },
+          { label: "Delete Rule" },
+        ]}
+        recordSummary={
+          <div className="space-y-1 text-sm">
+            <div className="font-mono font-semibold">{ruleToDelete.ipAddressOrCidr}</div>
+            <div className="text-xs text-muted-foreground">
+              Type: {ruleToDelete.ruleType} • {ruleToDelete.description || "No description"}
+            </div>
+          </div>
+        }
+        consequences={[
+          "Removing this IP access rule immediately stops enforcement for the specified IP address or CIDR block.",
+        ]}
+        onBack={() => setRuleToDelete(null)}
+        onCancel={() => setRuleToDelete(null)}
+        onConfirmDelete={handleConfirmDelete}
+        confirmLabel="Permanently Remove Rule"
+        isDeleting={deleteLoading}
+      />
+    );
+  }
+
+  if (createModalOpen) {
+    return (
+      <FullPageFormLayout
+        title="Add IP Access Rule"
+        subtitle="Define an individual IP address or a CIDR subnet block to blacklist or whitelist."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Security", href: "/admin/security" },
+          { label: "IP Access Rules", onClick: () => setCreateModalOpen(false) },
+          { label: "Add IP Rule" },
+        ]}
+        onBack={() => setCreateModalOpen(false)}
+        onCancel={() => setCreateModalOpen(false)}
+        onSubmit={handleCreate}
+        submitLabel="Create Rule"
+        submitDisabled={!createForm.ipAddressOrCidr.trim()}
+        isSubmitting={createLoading}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">IP Address or CIDR Block</label>
+            <Input
+              required
+              placeholder="e.g. 203.0.113.45 or 198.51.100.0/24"
+              value={createForm.ipAddressOrCidr}
+              onChange={(e) => setCreateForm({ ...createForm, ipAddressOrCidr: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Rule Type</label>
+            <select
+              value={createForm.ruleType}
+              onChange={(e) => setCreateForm({ ...createForm, ruleType: e.target.value })}
+              className="w-full h-10 px-3 rounded-md border bg-background text-sm"
+            >
+              <option value="Blacklist">Blacklist (Block Traffic)</option>
+              <option value="Whitelist">Whitelist (Explicitly Trust)</option>
+            </select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Description / Reason</label>
+            <Input
+              placeholder="e.g. Malicious credential stuffing origin, partner VPN"
+              value={createForm.description}
+              onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Expiration Date (Optional)</label>
+            <Input
+              type="date"
+              value={createForm.expiresAt}
+              onChange={(e) => setCreateForm({ ...createForm, expiresAt: e.target.value })}
+            />
+          </div>
+        </div>
+      </FullPageFormLayout>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-none min-w-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -222,7 +323,7 @@ export function AdminIpRulesClient() {
                         variant="ghost"
                         size="sm"
                         className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDelete(r.id)}
+                        onClick={() => handleDelete(r)}
                         title="Delete Rule"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -235,70 +336,6 @@ export function AdminIpRulesClient() {
           </table>
         </div>
       </div>
-
-      {/* Create Rule Modal */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent>
-          <form onSubmit={handleCreate}>
-            <DialogHeader>
-              <DialogTitle>Add IP Access Rule</DialogTitle>
-              <DialogDescription>
-                Define an individual IP address or a CIDR subnet block to blacklist or whitelist.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-3 py-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium">IP Address or CIDR Block</label>
-                <Input
-                  required
-                  placeholder="e.g. 203.0.113.45 or 198.51.100.0/24"
-                  value={createForm.ipAddressOrCidr}
-                  onChange={(e) => setCreateForm({ ...createForm, ipAddressOrCidr: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium">Rule Type</label>
-                <select
-                  value={createForm.ruleType}
-                  onChange={(e) => setCreateForm({ ...createForm, ruleType: e.target.value })}
-                  className="w-full h-10 px-3 rounded-md border bg-background text-sm"
-                >
-                  <option value="Blacklist">Blacklist (Block Traffic)</option>
-                  <option value="Whitelist">Whitelist (Explicitly Trust)</option>
-                </select>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium">Description / Reason</label>
-                <Input
-                  placeholder="e.g. Malicious credential stuffing origin, partner VPN"
-                  value={createForm.description}
-                  onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium">Expiration Date (Optional)</label>
-                <Input
-                  type="date"
-                  value={createForm.expiresAt}
-                  onChange={(e) => setCreateForm({ ...createForm, expiresAt: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createLoading || !createForm.ipAddressOrCidr.trim()}>
-                {createLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Create Rule
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

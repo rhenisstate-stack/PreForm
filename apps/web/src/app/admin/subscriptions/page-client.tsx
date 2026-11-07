@@ -20,14 +20,11 @@ import { isSubscriptionAdmin } from "@/lib/admin/authz";
 import { formatRoleTitle } from "@/components/layout/personalized-welcome";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDeleteLayout,
+} from "@/components/ui/full-page-crud";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Product } from "@/lib/products";
 import { notify } from "@/lib/notifications";
@@ -89,6 +86,7 @@ export function AdminSubscriptionsClient() {
     onSuccess: () => {
       notify.success("Subscription plan created successfully");
       refetchPlans();
+      setEditorOpen(false);
     },
     onError: (error) => {
       const errorMessage = error.message || "Failed to create subscription plan";
@@ -113,6 +111,7 @@ export function AdminSubscriptionsClient() {
     onSuccess: () => {
       notify.success("Subscription plan updated successfully");
       refetchPlans();
+      setEditorOpen(false);
     },
     onError: (error) => {
       const errorMessage = error.message || "Failed to update subscription plan";
@@ -144,10 +143,19 @@ export function AdminSubscriptionsClient() {
   // Local state
   const [editorOpen, setEditorOpen] = React.useState(false);
   const [editingPlan, setEditingPlan] = React.useState<Product | null>(null);
+  const [planForm, setPlanForm] = React.useState({
+    name: "",
+    slug: "",
+    description: "",
+    pathway: "RN" as "RN" | "PN" | "Both",
+    planType: "pro",
+    price: 59,
+    billingInterval: "month",
+    featuresText: "",
+  });
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = React.useState(false);
   const [planToArchive, setPlanToArchive] = React.useState<Product | null>(null);
-  const [feedbackMessage, setFeedbackMessage] = React.useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Filter state
   const [pathwayFilter, setPathwayFilter] = React.useState<"all" | "RN" | "PN" | "Both">("all");
@@ -161,7 +169,7 @@ export function AdminSubscriptionsClient() {
 
   if (!canManagePlans) {
     return (
-      <div className="mx-auto max-w-xl py-16 px-4 text-center">
+      <div className="w-full max-w-none py-16 px-4 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-destructive/10 text-destructive mb-6">
           <ShieldAlert className="h-8 w-8" aria-hidden="true" />
         </div>
@@ -189,14 +197,33 @@ export function AdminSubscriptionsClient() {
 
   const isProcessing = isSubmitting || deletePlanMutation.isPending || updatePlanMutation.isPending || createPlanMutation.isPending;
 
-  // Form handlers (simplified for brevity)
   const handleOpenCreate = () => {
     setEditingPlan(null);
+    setPlanForm({
+      name: "",
+      slug: "",
+      description: "",
+      pathway: "RN",
+      planType: "pro",
+      price: 59,
+      billingInterval: "month",
+      featuresText: "Full question bank\nDetailed rationales",
+    });
     setEditorOpen(true);
   };
 
   const handleOpenEdit = (plan: Product) => {
     setEditingPlan(plan);
+    setPlanForm({
+      name: plan.name,
+      slug: plan.slug,
+      description: plan.description,
+      pathway: plan.pathway,
+      planType: plan.planType,
+      price: plan.price,
+      billingInterval: plan.billingInterval || "month",
+      featuresText: (plan.features || []).join("\n"),
+    });
     setEditorOpen(true);
   };
 
@@ -205,14 +232,28 @@ export function AdminSubscriptionsClient() {
     setEditingPlan(null);
   };
 
-  const handleSubmit = async (formData: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsSubmitting(true);
-    setFeedbackMessage(null);
+
+    const payload = {
+      name: planForm.name.trim(),
+      slug: planForm.slug.trim(),
+      description: planForm.description.trim(),
+      pathway: planForm.pathway,
+      planType: planForm.planType,
+      price: Number(planForm.price),
+      billingInterval: planForm.billingInterval,
+      features: planForm.featuresText
+        .split("\n")
+        .map((f) => f.trim())
+        .filter(Boolean),
+    };
 
     if (editingPlan) {
-      updatePlanMutation.mutate({ id: editingPlan.id, updates: formData });
+      updatePlanMutation.mutate({ id: editingPlan.id, updates: payload });
     } else {
-      createPlanMutation.mutate(formData);
+      createPlanMutation.mutate(payload);
     }
 
     setIsSubmitting(false);
@@ -230,11 +271,150 @@ export function AdminSubscriptionsClient() {
     setPlanToArchive(null);
   };
 
+  if (archiveDialogOpen && planToArchive) {
+    return (
+      <FullPageDeleteLayout
+        title="Archive Subscription Plan"
+        subtitle="This will deactivate the plan and hide it from customers. Historical purchase records will remain valid."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Subscriptions", onClick: () => setArchiveDialogOpen(false) },
+          { label: "Archive Plan" },
+        ]}
+        recordSummary={
+          <div className="space-y-1 text-sm">
+            <div className="font-semibold">{planToArchive.name}</div>
+            <div className="text-xs text-muted-foreground">
+              Slug: {planToArchive.slug} • Pathway: {planToArchive.pathway} • Price: ${planToArchive.price}
+            </div>
+          </div>
+        }
+        consequences={[
+          "Deactivating this plan hides it from the public subscription catalog.",
+          "Existing learner subscriptions and historical purchase records remain intact.",
+        ]}
+        onBack={() => setArchiveDialogOpen(false)}
+        onCancel={() => setArchiveDialogOpen(false)}
+        onConfirmDelete={handleArchiveConfirm}
+        confirmLabel="Archive & Deactivate"
+        isDeleting={isProcessing}
+      />
+    );
+  }
+
+  if (editorOpen) {
+    return (
+      <FullPageFormLayout
+        title={editingPlan ? "Edit Subscription Plan" : "Create Subscription Plan"}
+        subtitle={
+          editingPlan
+            ? "Update the subscription plan details, pricing, and pathway entitlements."
+            : "Add a new subscription plan to the platform."
+        }
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Subscriptions", onClick: handleCloseEditor },
+          { label: editingPlan ? "Edit Plan" : "Create Plan" },
+        ]}
+        onBack={handleCloseEditor}
+        onCancel={handleCloseEditor}
+        onSubmit={handleSubmit}
+        submitLabel={editingPlan ? "Update Plan" : "Create Plan"}
+        isSubmitting={isProcessing}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Plan Name</label>
+            <Input
+              required
+              placeholder="e.g. NCLEX-RN Complete Preparation"
+              value={planForm.name}
+              onChange={(e) => setPlanForm({ ...planForm, name: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Slug</label>
+            <Input
+              required
+              placeholder="e.g. rn-pro"
+              value={planForm.slug}
+              onChange={(e) => setPlanForm({ ...planForm, slug: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5 md:col-span-2">
+            <label className="text-xs font-medium">Description</label>
+            <Input
+              required
+              placeholder="Describe the plan and target candidate cohort..."
+              value={planForm.description}
+              onChange={(e) => setPlanForm({ ...planForm, description: e.target.value })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Pathway</label>
+            <select
+              value={planForm.pathway}
+              onChange={(e) => setPlanForm({ ...planForm, pathway: e.target.value as "RN" | "PN" | "Both" })}
+              className="w-full h-10 px-3 rounded-md border bg-background text-sm"
+            >
+              <option value="RN">RN</option>
+              <option value="PN">PN</option>
+              <option value="Both">Both (RN & PN)</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Plan Type</label>
+            <select
+              value={planForm.planType}
+              onChange={(e) => setPlanForm({ ...planForm, planType: e.target.value })}
+              className="w-full h-10 px-3 rounded-md border bg-background text-sm"
+            >
+              <option value="starter">Starter</option>
+              <option value="pro">Pro</option>
+              <option value="premium">Premium</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Price (USD)</label>
+            <Input
+              type="number"
+              required
+              min={1}
+              value={planForm.price}
+              onChange={(e) => setPlanForm({ ...planForm, price: Number(e.target.value) })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Billing Interval</label>
+            <select
+              value={planForm.billingInterval}
+              onChange={(e) => setPlanForm({ ...planForm, billingInterval: e.target.value })}
+              className="w-full h-10 px-3 rounded-md border bg-background text-sm"
+            >
+              <option value="month">Monthly</option>
+              <option value="quarter">Quarterly (90 Days)</option>
+              <option value="year">Annual</option>
+            </select>
+          </div>
+          <div className="space-y-1.5 md:col-span-2">
+            <label className="text-xs font-medium">Included Features (One per line)</label>
+            <textarea
+              rows={4}
+              value={planForm.featuresText}
+              onChange={(e) => setPlanForm({ ...planForm, featuresText: e.target.value })}
+              className="w-full rounded-md border bg-background p-3 text-sm"
+            />
+          </div>
+        </div>
+      </FullPageFormLayout>
+    );
+  }
+
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="w-full max-w-none min-w-0 space-y-6">
       {/* Page header & primary actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <p className="text-xs sm:text-sm text-muted-foreground max-w-2xl">
+        <p className="text-xs sm:text-sm text-muted-foreground">
           Authoritative source of truth for NCLEX-RN, NCLEX-PN, and All-Access dual-pathway study plans.
         </p>
 
@@ -361,92 +541,6 @@ export function AdminSubscriptionsClient() {
             <Plus className="mr-2 h-4 w-4" />
             Create Plan
           </Button>
-        </div>
-      )}
-
-      {/* Editor dialog */}
-      <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPlan ? "Edit Subscription Plan" : "Create Subscription Plan"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingPlan ? "Update the subscription plan details." : "Add a new subscription plan to the platform."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4 text-center text-muted-foreground">
-            Form implementation would go here...
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={handleCloseEditor}
-              disabled={isProcessing}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {}}
-              disabled={isProcessing}
-              className="bg-primary text-primary-foreground"
-            >
-              {isProcessing
-                ? "Saving..."
-                : editingPlan
-                ? "Update Plan"
-                : "Create Plan"
-              }
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Archive confirmation dialog */}
-      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Archive Subscription Plan</DialogTitle>
-            <DialogDescription>
-              This will deactivate the plan and hide it from customers. Historical purchase records will remain valid.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p>
-              Are you sure you want to archive <strong>{planToArchive?.name}</strong>?
-            </p>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setArchiveDialogOpen(false)}
-              disabled={isProcessing}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={handleArchiveConfirm}
-              disabled={isProcessing}
-            >
-              {isProcessing ? "Archiving..." : "Archive & Deactivate"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Feedback message */}
-      {feedbackMessage && (
-        <div
-          className={`fixed bottom-4 right-4 rounded-lg border p-4 shadow-lg max-w-md ${feedbackMessage.type === "error"
-              ? "bg-destructive/10 border-destructive text-destructive"
-              : "bg-green-50 border-green-200 text-green-800 dark:bg-green-950 dark:border-green-800 dark:text-green-100"
-            }`}
-        >
-          <p className="text-sm font-medium">
-            {feedbackMessage.type === "error" ? "Error" : "Success"}
-          </p>
-          <p className="text-sm mt-1">{feedbackMessage.text}</p>
         </div>
       )}
     </div>

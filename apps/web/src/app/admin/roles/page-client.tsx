@@ -19,13 +19,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDetailsLayout,
+  FullPageDeleteLayout,
+} from "@/components/ui/full-page-crud";
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
 import type { AdminRoleItem } from "@/lib/api-services";
@@ -38,7 +35,7 @@ export function AdminRolesClient() {
   const [allPermissions, setAllPermissions] = React.useState<any[]>([]);
   const [groupedPermissions, setGroupedPermissions] = React.useState<Record<string, any[]>>({});
 
-  // Modals
+  // Full-Page CRUD states
   const [selectedRole, setSelectedRole] = React.useState<any | null>(null);
   const [permModalOpen, setPermModalOpen] = React.useState(false);
   const [permLoading, setPermLoading] = React.useState(false);
@@ -46,6 +43,9 @@ export function AdminRolesClient() {
   const [createModalOpen, setCreateModalOpen] = React.useState(false);
   const [createForm, setCreateForm] = React.useState({ name: "", description: "" });
   const [createLoading, setCreateLoading] = React.useState(false);
+
+  const [roleToDelete, setRoleToDelete] = React.useState<AdminRoleItem | null>(null);
+  const [deleteLoading, setDeleteLoading] = React.useState(false);
 
   const fetchRolesAndPermissions = React.useCallback(async () => {
     setLoading(true);
@@ -149,23 +149,165 @@ export function AdminRolesClient() {
     }
   };
 
-  const handleDeleteRole = async (role: AdminRoleItem) => {
-    if (!confirm(`Are you sure you want to delete role '${role.name}'?`)) return;
+  const handleDeleteRole = (role: AdminRoleItem) => {
+    setRoleToDelete(role);
+  };
 
+  const handleConfirmDeleteRole = async () => {
+    if (!roleToDelete) return;
+    setDeleteLoading(true);
     try {
-      const res = await fetch(`/api/admin/roles/${role.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/admin/roles/${roleToDelete.id}`, { method: "DELETE" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to delete role");
 
-      notify.success(`Role '${role.name}' deleted`);
+      notify.success(`Role '${roleToDelete.name}' deleted`);
+      setRoleToDelete(null);
       fetchRolesAndPermissions();
     } catch (err) {
       notify.error(sanitizeErrorMessage(err, "Failed to delete role"));
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
+  if (roleToDelete) {
+    return (
+      <FullPageDeleteLayout
+        title="Delete Custom Role"
+        subtitle="Permanently remove this custom role from the RBAC directory."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Roles & Permissions", onClick: () => setRoleToDelete(null) },
+          { label: "Delete Role" },
+        ]}
+        recordSummary={
+          <div className="space-y-1 text-sm">
+            <div className="font-semibold capitalize">{roleToDelete.name.replace("_", " ")}</div>
+            <div className="text-xs text-muted-foreground">{roleToDelete.description || "No description provided."}</div>
+            <div className="text-xs text-muted-foreground pt-1">
+              {roleToDelete.permissionCount} permissions • {roleToDelete.userCount} assigned users
+            </div>
+          </div>
+        }
+        consequences={[
+          "Deleting this role permanently removes it from the system role directory.",
+          "Users currently assigned this role will lose its associated permissions.",
+        ]}
+        onBack={() => setRoleToDelete(null)}
+        onCancel={() => setRoleToDelete(null)}
+        onConfirmDelete={handleConfirmDeleteRole}
+        confirmLabel="Permanently Delete Role"
+        isDeleting={deleteLoading}
+      />
+    );
+  }
+
+  if (permModalOpen) {
+    return (
+      <FullPageDetailsLayout
+        title={`Permissions for ${selectedRole?.name?.replace("_", " ") || "Role"}`}
+        subtitle="Assign or revoke granular system permissions. Updating permissions increments SecurityVersion and revokes active sessions for assigned users."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Roles & Permissions", onClick: () => setPermModalOpen(false) },
+          { label: selectedRole?.name?.replace("_", " ") || "Role Permissions" },
+        ]}
+        onBack={() => setPermModalOpen(false)}
+      >
+        {permLoading || !selectedRole ? (
+          <div className="py-12 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
+        ) : (
+          <div className="space-y-6">
+            {Object.entries(groupedPermissions).map(([category, perms]) => (
+              <div key={category} className="rounded-xl border bg-card p-5 space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b pb-2">
+                  {category}
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {perms.map((p) => {
+                    const assigned = selectedRole.permissions?.some((rp: any) => rp.id === p.id || rp.key === p.key);
+                    const isSuper = selectedRole.name === "superadmin";
+
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => {
+                          if (!isSuper) handleTogglePermission(p.id, assigned);
+                        }}
+                        className={`p-3 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition-colors ${
+                          assigned
+                            ? "bg-primary/5 border-primary/30 text-foreground"
+                            : "bg-muted/20 border-border text-muted-foreground hover:bg-muted/40"
+                        } ${isSuper ? "cursor-not-allowed opacity-80" : ""}`}
+                      >
+                        <div>
+                          <div className="font-medium text-foreground">{p.name}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono">{p.key}</div>
+                        </div>
+                        <div
+                          className={`h-4 w-4 rounded border flex items-center justify-center ${
+                            assigned ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/40"
+                          }`}
+                        >
+                          {assigned && <CheckCircle2 className="h-3 w-3" />}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </FullPageDetailsLayout>
+    );
+  }
+
+  if (createModalOpen) {
+    return (
+      <FullPageFormLayout
+        title="Create Custom Role"
+        subtitle="Author a new role. You can assign granular permissions to it immediately after creation."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Roles & Permissions", onClick: () => setCreateModalOpen(false) },
+          { label: "Create Role" },
+        ]}
+        onBack={() => setCreateModalOpen(false)}
+        onCancel={() => setCreateModalOpen(false)}
+        onSubmit={handleCreateRole}
+        submitLabel="Create Role"
+        submitDisabled={!createForm.name.trim()}
+        isSubmitting={createLoading}
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Role Key / Name</label>
+            <Input
+              required
+              placeholder="e.g. senior_reviewer, audit_clerk"
+              value={createForm.name}
+              onChange={(e) => setCreateForm({ ...createForm, name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })}
+            />
+            <p className="text-[11px] text-muted-foreground">Lowercase letters, numbers, and underscores only.</p>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Description</label>
+            <Input
+              placeholder="Responsibilities and purpose of this role..."
+              value={createForm.description}
+              onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
+            />
+          </div>
+        </div>
+      </FullPageFormLayout>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-none min-w-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -255,115 +397,6 @@ export function AdminRolesClient() {
           ))
         )}
       </div>
-
-      {/* Permissions Management Dialog */}
-      <Dialog open={permModalOpen} onOpenChange={setPermModalOpen}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="capitalize flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
-              Permissions for {selectedRole?.name?.replace("_", " ")}
-            </DialogTitle>
-            <DialogDescription>
-              Assign or revoke granular system permissions. Updating permissions increments SecurityVersion and revokes active sessions for assigned users.
-            </DialogDescription>
-          </DialogHeader>
-
-          {permLoading || !selectedRole ? (
-            <div className="py-12 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto" /></div>
-          ) : (
-            <div className="space-y-6 py-2">
-              {Object.entries(groupedPermissions).map(([category, perms]) => (
-                <div key={category} className="space-y-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b pb-1">
-                    {category}
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {perms.map((p) => {
-                      const assigned = selectedRole.permissions?.some((rp: any) => rp.id === p.id || rp.key === p.key);
-                      const isSuper = selectedRole.name === "superadmin";
-
-                      return (
-                        <div
-                          key={p.id}
-                          onClick={() => {
-                            if (!isSuper) handleTogglePermission(p.id, assigned);
-                          }}
-                          className={`p-2.5 rounded-lg border text-xs flex items-center justify-between cursor-pointer transition-colors ${
-                            assigned
-                              ? "bg-primary/5 border-primary/30 text-foreground"
-                              : "bg-muted/20 border-border text-muted-foreground hover:bg-muted/40"
-                          } ${isSuper ? "cursor-not-allowed opacity-80" : ""}`}
-                        >
-                          <div>
-                            <div className="font-medium text-foreground">{p.name}</div>
-                            <div className="text-[10px] text-muted-foreground font-mono">{p.key}</div>
-                          </div>
-                          <div
-                            className={`h-4 w-4 rounded border flex items-center justify-center ${
-                              assigned ? "bg-primary border-primary text-primary-foreground" : "border-muted-foreground/40"
-                            }`}
-                          >
-                            {assigned && <CheckCircle2 className="h-3 w-3" />}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPermModalOpen(false)}>Done</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Role Modal */}
-      <Dialog open={createModalOpen} onOpenChange={setCreateModalOpen}>
-        <DialogContent>
-          <form onSubmit={handleCreateRole}>
-            <DialogHeader>
-              <DialogTitle>Create Custom Role</DialogTitle>
-              <DialogDescription>
-                Author a new role. You can assign granular permissions to it immediately after creation.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-3 py-4">
-              <div className="space-y-1">
-                <label className="text-xs font-medium">Role Key / Name</label>
-                <Input
-                  required
-                  placeholder="e.g. senior_reviewer, audit_clerk"
-                  value={createForm.name}
-                  onChange={(e) => setCreateForm({ ...createForm, name: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "") })}
-                />
-                <p className="text-[11px] text-muted-foreground">Lowercase letters, numbers, and underscores only.</p>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-medium">Description</label>
-                <Input
-                  placeholder="Responsibilities and purpose of this role..."
-                  value={createForm.description}
-                  onChange={(e) => setCreateForm({ ...createForm, description: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateModalOpen(false)}>Cancel</Button>
-              <Button type="submit" disabled={createLoading || !createForm.name.trim()}>
-                {createLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Create Role
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

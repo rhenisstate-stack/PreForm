@@ -22,14 +22,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { FullPageDetailsLayout } from "@/components/ui/full-page-crud";
 import { notify } from "@/lib/notifications";
 import { sanitizeErrorMessage } from "@/lib/error-mapping";
 import type { AdminAuditLogItem } from "@/lib/api-services";
@@ -156,8 +149,123 @@ export function AdminAuditLogsClient() {
     }
   };
 
+  if (inspectModalOpen) {
+    return (
+      <FullPageDetailsLayout
+        title="Audit Event Detail"
+        subtitle="Complete forensic record including payload diff and correlation context."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Audit Logs", onClick: () => setInspectModalOpen(false) },
+          { label: selectedLog?.action || "Audit Event Detail" },
+        ]}
+        onBack={() => setInspectModalOpen(false)}
+      >
+        {inspectLoading ? (
+          <div className="py-12 text-center text-muted-foreground">
+            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+            Loading record details...
+          </div>
+        ) : selectedLog ? (
+          <div className="space-y-6 text-xs">
+            {/* Event Metadata Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-muted/40 p-5 rounded-xl border border-border">
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Log ID:</span>
+                <span className="font-mono font-medium text-foreground">{selectedLog.id}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Timestamp:</span>
+                <span className="font-medium text-foreground">{new Date(selectedLog.timestamp).toISOString()}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Action:</span>
+                <span className="font-mono font-bold text-primary">{selectedLog.action}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Outcome & Severity:</span>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="font-bold uppercase text-foreground">{selectedLog.outcome}</span>
+                  {getSeverityBadge(selectedLog.severity)}
+                </div>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Entity:</span>
+                <span className="font-medium text-foreground">
+                  {selectedLog.entityType} ({selectedLog.entityId || "N/A"})
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Actor:</span>
+                <span className="font-medium text-foreground">
+                  {selectedLog.actorName ? `${selectedLog.actorName} (${selectedLog.actorEmail})` : selectedLog.actorEmail || "System"}
+                </span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Client IP:</span>
+                <span className="font-mono text-foreground">{selectedLog.ipAddress || "Unknown"}</span>
+              </div>
+              <div>
+                <span className="text-muted-foreground block text-[11px]">Correlation ID:</span>
+                <div className="flex items-center gap-1 font-mono text-foreground">
+                  <span>{selectedLog.correlationId || "None"}</span>
+                  {selectedLog.correlationId && (
+                    <button
+                      onClick={() => handleCopyCorrelationId(selectedLog.correlationId)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      {copiedCorrelationId ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="rounded-xl border bg-card p-5 space-y-2">
+              <span className="text-muted-foreground block font-medium">Description:</span>
+              <div className="bg-background border border-border p-3 rounded text-foreground text-sm">
+                {selectedLog.description}
+              </div>
+            </div>
+
+            {/* User Agent */}
+            {selectedLog.userAgent && (
+              <div className="rounded-xl border bg-card p-5 space-y-2">
+                <span className="text-muted-foreground block font-medium">User Agent:</span>
+                <div className="bg-background border border-border p-3 rounded text-[11px] font-mono text-muted-foreground break-all">
+                  {selectedLog.userAgent}
+                </div>
+              </div>
+            )}
+
+            {/* Before Value JSON */}
+            {selectedLog.beforeValueJson && (
+              <div className="rounded-xl border bg-card p-5 space-y-2">
+                <span className="text-muted-foreground block font-medium">Before State:</span>
+                <pre className="bg-muted p-4 rounded border border-border text-[11px] font-mono text-foreground overflow-x-auto">
+                  {formatJson(selectedLog.beforeValueJson)}
+                </pre>
+              </div>
+            )}
+
+            {/* After Value JSON */}
+            {selectedLog.afterValueJson && (
+              <div className="rounded-xl border bg-card p-5 space-y-2">
+                <span className="text-muted-foreground block font-medium">After State:</span>
+                <pre className="bg-muted p-4 rounded border border-border text-[11px] font-mono text-foreground overflow-x-auto">
+                  {formatJson(selectedLog.afterValueJson)}
+                </pre>
+              </div>
+            )}
+          </div>
+        ) : null}
+      </FullPageDetailsLayout>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-none min-w-0 space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border/50 pb-6">
         <div>

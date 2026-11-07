@@ -121,8 +121,87 @@ export function AdminReportsClient() {
     window.open(`/api/admin/reports/questions/export?${params.toString()}`, "_blank");
   };
 
+  if (selectedQuestion) {
+    return (
+      <div className="w-full max-w-none min-w-0 space-y-6" data-testid="distractor-modal">
+        <div className="bg-card border border-border rounded-2xl w-full p-6 space-y-6 shadow-xs">
+          <div className="flex items-start justify-between border-b border-border pb-4">
+            <div>
+              <h3 className="font-serif font-bold text-foreground text-xl">
+                Item Distractor Analysis: {selectedQuestion.code}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Empirical selection distribution across answer choices
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setSelectedQuestion(null)}>
+              Back to Reports
+            </Button>
+          </div>
+
+          <div className="p-4 bg-muted/30 rounded-xl text-sm text-foreground leading-relaxed">
+            <p className="font-semibold text-muted-foreground uppercase text-[10px] mb-1">Question Stem</p>
+            {selectedQuestion.stemPreview}
+          </div>
+
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Option Selection Breakdown ({selectedQuestion.timesAnswered} responses)
+            </p>
+
+            {detailLoading ? (
+              <div className="py-4 text-center text-xs text-muted-foreground">Analyzing distractors...</div>
+            ) : !selectedQuestion.distractorAnalysis || selectedQuestion.distractorAnalysis.length === 0 ? (
+              <div className="py-4 text-center text-xs text-muted-foreground">
+                No candidate responses recorded for this question yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {selectedQuestion.distractorAnalysis.map((d) => (
+                  <div
+                    key={d.optionKey}
+                    className={`p-4 rounded-xl border text-xs space-y-2 ${
+                      d.isCorrect
+                        ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100"
+                        : "border-border bg-card text-foreground"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold flex items-center gap-1.5">
+                        Option {d.optionKey}
+                        {d.isCorrect && (
+                          <Badge className="bg-emerald-600 text-white text-[9px] py-0 px-1.5">Correct Key</Badge>
+                        )}
+                      </span>
+                      <span className="font-medium text-xs">
+                        {d.selectionCount} selections ({d.selectionRate}%)
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">{d.contentPreview}</p>
+                    <div className="w-full bg-muted/60 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${d.isCorrect ? "bg-emerald-600" : "bg-primary/70"}`}
+                        style={{ width: `${d.selectionRate}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-2 flex justify-end">
+            <Button variant="outline" size="sm" onClick={() => setSelectedQuestion(null)}>
+              Close
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6" data-testid="admin-reports-page">
+    <div className="w-full max-w-none min-w-0 space-y-6" data-testid="admin-reports-page">
       {/* Header and Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border">
         <div>
@@ -422,90 +501,6 @@ export function AdminReportsClient() {
                     )}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          )}
-
-          {/* Distractor Analysis Modal */}
-          {selectedQuestion && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
-              data-testid="distractor-modal"
-            >
-              <div className="bg-card border border-border rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-xl">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-serif font-bold text-foreground text-base">
-                      Item Distractor Analysis: {selectedQuestion.code}
-                    </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Empirical selection distribution across answer choices
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setSelectedQuestion(null)}
-                    className="text-muted-foreground hover:text-foreground text-sm font-semibold"
-                  >
-                    ✕
-                  </button>
-                </div>
-
-                <div className="p-3 bg-muted/30 rounded-xl text-xs text-foreground leading-relaxed">
-                  <p className="font-semibold text-muted-foreground uppercase text-[10px] mb-1">Question Stem</p>
-                  {selectedQuestion.stemPreview}
-                </div>
-
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Option Selection Breakdown ({selectedQuestion.timesAnswered} responses)
-                  </p>
-
-                  {detailLoading ? (
-                    <div className="py-4 text-center text-xs text-muted-foreground">Analyzing distractors...</div>
-                  ) : !selectedQuestion.distractorAnalysis || selectedQuestion.distractorAnalysis.length === 0 ? (
-                    <div className="py-4 text-center text-xs text-muted-foreground">
-                      No candidate responses recorded for this question yet.
-                    </div>
-                  ) : (
-                    <div className="space-y-2">
-                      {selectedQuestion.distractorAnalysis.map((d) => (
-                        <div
-                          key={d.optionKey}
-                          className={`p-3 rounded-xl border text-xs space-y-1.5 ${
-                            d.isCorrect
-                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100"
-                              : "border-border bg-card text-foreground"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold flex items-center gap-1.5">
-                              Option {d.optionKey}
-                              {d.isCorrect && (
-                                <Badge className="bg-emerald-600 text-white text-[9px] py-0 px-1.5">Correct Key</Badge>
-                              )}
-                            </span>
-                            <span className="font-medium text-xs">
-                              {d.selectionCount} selections ({d.selectionRate}%)
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground">{d.contentPreview}</p>
-                          <div className="w-full bg-muted/60 h-1.5 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${d.isCorrect ? "bg-emerald-600" : "bg-primary/70"}`}
-                              style={{ width: `${d.selectionRate}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-2 flex justify-end">
-                  <Button variant="outline" size="sm" onClick={() => setSelectedQuestion(null)}>
-                    Close
-                  </Button>
-                </div>
               </div>
             </div>
           )}

@@ -30,13 +30,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  FullPageFormLayout,
+  FullPageDeleteLayout,
+} from "@/components/ui/full-page-crud";
 import { useAuth } from "@/lib/auth-context";
 import { isSuperAdmin } from "@/lib/admin/authz";
 import { notify } from "@/lib/notifications";
@@ -372,7 +368,7 @@ export function AdminSecuritySessionsClient() {
   // Non-SuperAdmin Gate
   if (!authLoading && !superAdmin) {
     return (
-      <div className="p-8 max-w-4xl mx-auto space-y-6">
+      <div className="p-6 w-full max-w-none space-y-6">
         <Card className="border-destructive/30 bg-destructive/5">
           <CardHeader>
             <div className="flex items-center gap-3 text-destructive">
@@ -393,8 +389,134 @@ export function AdminSecuritySessionsClient() {
     );
   }
 
+  if (confirmSavePolicyOpen) {
+    return (
+      <FullPageFormLayout
+        title="Apply Global Session Policy Changes?"
+        subtitle={`You are updating the authoritative session security policy (v${policy?.policyVersion ?? 1} → v${(policy?.policyVersion ?? 1) + 1}). Concurrency checks and new sessions will immediately consume the updated policy thresholds.`}
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Session Security", onClick: () => setConfirmSavePolicyOpen(false) },
+          { label: "Apply Policy" },
+        ]}
+        onBack={() => setConfirmSavePolicyOpen(false)}
+        onCancel={() => setConfirmSavePolicyOpen(false)}
+        onSubmit={handleSavePolicy}
+        submitLabel="Save & Apply Policy"
+        isSubmitting={savingPolicy}
+      >
+        <div className="text-sm text-muted-foreground">
+          Confirm applying the updated session timeout and concurrency thresholds across the platform.
+        </div>
+      </FullPageFormLayout>
+    );
+  }
+
+  if (confirmResetPolicyOpen) {
+    return (
+      <FullPageDeleteLayout
+        title="Reset Policy to System Defaults?"
+        subtitle="This will restore the canonical platform defaults: 2 concurrent sessions, 1 session per client, 300 minutes idle timeout, and 10,080 minutes absolute timeout."
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Session Security", onClick: () => setConfirmResetPolicyOpen(false) },
+          { label: "Reset Policy" },
+        ]}
+        recordSummary={
+          <div className="text-sm font-medium">
+            Global Session Security Policy (v{policy?.policyVersion ?? 1})
+          </div>
+        }
+        consequences={[
+          "Restores 2 concurrent sessions, 1 session per client, 300m idle timeout, and 10,080m absolute timeout.",
+        ]}
+        onBack={() => setConfirmResetPolicyOpen(false)}
+        onCancel={() => setConfirmResetPolicyOpen(false)}
+        onConfirmDelete={handleResetPolicy}
+        confirmLabel="Reset to Defaults"
+        isDeleting={resettingPolicy}
+      />
+    );
+  }
+
+  if (sessionToRevoke) {
+    return (
+      <FullPageFormLayout
+        title="Administratively Revoke Session?"
+        subtitle={`Target user: ${sessionToRevoke.userDisplayName} (${sessionToRevoke.userEmail}) on device ${sessionToRevoke.deviceLabel}. This device will be immediately signed out and unable to make API calls.`}
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Session Security", onClick: () => setSessionToRevoke(null) },
+          { label: "Revoke Session" },
+        ]}
+        onBack={() => setSessionToRevoke(null)}
+        onCancel={() => setSessionToRevoke(null)}
+        onSubmit={handleConfirmRevokeSession}
+        submitLabel="Confirm Revocation"
+        isSubmitting={revokingSession}
+      >
+        <div className="space-y-3">
+          <div className="p-3 rounded-lg border bg-muted/30 text-sm">
+            Target user: <strong className="text-foreground">{sessionToRevoke.userDisplayName} ({sessionToRevoke.userEmail})</strong> on device <strong className="text-foreground">{sessionToRevoke.deviceLabel}</strong>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="revoke-reason" className="text-xs font-semibold text-foreground">
+              Administrative Reason (Required for Audit Trail)
+            </label>
+            <textarea
+              id="revoke-reason"
+              rows={3}
+              value={revokeReason}
+              onChange={(e) => setRevokeReason(e.target.value)}
+              placeholder="e.g. Suspicious concurrent location, credential compromise..."
+              className="w-full p-2.5 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </div>
+      </FullPageFormLayout>
+    );
+  }
+
+  if (userToRevoke) {
+    return (
+      <FullPageFormLayout
+        title="Terminate All Sessions for User?"
+        subtitle={`You are about to terminate all active sessions for ${userToRevoke.name} (${userToRevoke.email}). The learner will be logged out everywhere and required to reauthenticate.`}
+        breadcrumbs={[
+          { label: "Admin", href: "/admin" },
+          { label: "Session Security", onClick: () => setUserToRevoke(null) },
+          { label: "Terminate User Sessions" },
+        ]}
+        onBack={() => setUserToRevoke(null)}
+        onCancel={() => setUserToRevoke(null)}
+        onSubmit={handleConfirmRevokeUserSessions}
+        submitLabel="Terminate All User Sessions"
+        isSubmitting={revokingUserSessions}
+      >
+        <div className="space-y-3">
+          <div className="p-3 rounded-lg border bg-muted/30 text-sm">
+            Target user: <strong className="text-foreground">{userToRevoke.name} ({userToRevoke.email})</strong>
+          </div>
+          <div className="space-y-2">
+            <label htmlFor="user-revoke-reason" className="text-xs font-semibold text-foreground">
+              Administrative Reason (Required for Audit Trail)
+            </label>
+            <textarea
+              id="user-revoke-reason"
+              rows={3}
+              value={userRevokeReason}
+              onChange={(e) => setUserRevokeReason(e.target.value)}
+              placeholder="e.g. Account security reset, credential rotation..."
+              className="w-full p-2.5 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+        </div>
+      </FullPageFormLayout>
+    );
+  }
+
   return (
-    <div className="space-y-8 p-6 max-w-7xl mx-auto">
+    <div className="space-y-8 w-full max-w-none min-w-0">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-6">
         <div>
