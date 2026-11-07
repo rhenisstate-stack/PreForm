@@ -18,6 +18,7 @@ using Preform.Api.Services.RateLimiting;
 using Preform.Api.Services.Security;
 using Preform.Api.Services.Analytics;
 using Preform.Api.Services.Monitoring;
+using Preform.Api.Services.AI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -87,6 +88,16 @@ builder.Services.AddScoped<IAttemptQuestionService, AttemptQuestionService>();
 // AI Study Studio (Phase 1): server-authoritative spaced repetition scheduling
 builder.Services.AddScoped<ISpacedRepetitionService, SpacedRepetitionService>();
 builder.Services.AddScoped<IFlashcardService, FlashcardService>();
+
+// Study Guide Management & AI Study Studio
+builder.Services.AddScoped<INotesService, NotesService>();
+builder.Services.AddScoped<IReviewSessionService, ReviewSessionService>();
+builder.Services.AddScoped<ITopicQuizService, TopicQuizService>();
+builder.Services.AddScoped<ICuratedStudyGuideService, CuratedStudyGuideService>();
+builder.Services.AddSingleton<MockStudyProvider>();
+builder.Services.AddHttpClient<GeminiStudyProvider>();
+builder.Services.AddScoped<IAIStudyProvider, GeminiStudyProvider>();
+builder.Services.AddScoped<IAIGovernanceService, AIGovernanceService>();
 // Examination Domain Foundation (P3.1)
 builder.Services.AddScoped<IExaminationCodeService, ExaminationCodeService>();
 builder.Services.AddScoped<IExamLifecycleService, ExamLifecycleService>();
