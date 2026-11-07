@@ -164,7 +164,6 @@ public class ExaminationCodeService : IExaminationCodeService
                         DisplayOrder = order++
                     };
                     _context.ExamQuestions.Add(eq);
-                    initialRevision.ExamQuestions.Add(eq);
                 }
             }
 
