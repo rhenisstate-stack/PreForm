@@ -270,9 +270,9 @@ public class StudyStudioPhase2Tests : IClassFixture<WebApplicationFactory<Progra
                         Stem = "First official assigned question on cardiac arrest.",
                         Pathway = "rn",
                         Status = QuestionStatus.Published,
-                        TypeKey = "single-choice",
+                        QuestionTypeKey = "single-choice",
                         ClientNeedId = "PHYS_PHARM",
-                        CreatedByUserId = "usr_admin"
+                        CreatedById = "usr_admin"
                     },
                     new Question
                     {
@@ -280,9 +280,9 @@ public class StudyStudioPhase2Tests : IClassFixture<WebApplicationFactory<Progra
                         Stem = "Second official assigned question on emergency drugs.",
                         Pathway = "rn",
                         Status = QuestionStatus.Published,
-                        TypeKey = "single-choice",
+                        QuestionTypeKey = "single-choice",
                         ClientNeedId = "PHYS_PHARM",
-                        CreatedByUserId = "usr_admin"
+                        CreatedById = "usr_admin"
                     }
                 );
                 await db.SaveChangesAsync();
