@@ -16,7 +16,36 @@ public enum SubscriptionStatus
     Active = 1,
     PastDue = 2,
     Cancelled = 3,
-    Expired = 4
+    Expired = 4,
+    Suspended = 5,
+    Revoked = 6
+}
+
+public enum PaymentMethod
+{
+    Card = 1,
+    Cash = 2,
+    MPesa = 3,
+    BankTransfer = 4,
+    DirectDeposit = 5,
+    Other = 6
+}
+
+public enum PaymentVerificationStatus
+{
+    PendingVerification = 1,
+    Verified = 2,
+    Rejected = 3,
+    Refunded = 4,
+    Reversed = 5,
+    Cancelled = 6
+}
+
+public enum PlanPublicationStatus
+{
+    Draft = 1,
+    Published = 2,
+    Archived = 3
 }
 
 public enum OrderStatus
@@ -96,6 +125,10 @@ public class SubscriptionPlan
 
     public string EntitlementsJson { get; set; } = "[\"rn\"]";
 
+    public PlanPublicationStatus PublicationStatus { get; set; } = PlanPublicationStatus.Published;
+
+    public int Version { get; set; } = 1;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -131,6 +164,27 @@ public class UserSubscription
     public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddMonths(1);
 
     public DateTime? CancelledAt { get; set; }
+
+    public DateTime? SuspendedAt { get; set; }
+
+    [MaxLength(512)]
+    public string? SuspensionReason { get; set; }
+
+    [MaxLength(128)]
+    public string? CancelledBy { get; set; }
+
+    public DateTime? ExtendedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? ExtendedBy { get; set; }
+
+    public bool IsManual { get; set; } = false;
+
+    [MaxLength(128)]
+    public string? ManualAuthorizationId { get; set; }
+
+    [MaxLength(1024)]
+    public string? Notes { get; set; }
 }
 
 [Table("Orders", Schema = "public")]
@@ -165,6 +219,28 @@ public class Order
     [MaxLength(256)]
     public string? ProviderPaymentId { get; set; }
 
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Card;
+
+    [MaxLength(128)]
+    public string? ReceiptNumber { get; set; }
+
+    [MaxLength(128)]
+    public string? TransactionReference { get; set; }
+
+    [MaxLength(2048)]
+    public string? Notes { get; set; }
+
+    [MaxLength(1024)]
+    public string? PaymentEvidenceUrl { get; set; }
+
+    [MaxLength(128)]
+    public string? VerifiedBy { get; set; }
+
+    public DateTime? VerifiedAt { get; set; }
+
+    [MaxLength(128)]
+    public string? ManualAuthorizationId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -196,6 +272,144 @@ public class PaymentTransaction
     public string Status { get; set; } = "processed";
 
     public string PayloadJson { get; set; } = "{}";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+[Table("ManualSubscriptionAuthorizations", Schema = "public")]
+public class ManualSubscriptionAuthorization
+{
+    [Key]
+    public string Id { get; set; } = "man_auth_" + Guid.NewGuid().ToString("N");
+
+    [Required]
+    [MaxLength(128)]
+    public string UserId { get; set; } = string.Empty;
+    public User User { get; set; } = null!;
+
+    [Required]
+    [MaxLength(128)]
+    public string PlanId { get; set; } = string.Empty;
+    public SubscriptionPlan Plan { get; set; } = null!;
+
+    [Required]
+    [MaxLength(32)]
+    public string Pathway { get; set; } = "rn";
+
+    public PaymentMethod PaymentMethod { get; set; } = PaymentMethod.Cash;
+
+    public int AmountCents { get; set; }
+
+    [MaxLength(10)]
+    public string Currency { get; set; } = "USD";
+
+    [MaxLength(128)]
+    public string? TransactionReference { get; set; }
+
+    [MaxLength(128)]
+    public string? ReceiptNumber { get; set; }
+
+    public DateTime PaymentDate { get; set; } = DateTime.UtcNow;
+
+    [MaxLength(1024)]
+    public string? EvidenceUrl { get; set; }
+
+    [MaxLength(2048)]
+    public string? Notes { get; set; }
+
+    public PaymentVerificationStatus Status { get; set; } = PaymentVerificationStatus.PendingVerification;
+
+    [MaxLength(128)]
+    public string RequestedByAdminId { get; set; } = string.Empty;
+
+    [MaxLength(128)]
+    public string? VerifiedByAdminId { get; set; }
+
+    [MaxLength(1024)]
+    public string? RejectionReason { get; set; }
+
+    [MaxLength(128)]
+    public string? SubscriptionId { get; set; }
+    public UserSubscription? Subscription { get; set; }
+
+    [MaxLength(128)]
+    public string? OrderId { get; set; }
+    public Order? Order { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? VerifiedAt { get; set; }
+}
+
+[Table("SubscriptionPlanAppearances", Schema = "public")]
+public class SubscriptionPlanAppearance
+{
+    [Key]
+    public string Id { get; set; } = "appr_" + Guid.NewGuid().ToString("N");
+
+    [MaxLength(128)]
+    public string? PlanId { get; set; } // null represents global default template
+    public SubscriptionPlan? Plan { get; set; }
+
+    public int Version { get; set; } = 1;
+    public bool IsPublished { get; set; } = true;
+
+    public string TypographyJson { get; set; } = "{}";
+    public string ColorsJson { get; set; } = "{}";
+    public string CardStylingJson { get; set; } = "{}";
+    public string ButtonStylingJson { get; set; } = "{}";
+    public string LayoutJson { get; set; } = "{}";
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    [MaxLength(128)]
+    public string? CreatedBy { get; set; }
+    public DateTime? PublishedAt { get; set; }
+    [MaxLength(128)]
+    public string? PublishedBy { get; set; }
+}
+
+[Table("EntitlementDefinitions", Schema = "public")]
+public class EntitlementDefinition
+{
+    [Key]
+    [MaxLength(64)]
+    public string Code { get; set; } = string.Empty;
+
+    [Required]
+    [MaxLength(128)]
+    public string Name { get; set; } = string.Empty;
+
+    [MaxLength(64)]
+    public string Category { get; set; } = "General";
+
+    [MaxLength(512)]
+    public string Description { get; set; } = string.Empty;
+
+    [MaxLength(32)]
+    public string CoursePathway { get; set; } = "Both"; // "RN", "PN", "Both"
+
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+[Table("SubscriptionPlanEntitlements", Schema = "public")]
+public class SubscriptionPlanEntitlement
+{
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    [Required]
+    [MaxLength(128)]
+    public string PlanId { get; set; } = string.Empty;
+    public SubscriptionPlan Plan { get; set; } = null!;
+
+    [Required]
+    [MaxLength(64)]
+    public string EntitlementCode { get; set; } = string.Empty;
+    public EntitlementDefinition Entitlement { get; set; } = null!;
+
+    public int? UsageLimit { get; set; } // null = unlimited
+
+    public string MetadataJson { get; set; } = "{}";
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

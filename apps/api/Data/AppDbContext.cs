@@ -52,6 +52,10 @@ public class AppDbContext : DbContext
     public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
+    public DbSet<ManualSubscriptionAuthorization> ManualSubscriptionAuthorizations => Set<ManualSubscriptionAuthorization>();
+    public DbSet<SubscriptionPlanAppearance> SubscriptionPlanAppearances => Set<SubscriptionPlanAppearance>();
+    public DbSet<EntitlementDefinition> EntitlementDefinitions => Set<EntitlementDefinition>();
+    public DbSet<SubscriptionPlanEntitlement> SubscriptionPlanEntitlements => Set<SubscriptionPlanEntitlement>();
 
     // Testimonials & Feedback
     public DbSet<Testimonial> Testimonials => Set<Testimonial>();
@@ -567,6 +571,81 @@ public class AppDbContext : DbContext
                   .HasDatabaseName("idx_payment_transactions_provider_event_id")
                   .IsUnique();
             entity.HasIndex(pt => pt.OrderId);
+        });
+
+        // ── Monetization Subsystem (Phase 2): Manual Authorizations, Appearance, Entitlements ──
+        modelBuilder.Entity<ManualSubscriptionAuthorization>(entity =>
+        {
+            entity.ToTable("ManualSubscriptionAuthorizations", "public");
+            entity.HasKey(m => m.Id);
+            entity.HasIndex(m => m.TransactionReference)
+                  .IsUnique()
+                  .HasFilter("\"TransactionReference\" IS NOT NULL")
+                  .HasDatabaseName("idx_manual_auth_tx_ref_unique");
+            entity.HasIndex(m => m.UserId);
+            entity.HasIndex(m => m.Status);
+            entity.HasIndex(m => m.PaymentMethod);
+            entity.HasIndex(m => m.RequestedByAdminId);
+
+            entity.HasOne(m => m.User)
+                  .WithMany()
+                  .HasForeignKey(m => m.UserId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(m => m.Plan)
+                  .WithMany()
+                  .HasForeignKey(m => m.PlanId)
+                  .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(m => m.Subscription)
+                  .WithMany()
+                  .HasForeignKey(m => m.SubscriptionId)
+                  .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(m => m.Order)
+                  .WithMany()
+                  .HasForeignKey(m => m.OrderId)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<SubscriptionPlanAppearance>(entity =>
+        {
+            entity.ToTable("SubscriptionPlanAppearances", "public");
+            entity.HasKey(a => a.Id);
+            entity.HasIndex(a => new { a.PlanId, a.Version, a.IsPublished })
+                  .HasDatabaseName("idx_sub_plan_appearances_version");
+
+            entity.HasOne(a => a.Plan)
+                  .WithMany()
+                  .HasForeignKey(a => a.PlanId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EntitlementDefinition>(entity =>
+        {
+            entity.ToTable("EntitlementDefinitions", "public");
+            entity.HasKey(e => e.Code);
+            entity.HasIndex(e => e.CoursePathway);
+            entity.HasIndex(e => e.IsActive);
+        });
+
+        modelBuilder.Entity<SubscriptionPlanEntitlement>(entity =>
+        {
+            entity.ToTable("SubscriptionPlanEntitlements", "public");
+            entity.HasKey(spe => spe.Id);
+            entity.HasIndex(spe => new { spe.PlanId, spe.EntitlementCode })
+                  .IsUnique()
+                  .HasDatabaseName("idx_sub_plan_entitlements_unique");
+
+            entity.HasOne(spe => spe.Plan)
+                  .WithMany()
+                  .HasForeignKey(spe => spe.PlanId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(spe => spe.Entitlement)
+                  .WithMany()
+                  .HasForeignKey(spe => spe.EntitlementCode)
+                  .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }
