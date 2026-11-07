@@ -236,7 +236,7 @@ public class ExamManagementModulesCrudTests
                 Title = "Pharmacology & Safety Custom Standalone Test",
                 InitialRevisionTitle = "Pharmacology & Safety Custom Standalone Test - v1",
                 Description = "Focused custom test for RN pharmacology",
-                ExamType = (int)ExamType.Standalone,
+                ExamType = ExamType.Standalone,
                 TimeLimitMinutes = 45,
                 PassingScorePercent = 75m,
                 TargetQuestionCount = 1,
@@ -258,7 +258,7 @@ public class ExamManagementModulesCrudTests
 
         Assert.Single(standaloneQuery.Items);
         Assert.Equal(exam.Id, standaloneQuery.Items[0].Id);
-        Assert.Equal((int)ExamType.Standalone, standaloneQuery.Items[0].LatestRevision!.ExamType);
+        Assert.Equal(ExamType.Standalone, standaloneQuery.Items[0].LatestRevision!.ExamType);
         Assert.Equal(1, standaloneQuery.Items[0].LatestRevision!.QuestionCount);
 
         // Query by module = "practice" should not include the standalone test
@@ -274,7 +274,6 @@ public class ExamManagementModulesCrudTests
             Id = "att_1",
             ExamId = initialRev.Id,
             UserId = "student_1",
-            Pathway = "rn",
             Status = AttemptStatus.Completed
         };
         db.ExamAttempts.Add(attempt);
@@ -307,7 +306,7 @@ public class ExamManagementModulesCrudTests
                 Title = "NCLEX-RN Comprehensive Readiness Assessment Test #1",
                 InitialRevisionTitle = "NCLEX-RN RAT #1",
                 Description = "Readiness assessment test",
-                ExamType = (int)ExamType.DiagnosticReadiness,
+                ExamType = ExamType.DiagnosticReadiness,
                 TimeLimitMinutes = 120,
                 PassingScorePercent = 72m
             },
@@ -395,8 +394,8 @@ public class ExamManagementModulesCrudTests
             ClientNeedId = "PHA",
             Options = new List<QuestionOption>
             {
-                new QuestionOption { Id = "opt_rn_1", Key = "A", Text = "Administer broad-spectrum antibiotics", IsCorrect = true },
-                new QuestionOption { Id = "opt_rn_2", Key = "B", Text = "Document hourly urine output", IsCorrect = false }
+                new QuestionOption { Id = "opt_rn_1", Label = "A", Content = "Administer broad-spectrum antibiotics", IsCorrect = true },
+                new QuestionOption { Id = "opt_rn_2", Label = "B", Content = "Document hourly urine output", IsCorrect = false }
             }
         };
         var pnQuestion = new Question
@@ -411,8 +410,8 @@ public class ExamManagementModulesCrudTests
             ClientNeedId = "PHA",
             Options = new List<QuestionOption>
             {
-                new QuestionOption { Id = "opt_pn_1", Key = "A", Text = "I will use a soft-bristled toothbrush", IsCorrect = true },
-                new QuestionOption { Id = "opt_pn_2", Key = "B", Text = "I will double my dose if I miss one", IsCorrect = false }
+                new QuestionOption { Id = "opt_pn_1", Label = "A", Content = "I will use a soft-bristled toothbrush", IsCorrect = true },
+                new QuestionOption { Id = "opt_pn_2", Label = "B", Content = "I will double my dose if I miss one", IsCorrect = false }
             }
         };
         db.Questions.AddRange(rnQuestion, pnQuestion);
@@ -424,7 +423,7 @@ public class ExamManagementModulesCrudTests
             {
                 Pathway = "rn",
                 Title = "NCLEX-RN Full Practice Exam A",
-                ExamType = (int)ExamType.Practice,
+                ExamType = ExamType.Practice,
                 TimeLimitMinutes = 180,
                 PassingScorePercent = 75m,
                 TargetQuestionCount = 1,
@@ -438,7 +437,7 @@ public class ExamManagementModulesCrudTests
             {
                 Pathway = "pn",
                 Title = "NCLEX-PN Full Practice Exam A",
-                ExamType = (int)ExamType.Practice,
+                ExamType = ExamType.Practice,
                 TimeLimitMinutes = 150,
                 PassingScorePercent = 72m,
                 TargetQuestionCount = 1,
@@ -451,7 +450,7 @@ public class ExamManagementModulesCrudTests
         var allPractice = await lifecycleService.QueryExaminationsAsync(
             new ExaminationQueryParameters { Module = "practice" },
             adminUser);
-        Assert.Equal(2, allPractice.TotalCount);
+        Assert.Equal(2, allPractice.Pagination.TotalItems);
 
         var rnOnlyPractice = await lifecycleService.QueryExaminationsAsync(
             new ExaminationQueryParameters { Module = "practice", Pathway = "rn" },
@@ -468,7 +467,7 @@ public class ExamManagementModulesCrudTests
 
         // Transition RN Practice Exam through Draft -> InReview -> Approved -> Published, then Duplicate
         var inReview = await lifecycleService.SubmitForReviewAsync(rnRev.Id, rnRev.ConcurrencyToken, adminUser);
-        var approved = await lifecycleService.ApproveAsync(rnRev.Id, inReview.ConcurrencyToken, "Clinical blueprint verified", reviewerUser);
+        var approved = await lifecycleService.ApproveAsync(rnRev.Id, inReview.ConcurrencyToken, adminUser);
         var published = await lifecycleService.PublishAsync(rnRev.Id, approved.ConcurrencyToken, adminUser);
         Assert.Equal("Published", published.LifecycleState);
 
@@ -481,7 +480,7 @@ public class ExamManagementModulesCrudTests
             rnPractice.Id,
             new DuplicateExaminationRequest
             {
-                NewExaminationTitle = "NCLEX-RN Full Practice Exam B (Cloned)"
+                Title = "NCLEX-RN Full Practice Exam B (Cloned)"
             },
             adminUser);
 
