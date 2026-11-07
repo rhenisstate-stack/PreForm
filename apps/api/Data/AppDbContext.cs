@@ -37,6 +37,7 @@ public class AppDbContext : DbContext
     public DbSet<Question> Questions => Set<Question>();
     public DbSet<QuestionOption> QuestionOptions => Set<QuestionOption>();
     public DbSet<QuestionVersion> QuestionVersions => Set<QuestionVersion>();
+    public DbSet<QuestionMedia> QuestionMedia => Set<QuestionMedia>();
 
     // Assessments
     public DbSet<Examination> Examinations => Set<Examination>();
@@ -332,6 +333,28 @@ public class AppDbContext : DbContext
                   .WithMany(q => q.Options)
                   .HasForeignKey(qo => qo.QuestionId)
                   .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // QuestionMedia (Persistent Binary Image Storage)
+        modelBuilder.Entity<QuestionMedia>(entity =>
+        {
+            entity.ToTable("QuestionMedia", "public");
+            entity.HasKey(qm => qm.Id);
+            entity.Property(qm => qm.ImageData).IsRequired().HasColumnType("bytea");
+            entity.Property(qm => qm.ContentType).IsRequired().HasMaxLength(64);
+            entity.Property(qm => qm.Sha256Hash).IsRequired().HasMaxLength(64);
+            entity.Property(qm => qm.FieldKey).HasMaxLength(64);
+            entity.Property(qm => qm.FileName).HasMaxLength(256);
+            entity.HasIndex(qm => qm.QuestionId);
+            entity.HasIndex(qm => qm.Sha256Hash);
+            entity.HasOne(qm => qm.Question)
+                  .WithMany(q => q.Media)
+                  .HasForeignKey(qm => qm.QuestionId)
+                  .OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(qm => qm.CreatedBy)
+                  .WithMany()
+                  .HasForeignKey(qm => qm.CreatedById)
+                  .OnDelete(DeleteBehavior.SetNull);
         });
 
         // Examination (Stable Identity)

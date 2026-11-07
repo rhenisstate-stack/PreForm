@@ -394,6 +394,33 @@ public class QuestionBankService : IQuestionBankService
                 });
                 order++;
             }
+
+            var mediaUrls = nonEmptyOptions
+                .Select(o => o.MediaUrl)
+                .Where(u => !string.IsNullOrWhiteSpace(u))
+                .ToList();
+
+            if (mediaUrls.Count > 0)
+            {
+                var mediaIds = mediaUrls
+                    .Select(u => u!.Contains("/media/") ? u.Substring(u.LastIndexOf("/media/") + 7).Split('?')[0].Trim() : u!.Trim())
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Distinct()
+                    .ToList();
+
+                if (mediaIds.Count > 0)
+                {
+                    var unlinkedMedia = await _context.QuestionMedia
+                        .Where(m => mediaIds.Contains(m.Id) && m.QuestionId == null)
+                        .ToListAsync(ct);
+
+                    foreach (var m in unlinkedMedia)
+                    {
+                        m.QuestionId = question.Id;
+                        m.UpdatedAt = now;
+                    }
+                }
+            }
         }
 
         _context.Questions.Add(question);
@@ -518,6 +545,33 @@ public class QuestionBankService : IQuestionBankService
                 MediaUrl = opt.MediaUrl?.Trim()
             });
             order++;
+        }
+
+        var updatedMediaUrls = validOptions
+            .Select(o => o.MediaUrl)
+            .Where(u => !string.IsNullOrWhiteSpace(u))
+            .ToList();
+
+        if (updatedMediaUrls.Count > 0)
+        {
+            var mediaIds = updatedMediaUrls
+                .Select(u => u!.Contains("/media/") ? u.Substring(u.LastIndexOf("/media/") + 7).Split('?')[0].Trim() : u!.Trim())
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct()
+                .ToList();
+
+            if (mediaIds.Count > 0)
+            {
+                var unlinkedMedia = await _context.QuestionMedia
+                    .Where(m => mediaIds.Contains(m.Id) && m.QuestionId == null)
+                    .ToListAsync(ct);
+
+                foreach (var m in unlinkedMedia)
+                {
+                    m.QuestionId = question.Id;
+                    m.UpdatedAt = now;
+                }
+            }
         }
 
         _context.AuditLogs.Add(new AuditLog

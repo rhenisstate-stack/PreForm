@@ -101,6 +101,7 @@ builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHand
 // Phase 2 Curriculum Taxonomy & Question Bank
 builder.Services.AddScoped<ICurriculumService, CurriculumService>();
 builder.Services.AddScoped<IQuestionBankService, QuestionBankService>();
+builder.Services.AddScoped<IQuestionMediaService, QuestionMediaService>();
 
 // Phase 3 Learner Assessment, RAT & Exam Delivery Integration
 builder.Services.AddScoped<IAssessmentSelectionService, AssessmentSelectionService>();

@@ -214,6 +214,7 @@ public class Question
 
     public ICollection<QuestionOption> Options { get; set; } = new List<QuestionOption>();
     public ICollection<QuestionVersion> Versions { get; set; } = new List<QuestionVersion>();
+    public ICollection<QuestionMedia> Media { get; set; } = new List<QuestionMedia>();
 }
 
 [Table("QuestionOptions", Schema = "public")]
@@ -268,4 +269,39 @@ public class QuestionVersion
     public string? CreatedById { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+[Table("QuestionMedia", Schema = "public")]
+public class QuestionMedia
+{
+    [Key]
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+
+    public string? QuestionId { get; set; }
+    public Question? Question { get; set; }
+
+    [MaxLength(64)]
+    public string FieldKey { get; set; } = string.Empty;
+
+    [MaxLength(256)]
+    public string? FileName { get; set; }
+
+    [Required]
+    [MaxLength(64)]
+    public string ContentType { get; set; } = "image/png";
+
+    public long FileSizeBytes { get; set; }
+
+    [Required]
+    [MaxLength(64)]
+    public string Sha256Hash { get; set; } = string.Empty;
+
+    [Required]
+    public byte[] ImageData { get; set; } = Array.Empty<byte>();
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public string? CreatedById { get; set; }
+    public User? CreatedBy { get; set; }
 }
