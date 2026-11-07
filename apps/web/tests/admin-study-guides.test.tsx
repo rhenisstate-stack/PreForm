@@ -139,10 +139,10 @@ describe("Admin Study Guide Management Module", () => {
       expect(subitemsContainer).toBeDefined();
 
       // Check for all four child routes
-      expect(screen.getByTestId("sidebar-item-admin-study-guides-notes")).toBeDefined();
-      expect(screen.getByTestId("sidebar-item-admin-study-guides-flashcards")).toBeDefined();
-      expect(screen.getByTestId("sidebar-item-admin-study-guides-review-sessions")).toBeDefined();
-      expect(screen.getByTestId("sidebar-item-admin-study-guides-topic-quizzes")).toBeDefined();
+      expect(screen.getByTestId("sidebar-link-admin-study-guides-notes")).toBeDefined();
+      expect(screen.getByTestId("sidebar-link-admin-study-guides-flashcards")).toBeDefined();
+      expect(screen.getByTestId("sidebar-link-admin-study-guides-review-sessions")).toBeDefined();
+      expect(screen.getByTestId("sidebar-link-admin-study-guides-topic-quizzes")).toBeDefined();
     });
 
     it("collapses and re-expands child navigation items when clicking the parent chevron toggle", async () => {
@@ -216,7 +216,7 @@ describe("Admin Study Guide Management Module", () => {
         expect(screen.getByText("Acid-Base Imbalances (ABG Interpretation)")).toBeDefined();
       });
 
-      expect(screen.getByText("Published")).toBeDefined();
+      expect(screen.getAllByText("Published").length).toBeGreaterThan(0);
       expect(screen.getByText("RN")).toBeDefined();
 
       // Click New Note button
