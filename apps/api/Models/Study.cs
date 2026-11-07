@@ -62,6 +62,12 @@ public class FlashcardDeck
     public string TopicTitle { get; set; } = string.Empty;
 
     public bool IsArchived { get; set; } = false;
+    public bool IsFavourite { get; set; } = false;
+
+    [MaxLength(32)]
+    public string? ClientNeedId { get; set; }
+
+    public string TagsJson { get; set; } = "[]";
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -95,6 +101,34 @@ public class Flashcard
 
     [MaxLength(1024)]
     public string Explanation { get; set; } = string.Empty;
+
+    [MaxLength(512)]
+    public string? ImageUrl { get; set; }
+
+    [MaxLength(512)]
+    public string? DiagramUrl { get; set; }
+
+    [MaxLength(32)]
+    public string CardStyle { get; set; } = "qa"; // "qa" | "term_def" | "clinical_scenario" | "cloze"
+
+    public bool IsFavourite { get; set; } = false;
+    public bool IsDifficult { get; set; } = false;
+
+    [MaxLength(128)]
+    public string? SubjectDomainId { get; set; }
+
+    [MaxLength(128)]
+    public string? TopicSlug { get; set; }
+
+    [MaxLength(160)]
+    public string? TopicTitle { get; set; }
+
+    [MaxLength(32)]
+    public string? ClientNeedId { get; set; }
+
+    public string TagsJson { get; set; } = "[]";
+
+    public int DisplayOrder { get; set; } = 0;
 
     /// <summary>"fundamental" | "medium" | "high_yield"</summary>
     [Required]
