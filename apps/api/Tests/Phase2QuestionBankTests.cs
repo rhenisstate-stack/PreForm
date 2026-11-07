@@ -618,7 +618,7 @@ public class Phase2QuestionBankTests
             RevisionNumber = 1,
             Title = "Dependency Test Exam Rev 1",
             Pathway = "rn",
-            LifecycleState = RevisionLifecycleState.Draft
+            LifecycleState = ExamLifecycleState.Draft
         };
         var membership = new ExamQuestion
         {

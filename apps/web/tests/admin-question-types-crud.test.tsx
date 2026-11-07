@@ -321,7 +321,7 @@ describe("All 18 Canonical Question Types — Registry, Renderer, Editor & Full-
     fireEvent.click(screen.getByText("Delete / Archive"));
     expect(await screen.findByTestId("question-delete-fullpage")).toBeInTheDocument();
     expect(
-      screen.getByText(/Hard Deletion Blocked by Data-Integrity Policy/i)
+      await screen.findByText(/Hard Deletion Blocked by Data-Integrity Policy/i)
     ).toBeInTheDocument();
 
     // Click Archive / Deactivate Instead fallback

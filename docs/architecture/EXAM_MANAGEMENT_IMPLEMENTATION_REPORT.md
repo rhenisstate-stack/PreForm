@@ -127,9 +127,13 @@ Entity Framework Core (AppDbContext) → PostgreSQL
 
 - **Backend xUnit Suite (`apps/api/Tests/`):**
   - `ExamManagementModulesCrudTests`: **5 passed, 0 failed**.
+  - `Phase2QuestionBankTests` (including `QuestionCrud_PreservesExhibitsAndStructuredContentOnUpdate_AndEnforcesDependencyProtectedDeletion`): **All passed, 0 failed**.
+  - `QuestionTypeRegistryTests`: **All 18 canonical question types verified**.
   - Existing Examination Governance, Library, Duplication & Lifecycle Suites (`ExaminationConfigurationAndGovernanceTests`, `ExaminationLibraryAndDuplicationTests`, `ExamLifecycleTests`): **93 passed, 0 failed**.
 - **Frontend Vitest Suite (`apps/web/tests/`):**
+  - `admin-shell.test.tsx`: **18 passed, 0 failed** (including Examination Management sidebar hierarchy, collapsible `Create Custom Test (Stand Alone)` parent, active-route highlighting, and auto-expansion on nested routes).
   - `admin-exam-management-modules.test.tsx`: **5 passed, 0 failed**.
+  - `admin-question-types-crud.test.tsx`: **4 passed, 0 failed** (verifying all 18 canonical question types in `QuestionTypeRenderer`, `QuestionTypeEditor`, and `AdminQuestionsClient` full-page CRUD).
   - `admin-examinations-discovery.test.tsx`: **12 passed, 0 failed**.
   - `admin-examinations-workflow-consolidation.test.tsx`: **3 passed, 0 failed**.
   - `examination-library-error-states.test.tsx`: **3 passed, 0 failed**.

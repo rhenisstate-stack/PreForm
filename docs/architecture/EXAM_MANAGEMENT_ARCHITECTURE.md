@@ -101,3 +101,19 @@ All examinations (Standalone Custom Tests, RATS, and Practice Exams) honour the 
 - **Examination Family (`DELETE /api/v1/examinations/{id}`):**
   - Can be hard-deleted **only** when all revisions are in `Draft` state, have never been published, and have zero `ExamAttempts`.
   - If any revision has been published or has learner `ExamAttempts`, hard deletion is rejected with `409 Conflict` and the administrator is guided to **Archive** or **Retire** the examination.
+- **Question (`DELETE /api/v1/questions/{id}`):**
+  - Can be hard-deleted **only** when zero `ExamQuestions`, `AttemptResponses`, and `ExamAttemptQuestions` reference the question.
+  - If referenced by any examination revision or learner attempt, hard deletion is rejected with `409 Conflict` and the administrator can archive the question (`QuestionStatus.Archived`) via the one-click fallback.
+
+---
+
+## 5. Admin Sidebar & Dedicated Full-Page Route Hierarchy
+
+- `/admin/examinations` — Examination Management landing hub & Examination Library
+- `/admin/examinations/standalone` — Create Custom Test (Stand Alone) workspace
+  - `/admin/examinations/standalone/courses` (`+ /new`, `/[id]`, `/[id]/edit`, `/[id]/delete`)
+  - `/admin/examinations/standalone/client-needs` (`+ /new`, `/[id]`, `/[id]/edit`, `/[id]/delete`)
+  - `/admin/examinations/standalone/tests` (`+ /new`, `/[id]`, `/[id]/edit`, `/[id]/delete`)
+- `/admin/examinations/rats` (`+ /new`, `/[id]`, `/[id]/edit`, `/[id]/delete`)
+- `/admin/examinations/practice` (`+ /new`, `/[id]`, `/[id]/edit`, `/[id]/delete`)
+- `/admin/questions` & `/admin/question-repository` (`+ /new`, `/[id]`, `/[id]/edit`, `/[id]/delete`)

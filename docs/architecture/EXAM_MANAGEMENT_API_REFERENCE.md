@@ -64,3 +64,17 @@ All three examination modules (`Standalone = 5`, `DiagnosticReadiness = 4`, `Pra
 | `GET` | `/api/v1/examinations/revisions/{revisionId}/readiness` | `/api/admin/examinations/revisions/{revisionId}/readiness` | `exams.view` | Evaluate multi-stage publication readiness checks (`READY`, `NEEDS_ATTENTION`, `BLOCKED`). |
 | `GET` | `/api/v1/examinations/revisions/{revisionId}/preview` | `/api/admin/examinations/revisions/{revisionId}/preview` | `exams.view` | Simulate candidate view with educator answer key and clinical rationales. |
 | `POST` | `/api/v1/examinations/revisions/{revisionId}/{action}` | `/api/admin/examinations/revisions/{revisionId}/{action}` | Role-dependent | Execute lifecycle transitions: `submit`, `recommend`, `return`, `approve`, `publish`, `archive`, `restore`, `retire`, `emergency-retire`. |
+
+---
+
+## 3. Question Repository & 18 Question-Type CRUD Endpoints
+
+| Method | Backend Route | BFF Route | Required Permission | Description |
+|---|---|---|---|---|
+| `GET` | `/api/v1/questions` | `/api/admin/questions` | `content.view` | Paginated query across all 18 canonical question types (`search`, `pathway`, `type`, `status`, `difficulty`, `clientNeedId`, `topicId`). Returns `referencedByExamCount`, `referencedByAttemptCount`, and `canDelete`. |
+| `GET` | `/api/v1/questions/{id}` | `/api/admin/questions/{id}` | `content.view` | Full question detail including `exhibitsJson`, `structuredContentJson`, `options` (with `mediaUrl`), and `referencedExams`. |
+| `POST` | `/api/v1/questions` | `/api/admin/questions` | `content.create` | Create a canonical question for any of the 18 supported question types. |
+| `PUT` | `/api/v1/questions/{id}` | `/api/admin/questions/{id}` | `content.edit` | Update an existing question while preserving omitted `exhibitsJson` and `structuredContentJson` and recording version snapshots on published edits. |
+| `DELETE` | `/api/v1/questions/{id}` | `/api/admin/questions/{id}` | `content.edit` | Dependency-protected delete: returns `200 OK` if unreferenced, or `409 Conflict` when referenced by `ExamQuestions`, `AttemptResponses`, or `ExamAttemptQuestions`. |
+| `POST` | `/api/v1/questions/{id}/status` | `/api/admin/questions/{id}/status` | Role-dependent | Transition question lifecycle (`Draft`, `InReview`, `Approved`, `Published`, `Archived`). Supports `Archived` as a deactivation fallback when deletion is blocked. |
+| `GET` | `/api/v1/questions/{id}/versions` | `/api/admin/questions/{id}/versions` | `content.view` | Retrieve immutable version history snapshots for a question. |

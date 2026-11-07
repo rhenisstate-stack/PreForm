@@ -113,3 +113,26 @@ Administrators can switch between:
   - **Duplicate Examination:** One-click duplication into a new `Examination` family (`POST /api/v1/examinations/{id}/duplicate`) with a fresh sequential code and copied question memberships.
   - **Preview Examination:** Candidate simulation preview with educator answer key and rationale verification (`ExaminationPreviewDialog`).
   - **Publish / Unpublish (Archive) / Delete:** Full lifecycle state transitions and dependency-aware deletion.
+
+---
+
+## 6. Admin Sidebar Integration & Dedicated Navigation Hierarchy
+
+The Admin Dashboard sidebar (`apps/web/src/lib/admin/navigation.tsx` & `apps/web/src/components/admin/admin-shell.tsx`) exposes the **Examination Management** group with direct navigation to all three primary modules and their sub-modules:
+
+- **Examination Management**
+  - **Create Custom Test (Stand Alone)** (`/admin/examinations/standalone`) — collapsible parent section
+    - **Course/Subject Management** (`/admin/examinations/standalone/courses`)
+    - **Client Needs Management** (`/admin/examinations/standalone/client-needs`)
+    - **Standalone Test Management** (`/admin/examinations/standalone/tests`)
+  - **RATS (Readiness Assessment Tests)** (`/admin/examinations/rats`)
+  - **Practice Exams** (`/admin/examinations/practice`)
+  - **Examination Library** (`/admin/examinations`)
+  - **Question Bank** (`/admin/questions` & `/admin/question-repository`)
+  - **Question-Type Registry** (`/admin/question-types`)
+
+---
+
+## 7. All 18 Canonical Question Types — Complete Administrative CRUD
+
+Administrators can author, view, edit, preview, and delete/archive questions across all **18 canonical NCLEX question types** (`single-choice`, `multiple-choice`, `sata`, `checkbox`, `image-based`, `multiple-image`, `drag-drop`, `ordering`, `case-study`, `essay`, `matching`, `fill-blank`, `matrix`, `numeric`, `true-false`, `tabular`, `short-answer`, `dynamic-lab`) using full-page CRUD workflows (`/admin/questions/*` and `/admin/question-repository/*`), type-specific structured editors (`QuestionTypeEditor`), and live learner/admin preview (`QuestionTypeRenderer`).

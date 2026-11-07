@@ -50,6 +50,8 @@ The Admin Dashboard Exam Management implementation has been verified across four
 | Test Suite | Verified Capabilities | Result |
 |---|---|---|
 | `admin-exam-management-modules.test.tsx` | Three primary Exam Management cards (`Create Custom Test (Stand Alone)`, `RATS`, `Practice Exams`), internal Standalone sub-navigation, Course/Subject CRUD & `409` Deactivate fallback, Client Needs CRUD & question counts, RAT Readiness Threshold validation, and Practice Exams RN/PN filtering & creation | **PASS (5/5)** |
+| `admin-shell.test.tsx` | Admin Sidebar hierarchy (`Create Custom Test (Stand Alone)` collapsible parent with `Course/Subject Management`, `Client Needs Management`, `Standalone Test Management`, plus `RATS`, `Practice Exams`, and `Examination Library`), active-route highlighting, auto-expansion on nested routes, and RBAC filtering | **PASS (18/18)** |
+| `admin-question-types-crud.test.tsx` | All 18 canonical question types registry verification, `QuestionTypeRenderer` & `QuestionTypeEditor` across all 18 types, `exhibitsJson` & `structuredContentJson` preservation on edit, dependency metadata display, and `409 Conflict` deletion protection with Archive fallback | **PASS (4/4)** |
 | `admin-examinations-discovery.test.tsx` | Library query param parsing, pathway & lifecycle filtering, search debounce, sorting, pagination | **PASS (12/12)** |
 | `admin-examinations-workflow-consolidation.test.tsx` | Library row actions (`Author Draft`, `Review`, `Open Family`), Revision Studio tabs (`Overview & Settings`, `Composition & Blueprint`, `Questions`, `Readiness & Publish`) | **PASS (3/3)** |
 | `examination-library-error-states.test.tsx` | Distinct 401 session-expired, 403 permission-denied, and 500 retry states | **PASS (3/3)** |

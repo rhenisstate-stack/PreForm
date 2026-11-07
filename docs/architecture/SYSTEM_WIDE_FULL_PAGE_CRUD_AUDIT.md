@@ -63,3 +63,22 @@ This document records the comprehensive audit, compliance classification, archit
 | **Learner Profile & Settings** | `/profile` (`apps/web/src/app/profile/page-client.tsx`) | Full-page cards constrained by `mx-auto max-w-6xl` and `max-w-xl`. | `mx-auto max-w-6xl`, `max-w-xl` | **Partially compliant** | Removed `mx-auto max-w-6xl` and `max-w-xl` so profile forms expand cleanly across the workspace. |
 | **Learner Security & Active Sessions** | `/dashboard/settings/security` (`apps/web/src/app/dashboard/settings/security/page-client.tsx`) | Used 2 `<Dialog>` modals (`targetSessionToRevoke`, `confirmRevokeOthersOpen`). | Modal `max-w-md` | **Non-compliant** | Converted single-session revocation and bulk-other-sessions revocation into full-page confirmation views (`FullPageDeleteLayout`). |
 | **Learner Flashcards Studio** | `/dashboard/study/flashcards` (`apps/web/src/components/learner/study-studio/study-flashcards-client.tsx`) | Used `fixed inset-0 z-50` overlay for `CreateDeckModal` and `window.confirm()` for card deletion and deck archival. | `max-w-lg` modal, `max-w-3xl` | **Non-compliant** | Removed `window.confirm()` and `fixed inset-0 z-50` modal; converted Create Deck, Delete Card confirmation, and Archive Deck confirmation into full-page workspace views inside `StudyStudioShell`. |
+
+---
+
+## 4. Dedicated Full-Page Examination & Question CRUD Route Tree
+
+All primary examination-management modules and the 18-type Question Repository provide dedicated full-page App Router routes in addition to full-page in-workspace views:
+
+- **Create Custom Test (Stand Alone)**:
+  - `/admin/examinations/standalone`
+  - `/admin/examinations/standalone/courses`, `/new`, `/[id]`, `/[id]/edit`, `/[id]/delete`
+  - `/admin/examinations/standalone/client-needs`, `/new`, `/[id]`, `/[id]/edit`, `/[id]/delete`
+  - `/admin/examinations/standalone/tests`, `/new`, `/[id]`, `/[id]/edit`, `/[id]/delete`
+- **RATS (Readiness Assessment Tests)**:
+  - `/admin/examinations/rats`, `/new`, `/[id]`, `/[id]/edit`, `/[id]/delete`
+- **Practice Exams**:
+  - `/admin/examinations/practice`, `/new`, `/[id]`, `/[id]/edit`, `/[id]/delete`
+- **Question Repository (All 18 Canonical Question Types)**:
+  - `/admin/questions`, `/new`, `/[id]`, `/[id]/edit`, `/[id]/delete`
+  - `/admin/question-repository`, `/new`, `/[questionId]`, `/[questionId]/edit`, `/[questionId]/delete`
