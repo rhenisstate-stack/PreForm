@@ -565,6 +565,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           pathname={pathname}
           displayName={displayName}
           roleTitle={roleTitle}
+          picture={user.picture}
           collapsed={collapsed}
         />
       </aside>
@@ -580,6 +581,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             pathname={pathname}
             displayName={displayName}
             roleTitle={roleTitle}
+            picture={user.picture}
             collapsed={false}
             onNavigateMobile={() => setIsMobileOpen(false)}
           />
@@ -666,6 +668,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 displayName={displayName}
                 email={user.email ?? ""}
                 roleTitle={roleTitle}
+                picture={user.picture}
               />
             </div>
           </div>
@@ -684,14 +687,15 @@ function AdminAccountMenu({
   displayName,
   email,
   roleTitle,
+  picture,
 }: {
   displayName: string;
   email: string;
   roleTitle: string;
+  picture?: string;
 }) {
   const { logout } = useAuth();
   const router = useRouter();
-  const initial = displayName.charAt(0).toUpperCase();
 
   const handleLogout = async () => {
     await logout();
@@ -705,10 +709,16 @@ function AdminAccountMenu({
         <button
           className="flex items-center gap-2 rounded-full bg-muted/60 px-2 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label={`Account menu — ${roleTitle}`}
+          data-testid="admin-account-menu-trigger"
         >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-secondary-foreground text-xs font-bold">
-            {initial}
-          </span>
+          <LearnerAvatar
+            picture={picture}
+            name={displayName}
+            sizeClassName="h-7 w-7"
+            fallbackClassName="bg-secondary text-secondary-foreground text-xs font-bold border-transparent"
+            testIdPrefix="admin"
+            alt={`${displayName} account menu`}
+          />
           <span className="hidden md:inline max-w-28 truncate">{displayName}</span>
           <span className="hidden md:inline-flex items-center rounded-sm bg-secondary/15 px-1.5 py-0.5 text-[10px] font-semibold text-secondary">
             {roleTitle}
