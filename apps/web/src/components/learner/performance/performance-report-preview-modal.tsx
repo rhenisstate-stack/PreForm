@@ -124,7 +124,7 @@ export function PerformanceReportPreviewModal({
               <div className="sm:text-right text-xs text-muted-foreground font-mono space-y-0.5">
                 <div>Report ID: <span className="text-foreground font-bold">{report.reportId}</span></div>
                 <div>Generated: {new Date(report.generatedAt).toLocaleString()}</div>
-                <div>Timeframe: {report.timeframe.toUpperCase()}</div>
+                <div>Timeframe: {(report.timeframe || timeframe || "All Time").toUpperCase()}</div>
               </div>
             </div>
 
@@ -137,27 +137,27 @@ export function PerformanceReportPreviewModal({
                 <div className="rounded-xl border border-border p-3 bg-muted/20">
                   <span className="text-muted-foreground block text-[10px] uppercase">Overall Accuracy</span>
                   <span className="text-xl font-bold font-mono text-foreground">
-                    {report.overview.overallAccuracyPercent.toFixed(1)}%
+                    {(report.overview?.overallAccuracyPercent ?? 0).toFixed(1)}%
                   </span>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {report.overview.correctCount} / {report.overview.totalAnsweredQuestions} correct
+                    {report.overview?.correctCount ?? 0} / {report.overview?.totalAnsweredQuestions ?? 0} correct
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-border p-3 bg-muted/20">
                   <span className="text-muted-foreground block text-[10px] uppercase">Completed Tests</span>
                   <span className="text-xl font-bold font-mono text-foreground">
-                    {report.overview.totalCompletedAttempts}
+                    {report.overview?.totalCompletedAttempts ?? 0}
                   </span>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {report.overview.completionRatePercent.toFixed(1)}% completion rate
+                    {(report.overview?.completionRatePercent ?? 0).toFixed(1)}% completion rate
                   </p>
                 </div>
 
                 <div className="rounded-xl border border-border p-3 bg-muted/20">
                   <span className="text-muted-foreground block text-[10px] uppercase">Mean Score</span>
                   <span className="text-xl font-bold font-mono text-foreground">
-                    {report.overview.averageScorePercent.toFixed(1)}%
+                    {(report.overview?.averageScorePercent ?? 0).toFixed(1)}%
                   </span>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Across completed attempts</p>
                 </div>
@@ -165,10 +165,10 @@ export function PerformanceReportPreviewModal({
                 <div className="rounded-xl border border-border p-3 bg-muted/20">
                   <span className="text-muted-foreground block text-[10px] uppercase">Readiness Tier</span>
                   <span className="text-sm font-bold font-mono text-teal-700 dark:text-teal-300 block mt-1">
-                    {report.overview.currentReadinessTier}
+                    {report.overview?.currentReadinessTier || "Unassessed"}
                   </span>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {(report.overview.totalStudyDurationMinutes / 60).toFixed(1)} hrs study time
+                    {((report.overview?.totalStudyDurationMinutes ?? 0) / 60).toFixed(1)} hrs study time
                   </p>
                 </div>
               </div>

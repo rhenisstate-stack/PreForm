@@ -107,19 +107,19 @@ export function AttemptComparisonModal({
                 <div className="space-y-1.5 pt-2 border-t border-border/60 text-xs font-mono">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Score:</span>
-                    <span className="font-bold text-foreground">{att1.scorePercent.toFixed(1)}%</span>
+                    <span className="font-bold text-foreground">{(att1.scorePercent ?? 0).toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Accuracy:</span>
-                    <span className="font-bold text-foreground">{att1.accuracyPercent.toFixed(1)}%</span>
+                    <span className="font-bold text-foreground">{(att1.accuracyPercent ?? att1.scorePercent ?? 0).toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Questions Correct:</span>
-                    <span className="text-foreground">{att1.correctCount} / {att1.totalQuestions}</span>
+                    <span className="text-foreground">{att1.correctCount ?? 0} / {att1.totalQuestions ?? 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Time:</span>
-                    <span className="text-foreground">{att1.durationMinutes} min</span>
+                    <span className="text-foreground">{att1.durationMinutes ?? 0} min</span>
                   </div>
                 </div>
               </div>
@@ -136,19 +136,19 @@ export function AttemptComparisonModal({
                 <div className="space-y-1.5 pt-2 border-t border-teal-500/20 text-xs font-mono">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Score:</span>
-                    <span className="font-bold text-teal-700 dark:text-teal-300">{att2.scorePercent.toFixed(1)}%</span>
+                    <span className="font-bold text-teal-700 dark:text-teal-300">{(att2.scorePercent ?? 0).toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Accuracy:</span>
-                    <span className="font-bold text-teal-700 dark:text-teal-300">{att2.accuracyPercent.toFixed(1)}%</span>
+                    <span className="font-bold text-teal-700 dark:text-teal-300">{(att2.accuracyPercent ?? att2.scorePercent ?? 0).toFixed(1)}%</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Questions Correct:</span>
-                    <span className="text-foreground">{att2.correctCount} / {att2.totalQuestions}</span>
+                    <span className="text-foreground">{att2.correctCount ?? 0} / {att2.totalQuestions ?? 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Time:</span>
-                    <span className="text-foreground">{att2.durationMinutes} min</span>
+                    <span className="text-foreground">{att2.durationMinutes ?? 0} min</span>
                   </div>
                 </div>
               </div>
