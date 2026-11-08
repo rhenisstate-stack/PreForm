@@ -20,7 +20,7 @@ describe("Canonical Product Catalog & Cart Operations", () => {
     const premium = getProductById("prep-premium");
     expect(premium).toBeDefined();
     expect(premium?.price).toBe(89);
-    expect(premium?.pathway).toBe("Both");
+    expect(premium?.pathway).toBe("RN");
   });
 
   it("provides all 7 NCLEX-PN and All-Access products with exact prices, durations, and savings math", () => {
@@ -73,7 +73,7 @@ describe("Canonical Product Catalog & Cart Operations", () => {
     const prepPremium = getProductById("prep-premium");
     expect(prepPremium).toMatchObject({
       id: "prep-premium",
-      pathway: "Both",
+      pathway: "RN",
       planType: "premium",
       price: 89,
       billingInterval: "month",
@@ -83,7 +83,7 @@ describe("Canonical Product Catalog & Cart Operations", () => {
     const prepPremium90 = getProductById("prep-premium-90");
     expect(prepPremium90).toMatchObject({
       id: "prep-premium-90",
-      pathway: "Both",
+      pathway: "RN",
       planType: "premium",
       price: 229,
       originalPrice: 267,

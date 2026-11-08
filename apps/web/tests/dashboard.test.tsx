@@ -87,7 +87,7 @@ describe("PrepFord Learner Dashboard (/dashboard) — Single-Pathway Resolution"
 
     // Renders RN-specific hero action buttons
     expect(screen.getByTestId("rn-hero-create-test-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("rn-hero-take-rat-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("rn-hero-rat-btn")).toBeInTheDocument();
 
     // Renders static pathway badge, not a switcher
     expect(screen.getByTestId("dashboard-pathway-badge")).toHaveTextContent(/NCLEX-RN/i);
@@ -119,7 +119,7 @@ describe("PrepFord Learner Dashboard (/dashboard) — Single-Pathway Resolution"
 
     // Renders PN-specific hero action buttons
     expect(screen.getByTestId("pn-hero-create-test-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("pn-hero-take-rat-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("pn-hero-rat-btn")).toBeInTheDocument();
 
     // Renders static pathway badge, not a switcher
     expect(screen.getByTestId("dashboard-pathway-badge")).toHaveTextContent(/NCLEX-PN/i);
@@ -178,8 +178,8 @@ describe("PrepFord Learner Dashboard (/dashboard) — Single-Pathway Resolution"
     expect(within(sidebar).getByText(/^Account$/i)).toBeInTheDocument();
 
     // Enrolled pathway sidebar link only points to /dashboard/rn for RN student
-    expect(within(sidebar).getByText("NCLEX-RN Dashboard")).toBeInTheDocument();
-    expect(within(sidebar).queryByText("NCLEX-PN Dashboard")).not.toBeInTheDocument();
+    expect(within(sidebar).getByTitle("NCLEX-RN")).toBeInTheDocument();
+    expect(within(sidebar).queryByTitle("NCLEX-PN")).not.toBeInTheDocument();
 
     // Sidebar Security & Devices link
     const securityNavLink = within(sidebar).getByTestId("sidebar-nav-security");
@@ -230,8 +230,7 @@ describe("PrepFord Learner Dashboard (/dashboard) — Single-Pathway Resolution"
     expect(accountMenu).toHaveAttribute("href", "/profile");
   });
 
-  it("toggles the illustrative sample benchmark preview within resolved RN dashboard", async () => {
-    const user = userEvent.setup();
+  it("renders dedicated RN NCJMM framework and Client Needs breakdown", () => {
     mockAuthState = {
       user: {
         id: "candidate-123",
@@ -247,15 +246,9 @@ describe("PrepFord Learner Dashboard (/dashboard) — Single-Pathway Resolution"
 
     render(<DashboardClient />);
 
-    const toggle = screen.getByTestId("toggle-sample-preview");
-    expect(toggle).toHaveAttribute("aria-checked", "false");
-
-    await user.click(toggle);
-    expect(toggle).toHaveAttribute("aria-checked", "true");
-
-    // Chart and historical table must render with sample benchmark data
-    expect(screen.getByTestId("assessment-performance-chart")).toBeInTheDocument();
-    expect(screen.getByTestId("assessment-history-table")).toBeInTheDocument();
+    expect(screen.getByTestId("rn-ncjmm-framework")).toBeInTheDocument();
+    expect(screen.getByTestId("rn-client-needs-breakdown")).toBeInTheDocument();
+    expect(screen.getByTestId("rn-study-recommendations")).toBeInTheDocument();
   });
 
   it("launches the Create Test modal and records a real completed attempt", async () => {
@@ -315,7 +308,7 @@ describe("PrepFord Learner Dashboard (/dashboard) — Single-Pathway Resolution"
 
     render(<DashboardClient />);
 
-    const takeRatBtn = screen.getByTestId("rn-hero-take-rat-btn");
+    const takeRatBtn = screen.getByTestId("rn-hero-rat-btn");
     await user.click(takeRatBtn);
 
     const workspace = screen.getByTestId("modal-create-test");

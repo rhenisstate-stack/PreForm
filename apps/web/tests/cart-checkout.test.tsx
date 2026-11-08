@@ -173,7 +173,7 @@ describe("Cart Context & Checkout Verification (NCLEX-PN)", () => {
     expect(mockReplace).toHaveBeenCalledWith("/cart", { scroll: false });
   });
 
-  it("renders NCLEX-RN & PN badge (not NCLEX-Both) for prep-premium-90 and redirects signed-out users to /sign-in?from=/cart", async () => {
+  it("renders dedicated NCLEX-RN badge for prep-premium-90 and redirects signed-out users to /sign-in?from=/cart", async () => {
     mockSearchParams = new URLSearchParams("add=prep-premium-90");
 
     render(
@@ -183,10 +183,10 @@ describe("Cart Context & Checkout Verification (NCLEX-PN)", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("NCLEX-RN & PN All-Access (90-Day)")).toBeTruthy();
+      expect(screen.getByText("NCLEX-RN Premium Preparation (90-Day)")).toBeTruthy();
     });
 
-    expect(screen.getByText("NCLEX-RN & PN")).toBeTruthy();
+    expect(screen.getByText("NCLEX-RN")).toBeTruthy();
     expect(screen.queryByText("NCLEX-Both")).toBeNull();
 
     const signInCheckoutBtn = screen.getByRole("button", { name: /Sign In to Checkout/i });

@@ -1,27 +1,28 @@
-import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { BRAND } from "@/lib/brand";
-import { resolveSession } from "@/lib/session";
+"use client";
+
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
 import { PerformanceIntelligenceView } from "@/components/learner/performance/performance-intelligence-view";
+import { BrandedLoading } from "@/components/layout/branded-loading";
 
-export const metadata: Metadata = {
-  title: `Performance Intelligence | ${BRAND.name}`,
-  description:
-    "Authoritative NCLEX performance analytics, NCSBN Client Needs category mastery, and clinical judgment development.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-};
+export default function DashboardPerformancePage() {
+  const router = useRouter();
+  const { user, isLoading } = useAuth();
 
-export default async function DashboardPerformancePage() {
-  const session = await resolveSession();
-  if (session) {
-    if (session.pathway === "pn") {
-      redirect("/dashboard/pn/performance");
+  React.useEffect(() => {
+    if (!isLoading && user) {
+      if (user.pathway === "pn") {
+        router.replace("/dashboard/pn/performance");
+      } else {
+        router.replace("/dashboard/rn/performance");
+      }
     }
-    redirect("/dashboard/rn/performance");
+  }, [user, isLoading, router]);
+
+  if (isLoading) {
+    return <BrandedLoading fullScreen message="Resolving performance intelligence..." />;
   }
 
-  return <PerformanceIntelligenceView initialPathway="rn" />;
+  return <PerformanceIntelligenceView initialPathway={user?.pathway === "pn" ? "pn" : "rn"} />;
 }

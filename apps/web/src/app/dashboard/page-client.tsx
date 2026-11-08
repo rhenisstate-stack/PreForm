@@ -143,7 +143,6 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
   const isLoading = auth?.isLoading ?? true;
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
-  const [selectedPathway, setSelectedPathway] = React.useState<"rn" | "pn" | null>(null);
   const [recentActivity, setRecentActivity] = React.useState<RecentStudyActivity | null>(
     () => readStoredRecentActivity()
   );
@@ -452,21 +451,10 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const activePathway: "rn" | "pn" =
-    lockedPathway ?? selectedPathway ?? initialPathway ?? (user?.pathway === "pn" ? "pn" : "rn");
-  const pathwayLabel = activePathway === "pn" ? "NCLEX-PN" : "NCLEX-RN";
+  const activePathway: "rn" | "pn" | null =
+    lockedPathway ?? (user?.pathway === "rn" || user?.pathway === "pn" ? user.pathway : null);
+  const pathwayLabel = activePathway === "pn" ? "NCLEX-PN" : activePathway === "rn" ? "NCLEX-RN" : "Unassigned";
   const cartItemCount = cart?.itemCount ?? 0;
-
-  const handleSwitchPathway = React.useCallback(
-    (targetPathway: "rn" | "pn") => {
-      if (lockedPathway) {
-        router.push(`/dashboard/${targetPathway}`);
-      } else {
-        setSelectedPathway(targetPathway);
-      }
-    },
-    [lockedPathway, router]
-  );
 
   const recordActivity = React.useCallback(
     (entry: Omit<RecentStudyActivity, "visitedAt">) => {
@@ -488,7 +476,7 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
 
   // Fetch published assessments for active pathway
   React.useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated || !activePathway) return;
     let cancelled = false;
     fetch(`/api/assessments/available?pathway=${encodeURIComponent(activePathway)}`)
       .then((res) => (res.ok ? res.json() : null))
@@ -534,7 +522,7 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           examId,
-          pathway: activePathway,
+          pathway: activePathway ?? "rn",
           testType: createTestType,
           questionCount: testQuestionCount,
         }),
@@ -590,7 +578,7 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
           attemptNumber: nextAttemptNumber,
           questionCount: testQuestionCount,
           userAnswers: formattedAnswers,
-          pathway: activePathway,
+          pathway: activePathway ?? "rn",
         });
 
         const candidateSession = user?.id ? {
@@ -1664,7 +1652,7 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                 {(() => {
                   const modeFilteredAssessments = availableAssessments.filter((asm) => {
                     const matchesPathway =
-                      asm.pathway?.toLowerCase() === activePathway.toLowerCase();
+                      Boolean(activePathway && asm.pathway?.toLowerCase() === activePathway.toLowerCase());
                     if (!matchesPathway) return false;
                     const isRatExam =
                       asm.examType?.toLowerCase().includes("rat") ||

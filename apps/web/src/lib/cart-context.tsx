@@ -165,11 +165,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return [...prev, { product, quantity: 1 }];
       }
 
-      const filtered = prev.filter((i) => {
-        if (i.product.planType === "readiness") return true;
-        const overlapsPathway = i.product.pathway === product.pathway;
-        return !overlapsPathway;
-      });
+      // A learner subscribes to at most one study plan at a time; preserve readiness packs.
+      const filtered = prev.filter((i) => i.product.planType === "readiness");
       return [...filtered, { product, quantity: 1 }];
     });
 
