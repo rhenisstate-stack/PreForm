@@ -27,7 +27,17 @@ import {
   AdminGuideSummary,
   AdminGuideDetail,
 } from "@/lib/admin-study-service";
-import { toast } from "sonner";
+import { notify } from "@/lib/notifications";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -62,6 +72,13 @@ export function AdminStudyGuidesClient() {
   const [guideStatus, setGuideStatus] = React.useState<string>("Draft");
   const [editingGuideId, setEditingGuideId] = React.useState<string | null>(null);
 
+  // Destructive confirmation (AlertDialog state)
+  const [deleteTarget, setDeleteTarget] = React.useState<{
+    type: "category" | "guide";
+    id: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState<boolean>(false);
+
   const loadAll = React.useCallback(async () => {
     try {
       setLoading(true);
@@ -75,7 +92,7 @@ export function AdminStudyGuidesClient() {
         setGuideCatId(catRes.categories[0].id);
       }
     } catch (err: any) {
-      toast.error(err.message || "Failed to load study guide data.");
+      notify.error(err.message || "Failed to load study guide data.");
     } finally {
       setLoading(false);
     }
@@ -88,7 +105,7 @@ export function AdminStudyGuidesClient() {
   // Category Actions
   const handleSaveCategory = async () => {
     if (!catTitle.trim() || !catSlug.trim()) {
-      toast.error("Title and slug are required.");
+      notify.error("Title and slug are required.");
       return;
     }
     try {
@@ -98,37 +115,46 @@ export function AdminStudyGuidesClient() {
           slug: catSlug.trim(),
           description: catDesc.trim(),
         });
-        toast.success("Category updated.");
+        notify.success("Category updated.");
       } else {
         await adminStudyService.createCategory({
           title: catTitle.trim(),
           slug: catSlug.trim(),
           description: catDesc.trim(),
         });
-        toast.success("Category created.");
+        notify.success("Category created.");
       }
       setIsCatModalOpen(false);
       loadAll();
     } catch (err: any) {
-      toast.error(err.message || "Failed to save category.");
+      notify.error(err.message || "Failed to save category.");
     }
   };
 
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this category?")) return;
+  const runDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
     try {
-      await adminStudyService.deleteCategory(id);
-      toast.success("Category deleted.");
+      if (deleteTarget.type === "category") {
+        await adminStudyService.deleteCategory(deleteTarget.id);
+        notify.success("Category deleted.");
+      } else {
+        await adminStudyService.deleteGuide(deleteTarget.id);
+        notify.success("Study guide deleted.");
+      }
       loadAll();
     } catch (err: any) {
-      toast.error(err.message || "Failed to delete category.");
+      notify.error(err.message || "Failed to complete the deletion. Please try again.");
+    } finally {
+      setIsDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
   // Guide Actions
   const handleSaveGuide = async () => {
     if (!guideTitle.trim() || !guideSlug.trim() || !guideCatId) {
-      toast.error("Category, title, and slug are required.");
+      notify.error("Category, title, and slug are required.");
       return;
     }
 
@@ -148,7 +174,7 @@ export function AdminStudyGuidesClient() {
           clinicalKeyTakeaways: takeawaysList,
           status: guideStatus,
         });
-        toast.success("Guide updated.");
+        notify.success("Guide updated.");
       } else {
         await adminStudyService.createGuide({
           categoryId: guideCatId,
@@ -160,12 +186,12 @@ export function AdminStudyGuidesClient() {
           contentJson: "[]",
           status: guideStatus,
         });
-        toast.success("Guide created.");
+        notify.success("Guide created.");
       }
       setIsGuideModalOpen(false);
       loadAll();
     } catch (err: any) {
-      toast.error(err.message || "Failed to save guide.");
+      notify.error(err.message || "Failed to save guide.");
     }
   };
 
@@ -173,25 +199,14 @@ export function AdminStudyGuidesClient() {
     try {
       if (guide.status === "Published") {
         await adminStudyService.updateGuide(guide.id, { status: "Draft" });
-        toast.success("Guide reverted to draft.");
+        notify.success("Guide reverted to draft.");
       } else {
         await adminStudyService.publishGuide(guide.id);
-        toast.success("Guide published.");
+        notify.success("Guide published.");
       }
       loadAll();
     } catch (err: any) {
-      toast.error(err.message || "Failed to toggle status.");
-    }
-  };
-
-  const handleDeleteGuide = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this study guide?")) return;
-    try {
-      await adminStudyService.deleteGuide(id);
-      toast.success("Study guide deleted.");
-      loadAll();
-    } catch (err: any) {
-      toast.error(err.message || "Failed to delete guide.");
+      notify.error(err.message || "Failed to toggle status.");
     }
   };
 
@@ -435,7 +450,9 @@ export function AdminStudyGuidesClient() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => handleDeleteGuide(g.id)}
+                            aria-label={`Delete study guide ${g.title}`}
+                            data-testid={`delete-guide-button-${g.id}`}
+                            onClick={() => setDeleteTarget({ type: "guide", id: g.id })}
                             className="h-7 w-7 text-rose-600 hover:text-rose-700"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -491,7 +508,9 @@ export function AdminStudyGuidesClient() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => handleDeleteCategory(c.id)}
+                      aria-label={`Delete category ${c.title}`}
+                      data-testid={`delete-category-button-${c.id}`}
+                      onClick={() => setDeleteTarget({ type: "category", id: c.id })}
                       className="h-7 w-7 text-rose-600 hover:text-rose-700"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -623,6 +642,17 @@ export function AdminStudyGuidesClient() {
                 className="w-full p-2 rounded-lg border border-border bg-background text-xs"
               />
             </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsGuideModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleSaveGuide} className="bg-teal-600 hover:bg-teal-700 text-white">Save Guide</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+</div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsGuideModalOpen(false)}>Cancel</Button>
