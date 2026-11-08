@@ -191,7 +191,7 @@ const FEATURE_HIGHLIGHT_TABS: FeatureHighlightTab[] = [
       "Resume in-progress exam attempts or launch targeted remediation sets from your dashboard",
     ],
     ctaLabel: "Explore Student Workspace",
-    ctaHref: "/dashboard",
+    ctaHref: "/dashboard/rn",
     previewBadge: "Student Workspace",
     previewTitle: "NCLEX-RN Client Needs Domain Breakdown",
     previewLines: [
@@ -373,7 +373,7 @@ function buildRnFaqItems() {
       id: "faq-rn-progress-tracking",
       question: "How can students track their study progress?",
       answer:
-        "Signed-in learners can open the Learner Dashboard (/dashboard) to resume their most recent study activity, switch between NCLEX-RN and NCLEX-PN pathways, and view active plan status. Note that server-synced question bank telemetry and scored readiness assessment history are in active backend development, so personal accuracy percentages are not displayed until live attempt data is connected.",
+        "Signed-in learners can open the NCLEX-RN Learner Dashboard (/dashboard/rn) to resume their most recent study activity and view active plan status. Note that server-synced question bank telemetry and scored readiness assessment history are in active backend development, so personal accuracy percentages are not displayed until live attempt data is connected.",
     },
     {
       id: "faq-rn-checkout-activation",
@@ -1645,7 +1645,7 @@ export function NCLEXRNPageClient() {
 
               <div className="flex flex-wrap items-center gap-3 pt-3">
                 <Button asChild className="bg-primary text-primary-foreground rounded-xl font-semibold">
-                  <Link href={isAuthenticated ? "/dashboard" : "#rn-study-plans"}>
+                  <Link href={isAuthenticated ? "/dashboard/rn" : "#rn-study-plans"}>
                     {isAuthenticated ? "Open Student Workspace" : "Choose an RN Study Plan"}
                     <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                   </Link>
@@ -2319,7 +2319,7 @@ export function NCLEXRNPageClient() {
               size="lg"
               className="h-12 px-5 rounded-xl font-semibold"
             >
-              <Link href={isAuthenticated ? "/dashboard" : "/sign-up"}>
+              <Link href={isAuthenticated ? "/dashboard/rn" : "/sign-up?pathway=rn"}>
                 {isAuthenticated ? "Open Student Workspace" : "Create Free Account"}
               </Link>
             </Button>

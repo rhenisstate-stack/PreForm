@@ -13,11 +13,13 @@ import {
   Layers,
   RefreshCw,
   Scale,
+  ShieldCheck,
   Sparkles,
   Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/lib/auth-context";
 import { LearnerDashboardShell } from "@/components/learner/learner-dashboard-shell";
 import { PerformanceKpiGrid } from "./performance-kpi-grid";
 import { PerformanceTrendsChart } from "./performance-trends-chart";
@@ -52,6 +54,9 @@ export function PerformanceIntelligenceView({
   initialPathway,
   canSwitchPathway,
 }: PerformanceIntelligenceViewProps) {
+  const auth = useAuth();
+  const user = auth?.user;
+
   const [pathway, setPathway] = React.useState<"rn" | "pn">(initialPathway);
   const [timeframe, setTimeframe] = React.useState<"7d" | "30d" | "90d" | "6m" | "all">("all");
 
@@ -209,6 +214,48 @@ export function PerformanceIntelligenceView({
   const isRN = pathway === "rn";
   const pathwayLabel = isRN ? "NCLEX-RN (Registered Nurse)" : "NCLEX-PN (Practical Nurse)";
 
+  // Enforce single-pathway boundary for candidate role
+  if (
+    user &&
+    user.role === "candidate" &&
+    user.pathway &&
+    user.pathway !== initialPathway
+  ) {
+    const isRn = initialPathway === "rn";
+    return (
+      <LearnerDashboardShell
+        activeNav="performance"
+        breadcrumbPageTitle={`${initialPathway.toUpperCase()} Performance`}
+      >
+        <div
+          data-testid="dashboard-entitlement-blocked"
+          className="w-full py-24 px-4 text-center bg-background"
+        >
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 mb-6">
+            <ShieldCheck className="h-8 w-8" aria-hidden="true" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground mb-3">
+            {isRn ? "NCLEX-RN Entitlement Required" : "NCLEX-PN Entitlement Required"}
+          </h1>
+          <p className="text-muted-foreground max-w-md mx-auto mb-8 text-sm sm:text-base">
+            Your account is currently enrolled in the{" "}
+            <span className="font-semibold text-foreground">
+              NCLEX-{user.pathway.toUpperCase()}
+            </span>{" "}
+            programme. Single-pathway policy restricts access to your assigned examination track.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Button asChild className="w-full sm:w-auto">
+              <Link href={`/dashboard/${user.pathway}/performance`}>
+                Return to My NCLEX-{user.pathway.toUpperCase()} Performance
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </LearnerDashboardShell>
+    );
+  }
+
   return (
     <LearnerDashboardShell
       activeNav="performance"
@@ -228,15 +275,6 @@ export function PerformanceIntelligenceView({
               <Badge variant="outline" className="font-mono text-xs uppercase bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30">
                 Performance Intelligence
               </Badge>
-              {canSwitchPathway && (
-                <button
-                  type="button"
-                  onClick={() => setPathway(isRN ? "pn" : "rn")}
-                  className="text-xs text-muted-foreground hover:text-foreground underline"
-                >
-                  Switch to {isRN ? "NCLEX-PN" : "NCLEX-RN"}
-                </button>
-              )}
             </div>
 
             <h1 className="text-2xl sm:text-3xl font-serif font-bold text-foreground tracking-tight">

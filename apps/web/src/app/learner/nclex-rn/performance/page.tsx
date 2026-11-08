@@ -13,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function NCLEXRNPerformancePage() {
-  return <PerformanceIntelligenceView initialPathway="rn" canSwitchPathway={true} />;
+  return <PerformanceIntelligenceView initialPathway="rn" />;
 }

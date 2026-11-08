@@ -287,3 +287,45 @@ export function sanitizeReturnUrl(
     return defaultPath;
   }
 }
+
+/**
+ * Resolves an authenticated learner destination against their authoritative single pathway.
+ * - Cross-pathway attempts are redirected safely to their enrolled pathway dashboard.
+ * - Legacy generic /dashboard routes resolve to their assigned /dashboard/{pathway}.
+ * - Non-pathway routes (e.g. /cart, /profile, /study-guide) are preserved if safe.
+ */
+export function resolveAuthoritativeReturnUrl(
+  raw: string | null | undefined,
+  pathway?: "rn" | "pn" | null
+): string {
+  const defaultDashboard = pathway ? `/dashboard/${pathway}` : "/dashboard";
+  const sanitized = sanitizeReturnUrl(raw, defaultDashboard);
+
+  if (!pathway) {
+    return sanitized;
+  }
+
+  // Resolve generic /dashboard to authoritative single-pathway dashboard
+  if (sanitized === "/dashboard" || sanitized === "/dashboard/") {
+    return `/dashboard/${pathway}`;
+  }
+
+  // Prevent cross-pathway learner access on sign-in redirect
+  if (pathway === "rn") {
+    if (
+      sanitized.startsWith("/dashboard/pn") ||
+      sanitized.startsWith("/learner/nclex-pn")
+    ) {
+      return "/dashboard/rn";
+    }
+  } else if (pathway === "pn") {
+    if (
+      sanitized.startsWith("/dashboard/rn") ||
+      sanitized.startsWith("/learner/nclex-rn")
+    ) {
+      return "/dashboard/pn";
+    }
+  }
+
+  return sanitized;
+}

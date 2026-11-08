@@ -182,7 +182,7 @@ const PN_SHOWCASE_FEATURES: FeatureShowcaseItem[] = [
       "Direct links from each domain to targeted study modules and clinical notes",
     ],
     ctaLabel: "View Student Workspace",
-    ctaHref: "/dashboard",
+    ctaHref: "/dashboard/pn",
     imageSrc: "/images/illustrations/prepford-readiness-analytics.png",
     imageAlt: "PrepFord student workspace displaying NCLEX-PN domain progress",
   },
@@ -721,7 +721,7 @@ export function NCLEXPNPageClient() {
                   Monitor completed questions and accuracy percentages across practical nursing Client Needs domains in your student workspace, and benchmark your preparation with timed readiness assessments.
                 </p>
                 <Link
-                  href="/dashboard"
+                  href="/dashboard/pn"
                   className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-secondary hover:underline"
                 >
                   Open Student Workspace
@@ -1666,9 +1666,9 @@ export function NCLEXPNPageClient() {
                   className="w-full sm:w-auto bg-white/10 border-white/80 text-white hover:bg-white/20 hover:text-white font-semibold rounded-xl px-7"
                 >
                   {isAuthenticated ? (
-                    <Link href="/dashboard">Open Student Workspace</Link>
+                    <Link href="/dashboard/pn">Open Student Workspace</Link>
                   ) : (
-                    <Link href="/sign-up">Create Free Account</Link>
+                    <Link href="/sign-up?pathway=pn">Create Free Account</Link>
                   )}
                 </Button>
               </div>

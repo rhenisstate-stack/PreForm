@@ -24,8 +24,8 @@ export interface AuthContextType {
   login: (
     data: SignInInput,
     options?: { recoverSessions?: boolean }
-  ) => Promise<{ success: boolean; error?: string; errorCode?: string }>;
-  registerUser: (data: SignUpInput) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; user?: AuthUser; error?: string; errorCode?: string }>;
+  registerUser: (data: SignUpInput) => Promise<{ success: boolean; user?: AuthUser; error?: string }>;
   logout: () => Promise<void>;
   refreshSession: () => Promise<void>;
 }
@@ -93,7 +93,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(resData.user || null);
-      return { success: true };
+      return { success: true, user: resData.user };
     } catch (err) {
       console.error("Login exception:", err);
       return {
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       setUser(resData.user || null);
-      return { success: true };
+      return { success: true, user: resData.user };
     } catch (err) {
       console.error("Registration exception:", err);
       return {

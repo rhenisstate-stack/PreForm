@@ -50,10 +50,7 @@ export function LearnerDashboardShell({
   const user = auth?.user;
   const learnerName = user?.displayName || user?.name || "Nursing Candidate";
   const rawPathway = user?.pathway || "rn";
-  const [selectedPathway, setSelectedPathway] = React.useState<"rn" | "pn">(
-    rawPathway === "pn" ? "pn" : "rn"
-  );
-  const activePathway = selectedPathway;
+  const activePathway: "rn" | "pn" = rawPathway === "pn" ? "pn" : "rn";
   const pathwayLabel = activePathway === "pn" ? "NCLEX-PN Candidate" : "NCLEX-RN Candidate";
 
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState<boolean>(false);
@@ -176,22 +173,25 @@ export function LearnerDashboardShell({
               <Compass className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
               {!sidebarCollapsed && <span>Dashboard</span>}
             </Link>
-            <Link
-              href="/nclex-rn"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
-              title="NCLEX-RN"
-            >
-              <GraduationCap className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
-              {!sidebarCollapsed && <span>NCLEX-RN</span>}
-            </Link>
-            <Link
-              href="/nclex-pn"
-              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
-              title="NCLEX-PN"
-            >
-              <Stethoscope className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
-              {!sidebarCollapsed && <span>NCLEX-PN</span>}
-            </Link>
+            {activePathway === "rn" ? (
+              <Link
+                href="/dashboard/rn"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
+                title="NCLEX-RN"
+              >
+                <GraduationCap className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
+                {!sidebarCollapsed && <span>NCLEX-RN</span>}
+              </Link>
+            ) : (
+              <Link
+                href="/dashboard/pn"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
+                title="NCLEX-PN"
+              >
+                <Stethoscope className="h-4 w-4 shrink-0 text-muted-foreground dark:text-slate-400" />
+                {!sidebarCollapsed && <span>NCLEX-PN</span>}
+              </Link>
+            )}
             <Link
               href="/study-guide"
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
@@ -456,35 +456,13 @@ export function LearnerDashboardShell({
 
           {/* Right: Pathway Switcher, Theme Switcher, Cart & Profile */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Pathway focus toggles */}
-            <div className="flex items-center rounded-lg bg-muted p-0.5 text-xs font-medium">
-              <button
-                type="button"
-                data-testid="dashboard-pathway-rn"
-                aria-pressed={activePathway === "rn"}
-                onClick={() => setSelectedPathway("rn")}
-                className={`px-2.5 py-1 rounded-md transition-all ${
-                  activePathway === "rn"
-                    ? "bg-card text-foreground font-semibold shadow-2xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                NCLEX-RN
-              </button>
-              <button
-                type="button"
-                data-testid="dashboard-pathway-pn"
-                aria-pressed={activePathway === "pn"}
-                onClick={() => setSelectedPathway("pn")}
-                className={`px-2.5 py-1 rounded-md transition-all ${
-                  activePathway === "pn"
-                    ? "bg-card text-foreground font-semibold shadow-2xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                NCLEX-PN
-              </button>
-            </div>
+            {/* Enrolled pathway badge */}
+            <span
+              data-testid="learner-pathway-badge"
+              className="px-2.5 py-1 rounded-md bg-card text-foreground font-semibold shadow-2xs text-xs border border-border"
+            >
+              {activePathway === "pn" ? "NCLEX-PN" : "NCLEX-RN"}
+            </span>
 
             {/* Cart Link */}
             <Link

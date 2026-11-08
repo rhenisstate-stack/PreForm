@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { BRAND } from "@/lib/brand";
+import { resolveSession } from "@/lib/session";
 import { PerformanceIntelligenceView } from "@/components/learner/performance/performance-intelligence-view";
 
 export const metadata: Metadata = {
@@ -12,6 +14,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function DashboardPerformancePage() {
-  return <PerformanceIntelligenceView initialPathway="rn" canSwitchPathway={true} />;
+export default async function DashboardPerformancePage() {
+  const session = await resolveSession();
+  if (session) {
+    if (session.pathway === "pn") {
+      redirect("/dashboard/pn/performance");
+    }
+    redirect("/dashboard/rn/performance");
+  }
+
+  return <PerformanceIntelligenceView initialPathway="rn" />;
 }

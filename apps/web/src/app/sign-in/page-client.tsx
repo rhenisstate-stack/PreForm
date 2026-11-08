@@ -22,6 +22,7 @@ import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import {
   signInSchema,
   sanitizeReturnUrl,
+  resolveAuthoritativeReturnUrl,
   getEmailValidationError,
   type SignInInput,
 } from "@/lib/validation/auth";
@@ -95,7 +96,7 @@ export function SignInPageClient() {
       if (result.success) {
         notify.success("Signed in successfully. Welcome back!");
         const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
-        const targetDestination = sanitizeReturnUrl(rawReturn, "/dashboard");
+        const targetDestination = resolveAuthoritativeReturnUrl(rawReturn, result.user?.pathway);
         router.push(targetDestination);
         router.refresh();
       } else {
@@ -128,7 +129,7 @@ export function SignInPageClient() {
         setIsSessionLimitError(false);
         notify.success("Old sessions were cleaned up. Welcome back!");
         const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
-        const targetDestination = sanitizeReturnUrl(rawReturn, "/dashboard");
+        const targetDestination = resolveAuthoritativeReturnUrl(rawReturn, result.user?.pathway);
         router.push(targetDestination);
         router.refresh();
       } else {

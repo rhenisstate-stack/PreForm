@@ -13,5 +13,5 @@ export const metadata: Metadata = {
 };
 
 export default function DashboardRNPerformancePage() {
-  return <PerformanceIntelligenceView initialPathway="rn" canSwitchPathway={true} />;
+  return <PerformanceIntelligenceView initialPathway="rn" />;
 }

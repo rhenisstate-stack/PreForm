@@ -71,8 +71,6 @@ export interface NCLEXPNDashboardViewProps {
   onResumeAttempt: (attemptId: string, testType?: "tutored_cat" | "rat", status?: string) => void;
   onReviewAttempt: (attempt: CompletedAssessmentAttempt) => void;
   onViewReport: (attempt: CompletedAssessmentAttempt) => void;
-  onSwitchPathway?: (pathway: "rn" | "pn") => void;
-  canSwitchPathway?: boolean;
   authoritativeAttempts: BackendExamAttemptDto[];
   storedAttempts: CompletedAssessmentAttempt[];
   analyticsSummary: LearnerAnalyticsSummary | null;
@@ -121,8 +119,6 @@ export function NCLEXPNDashboardView({
   onResumeAttempt,
   onReviewAttempt,
   onViewReport,
-  onSwitchPathway,
-  canSwitchPathway = true,
   authoritativeAttempts,
   storedAttempts,
   analyticsSummary,
@@ -377,19 +373,6 @@ export function NCLEXPNDashboardView({
                     <BookOpen className="mr-2 h-4 w-4" />
                     <span>Explore PN Study Guide</span>
                   </Link>
-                </Button>
-              )}
-
-              {canSwitchPathway && onSwitchPathway && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onSwitchPathway("rn")}
-                  data-testid="pn-deliberate-switch-to-rn"
-                  className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4"
-                >
-                  Switch to NCLEX-RN Dashboard →
                 </Button>
               )}
             </div>
