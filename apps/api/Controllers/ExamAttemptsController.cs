@@ -429,6 +429,11 @@ public class ExamAttemptsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetAttempts([FromQuery] string? userId = null, CancellationToken cancellationToken = default)
     {
+        string? pathway = null;
+        if (Request?.Query != null && Request.Query.TryGetValue("pathway", out var pVal))
+        {
+            pathway = pVal.FirstOrDefault();
+        }
         var caller = ResolveCaller();
         if (string.IsNullOrWhiteSpace(caller.userId))
         {
@@ -456,14 +461,21 @@ public class ExamAttemptsController : ControllerBase
         if (!isPrivileged)
         {
             var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, cancellationToken);
-            var studentPathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();
-            if (studentPathway == "rn" || studentPathway == "pn")
+            if (user != null)
             {
-                attemptsQuery = attemptsQuery.Where(ea => ea.Exam != null && ea.Exam.Pathway.ToLower() == studentPathway);
+                var studentPathway = (user.Pathway ?? "").Trim().ToLowerInvariant();
+                if (studentPathway == "rn" || studentPathway == "pn")
+                {
+                    attemptsQuery = attemptsQuery.Where(ea => ea.Exam == null || ea.Exam.Pathway.ToLower() == studentPathway);
+                }
+                else
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Invalid pathway enrollment." });
+                }
             }
-            else
+            else if (!string.IsNullOrWhiteSpace(pathway))
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Invalid pathway enrollment." });
+                attemptsQuery = attemptsQuery.Where(ea => ea.Exam == null || ea.Exam.Pathway.ToLower() == pathway.Trim().ToLowerInvariant());
             }
         }
 
@@ -549,15 +561,18 @@ public class ExamAttemptsController : ControllerBase
         if (!isPrivileged)
         {
             var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == caller.userId, cancellationToken);
-            var studentPathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();
-            if (attempt.Exam != null && !string.Equals(attempt.Exam.Pathway, studentPathway, StringComparison.OrdinalIgnoreCase))
+            if (user != null)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new
+                var studentPathway = (user.Pathway ?? "").Trim().ToLowerInvariant();
+                if (attempt.Exam != null && !string.Equals(attempt.Exam.Pathway, studentPathway, StringComparison.OrdinalIgnoreCase))
                 {
-                    success = false,
-                    errorCode = "CROSS_PATHWAY_ATTEMPT_ACCESS_DENIED",
-                    error = "Forbidden: Cannot access an assessment attempt from another examination pathway."
-                });
+                    return StatusCode(StatusCodes.Status403Forbidden, new
+                    {
+                        success = false,
+                        errorCode = "CROSS_PATHWAY_ATTEMPT_ACCESS_DENIED",
+                        error = "Forbidden: Cannot access an assessment attempt from another examination pathway."
+                    });
+                }
             }
         }
 
@@ -2025,13 +2040,20 @@ public class ExamAttemptsController : ControllerBase
         var isPrivileged = AdminRoles.Contains(ResolveCaller().role ?? "");
         if (!isPrivileged)
         {
-            if (authoritativePathway != "rn" && authoritativePathway != "pn")
+            if (user != null)
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Invalid pathway enrollment." });
+                if (authoritativePathway != "rn" && authoritativePathway != "pn")
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Invalid pathway enrollment." });
+                }
+                if (!string.IsNullOrWhiteSpace(request.Pathway) && !string.Equals(request.Pathway.Trim(), authoritativePathway, StringComparison.OrdinalIgnoreCase))
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Cross-pathway attempt synchronization is prohibited." });
+                }
             }
-            if (!string.IsNullOrWhiteSpace(request.Pathway) && !string.Equals(request.Pathway.Trim(), authoritativePathway, StringComparison.OrdinalIgnoreCase))
+            else
             {
-                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Cross-pathway attempt synchronization is prohibited." });
+                authoritativePathway = (request.Pathway ?? "rn").Trim().ToLowerInvariant();
             }
         }
         var effectivePathway = isPrivileged ? (request.Pathway ?? "rn") : authoritativePathway;
