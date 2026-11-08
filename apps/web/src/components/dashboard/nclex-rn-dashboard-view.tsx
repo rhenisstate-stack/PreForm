@@ -43,10 +43,12 @@ import type {
   BackendExamAttemptDto,
   ClientNeedMastery,
   LearnerAnalyticsSummary,
+  LearnerPerformanceOverview,
   ReadinessTrend,
   StudyRecommendation,
   TopicMastery,
 } from "@/lib/api-services";
+import { CompactPerformanceCard } from "@/components/learner/performance/compact-performance-card";
 import type { StudyOverview } from "@/lib/study-service";
 import type { RecentStudyActivity } from "@/app/dashboard/page-client";
 import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
@@ -135,6 +137,23 @@ export function NCLEXRNDashboardView({
       (a) => !a.name?.toLowerCase().includes("pn") || a.name?.toLowerCase().includes("rn")
     );
   }, [authoritativeAttempts]);
+
+  const [intelligenceOverview, setIntelligenceOverview] = React.useState<LearnerPerformanceOverview | null>(null);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    fetch("/api/learner/analytics/overview?pathway=rn")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (isMounted && data && typeof data.totalAnsweredQuestions === "number") {
+          setIntelligenceOverview(data);
+        }
+      })
+      .catch(() => null);
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const totalAttemptsCount =
     typeof analyticsSummary?.totalCompletedAttempts === "number" && analyticsSummary.totalCompletedAttempts > 0
@@ -385,6 +404,13 @@ export function NCLEXRNDashboardView({
           </h2>
           <span className="text-xs text-muted-foreground font-mono">PostgreSQL Server Authoritative</span>
         </div>
+
+        {/* Compact Performance Intelligence Overview Card */}
+        <CompactPerformanceCard
+          overview={intelligenceOverview}
+          pathway="rn"
+          destinationHref="/learner/nclex-rn/performance"
+        />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Metric 1: Completed Assessments */}

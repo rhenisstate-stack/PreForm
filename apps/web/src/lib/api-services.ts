@@ -2908,5 +2908,407 @@ export const adminMonitoringService = {
   },
 };
 
+// ── Enterprise Performance Intelligence & Clinical Analytics DTOs ──
+
+export interface AnalyticsFilter {
+  pathway?: "rn" | "pn" | "all";
+  timeframe?: "7d" | "30d" | "90d" | "6m" | "all" | "custom";
+  fromDate?: string;
+  toDate?: string;
+  examType?: string;
+  clientNeedCategory?: string;
+  questionType?: string;
+  difficulty?: string;
+}
+
+export interface LearnerPerformanceOverview {
+  userId: string;
+  pathway: string;
+  timeframe: string;
+  totalAnsweredQuestions: number;
+  correctCount: number;
+  overallAccuracyPercent: number;
+  totalCompletedAttempts: number;
+  totalStartedAttempts: number;
+  completionRatePercent: number;
+  averageScorePercent: number;
+  totalStudyDurationMinutes: number;
+  currentReadinessTier: string;
+  accuracyTrendDeltaPercent: number;
+  trendDirection: "Up" | "Down" | "Neutral";
+  topStrengthCategory?: string | null;
+  primaryImprovementArea?: string | null;
+  computedAt: string;
+}
+
+export interface PerformanceTrendPoint {
+  dateLabel: string;
+  timestamp: string;
+  attemptId: string;
+  examTitle: string;
+  examType: string;
+  pathway: string;
+  scorePercent: number;
+  accuracyPercent: number;
+  questionsCount: number;
+  durationMinutes: number;
+  cumulativeAccuracyPercent: number;
+}
+
+export interface PerformanceTrendSeries {
+  points: PerformanceTrendPoint[];
+  overallAverageScore: number;
+  trendDirection: string;
+  scoreGrowthPercent: number;
+}
+
+export interface ScoreDistributionBand {
+  bandKey: string;
+  label: string;
+  minPercent: number;
+  maxPercent: number;
+  count: number;
+  percentage: number;
+  colorHex: string;
+}
+
+export interface LearnerScoreDistribution {
+  bands: ScoreDistributionBand[];
+  totalEvaluatedAttempts: number;
+  medianScorePercent: number;
+  passingThresholdPercent: number;
+  passingRatePercent: number;
+}
+
+export interface CategoryPerformanceIntelligence {
+  categoryCode: string;
+  categoryName: string;
+  parentCategoryName?: string | null;
+  pathway: string;
+  totalQuestions: number;
+  correctCount: number;
+  accuracyPercent: number;
+  classification: "Strong" | "Developing" | "NeedsAttention" | "InsufficientData";
+  averageTimeSeconds: number;
+  peerBenchmarkAccuracyPercent: number;
+  deltaFromPeerPercent: number;
+  recommendedRemediationAction?: string | null;
+}
+
+export interface QuestionTypeIntelligence {
+  questionTypeKey: string;
+  displayName: string;
+  isNgn: boolean;
+  totalQuestions: number;
+  correctCount: number;
+  accuracyPercent: number;
+  averageTimeSeconds: number;
+}
+
+export interface DifficultyIntelligence {
+  difficulty: string;
+  totalQuestions: number;
+  correctCount: number;
+  accuracyPercent: number;
+}
+
+export interface ClinicalJudgmentIntelligence {
+  stepKey: string;
+  stepName: string;
+  orderIndex: number;
+  totalQuestions: number;
+  correctCount: number;
+  accuracyPercent: number;
+}
+
+export interface RecurringErrorPattern {
+  patternKey: string;
+  title: string;
+  description: string;
+  impactLevel: "Critical" | "Moderate" | "Advisory";
+  affectedQuestionCount: number;
+  targetCategoryCode?: string | null;
+  suggestedIntervention: string;
+}
+
+export interface QuestionIntelligenceSummary {
+  questionTypes: QuestionTypeIntelligence[];
+  difficulties: DifficultyIntelligence[];
+  clinicalJudgmentSteps: ClinicalJudgmentIntelligence[];
+  recurringErrors: RecurringErrorPattern[];
+  totalQuestionsAnalyzed: number;
+}
+
+export interface QuestionReviewFilter {
+  pathway?: string;
+  attemptId?: string;
+  categoryCode?: string;
+  questionTypeKey?: string;
+  difficulty?: string;
+  onlyIncorrect?: boolean;
+  isFlagged?: boolean;
+  search?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface LearnerQuestionReview {
+  attemptId: string;
+  attemptTitle: string;
+  attemptCompletedAt: string;
+  questionId: string;
+  questionCode?: string | null;
+  questionStem: string;
+  questionTypeKey: string;
+  questionTypeDisplayName: string;
+  difficulty: string;
+  clientNeedCode?: string | null;
+  clientNeedName?: string | null;
+  isCorrect: boolean;
+  scoreEarned: number;
+  maxScore: number;
+  timeSpentSeconds: number;
+  isFlagged: boolean;
+  clinicalRationale?: string | null;
+  safeSelectedAnswerPreview: string;
+  safeCorrectAnswerPreview: string;
+}
+
+export interface PaginatedQuestionReview {
+  items: LearnerQuestionReview[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
+
+export interface AttemptComparisonDetail {
+  attemptId: string;
+  examTitle: string;
+  completedAt: string;
+  scorePercent: number;
+  accuracyPercent: number;
+  totalQuestions: number;
+  correctCount: number;
+  durationMinutes: number;
+  readinessTier?: string | null;
+}
+
+export interface CategoryComparisonDelta {
+  categoryCode: string;
+  categoryName: string;
+  attempt1AccuracyPercent: number;
+  attempt2AccuracyPercent: number;
+  deltaPercent: number;
+}
+
+export interface AttemptComparisonResponse {
+  attempt1: AttemptComparisonDetail;
+  attempt2: AttemptComparisonDetail;
+  scoreDeltaPercent: number;
+  accuracyDeltaPercent: number;
+  timeDeltaMinutes: number;
+  summaryText: string;
+  categoryDeltas: CategoryComparisonDelta[];
+}
+
+export interface LearnerRecommendation {
+  id: string;
+  category: string;
+  priority: "High" | "Medium" | "Low";
+  status: "New" | "InProgress" | "Completed" | "Dismissed";
+  title: string;
+  description: string;
+  evidenceReasoning: string;
+  targetClientNeedCode?: string | null;
+  targetClientNeedName?: string | null;
+  targetQuestionTypeKey?: string | null;
+  actionHref?: string | null;
+  actionLabel?: string | null;
+  createdAt: string;
+  resolvedAt?: string | null;
+}
+
+export interface LearnerIntervention {
+  id: string;
+  recommendationId?: string | null;
+  title: string;
+  targetCategoryCode?: string | null;
+  targetCategoryName?: string | null;
+  baselineAccuracyPercent: number;
+  postInterventionAccuracyPercent?: number | null;
+  deltaAccuracyPercent?: number | null;
+  status: "Active" | "Completed" | "Abandoned";
+  startedAt: string;
+  completedAt?: string | null;
+}
+
+export interface LearnerPerformanceReport {
+  reportId: string;
+  generatedAt: string;
+  userId: string;
+  learnerName: string;
+  learnerEmail: string;
+  pathway: string;
+  pathwayTitle: string;
+  timeframe: string;
+  overview: LearnerPerformanceOverview;
+  categoryBreakdown: CategoryPerformanceIntelligence[];
+  questionTypeBreakdown: QuestionTypeIntelligence[];
+  recommendations: LearnerRecommendation[];
+  methodologyDisclaimer: string;
+}
+
+function buildAnalyticsParams(filter?: AnalyticsFilter): string {
+  if (!filter) return "";
+  const params = new URLSearchParams();
+  if (filter.pathway) params.set("pathway", filter.pathway);
+  if (filter.timeframe) params.set("timeframe", filter.timeframe);
+  if (filter.fromDate) params.set("fromDate", filter.fromDate);
+  if (filter.toDate) params.set("toDate", filter.toDate);
+  if (filter.examType) params.set("examType", filter.examType);
+  if (filter.clientNeedCategory) params.set("clientNeedCategory", filter.clientNeedCategory);
+  if (filter.questionType) params.set("questionType", filter.questionType);
+  if (filter.difficulty) params.set("difficulty", filter.difficulty);
+  const str = params.toString();
+  return str ? `?${str}` : "";
+}
+
+export const performanceIntelligenceService = {
+  getOverview: async (session: VerifiedSession | null, filter?: AnalyticsFilter) => {
+    const qs = buildAnalyticsParams(filter);
+    return apiClient.get<{ success: boolean; data: LearnerPerformanceOverview }>(
+      `/api/v1/learner/analytics/overview${qs}`,
+      { session }
+    );
+  },
+
+  getTrends: async (session: VerifiedSession | null, filter?: AnalyticsFilter) => {
+    const qs = buildAnalyticsParams(filter);
+    return apiClient.get<{ success: boolean; data: PerformanceTrendSeries }>(
+      `/api/v1/learner/analytics/trends${qs}`,
+      { session }
+    );
+  },
+
+  getDistribution: async (session: VerifiedSession | null, filter?: AnalyticsFilter) => {
+    const qs = buildAnalyticsParams(filter);
+    return apiClient.get<{ success: boolean; data: LearnerScoreDistribution }>(
+      `/api/v1/learner/analytics/distribution${qs}`,
+      { session }
+    );
+  },
+
+  getCategories: async (session: VerifiedSession | null, filter?: AnalyticsFilter) => {
+    const qs = buildAnalyticsParams(filter);
+    return apiClient.get<{ success: boolean; data: CategoryPerformanceIntelligence[] }>(
+      `/api/v1/learner/analytics/categories${qs}`,
+      { session }
+    );
+  },
+
+  getQuestionIntelligence: async (session: VerifiedSession | null, filter?: AnalyticsFilter) => {
+    const qs = buildAnalyticsParams(filter);
+    return apiClient.get<{ success: boolean; data: QuestionIntelligenceSummary }>(
+      `/api/v1/learner/analytics/question-intelligence${qs}`,
+      { session }
+    );
+  },
+
+  getQuestionReview: async (session: VerifiedSession | null, filter?: QuestionReviewFilter) => {
+    const params = new URLSearchParams();
+    if (filter?.pathway) params.set("pathway", filter.pathway);
+    if (filter?.attemptId) params.set("attemptId", filter.attemptId);
+    if (filter?.categoryCode) params.set("categoryCode", filter.categoryCode);
+    if (filter?.questionTypeKey) params.set("questionTypeKey", filter.questionTypeKey);
+    if (filter?.difficulty) params.set("difficulty", filter.difficulty);
+    if (filter?.onlyIncorrect !== undefined) params.set("onlyIncorrect", String(filter.onlyIncorrect));
+    if (filter?.isFlagged !== undefined) params.set("isFlagged", String(filter.isFlagged));
+    if (filter?.search) params.set("search", filter.search);
+    if (filter?.page) params.set("page", String(filter.page));
+    if (filter?.pageSize) params.set("pageSize", String(filter.pageSize));
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get<{ success: boolean; data: PaginatedQuestionReview }>(
+      `/api/v1/learner/analytics/question-review${qs}`,
+      { session }
+    );
+  },
+
+  getAttemptComparison: async (session: VerifiedSession | null, attemptId1?: string, attemptId2?: string) => {
+    const params = new URLSearchParams();
+    if (attemptId1) params.set("attemptId1", attemptId1);
+    if (attemptId2) params.set("attemptId2", attemptId2);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    return apiClient.get<{ success: boolean; data: AttemptComparisonResponse }>(
+      `/api/v1/learner/analytics/comparison${qs}`,
+      { session }
+    );
+  },
+
+  getRecommendationsV2: async (session: VerifiedSession | null, pathway?: string) => {
+    const qs = pathway ? `?pathway=${encodeURIComponent(pathway)}` : "";
+    return apiClient.get<{ success: boolean; data: LearnerRecommendation[] }>(
+      `/api/v1/learner/analytics/recommendations-v2${qs}`,
+      { session }
+    );
+  },
+
+  updateRecommendationStatus: async (
+    session: VerifiedSession | null,
+    id: string,
+    status: "New" | "InProgress" | "Completed" | "Dismissed"
+  ) => {
+    return apiClient.put<{ success: boolean; data: LearnerRecommendation }>(
+      `/api/v1/learner/analytics/recommendations/${encodeURIComponent(id)}/status`,
+      { status },
+      { session }
+    );
+  },
+
+  getInterventions: async (session: VerifiedSession | null) => {
+    return apiClient.get<{ success: boolean; data: LearnerIntervention[] }>(
+      "/api/v1/learner/analytics/interventions",
+      { session }
+    );
+  },
+
+  startIntervention: async (
+    session: VerifiedSession | null,
+    data: { recommendationId?: string; title: string; targetCategoryCode?: string; targetCategoryName?: string }
+  ) => {
+    return apiClient.post<{ success: boolean; data: LearnerIntervention }>(
+      "/api/v1/learner/analytics/interventions/start",
+      data,
+      { session }
+    );
+  },
+};
+
+export const learnerReportsService = {
+  getPerformanceReport: async (session: VerifiedSession | null, filter?: AnalyticsFilter) => {
+    const qs = buildAnalyticsParams(filter);
+    return apiClient.get<{ success: boolean; data: LearnerPerformanceReport }>(
+      `/api/v1/learner/reports/performance${qs}`,
+      { session }
+    );
+  },
+
+  getPerformancePdf: async (session: VerifiedSession | null, filter?: AnalyticsFilter) => {
+    const qs = buildAnalyticsParams(filter);
+    return apiClient.get<Blob>(
+      `/api/v1/learner/reports/performance/pdf${qs}`,
+      { session, headers: { Accept: "application/pdf" } }
+    );
+  },
+
+  getPerformanceCsv: async (session: VerifiedSession | null, filter?: AnalyticsFilter) => {
+    const qs = buildAnalyticsParams(filter);
+    return apiClient.get<string>(
+      `/api/v1/learner/reports/performance/csv${qs}`,
+      { session, headers: { Accept: "text/csv" } }
+    );
+  },
+};
+
 
 

@@ -368,7 +368,7 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
 
         if (!string.IsNullOrWhiteSpace(filter.Pathway) && filter.Pathway != "both")
         {
-            responsesQuery = responsesQuery.Where(r => r.Question.Pathway == filter.Pathway || r.Question.Pathway == "both");
+            responsesQuery = responsesQuery.Where(r => r.Question == null || r.Question.Pathway == filter.Pathway || r.Question.Pathway == "both");
         }
 
         var responses = await responsesQuery

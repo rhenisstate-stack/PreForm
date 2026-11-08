@@ -292,6 +292,19 @@ export function LearnerDashboardShell({
               </div>
             )}
             <Link
+              href={activePathway === "pn" ? "/learner/nclex-pn/performance" : "/learner/nclex-rn/performance"}
+              data-testid="sidebar-performance-intelligence-link"
+              className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeNav === "performance" || pathname?.includes("/performance")
+                  ? "bg-teal-500/15 text-teal-700 dark:text-teal-300 font-semibold"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5"
+              }`}
+              title="Performance Intelligence"
+            >
+              <BarChart2 className="h-4 w-4 shrink-0 text-teal-600 dark:text-teal-400" />
+              {!sidebarCollapsed && <span>Performance Intelligence</span>}
+            </Link>
+            <Link
               href="/dashboard"
               className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted dark:text-slate-300 dark:hover:text-white dark:hover:bg-white/5 transition-colors"
               title="Previous Tests"
