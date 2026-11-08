@@ -456,26 +456,23 @@ public class ExamAttemptsController : ControllerBase
             .AsNoTracking()
             .Include(ea => ea.Exam)
             .Include(ea => ea.Responses)
-            .Where(ea => string.Equals(ea.UserId, targetUserId, StringComparison.Ordinal));
+            .Where(ea => ea.UserId == targetUserId);
 
+        string? studentPathway = null;
         if (!isPrivileged)
         {
             var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, cancellationToken);
             if (user != null)
             {
-                var studentPathway = (user.Pathway ?? "").Trim().ToLowerInvariant();
-                if (studentPathway == "rn" || studentPathway == "pn")
-                {
-                    attemptsQuery = attemptsQuery.Where(ea => ea.Exam == null || ea.Exam.Pathway.ToLower() == studentPathway);
-                }
-                else
+                studentPathway = (user.Pathway ?? "").Trim().ToLowerInvariant();
+                if (studentPathway != "rn" && studentPathway != "pn")
                 {
                     return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Invalid pathway enrollment." });
                 }
             }
             else if (!string.IsNullOrWhiteSpace(pathway))
             {
-                attemptsQuery = attemptsQuery.Where(ea => ea.Exam == null || ea.Exam.Pathway.ToLower() == pathway.Trim().ToLowerInvariant());
+                studentPathway = pathway.Trim().ToLowerInvariant();
             }
         }
 
@@ -495,6 +492,18 @@ public class ExamAttemptsController : ControllerBase
                 .AsNoTracking()
                 .Where(e => examIds.Contains(e.Id))
                 .ToDictionaryAsync(e => e.Id, StringComparer.Ordinal, cancellationToken);
+
+        if (!isPrivileged && !string.IsNullOrWhiteSpace(studentPathway))
+        {
+            attempts = attempts.Where(a =>
+            {
+                if (!string.IsNullOrWhiteSpace(a.ExamId) && examById.TryGetValue(a.ExamId, out var ex))
+                {
+                    return string.Equals(ex.Pathway, studentPathway, StringComparison.OrdinalIgnoreCase);
+                }
+                return true;
+            }).ToList();
+        }
 
         var dtos = attempts.Select(a =>
         {
