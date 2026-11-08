@@ -204,18 +204,25 @@ export function NCLEXRNDashboardView({
       }));
     }
     if (rnAuthoritativeAttempts.length > 0) {
-      return rnAuthoritativeAttempts.map((a, idx) => ({
-        date: a.createdAt ? a.createdAt.split("T")[0] : `Attempt ${idx + 1}`,
-        score: Math.round(a.scorePercent || 0),
-        label: a.name || `Test ${idx + 1}`,
-      }));
+      return rnAuthoritativeAttempts.map((a, idx) => {
+        const rawDate = (a as any).completedAt || (a as any).createdAt || (a as any).startedAt;
+        const dateStr = typeof rawDate === "string" ? rawDate.split("T")[0] : `Test ${idx + 1}`;
+        return {
+          date: dateStr,
+          score: Math.round(a.scorePercent || 0),
+          label: a.name || `Test ${idx + 1}`,
+        };
+      });
     }
     if (rnStoredAttempts.length > 0) {
-      return rnStoredAttempts.map((a, idx) => ({
-        date: a.timestamp ? a.timestamp.split("T")[0] : `Attempt ${idx + 1}`,
-        score: Math.round(a.scorePercent),
-        label: a.name || `Test ${idx + 1}`,
-      }));
+      return rnStoredAttempts.map((a, idx) => {
+        const dateStr = a.timestamp ? new Date(a.timestamp).toISOString().split("T")[0] : `Test ${idx + 1}`;
+        return {
+          date: dateStr,
+          score: Math.round(a.scorePercent),
+          label: a.name || `Test ${idx + 1}`,
+        };
+      });
     }
     return [];
   }, [readinessTrend, rnAuthoritativeAttempts, rnStoredAttempts]);

@@ -26,6 +26,7 @@ import {
   AnalyticsKpiCard,
   ChartDateRangeFilter,
   PathwayToggleFilter,
+  type TimeRangeOption,
 } from "@/components/analytics";
 import { AdminEcosystemView } from "@/components/admin/views/admin-ecosystem-view";
 import { ExamManagerView } from "@/components/admin/views/exam-manager-view";
@@ -52,8 +53,8 @@ export function AdminOverviewClient() {
   const { user, isLoading, isAuthenticated } = useAuth();
 
   // Filters state
-  const [timeRange, setTimeRange] = React.useState<string>("30d");
-  const [pathway, setPathway] = React.useState<string>("all");
+  const [timeRange, setTimeRange] = React.useState<TimeRangeOption>("30d");
+  const [pathway, setPathway] = React.useState<"all" | "rn" | "pn">("all");
 
   // Determine initial tab from user role
   const userRole = String(user?.role || "").toLowerCase();

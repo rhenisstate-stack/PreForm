@@ -110,7 +110,7 @@ export function AdminEcosystemView({
         title="Candidate Cohort & User Growth"
         description="Longitudinal candidate registrations, pathway distribution, and cohort engagement metrics"
         icon={Users}
-        action={
+        actions={
           <Link
             href="/admin/users"
             className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
@@ -165,7 +165,7 @@ export function AdminEcosystemView({
         title="Assessment Intelligence & Examination Activity"
         description="Candidate examination attempts, completion rates, and average clinical scores"
         icon={GraduationCap}
-        action={
+        actions={
           <Link
             href="/admin/examinations"
             className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
@@ -252,7 +252,7 @@ export function AdminEcosystemView({
         title="Curriculum & Item Repository Operations"
         description="Question bank growth velocity, item format diversity, and curated study guide pipelines"
         icon={FileQuestion}
-        action={
+        actions={
           <Link
             href="/admin/questions"
             className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
@@ -301,7 +301,7 @@ export function AdminEcosystemView({
         title="Monetization, Plans & Transaction Analytics"
         description="Gross collected payments, refund reconciliation, net platform revenue, and subscriber retention"
         icon={CreditCard}
-        action={
+        actions={
           <Link
             href="/admin/monetization"
             className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
@@ -352,7 +352,7 @@ export function AdminEcosystemView({
         title="Platform Audit Events & Operational Pulse"
         description="Real-time administrative, assessment, and monetization activity audit trails"
         icon={Activity}
-        action={
+        actions={
           <Link
             href="/admin/audit-logs"
             className="text-xs text-primary font-medium hover:underline inline-flex items-center gap-1"
