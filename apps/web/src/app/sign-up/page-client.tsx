@@ -25,6 +25,7 @@ import { ThemeSwitcher } from "@/components/layout/theme-switcher";
 import {
   signUpFormSchema,
   sanitizeReturnUrl,
+  resolveAuthoritativeReturnUrl,
   normalizeFullName,
   getEmailValidationError,
   type SignUpFormInput,
@@ -105,7 +106,7 @@ export function SignUpPageClient() {
         notify.success("Account created successfully! Welcome to PrepFord.");
         const rawReturn = searchParams.get("from") || searchParams.get("returnUrl");
         // Newly registered learners land directly on their learner workspace.
-        const from = sanitizeReturnUrl(rawReturn, "/dashboard");
+        const from = resolveAuthoritativeReturnUrl(rawReturn, data.pathway);
         router.push(from);
         router.refresh();
       } else {

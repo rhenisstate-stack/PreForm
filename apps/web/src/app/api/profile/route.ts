@@ -110,7 +110,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: false, error: "Request body must be an object" }, { status: 400 });
     }
 
-    const authoritativePathway: "rn" | "pn" | "both" = session.pathway || "rn";
+    const authoritativePathway: "rn" | "pn" = (session.pathway === "pn" ? "pn" : "rn");
     const authoritativePlan: string =
       session.activePlan || "NCLEX-RN Complete Preparation Plan";
     const authoritativeRole = session.role || "candidate";

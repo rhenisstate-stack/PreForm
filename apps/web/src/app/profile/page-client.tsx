@@ -40,7 +40,7 @@ export function ProfilePageClient() {
 
   // Personal details state
   const [displayName, setDisplayName] = React.useState("");
-  const [pathway, setPathway] = React.useState<"rn" | "pn" | "both">("rn");
+  const [pathway, setPathway] = React.useState<"rn" | "pn">("rn");
   const [targetExamDate, setTargetExamDate] = React.useState("2026-11-30");
   const [activePlan, setActivePlan] = React.useState<string>("");
   const [profileSaving, setProfileSaving] = React.useState(false);
@@ -432,7 +432,7 @@ export function ProfilePageClient() {
                     {displayName || user.displayName || user.name}
                   </h1>
                   <Badge variant="secondary" className="text-xs font-semibold uppercase">
-                    {pathway === "both" ? "NCLEX-RN & PN Dual Pathway" : `NCLEX-${pathway.toUpperCase()} Candidate`}
+                    {`NCLEX-${pathway.toUpperCase()} Candidate`}
                   </Badge>
                   {user.role === "superadmin" && (
                     <Badge className="bg-purple-600 text-white font-mono text-[11px] gap-1 px-2.5 py-0.5 shadow-2xs">
@@ -711,46 +711,27 @@ export function ProfilePageClient() {
 
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-foreground block">
-                  Target Licensure Examination
+                  Enrolled Licensure Examination
                 </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setPathway("rn")}
-                    className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border text-center transition-all ${
-                      pathway === "rn"
-                        ? "border-secondary bg-secondary/10 text-foreground ring-1 ring-secondary"
-                        : "border-border bg-background text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <span className="font-serif font-bold text-base">NCLEX-RN</span>
-                    <span className="text-[11px] mt-0.5">Registered Nurse</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPathway("pn")}
-                    className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border text-center transition-all ${
-                      pathway === "pn"
-                        ? "border-secondary bg-secondary/10 text-foreground ring-1 ring-secondary"
-                        : "border-border bg-background text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <span className="font-serif font-bold text-base">NCLEX-PN</span>
-                    <span className="text-[11px] mt-0.5">Practical / Vocational Nurse</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPathway("both")}
-                    className={`flex flex-col items-center justify-center p-3 sm:p-4 rounded-xl border text-center transition-all ${
-                      pathway === "both"
-                        ? "border-secondary bg-secondary/10 text-foreground ring-1 ring-secondary"
-                        : "border-border bg-background text-muted-foreground hover:bg-muted"
-                    }`}
-                  >
-                    <span className="font-serif font-bold text-base">RN &amp; PN Dual</span>
-                    <span className="text-[11px] mt-0.5">All-Access Licensure</span>
-                  </button>
+                <div
+                  data-testid="profile-enrolled-pathway-badge"
+                  className="p-4 rounded-xl border border-border bg-muted/40 flex items-center justify-between"
+                >
+                  <div className="space-y-0.5">
+                    <span className="font-serif font-bold text-base block text-foreground">
+                      NCLEX-{pathway.toUpperCase()}
+                    </span>
+                    <span className="text-xs text-muted-foreground block">
+                      {pathway === "rn" ? "Registered Nurse Track" : "Practical / Vocational Nurse Track"}
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="font-mono text-xs uppercase bg-secondary/10 text-secondary border-secondary/30">
+                    Enrolled Track
+                  </Badge>
                 </div>
+                <p className="text-[11px] text-muted-foreground">
+                  PrepFord enforces single-pathway enrollment. To request an administrative pathway change, please contact academic support.
+                </p>
               </div>
 
               <div className="space-y-1.5">
@@ -802,7 +783,7 @@ export function ProfilePageClient() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-lg font-serif font-bold text-foreground">
-                    {activePlan || (pathway === "both" ? "NCLEX-RN & PN All-Access Preparation Plan" : `NCLEX-${pathway.toUpperCase()} Complete Preparation Plan`)}
+                    {activePlan || (pathway === "pn" ? "NCLEX-PN Complete Preparation Plan" : "NCLEX-RN Complete Preparation Plan")}
                   </h3>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     Access Window: Valid until <span className="font-semibold text-foreground">December 31, 2026</span>
@@ -818,7 +799,7 @@ export function ProfilePageClient() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
-                    <span>Original NCLEX-{pathway === "both" ? "RN & PN" : pathway.toUpperCase()} question bank</span>
+                    <span>Original NCLEX-{pathway.toUpperCase()} question bank</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-secondary shrink-0" />
