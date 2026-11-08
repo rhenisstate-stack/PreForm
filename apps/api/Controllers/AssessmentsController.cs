@@ -53,9 +53,40 @@ public class AssessmentsController : ControllerBase
         }
 
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
-        var effectivePathway = !string.IsNullOrWhiteSpace(pathway)
-            ? (string.Equals(pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn")
-            : (string.Equals(user?.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn");
+        var role = User.FindFirst(ClaimTypes.Role)?.Value ?? "";
+        var isPrivileged = role == "admin" || role == "superadmin";
+
+        var authoritativePathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();
+
+        if (!isPrivileged)
+        {
+            if (authoritativePathway != "rn" && authoritativePathway != "pn")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = "INVALID_PATHWAY_ENROLLMENT",
+                    error = "Student account does not have a valid examination pathway assignment. Please contact academic support."
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(pathway) &&
+                !string.Equals(pathway.Trim(), authoritativePathway, StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = "PATHWAY_MISMATCH",
+                    error = $"Enrolled pathway is {authoritativePathway.ToUpperInvariant()}. Cross-pathway assessment access ({pathway.Trim().ToUpperInvariant()}) is prohibited."
+                });
+            }
+        }
+
+        var effectivePathway = isPrivileged
+            ? (!string.IsNullOrWhiteSpace(pathway)
+                ? (string.Equals(pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn")
+                : (string.Equals(user?.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn"))
+            : authoritativePathway;
 
         // Query active in-progress attempts for this user to enable "Resume" behavior
         var activeAttempts = await _context.ExamAttempts
@@ -148,7 +179,7 @@ public class AssessmentsController : ControllerBase
                         e.IsAvailable &&
                         (!e.AvailableFrom.HasValue || e.AvailableFrom.Value <= nowUtc) &&
                         (!e.AvailableTo.HasValue || e.AvailableTo.Value >= nowUtc) &&
-                        (e.Pathway == effectivePathway || e.Pathway == "both") &&
+                        e.Pathway == effectivePathway &&
                         e.Id != ratExamId && e.Id != practiceExamId && e.Id != catExamId)
             .OrderByDescending(e => e.PublishedAt ?? e.CreatedAt)
             .Take(20)

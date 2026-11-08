@@ -3,7 +3,10 @@ using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Preform.Api.Data;
 using Preform.Api.DTOs;
 using Preform.Api.Services;
 using Preform.Api.Services.Analytics;
@@ -16,10 +19,12 @@ namespace Preform.Api.Controllers;
 public class AnalyticsController : ControllerBase
 {
     private readonly ISystemAnalyticsService _analyticsService;
+    private readonly AppDbContext _context;
 
-    public AnalyticsController(ISystemAnalyticsService analyticsService)
+    public AnalyticsController(ISystemAnalyticsService analyticsService, AppDbContext context)
     {
         _analyticsService = analyticsService;
+        _context = context;
     }
 
     private string? GetCurrentUserId() =>
@@ -170,6 +175,25 @@ public class AnalyticsController : ControllerBase
         if (string.IsNullOrWhiteSpace(targetUserId))
         {
             return Unauthorized(new { success = false, error = "User identity could not be established." });
+        }
+
+        if (role != "admin" && role != "superadmin")
+        {
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
+            var studentPathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();
+            if (studentPathway != "rn" && studentPathway != "pn")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Student account does not have a valid examination pathway assignment ('rn' or 'pn')." });
+            }
+
+            if (!string.Equals(pathway, studentPathway, StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    error = $"Enrolled pathway is {studentPathway.ToUpperInvariant()}. Cross-pathway analytics access ({pathway.ToUpperInvariant()}) is prohibited."
+                });
+            }
         }
 
         var effectiveFilter = filter ?? new SystemAnalyticsFilterDto();

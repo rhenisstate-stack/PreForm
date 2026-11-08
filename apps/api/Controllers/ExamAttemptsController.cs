@@ -447,9 +447,27 @@ public class ExamAttemptsController : ControllerBase
                 ? userId
                 : caller.userId;
 
-        var attempts = await _context.ExamAttempts
+        var attemptsQuery = _context.ExamAttempts
             .AsNoTracking()
-            .Where(ea => string.Equals(ea.UserId, targetUserId, StringComparison.Ordinal))
+            .Include(ea => ea.Exam)
+            .Include(ea => ea.Responses)
+            .Where(ea => string.Equals(ea.UserId, targetUserId, StringComparison.Ordinal));
+
+        if (!isPrivileged)
+        {
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, cancellationToken);
+            var studentPathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();
+            if (studentPathway == "rn" || studentPathway == "pn")
+            {
+                attemptsQuery = attemptsQuery.Where(ea => ea.Exam != null && ea.Exam.Pathway.ToLower() == studentPathway);
+            }
+            else
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Invalid pathway enrollment." });
+            }
+        }
+
+        var attempts = await attemptsQuery
             .OrderByDescending(ea => ea.StartedAt)
             .ToListAsync(cancellationToken);
 
@@ -526,6 +544,21 @@ public class ExamAttemptsController : ControllerBase
         if (!string.Equals(attempt.UserId, caller.userId, StringComparison.Ordinal) && !isPrivileged)
         {
             return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Forbidden: Cannot view another candidate's assessment attempt." });
+        }
+
+        if (!isPrivileged)
+        {
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == caller.userId, cancellationToken);
+            var studentPathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();
+            if (attempt.Exam != null && !string.Equals(attempt.Exam.Pathway, studentPathway, StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = "CROSS_PATHWAY_ATTEMPT_ACCESS_DENIED",
+                    error = "Forbidden: Cannot access an assessment attempt from another examination pathway."
+                });
+            }
         }
 
         // Hard Pilot Entitlement Enforcement Boundary (Phase 7.9.2 Work Package B)
@@ -1157,9 +1190,38 @@ public class ExamAttemptsController : ControllerBase
             });
         }
 
-        var normalizedPathway = !string.IsNullOrWhiteSpace(request?.Pathway)
-            ? (string.Equals(request.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn")
-            : (string.Equals(user?.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn");
+        var isPrivileged = AdminRoles.Contains(caller.role ?? "");
+        var authoritativePathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();
+
+        if (!isPrivileged)
+        {
+            if (authoritativePathway != "rn" && authoritativePathway != "pn")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = "INVALID_PATHWAY_ENROLLMENT",
+                    error = "Student account does not have a valid examination pathway assignment ('rn' or 'pn'). Unknown or multi-pathway values fail closed. Please contact academic support."
+                });
+            }
+
+            if (!string.IsNullOrWhiteSpace(request?.Pathway) &&
+                !string.Equals(request.Pathway.Trim(), authoritativePathway, StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = "PATHWAY_MISMATCH",
+                    error = $"Enrolled pathway is {authoritativePathway.ToUpperInvariant()}. Cross-pathway assessment creation ({request.Pathway.Trim().ToUpperInvariant()}) is prohibited."
+                });
+            }
+        }
+
+        var normalizedPathway = isPrivileged
+            ? (!string.IsNullOrWhiteSpace(request?.Pathway)
+                ? (string.Equals(request.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn")
+                : (string.Equals(user?.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn"))
+            : authoritativePathway;
 
         // Hard Pilot Entitlement Enforcement Boundary (Phase 7.9.2 Work Package B)
         if (_entitlementService != null)
@@ -1197,6 +1259,16 @@ public class ExamAttemptsController : ControllerBase
             if (foundExam == null)
             {
                 return NotFound(new { success = false, error = $"Examination '{request.ExamId}' not found." });
+            }
+
+            if (!isPrivileged && !string.Equals(foundExam.Pathway, normalizedPathway, StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    errorCode = "EXAM_PATHWAY_MISMATCH",
+                    error = $"Cannot attempt examination '{foundExam.Title}' because it belongs to the {foundExam.Pathway.ToUpperInvariant()} pathway, but your account is enrolled in {normalizedPathway.ToUpperInvariant()}."
+                });
             }
 
             if (foundExam.LifecycleState != ExamLifecycleState.Published && !foundExam.IsPublished)
@@ -1948,7 +2020,22 @@ public class ExamAttemptsController : ControllerBase
         DateTime now,
         CancellationToken cancellationToken)
     {
-        var exam = await GetOrCreateDefaultExamAsync(request.Pathway ?? "rn", cancellationToken);
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == candidateUserId, cancellationToken);
+        var authoritativePathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();
+        var isPrivileged = AdminRoles.Contains(ResolveCaller().role ?? "");
+        if (!isPrivileged)
+        {
+            if (authoritativePathway != "rn" && authoritativePathway != "pn")
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Invalid pathway enrollment." });
+            }
+            if (!string.IsNullOrWhiteSpace(request.Pathway) && !string.Equals(request.Pathway.Trim(), authoritativePathway, StringComparison.OrdinalIgnoreCase))
+            {
+                return StatusCode(StatusCodes.Status403Forbidden, new { success = false, error = "Cross-pathway attempt synchronization is prohibited." });
+            }
+        }
+        var effectivePathway = isPrivileged ? (request.Pathway ?? "rn") : authoritativePathway;
+        var exam = await GetOrCreateDefaultExamAsync(effectivePathway, cancellationToken);
 
         // Build a server-verified question plan. Candidate synchronization input
         // may NOT create question records or stubs: every submitted question must

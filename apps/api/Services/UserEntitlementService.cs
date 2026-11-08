@@ -123,15 +123,37 @@ public class UserEntitlementService : IUserEntitlementService
             };
         }
 
-        var normalizedPathway = !string.IsNullOrWhiteSpace(requestedPathway)
-            ? (string.Equals(requestedPathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn")
-            : (string.Equals(user.Pathway, "pn", StringComparison.OrdinalIgnoreCase) ? "pn" : "rn");
+        // Authoritative Single-Pathway Enforcement for Student Accounts
+        var userPathway = (user.Pathway ?? "").Trim().ToLowerInvariant();
+        if (userPathway != "rn" && userPathway != "pn")
+        {
+            return new EntitlementEvaluationResult
+            {
+                IsEntitled = false,
+                Status = "PathwayDenied",
+                ErrorCode = "INVALID_PATHWAY_ENROLLMENT",
+                Reason = "Student account does not have a valid examination pathway assignment ('rn' or 'pn'). Unknown or multi-pathway values fail closed. Please contact academic support."
+            };
+        }
+
+        // Cross-pathway requests by candidate students are strictly rejected
+        if (!string.IsNullOrWhiteSpace(requestedPathway) &&
+            !string.Equals(requestedPathway.Trim(), userPathway, StringComparison.OrdinalIgnoreCase))
+        {
+            return new EntitlementEvaluationResult
+            {
+                IsEntitled = false,
+                Status = "PathwayMismatch",
+                ErrorCode = "PATHWAY_NOT_ENTITLED",
+                Reason = $"Your enrolled examination pathway is {userPathway.ToUpperInvariant()}, but {requestedPathway.Trim().ToUpperInvariant()} was requested. PrepFord students are permitted to study exactly one examination pathway."
+            };
+        }
+
+        var normalizedPathway = userPathway;
 
         var matchingSub = activeSubs.FirstOrDefault(s =>
-            string.Equals(s.Pathway, "both", StringComparison.OrdinalIgnoreCase) ||
             string.Equals(s.Pathway, normalizedPathway, StringComparison.OrdinalIgnoreCase) ||
-            (s.Plan != null && (string.Equals(s.Plan.Pathway, "Both", StringComparison.OrdinalIgnoreCase) ||
-                                string.Equals(s.Plan.Pathway, normalizedPathway, StringComparison.OrdinalIgnoreCase))));
+            (s.Plan != null && string.Equals(s.Plan.Pathway, normalizedPathway, StringComparison.OrdinalIgnoreCase)));
 
         if (matchingSub == null)
         {

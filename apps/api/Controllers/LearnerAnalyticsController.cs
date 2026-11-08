@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Preform.Api.Data;
 using Preform.Api.DTOs;
 using Preform.Api.Services.Analytics;
 
@@ -22,10 +24,12 @@ public class LearnerAnalyticsController : ControllerBase
     };
 
     private readonly ILearnerAnalyticsService _analyticsService;
+    private readonly AppDbContext _context;
 
-    public LearnerAnalyticsController(ILearnerAnalyticsService analyticsService)
+    public LearnerAnalyticsController(ILearnerAnalyticsService analyticsService, AppDbContext context)
     {
         _analyticsService = analyticsService;
+        _context = context;
     }
 
     #region Legacy & Phase 5 Endpoints
@@ -33,7 +37,7 @@ public class LearnerAnalyticsController : ControllerBase
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary([FromQuery] string? userId = null, CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, null, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var targetUserId = authResult.TargetUserId!;
@@ -44,7 +48,7 @@ public class LearnerAnalyticsController : ControllerBase
     [HttpGet("client-needs")]
     public async Task<IActionResult> GetClientNeeds([FromQuery] string? userId = null, CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, null, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var targetUserId = authResult.TargetUserId!;
@@ -55,7 +59,7 @@ public class LearnerAnalyticsController : ControllerBase
     [HttpGet("curriculum")]
     public async Task<IActionResult> GetCurriculumMastery([FromQuery] string? userId = null, CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, null, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var targetUserId = authResult.TargetUserId!;
@@ -66,7 +70,7 @@ public class LearnerAnalyticsController : ControllerBase
     [HttpGet("readiness-trend")]
     public async Task<IActionResult> GetReadinessTrend([FromQuery] string? userId = null, CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, null, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var targetUserId = authResult.TargetUserId!;
@@ -77,7 +81,7 @@ public class LearnerAnalyticsController : ControllerBase
     [HttpGet("recommendations")]
     public async Task<IActionResult> GetRecommendations([FromQuery] string? userId = null, CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, null, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var targetUserId = authResult.TargetUserId!;
@@ -99,13 +103,13 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] DateTime? toDate = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var filter = new AnalyticsFilterDto
         {
             TimeRange = timeRange ?? "all",
-            Pathway = pathway,
+            Pathway = authResult.ValidatedPathway,
             ExamType = examType,
             FromDate = fromDate,
             ToDate = toDate
@@ -125,13 +129,13 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] DateTime? toDate = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var filter = new AnalyticsFilterDto
         {
             TimeRange = timeRange ?? "all",
-            Pathway = pathway,
+            Pathway = authResult.ValidatedPathway,
             ExamType = examType,
             FromDate = fromDate,
             ToDate = toDate
@@ -151,13 +155,13 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] DateTime? toDate = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var filter = new AnalyticsFilterDto
         {
             TimeRange = timeRange ?? "all",
-            Pathway = pathway,
+            Pathway = authResult.ValidatedPathway,
             ExamType = examType,
             FromDate = fromDate,
             ToDate = toDate
@@ -177,13 +181,13 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] DateTime? toDate = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var filter = new AnalyticsFilterDto
         {
             TimeRange = timeRange ?? "all",
-            Pathway = pathway,
+            Pathway = authResult.ValidatedPathway,
             ExamType = examType,
             FromDate = fromDate,
             ToDate = toDate
@@ -203,13 +207,13 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] DateTime? toDate = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var filter = new AnalyticsFilterDto
         {
             TimeRange = timeRange ?? "all",
-            Pathway = pathway,
+            Pathway = authResult.ValidatedPathway,
             ExamType = examType,
             FromDate = fromDate,
             ToDate = toDate
@@ -231,12 +235,12 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] int pageSize = 20,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var filter = new QuestionReviewFilterDto
         {
-            Pathway = pathway,
+            Pathway = authResult.ValidatedPathway,
             ClientNeedCode = clientNeedCode,
             QuestionTypeKey = questionTypeKey,
             Difficulty = difficulty,
@@ -256,8 +260,47 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] string? attemptId2 = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, null, ct);
         if (authResult.Result != null) return authResult.Result;
+
+        var callerRole = User.FindFirst(ClaimTypes.Role)?.Value;
+        var isPrivileged = AdminRoles.Contains(callerRole ?? string.Empty);
+
+        var attemptIds = new List<string>();
+        if (!string.IsNullOrWhiteSpace(attemptId1)) attemptIds.Add(attemptId1);
+        if (!string.IsNullOrWhiteSpace(attemptId2)) attemptIds.Add(attemptId2);
+
+        if (attemptIds.Count > 0)
+        {
+            var attempts = await _context.ExamAttempts
+                .Include(ea => ea.Exam)
+                .Where(ea => attemptIds.Contains(ea.Id))
+                .ToListAsync(ct);
+
+            foreach (var att in attempts)
+            {
+                if (att.UserId != authResult.TargetUserId && !isPrivileged)
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new
+                    {
+                        success = false,
+                        code = "ATTEMPT_OWNERSHIP_MISMATCH",
+                        error = "Attempt does not belong to the target learner."
+                    });
+                }
+
+                if (!isPrivileged && att.Exam != null &&
+                    !string.Equals(att.Exam.Pathway, authResult.ValidatedPathway, StringComparison.OrdinalIgnoreCase))
+                {
+                    return StatusCode(StatusCodes.Status403Forbidden, new
+                    {
+                        success = false,
+                        code = "CROSS_PATHWAY_ATTEMPT_ACCESS_DENIED",
+                        error = $"Cross-pathway attempt comparison forbidden. Attempt '{att.Id}' is {att.Exam.Pathway?.ToUpperInvariant()} but learner pathway is {authResult.ValidatedPathway.ToUpperInvariant()}."
+                    });
+                }
+            }
+        }
 
         var comp = await _analyticsService.GetAttemptComparisonAsync(authResult.TargetUserId!, attemptId1, attemptId2, ct);
         return Ok(new { success = true, data = comp });
@@ -269,10 +312,10 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] string? pathway = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
-        var recs = await _analyticsService.GetLearnerRecommendationsAsync(authResult.TargetUserId!, pathway, ct);
+        var recs = await _analyticsService.GetLearnerRecommendationsAsync(authResult.TargetUserId!, authResult.ValidatedPathway, ct);
         return Ok(new { success = true, data = recs });
     }
 
@@ -283,7 +326,7 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] string? userId = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, null, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var updated = await _analyticsService.UpdateRecommendationStatusAsync(authResult.TargetUserId!, id, request, ct);
@@ -299,7 +342,7 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] string? userId = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, null, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var interventions = await _analyticsService.GetInterventionsAsync(authResult.TargetUserId!, ct);
@@ -312,23 +355,31 @@ public class LearnerAnalyticsController : ControllerBase
         [FromQuery] string? userId = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, request?.Pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
-        var inv = await _analyticsService.StartInterventionAsync(authResult.TargetUserId!, request, ct);
+        if (request != null)
+        {
+            request.Pathway = authResult.ValidatedPathway;
+        }
+
+        var inv = await _analyticsService.StartInterventionAsync(authResult.TargetUserId!, request!, ct);
         return Ok(new { success = true, data = inv });
     }
 
     #endregion
 
-    private (IActionResult? Result, string? TargetUserId) AuthorizeAccess(string? requestedUserId)
+    private async Task<(IActionResult? Result, string? TargetUserId, string ValidatedPathway)> AuthorizeAccessAsync(
+        string? requestedUserId,
+        string? requestedPathway,
+        CancellationToken ct)
     {
         var callerUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var callerRole = User.FindFirst(ClaimTypes.Role)?.Value;
 
         if (string.IsNullOrWhiteSpace(callerUserId))
         {
-            return (Unauthorized(new { success = false, error = "Authentication required." }), null);
+            return (Unauthorized(new { success = false, error = "Authentication required." }), null, string.Empty);
         }
 
         var isPrivileged = AdminRoles.Contains(callerRole ?? string.Empty);
@@ -340,14 +391,55 @@ public class LearnerAnalyticsController : ControllerBase
             return (StatusCode(StatusCodes.Status403Forbidden, new
             {
                 success = false,
+                code = "CROSS_USER_ACCESS_FORBIDDEN",
                 error = "Forbidden: Cannot access another learner's performance analytics."
-            }), null);
+            }), null, string.Empty);
         }
 
         var targetUserId = isPrivileged && !string.IsNullOrWhiteSpace(requestedUserId)
             ? requestedUserId
             : callerUserId;
 
-        return (null, targetUserId);
+        var targetUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
+        if (targetUser == null)
+        {
+            return (NotFound(new { success = false, error = "Learner not found." }), null, string.Empty);
+        }
+
+        if (!isPrivileged)
+        {
+            var studentPathway = targetUser.Pathway?.Trim().ToLowerInvariant();
+            if (studentPathway != "rn" && studentPathway != "pn")
+            {
+                return (StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    code = "VALID_PATHWAY_REQUIRED",
+                    error = "Learner must have an active single pathway enrollment ('rn' or 'pn'). Multi-pathway or dual access is not permitted."
+                }), null, string.Empty);
+            }
+
+            if (!string.IsNullOrWhiteSpace(requestedPathway))
+            {
+                var normalizedRequested = requestedPathway.Trim().ToLowerInvariant();
+                if (normalizedRequested != studentPathway)
+                {
+                    return (StatusCode(StatusCodes.Status403Forbidden, new
+                    {
+                        success = false,
+                        code = "PATHWAY_MISMATCH",
+                        error = $"Cross-pathway access forbidden. Learner is enrolled in NCLEX-{studentPathway.ToUpperInvariant()} and cannot access NCLEX-{normalizedRequested.ToUpperInvariant()} analytics."
+                    }), null, string.Empty);
+                }
+            }
+
+            return (null, targetUserId, studentPathway);
+        }
+
+        var effectivePathway = !string.IsNullOrWhiteSpace(requestedPathway)
+            ? requestedPathway.Trim().ToLowerInvariant()
+            : (targetUser.Pathway?.Trim().ToLowerInvariant() ?? "rn");
+
+        return (null, targetUserId, effectivePathway);
     }
 }

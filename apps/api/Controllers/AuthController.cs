@@ -144,15 +144,31 @@ public class AuthController : ControllerBase
             return Conflict(new AuthResponse { Success = false, Error = "An account with this email address already exists." });
         }
 
+        if (string.IsNullOrWhiteSpace(request.Pathway) ||
+            (!string.Equals(request.Pathway.Trim(), "rn", StringComparison.OrdinalIgnoreCase) &&
+             !string.Equals(request.Pathway.Trim(), "pn", StringComparison.OrdinalIgnoreCase)))
+        {
+            return BadRequest(new AuthResponse
+            {
+                Success = false,
+                Error = "A valid single examination pathway ('rn' or 'pn') is required for registration. Multi-pathway or dual access is not permitted."
+            });
+        }
+
+        var normalizedPathway = request.Pathway.Trim().ToLowerInvariant();
+        var defaultPlan = normalizedPathway == "pn"
+            ? "NCLEX-PN Complete Preparation Plan"
+            : "NCLEX-RN Complete Preparation Plan";
+
         var now = DateTime.UtcNow;
         var user = new User
         {
             Id = Guid.NewGuid().ToString(),
             Email = normalizedEmail,
             DisplayName = normalizedDisplayName,
-            Pathway = string.IsNullOrWhiteSpace(request.Pathway) ? "rn" : request.Pathway.Trim().ToLowerInvariant(),
+            Pathway = normalizedPathway,
             TargetExamDate = "2026-11-30",
-            ActivePlan = "NCLEX-RN Complete Preparation Plan",
+            ActivePlan = defaultPlan,
             EmailNotifications = true,
             StudyReminders = true,
             IsActive = true,

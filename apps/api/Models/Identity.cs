@@ -22,7 +22,7 @@ public class User
     public string DisplayName { get; set; } = string.Empty;
 
     [MaxLength(10)]
-    public string Pathway { get; set; } = "rn"; // "rn", "pn", "both"
+    public string Pathway { get; set; } = "rn"; // Enforced single-pathway invariant: "rn" or "pn" for candidate students
 
     [MaxLength(32)]
     public string TargetExamDate { get; set; } = "2026-11-30";

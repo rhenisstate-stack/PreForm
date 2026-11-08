@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Preform.Api.Data;
 using Preform.Api.DTOs;
 using Preform.Api.Services.Analytics;
 
@@ -22,10 +24,12 @@ public class LearnerReportsController : ControllerBase
     };
 
     private readonly ILearnerReportingService _reportingService;
+    private readonly AppDbContext _context;
 
-    public LearnerReportsController(ILearnerReportingService reportingService)
+    public LearnerReportsController(ILearnerReportingService reportingService, AppDbContext context)
     {
         _reportingService = reportingService;
+        _context = context;
     }
 
     [HttpGet("performance")]
@@ -38,13 +42,13 @@ public class LearnerReportsController : ControllerBase
         [FromQuery] DateTime? toDate = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var filter = new AnalyticsFilterDto
         {
             TimeRange = timeRange ?? "all",
-            Pathway = pathway,
+            Pathway = authResult.ValidatedPathway,
             ExamType = examType,
             FromDate = fromDate,
             ToDate = toDate
@@ -64,13 +68,13 @@ public class LearnerReportsController : ControllerBase
         [FromQuery] DateTime? toDate = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var filter = new AnalyticsFilterDto
         {
             TimeRange = timeRange ?? "all",
-            Pathway = pathway,
+            Pathway = authResult.ValidatedPathway,
             ExamType = examType,
             FromDate = fromDate,
             ToDate = toDate
@@ -78,7 +82,7 @@ public class LearnerReportsController : ControllerBase
 
         var report = await _reportingService.GenerateReportAsync(authResult.TargetUserId!, filter, ct);
         var pdfBytes = _reportingService.ExportReportPdf(report);
-        var safePathway = (pathway ?? "nclex").ToLowerInvariant();
+        var safePathway = authResult.ValidatedPathway.ToLowerInvariant();
         var fileName = $"PrepFord-{safePathway.ToUpperInvariant()}-Performance-Report-{DateTime.UtcNow:yyyyMMdd}.pdf";
 
         return File(pdfBytes, "application/pdf", fileName);
@@ -94,13 +98,13 @@ public class LearnerReportsController : ControllerBase
         [FromQuery] DateTime? toDate = null,
         CancellationToken ct = default)
     {
-        var authResult = AuthorizeAccess(userId);
+        var authResult = await AuthorizeAccessAsync(userId, pathway, ct);
         if (authResult.Result != null) return authResult.Result;
 
         var filter = new AnalyticsFilterDto
         {
             TimeRange = timeRange ?? "all",
-            Pathway = pathway,
+            Pathway = authResult.ValidatedPathway,
             ExamType = examType,
             FromDate = fromDate,
             ToDate = toDate
@@ -108,20 +112,23 @@ public class LearnerReportsController : ControllerBase
 
         var report = await _reportingService.GenerateReportAsync(authResult.TargetUserId!, filter, ct);
         var csvBytes = _reportingService.ExportReportCsv(report);
-        var safePathway = (pathway ?? "nclex").ToLowerInvariant();
+        var safePathway = authResult.ValidatedPathway.ToLowerInvariant();
         var fileName = $"PrepFord-{safePathway.ToUpperInvariant()}-Performance-Data-{DateTime.UtcNow:yyyyMMdd}.csv";
 
         return File(csvBytes, "text/csv; charset=utf-8", fileName);
     }
 
-    private (IActionResult? Result, string? TargetUserId) AuthorizeAccess(string? requestedUserId)
+    private async Task<(IActionResult? Result, string? TargetUserId, string ValidatedPathway)> AuthorizeAccessAsync(
+        string? requestedUserId,
+        string? requestedPathway,
+        CancellationToken ct)
     {
         var callerUserId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         var callerRole = User.FindFirst(ClaimTypes.Role)?.Value;
 
         if (string.IsNullOrWhiteSpace(callerUserId))
         {
-            return (Unauthorized(new { success = false, error = "Authentication required." }), null);
+            return (Unauthorized(new { success = false, error = "Authentication required." }), null, string.Empty);
         }
 
         var isPrivileged = AdminRoles.Contains(callerRole ?? string.Empty);
@@ -133,14 +140,55 @@ public class LearnerReportsController : ControllerBase
             return (StatusCode(StatusCodes.Status403Forbidden, new
             {
                 success = false,
+                code = "CROSS_USER_ACCESS_FORBIDDEN",
                 error = "Forbidden: Cannot access another learner's performance report."
-            }), null);
+            }), null, string.Empty);
         }
 
         var targetUserId = isPrivileged && !string.IsNullOrWhiteSpace(requestedUserId)
             ? requestedUserId
             : callerUserId;
 
-        return (null, targetUserId);
+        var targetUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
+        if (targetUser == null)
+        {
+            return (NotFound(new { success = false, error = "Learner not found." }), null, string.Empty);
+        }
+
+        if (!isPrivileged)
+        {
+            var studentPathway = targetUser.Pathway?.Trim().ToLowerInvariant();
+            if (studentPathway != "rn" && studentPathway != "pn")
+            {
+                return (StatusCode(StatusCodes.Status403Forbidden, new
+                {
+                    success = false,
+                    code = "VALID_PATHWAY_REQUIRED",
+                    error = "Learner must have an active single pathway enrollment ('rn' or 'pn'). Multi-pathway or dual access is not permitted."
+                }), null, string.Empty);
+            }
+
+            if (!string.IsNullOrWhiteSpace(requestedPathway))
+            {
+                var normalizedRequested = requestedPathway.Trim().ToLowerInvariant();
+                if (normalizedRequested != studentPathway)
+                {
+                    return (StatusCode(StatusCodes.Status403Forbidden, new
+                    {
+                        success = false,
+                        code = "PATHWAY_MISMATCH",
+                        error = $"Cross-pathway access forbidden. Learner is enrolled in NCLEX-{studentPathway.ToUpperInvariant()} and cannot access NCLEX-{normalizedRequested.ToUpperInvariant()} reports."
+                    }), null, string.Empty);
+                }
+            }
+
+            return (null, targetUserId, studentPathway);
+        }
+
+        var effectivePathway = !string.IsNullOrWhiteSpace(requestedPathway)
+            ? requestedPathway.Trim().ToLowerInvariant()
+            : (targetUser.Pathway?.Trim().ToLowerInvariant() ?? "rn");
+
+        return (null, targetUserId, effectivePathway);
     }
 }

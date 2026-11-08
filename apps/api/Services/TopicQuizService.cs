@@ -21,12 +21,16 @@ public class TopicQuizService : ITopicQuizService
 
     public async Task<TopicQuizConfigurationDto> CreateConfigurationAsync(string userId, CreateTopicQuizConfigurationRequest request)
     {
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+        var userPathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();
+        var programme = (userPathway == "rn" || userPathway == "pn") ? userPathway : (request.Programme ?? "rn");
+
         var config = new TopicQuizConfiguration
         {
             Id = Guid.NewGuid().ToString(),
             UserId = userId,
             Title = request.Title.Trim(),
-            Programme = request.Programme ?? "rn",
+            Programme = programme,
             SubjectDomainId = request.SubjectDomainId,
             TopicSlug = request.TopicSlug,
             TopicTitle = request.TopicTitle,
@@ -47,11 +51,15 @@ public class TopicQuizService : ITopicQuizService
 
     public async Task<List<TopicQuizConfigurationDto>> GetUserConfigurationsAsync(string userId, string? programme = null)
     {
+        var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+        var userPathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();
+        var effectiveProgramme = (userPathway == "rn" || userPathway == "pn") ? userPathway : programme;
+
         var query = _context.TopicQuizConfigurations.AsNoTracking()
             .Where(c => (c.UserId == userId || (c.IsOfficial && c.IsPublished)) && c.IsActive);
-        if (!string.IsNullOrWhiteSpace(programme) && programme != "all")
+        if (!string.IsNullOrWhiteSpace(effectiveProgramme) && effectiveProgramme != "all")
         {
-            query = query.Where(c => c.Programme == programme || c.Programme == "both");
+            query = query.Where(c => c.Programme == effectiveProgramme);
         }
 
         return await query

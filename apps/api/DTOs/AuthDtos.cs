@@ -18,8 +18,10 @@ public class RegisterRequest
     [MaxLength(128)]
     public string DisplayName { get; set; } = string.Empty;
 
+    [Required]
+    [RegularExpression("^(?i)(rn|pn)$", ErrorMessage = "Pathway must be 'rn' or 'pn'. Multi-pathway enrollment is not permitted.")]
     [MaxLength(10)]
-    public string Pathway { get; set; } = "rn"; // "rn", "pn", "both"
+    public string Pathway { get; set; } = "rn";
 
     /// <summary>Stable browser client identity (cid_* form) so the registration session is rotatable by the same client.</summary>
     [MaxLength(64)]

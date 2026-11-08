@@ -366,9 +366,10 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
                         completedIds.Contains(r.ExamAttemptId) &&
                         r.GradingState == ResponseGradingState.Graded);
 
-        if (!string.IsNullOrWhiteSpace(filter.Pathway) && filter.Pathway != "both")
+        if (!string.IsNullOrWhiteSpace(filter.Pathway))
         {
-            responsesQuery = responsesQuery.Where(r => r.Question == null || r.Question.Pathway == filter.Pathway || r.Question.Pathway == "both");
+            var p = filter.Pathway.Trim().ToLowerInvariant();
+            responsesQuery = responsesQuery.Where(r => r.Question != null && r.Question.Pathway.ToLower() == p);
         }
 
         var responses = await responsesQuery
@@ -606,9 +607,10 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
 
         if (startDate.HasValue) query = query.Where(r => r.AnsweredAt >= startDate.Value);
         if (endDate.HasValue) query = query.Where(r => r.AnsweredAt <= endDate.Value);
-        if (!string.IsNullOrWhiteSpace(filter.Pathway) && filter.Pathway != "both")
+        if (!string.IsNullOrWhiteSpace(filter.Pathway))
         {
-            query = query.Where(r => r.Question.Pathway == filter.Pathway || r.Question.Pathway == "both");
+            var p = filter.Pathway.Trim().ToLowerInvariant();
+            query = query.Where(r => r.Question != null && r.Question.Pathway.ToLower() == p);
         }
 
         var responses = await query
@@ -699,9 +701,10 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
 
         if (startDate.HasValue) query = query.Where(r => r.AnsweredAt >= startDate.Value);
         if (endDate.HasValue) query = query.Where(r => r.AnsweredAt <= endDate.Value);
-        if (!string.IsNullOrWhiteSpace(filter.Pathway) && filter.Pathway != "both")
+        if (!string.IsNullOrWhiteSpace(filter.Pathway))
         {
-            query = query.Where(r => r.Question.Pathway == filter.Pathway || r.Question.Pathway == "both");
+            var p = filter.Pathway.Trim().ToLowerInvariant();
+            query = query.Where(r => r.Question != null && r.Question.Pathway.ToLower() == p);
         }
 
         var responses = await query
@@ -876,9 +879,10 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
                         r.ExamAttempt.Status == AttemptStatus.Completed &&
                         r.GradingState == ResponseGradingState.Graded);
 
-        if (!string.IsNullOrWhiteSpace(filter.Pathway) && filter.Pathway != "both")
+        if (!string.IsNullOrWhiteSpace(filter.Pathway))
         {
-            query = query.Where(r => r.Question.Pathway == filter.Pathway || r.Question.Pathway == "both");
+            var p = filter.Pathway.Trim().ToLowerInvariant();
+            query = query.Where(r => r.Question != null && r.Question.Pathway.ToLower() == p);
         }
         if (!string.IsNullOrWhiteSpace(filter.ClientNeedCode))
         {
@@ -982,7 +986,18 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
 
         // Fallbacks: First vs Latest if unspecified
         if (att1 == null) att1 = completedAttempts.First();
-        if (att2 == null) att2 = completedAttempts.Last();
+        if (att2 == null)
+        {
+            // Pick latest attempt that matches att1's pathway
+            att2 = completedAttempts.LastOrDefault(a => string.Equals(a.Exam?.Pathway, att1.Exam?.Pathway, StringComparison.OrdinalIgnoreCase)) ?? completedAttempts.Last();
+        }
+
+        // Strict cross-pathway disallowal
+        if (att1?.Exam != null && att2?.Exam != null &&
+            !string.Equals(att1.Exam.Pathway, att2.Exam.Pathway, StringComparison.OrdinalIgnoreCase))
+        {
+            return new AttemptComparisonResponseDto();
+        }
 
         var d1 = MapAttemptDetail(att1);
         var d2 = MapAttemptDetail(att2);
@@ -1070,9 +1085,10 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
         var existingQuery = _context.LearnerPerformanceRecommendations
             .Where(r => r.UserId == userId);
 
-        if (!string.IsNullOrWhiteSpace(pathway) && pathway != "both")
+        if (!string.IsNullOrWhiteSpace(pathway))
         {
-            existingQuery = existingQuery.Where(r => r.Pathway == pathway || r.Pathway == "both");
+            var p = pathway.Trim().ToLowerInvariant();
+            existingQuery = existingQuery.Where(r => r.Pathway.ToLower() == p);
         }
 
         var existing = await existingQuery
@@ -1082,7 +1098,8 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
         // If no persistent recommendations exist, generate and persist initial set
         if (existing.Count == 0)
         {
-            await GenerateAndPersistInitialRecommendationsAsync(userId, pathway ?? "both", ct);
+            var targetPathway = !string.IsNullOrWhiteSpace(pathway) ? pathway.Trim().ToLowerInvariant() : "rn";
+            await GenerateAndPersistInitialRecommendationsAsync(userId, targetPathway, ct);
             existing = await existingQuery.OrderByDescending(r => r.CreatedAt).ToListAsync(ct);
         }
 
@@ -1338,7 +1355,7 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
         {
             UserId = userId,
             RecommendationId = request.RecommendationId,
-            Pathway = request.Pathway ?? "both",
+            Pathway = !string.IsNullOrWhiteSpace(request.Pathway) ? request.Pathway.Trim().ToLowerInvariant() : "rn",
             Title = string.IsNullOrWhiteSpace(request.Title) ? "Targeted Knowledge Intervention" : request.Title,
             Category = request.Category ?? RecommendationCategoryNames.TargetedPractice,
             TargetClientNeedCode = request.TargetClientNeedCode,
@@ -1453,9 +1470,10 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
         if (startDate.HasValue) query = query.Where(a => a.StartedAt >= startDate.Value);
         if (endDate.HasValue) query = query.Where(a => a.StartedAt <= endDate.Value);
 
-        if (!string.IsNullOrWhiteSpace(filter.Pathway) && filter.Pathway != "both")
+        if (!string.IsNullOrWhiteSpace(filter.Pathway))
         {
-            query = query.Where(a => a.Exam.Pathway == filter.Pathway || a.Exam.Pathway == "both");
+            var p = filter.Pathway.Trim().ToLowerInvariant();
+            query = query.Where(a => a.Exam != null && a.Exam.Pathway.ToLower() == p);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.ExamType) && Enum.TryParse<ExamType>(filter.ExamType, true, out var eType))

@@ -31,6 +31,7 @@ public class LearnerReportingService : ILearnerReportingService
         var learnerName = user?.DisplayName ?? user?.Email ?? "Nursing Candidate";
         var learnerEmail = user?.Email ?? "";
         var pathway = filter.Pathway?.ToLowerInvariant() ?? user?.Pathway ?? "rn";
+        filter.Pathway = pathway;
         var isPn = pathway == "pn";
         var pathwayTitle = isPn ? "NCLEX-PN Practical Nursing" : "NCLEX-RN Registered Nursing";
 
