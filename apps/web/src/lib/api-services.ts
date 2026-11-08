@@ -3310,5 +3310,466 @@ export const learnerReportsService = {
   },
 };
 
+// ============================================================================
+// SYSTEM-WIDE DASHBOARD INTELLIGENCE & ANALYTICS INTERFACES & SERVICE
+// ============================================================================
+
+export interface SystemAnalyticsEnvelope<T> {
+  success: boolean;
+  data: T;
+  calculatedAt: string;
+}
+
+export interface AdminSystemOverviewDto {
+  kpis: {
+    totalUsers: number;
+    activeUsers: number;
+    newRegistrations: number;
+    totalRnLearners: number;
+    totalPnLearners: number;
+    totalExaminations: number;
+    examinationAttempts: number;
+    completedExaminations: number;
+    totalQuestions: number;
+    publishedStudyResources: number;
+    activeSubscriptions: number;
+    netSubscriptionRevenue: number;
+    grossCollectedRevenue: number;
+    totalRefunds: number;
+    pendingOperationalTasks: number;
+  };
+  deltas: {
+    userGrowthPercent?: number | null;
+    attemptsGrowthPercent?: number | null;
+    revenueGrowthPercent?: number | null;
+    periodLabel: string;
+  };
+  calculatedAt: string;
+}
+
+export interface AdminUserAnalyticsDto {
+  registrationTrends: Array<{
+    date: string;
+    label: string;
+    newUsers: number;
+    rnLearners: number;
+    pnLearners: number;
+    cumulativeTotal: number;
+  }>;
+  pathwayDistribution: {
+    rnCount: number;
+    pnCount: number;
+    bothCount: number;
+    rnPercent: number;
+    pnPercent: number;
+  };
+  engagementMetrics: {
+    dailyActiveUsers: number;
+    weeklyActiveUsers: number;
+    monthlyActiveUsers: number;
+    engagementRatePercent: number;
+  };
+}
+
+export interface AdminExamAnalyticsDto {
+  attemptTrends: Array<{
+    date: string;
+    label: string;
+    totalAttempts: number;
+    completedAttempts: number;
+    rnAttempts: number;
+    pnAttempts: number;
+    averageScore: number;
+  }>;
+  statusBreakdown: Array<{
+    status: string;
+    count: number;
+    percentage: number;
+  }>;
+  pathwayComparison: {
+    rnAttempts: number;
+    pnAttempts: number;
+    rnAverageScore: number;
+    pnAverageScore: number;
+    rnCompletionRate: number;
+    pnCompletionRate: number;
+  };
+  topExaminations: Array<{
+    examId: string;
+    title: string;
+    pathway: string;
+    attemptsCount: number;
+    averageScore: number;
+    passRate: number;
+  }>;
+}
+
+export interface AdminAcademicAnalyticsDto {
+  questionGrowth: Array<{
+    date: string;
+    label: string;
+    questionsAdded: number;
+    cumulativeQuestions: number;
+  }>;
+  questionsByType: Array<{
+    typeKey: string;
+    typeName: string;
+    count: number;
+    percentage: number;
+  }>;
+  clientNeedsCoverage: Array<{
+    clientNeedId: string;
+    code: string;
+    name: string;
+    totalQuestions: number;
+    rnQuestions: number;
+    pnQuestions: number;
+  }>;
+  curatedResources: {
+    totalStudyGuides: number;
+    publishedStudyGuides: number;
+    draftStudyGuides: number;
+    inReviewStudyGuides: number;
+  };
+}
+
+export interface AdminMonetizationAnalyticsDto {
+  revenueTrends: Array<{
+    date: string;
+    label: string;
+    grossAmount: number;
+    netAmount: number;
+    refundsAmount: number;
+  }>;
+  subscriptionsByStatus: Array<{
+    status: string;
+    count: number;
+    percentage: number;
+  }>;
+  subscriptionsByPlan: Array<{
+    planId: string;
+    planName: string;
+    activeCount: number;
+    monthlyRecurringRevenue: number;
+  }>;
+  transactionSummary: {
+    totalTransactions: number;
+    successfulTransactions: number;
+    failedTransactions: number;
+    refundTransactions: number;
+    totalNetRevenue: number;
+  };
+}
+
+export interface AdminPlatformActivityDto {
+  categoryVolume: Array<{
+    category: string;
+    eventCount: number;
+    percentage: number;
+  }>;
+  recentEvents: Array<{
+    id: string | number;
+    actor: string;
+    action: string;
+    category: string;
+    description?: string;
+    timestamp: string;
+    status: string;
+  }>;
+  systemOperationalStatus: {
+    databaseHealthy: boolean;
+    activeConnectionsEstimate: number;
+    lastAuditSyncUtc: string;
+  };
+}
+
+export interface ExamManagerOverviewDto {
+  kpis: {
+    totalExaminations: number;
+    activeExaminations: number;
+    draftsCount: number;
+    scheduledCount: number;
+    totalAttemptsWindow: number;
+    averageScoreWindow: number;
+    passRateWindow: number;
+  };
+  recentAttempts: Array<{
+    attemptId: string;
+    examTitle: string;
+    pathway: string;
+    candidateMasked: string;
+    score: number;
+    status: string;
+    startedAt: string;
+    completedAt?: string;
+  }>;
+  pathwayExamDistribution: Array<{
+    pathway: string;
+    activeExams: number;
+    totalAttempts: number;
+    averageScore: number;
+  }>;
+  examPerformancePipeline: Array<{
+    examId: string;
+    title: string;
+    code: string;
+    pathway: string;
+    totalAttempts: number;
+    passRate: number;
+    avgScore: number;
+    status: string;
+  }>;
+}
+
+export interface ContentManagerOverviewDto {
+  kpis: {
+    totalQuestions: number;
+    publishedQuestions: number;
+    inReviewQuestions: number;
+    draftQuestions: number;
+    totalStudyGuides: number;
+    publishedStudyGuides: number;
+  };
+  questionVelocity: Array<{
+    date: string;
+    label: string;
+    added: number;
+    published: number;
+  }>;
+  questionsByItemType: Array<{
+    typeKey: string;
+    typeName: string;
+    count: number;
+    percentage: number;
+  }>;
+  pendingReviewQueue: Array<{
+    questionId: string;
+    stemExcerpt: string;
+    itemType: string;
+    pathway: string;
+    author: string;
+    submittedAt: string;
+    daysInQueue: number;
+  }>;
+}
+
+export interface ReviewerOverviewDto {
+  kpis: {
+    assignedQueueCount: number;
+    approvedThisMonth: number;
+    rejectedThisMonth: number;
+    avgTurnaroundHours: number;
+  };
+  reviewItems: Array<{
+    questionId: string;
+    stemExcerpt: string;
+    itemType: string;
+    pathway: string;
+    author: string;
+    submittedAt: string;
+    priority: string;
+  }>;
+  reviewHistory: Array<{
+    date: string;
+    label: string;
+    approved: number;
+    rejected: number;
+  }>;
+}
+
+export interface InstructorOverviewDto {
+  kpis: {
+    assignedCohortLearners: number;
+    activeLearners7d: number;
+    averageCohortScore: number;
+    atRiskLearnersCount: number;
+  };
+  scoreDistribution: Array<{
+    scoreBand: string;
+    learnerCount: number;
+    percentage: number;
+  }>;
+  domainMastery: Array<{
+    domainName: string;
+    cohortAvgScore: number;
+    benchmarkTarget: number;
+  }>;
+  atRiskLearners: Array<{
+    learnerId: string;
+    maskedName: string;
+    pathway: string;
+    attemptsCount: number;
+    avgScore: number;
+    riskFactor: string;
+    lastActiveAt: string;
+  }>;
+}
+
+export interface LearnerPathwayOverviewDto {
+  pathway: string;
+  kpis: {
+    totalAttempts: number;
+    completedAttempts: number;
+    averageScore: number;
+    currentStreakDays: number;
+    studyTimeMinutes: number;
+    clientNeedsMastered: number;
+    clientNeedsTotal: number;
+  };
+  scoreTrajectory: Array<{
+    date: string;
+    label: string;
+    score: number;
+    examTitle: string;
+  }>;
+  clientNeedsMastery: Array<{
+    clientNeedId: string;
+    code: string;
+    name: string;
+    scorePercentage: number;
+    status: "mastered" | "developing" | "needs_improvement" | "unassessed";
+    questionsAnswered: number;
+    benchmarkPercentage: number;
+  }>;
+  studyConsistency: Array<{
+    date: string;
+    dayOfWeek: string;
+    minutesSpent: number;
+    questionsPracticed: number;
+  }>;
+  recentAttempts: Array<{
+    attemptId: string;
+    examTitle: string;
+    score: number;
+    status: string;
+    completedAt: string;
+  }>;
+  clinicalRecommendations: Array<{
+    id: string;
+    title: string;
+    description: string;
+    reason: string;
+    priority: "high" | "medium" | "low";
+    actionUrl: string;
+  }>;
+}
+
+export interface AnalyticsFilterParams {
+  timeRange?: string;
+  fromDate?: string;
+  toDate?: string;
+  pathway?: string;
+  category?: string;
+  limit?: number;
+}
+
+function buildAnalyticsFilterQuery(filter?: AnalyticsFilterParams): string {
+  if (!filter) return "";
+  const params = new URLSearchParams();
+  if (filter.timeRange) params.set("timeRange", filter.timeRange);
+  if (filter.fromDate) params.set("fromDate", filter.fromDate);
+  if (filter.toDate) params.set("toDate", filter.toDate);
+  if (filter.pathway) params.set("pathway", filter.pathway);
+  if (filter.category) params.set("category", filter.category);
+  if (filter.limit) params.set("limit", String(filter.limit));
+  const str = params.toString();
+  return str ? `?${str}` : "";
+}
+
+export const systemAnalyticsService = {
+  getAdminOverview: async (filter?: AnalyticsFilterParams, session?: VerifiedSession | null) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<AdminSystemOverviewDto>>(
+      `/api/v1/analytics/admin/overview${qs}`,
+      { session }
+    );
+  },
+
+  getAdminUsers: async (filter?: AnalyticsFilterParams, session?: VerifiedSession | null) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<AdminUserAnalyticsDto>>(
+      `/api/v1/analytics/admin/users${qs}`,
+      { session }
+    );
+  },
+
+  getAdminExaminations: async (filter?: AnalyticsFilterParams, session?: VerifiedSession | null) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<AdminExamAnalyticsDto>>(
+      `/api/v1/analytics/admin/examinations${qs}`,
+      { session }
+    );
+  },
+
+  getAdminAcademics: async (filter?: AnalyticsFilterParams, session?: VerifiedSession | null) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<AdminAcademicAnalyticsDto>>(
+      `/api/v1/analytics/admin/academics${qs}`,
+      { session }
+    );
+  },
+
+  getAdminMonetization: async (filter?: AnalyticsFilterParams, session?: VerifiedSession | null) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<AdminMonetizationAnalyticsDto>>(
+      `/api/v1/analytics/admin/monetization${qs}`,
+      { session }
+    );
+  },
+
+  getAdminActivity: async (filter?: AnalyticsFilterParams, session?: VerifiedSession | null) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<AdminPlatformActivityDto>>(
+      `/api/v1/analytics/admin/activity${qs}`,
+      { session }
+    );
+  },
+
+  getExamsOverview: async (filter?: AnalyticsFilterParams, session?: VerifiedSession | null) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<ExamManagerOverviewDto>>(
+      `/api/v1/analytics/exams/overview${qs}`,
+      { session }
+    );
+  },
+
+  getContentOverview: async (filter?: AnalyticsFilterParams, session?: VerifiedSession | null) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<ContentManagerOverviewDto>>(
+      `/api/v1/analytics/content/overview${qs}`,
+      { session }
+    );
+  },
+
+  getReviewsOverview: async (filter?: AnalyticsFilterParams, session?: VerifiedSession | null) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<ReviewerOverviewDto>>(
+      `/api/v1/analytics/reviews/overview${qs}`,
+      { session }
+    );
+  },
+
+  getInstructorOverview: async (filter?: AnalyticsFilterParams, session?: VerifiedSession | null) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<InstructorOverviewDto>>(
+      `/api/v1/analytics/instructor/overview${qs}`,
+      { session }
+    );
+  },
+
+  getLearnerOverview: async (
+    pathway: "rn" | "pn",
+    filter?: AnalyticsFilterParams,
+    session?: VerifiedSession | null
+  ) => {
+    const qs = buildAnalyticsFilterQuery(filter);
+    return apiClient.get<SystemAnalyticsEnvelope<LearnerPathwayOverviewDto>>(
+      `/api/v1/analytics/learner/${pathway}/overview${qs}`,
+      { session }
+    );
+  },
+};
+
+
 
 

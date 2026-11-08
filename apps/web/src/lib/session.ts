@@ -99,6 +99,7 @@ export const ALLOWED_ADMIN_ROLES = new Set([
   "content_manager",
   "exam_manager",
   "reviewer",
+  "instructor",
 ]);
 
 /**

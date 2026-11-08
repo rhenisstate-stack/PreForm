@@ -53,6 +53,11 @@ import { CompactPerformanceCard } from "@/components/learner/performance/compact
 import type { StudyOverview } from "@/lib/study-service";
 import type { RecentStudyActivity } from "@/app/dashboard/page-client";
 import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
+import {
+  AnalyticsChartCard,
+  TrendChart,
+  HorizontalRankingChart,
+} from "@/components/analytics";
 
 export interface NCLEXPNDashboardViewProps {
   learnerName: string;
@@ -188,6 +193,60 @@ export function NCLEXPNDashboardView({
         : pnStoredAttempts.length > 0
           ? Math.round(pnStoredAttempts.reduce((acc, a) => acc + a.scorePercent, 0) / pnStoredAttempts.length)
           : null;
+
+  // Longitudinal Score Trajectory points
+  const trajectoryPoints = React.useMemo(() => {
+    if (readinessTrend?.attempts && readinessTrend.attempts.length > 0) {
+      return readinessTrend.attempts.map((a, idx) => ({
+        date: a.completedAt ? a.completedAt.split("T")[0] : `Attempt ${idx + 1}`,
+        score: Math.round(a.scorePercent),
+        label: a.examTitle || `Test ${idx + 1}`,
+      }));
+    }
+    if (pnAuthoritativeAttempts.length > 0) {
+      return pnAuthoritativeAttempts.map((a, idx) => ({
+        date: a.createdAt ? a.createdAt.split("T")[0] : `Attempt ${idx + 1}`,
+        score: Math.round(a.scorePercent || 0),
+        label: a.name || `Test ${idx + 1}`,
+      }));
+    }
+    if (pnStoredAttempts.length > 0) {
+      return pnStoredAttempts.map((a, idx) => ({
+        date: a.timestamp ? a.timestamp.split("T")[0] : `Attempt ${idx + 1}`,
+        score: Math.round(a.scorePercent),
+        label: a.name || `Test ${idx + 1}`,
+      }));
+    }
+    return [];
+  }, [readinessTrend, pnAuthoritativeAttempts, pnStoredAttempts]);
+
+  // PN Client Needs horizontal ranking items
+  const rankingItems = React.useMemo(() => {
+    if (clientNeeds.length > 0) {
+      return clientNeeds.map((cat) => ({
+        id: cat.categoryCode,
+        label: cat.categoryName,
+        value: Math.round(cat.accuracyPercent),
+        sublabel: `${cat.totalAssessedQuestions} items`,
+        benchmark: 75,
+        status: (cat.totalAssessedQuestions === 0
+          ? "unassessed"
+          : cat.accuracyPercent >= 75
+          ? "mastered"
+          : cat.accuracyPercent >= 60
+          ? "developing"
+          : "needs_improvement") as "mastered" | "developing" | "needs_improvement" | "unassessed",
+      }));
+    }
+    return CANONICAL_PN_CLIENT_NEEDS.map((cat) => ({
+      id: cat.categoryCode,
+      label: cat.categoryName,
+      value: 0,
+      sublabel: "Baseline",
+      benchmark: 75,
+      status: "unassessed" as const,
+    }));
+  }, [clientNeeds]);
 
   return (
     <div data-testid="nclex-pn-dashboard-view" className="space-y-8">
@@ -480,6 +539,69 @@ export function NCLEXPNDashboardView({
             <p className="text-xs text-muted-foreground">NCSBN PN category percentile benchmark</p>
           </div>
         </div>
+
+        {/* Longitudinal Trajectory & Study Consistency Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2" data-testid="pn-trajectory-section">
+          <div className="lg:col-span-2">
+            <AnalyticsChartCard
+              title="Longitudinal Performance Trajectory"
+              description="Sequential assessment accuracy and cumulative readiness score progression"
+              empty={trajectoryPoints.length === 0}
+              emptyTitle="No Assessment Trajectory Yet"
+              emptyDescription="Complete your first NCLEX-PN practice set or Readiness Assessment to begin tracking your score progression over time."
+            >
+              <TrendChart
+                data={trajectoryPoints}
+                xKey="date"
+                yAxisFormatter={(val) => `${val}%`}
+                targetBenchmark={{ value: 75, label: "Pass Benchmark (75%)", color: "#10B981" }}
+                series={[
+                  { key: "score", name: "PN Exam Score (%)", color: "#8B5CF6", type: "area" },
+                ]}
+              />
+            </AnalyticsChartCard>
+          </div>
+
+          <div>
+            <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur-sm h-full flex flex-col justify-between space-y-4">
+              <div>
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  PN Study Consistency &amp; Streak
+                </span>
+                <div className="mt-3 flex items-baseline gap-2">
+                  <span className="text-3xl font-bold font-mono text-foreground">
+                    {analyticsSummary?.totalCompletedAttempts && analyticsSummary.totalCompletedAttempts > 0 ? "Active" : "New Candidate"}
+                  </span>
+                  <Badge variant="success" className="text-xs">
+                    {analyticsSummary?.totalCompletedAttempts ?? 0} Completed Sets
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Consistent practical nursing drills build clinical judgment for bedside delegation &amp; patient monitoring.
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-border/40 space-y-2">
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Practiced Minutes:</span>
+                  <span className="font-mono font-bold text-foreground">
+                    {analyticsSummary?.totalDurationMinutes ? Math.round(analyticsSummary.totalDurationMinutes) : 0} min
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Curriculum Domain Count:</span>
+                  <span className="font-mono font-bold text-violet-600 dark:text-violet-400">
+                    8 Official NCSBN Categories
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-muted-foreground">Clinical Standard:</span>
+                  <span className="font-mono font-bold text-foreground">Next Gen NCLEX-PN (NGN)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* =====================================================================
@@ -517,6 +639,32 @@ export function NCLEXPNDashboardView({
               Maintain gravity drainage bags below the level of the bladder at all times.
             </p>
           </div>
+        </div>
+      </section>
+
+      {/* =====================================================================
+          SECTION 4.5: INTERACTIVE CLIENT NEEDS RANKING BENCHMARK
+         ===================================================================== */}
+      <section
+        data-testid="pn-client-needs-ranking"
+        className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-serif font-bold text-foreground">
+              PN Client Needs Mastery Trajectory &amp; Pass Benchmark
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Comparative ranking against the 75% NCSBN Practical Nursing passing standard
+            </p>
+          </div>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+          <HorizontalRankingChart
+            items={rankingItems}
+            benchmark={75}
+            benchmarkLabel="NCSBN Passing Benchmark (75%)"
+          />
         </div>
       </section>
 
