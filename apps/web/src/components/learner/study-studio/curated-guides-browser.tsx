@@ -26,7 +26,7 @@ import {
   CuratedGuideSummary,
   CuratedGuideDetail,
 } from "@/lib/study-client-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export function CuratedGuidesBrowser() {
   const [programme, setProgramme] = React.useState<string>("rn");

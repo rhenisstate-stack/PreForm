@@ -41,7 +41,7 @@ import {
   AIDraftQuestion,
   AdminQuizAnalytics,
 } from "@/lib/admin-study-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export function AdminTopicQuizzesClient() {
   const [activeTab, setActiveTab] = React.useState<"quizzes" | "analytics">("quizzes");

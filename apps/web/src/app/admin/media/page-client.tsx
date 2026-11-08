@@ -36,7 +36,7 @@ import {
   MAX_MEDIA_FILE_BYTES,
   ALLOWED_MEDIA_MIME_TYPES,
 } from "@/lib/media-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 import { MediaPicker } from "@/components/media/media-picker";
 
 export function AdminMediaClient() {

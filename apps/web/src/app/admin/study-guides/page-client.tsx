@@ -649,17 +649,44 @@ export function AdminStudyGuidesClient() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── AlertDialog: Destructive Deletion Confirmation ── */}
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent data-testid="delete-confirmation-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {deleteTarget?.type === "category" ? "Delete this category?" : "Delete this study guide?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteTarget?.type === "category"
+                ? "The category and its taxonomy links will be removed from Official Study Guide Management. Guides referencing it may lose their categorisation. This action is permanent and cannot be undone."
+                : "The study guide, its clinical content, takeaways, and publication status will be permanently deleted. This action is irreversible and cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting} data-testid="delete-confirmation-cancel">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              data-testid="delete-confirmation-confirm"
+              onClick={(event) => {
+                event.preventDefault();
+                runDelete();
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-</div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsGuideModalOpen(false)}>Cancel</Button>
-            <Button onClick={handleSaveGuide} className="bg-teal-600 hover:bg-teal-700 text-white">Save Guide</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-}
+

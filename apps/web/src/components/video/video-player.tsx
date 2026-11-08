@@ -5,7 +5,7 @@ import { Play, CheckCircle2, Clock, ShieldCheck, AlertCircle } from "lucide-reac
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { LearningVideo, LearnerVideoProgress, videoService } from "@/lib/video-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export interface VideoPlayerProps {
   video: LearningVideo;

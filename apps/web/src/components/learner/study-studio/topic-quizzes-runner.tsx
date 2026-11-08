@@ -29,7 +29,7 @@ import {
   TopicQuizResults,
 } from "@/lib/study-client-service";
 import { aiStudyService } from "@/lib/ai-study-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 import {
   Dialog,
   DialogContent,

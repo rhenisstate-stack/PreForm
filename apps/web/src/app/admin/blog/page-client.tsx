@@ -35,7 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { blogService, AdminBlogPost } from "@/lib/blog-service";
 import { MediaPicker } from "@/components/media/media-picker";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export function AdminBlogClient() {
   const [posts, setPosts] = React.useState<AdminBlogPost[]>([]);

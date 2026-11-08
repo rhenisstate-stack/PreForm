@@ -31,7 +31,7 @@ import {
   submitFlashcardReview,
 } from "@/lib/study-service";
 import { studyService, FlashcardDeck } from "@/lib/study-client-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 import {
   Dialog,
   DialogContent,

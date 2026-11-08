@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { MessageSquarePlus, Send, AlertCircle, CheckCircle2 } from "lucide-react";
 import { feedbackService, LearnerFeedback } from "@/lib/feedback-service";
 import { useAuth } from "@/lib/auth-context";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export interface FeedbackDialogProps {
   open: boolean;

@@ -45,7 +45,7 @@ import { aiStudyService, AISummaryResult, AIGeneratedFlashcard } from "@/lib/ai-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 import {
   Dialog,
   DialogContent,

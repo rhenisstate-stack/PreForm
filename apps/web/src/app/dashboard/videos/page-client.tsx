@@ -22,7 +22,7 @@ import {
   videoService,
 } from "@/lib/video-service";
 import { VideoPlayer } from "@/components/video/video-player";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export function LearnerVideosClient() {
   const [videos, setVideos] = React.useState<LearningVideo[]>([]);

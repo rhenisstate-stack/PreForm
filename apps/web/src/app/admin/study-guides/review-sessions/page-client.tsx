@@ -36,7 +36,7 @@ import {
   AdminReviewSessionRecord,
   AdminReviewSessionDetail,
 } from "@/lib/admin-study-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export function AdminReviewSessionsClient() {
   const [activeTab, setActiveTab] = React.useState<"analytics" | "sessions" | "config">("analytics");

@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { LearningVideo, videoService } from "@/lib/video-service";
 import { MediaPicker } from "@/components/media/media-picker";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export function AdminVideosClient() {
   const [videos, setVideos] = React.useState<LearningVideo[]>([]);

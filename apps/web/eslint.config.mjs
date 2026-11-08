@@ -31,6 +31,30 @@ const eslintConfig = defineConfig([
       "prefer-const": "warn",
     },
   },
+  // PrepFord notification standard: raw Sonner may only be imported by the
+  // central notification service and the global Toaster component. All other
+  // modules must use `notify` from "@/lib/notifications".
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: [
+      "src/lib/notifications.{ts,tsx}",
+      "src/components/ui/sonner.{ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["sonner", "sonner/*"],
+              message:
+                "Use the centralized notification service (import { notify } from '@/lib/notifications'). Direct Sonner imports are reserved for the global Toaster and notify service.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

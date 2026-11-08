@@ -30,7 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { feedbackService, LearnerFeedback } from "@/lib/feedback-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 import { useAuth } from "@/lib/auth-context";
 
 export function AdminFeedbackClient() {

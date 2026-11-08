@@ -52,7 +52,7 @@ import {
   AdminStudyNote,
   AdminNoteFilterParams,
 } from "@/lib/admin-study-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export function AdminNotesClient() {
   const [notes, setNotes] = React.useState<AdminStudyNote[]>([]);

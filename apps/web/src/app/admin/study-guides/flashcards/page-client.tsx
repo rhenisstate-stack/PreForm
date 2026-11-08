@@ -38,7 +38,7 @@ import {
   AdminFlashcardDeck,
   AdminFlashcard,
 } from "@/lib/admin-study-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export function AdminFlashcardsClient() {
   const [decks, setDecks] = React.useState<AdminFlashcardDeck[]>([]);

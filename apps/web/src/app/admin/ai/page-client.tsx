@@ -25,7 +25,7 @@ import {
   AIProviderConfig,
   AIMonitoring,
 } from "@/lib/admin-study-service";
-import { toast } from "sonner";
+import { notify as toast } from "@/lib/notifications";
 
 export function AdminAIGovernanceClient() {
   const [config, setConfig] = React.useState<AIProviderConfig | null>(null);
