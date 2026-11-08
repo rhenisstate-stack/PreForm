@@ -125,6 +125,7 @@ builder.Services.AddScoped<IAdminReportingService, AdminReportingService>();
 builder.Services.AddScoped<IQuestionAnalyticsService, QuestionAnalyticsService>();
 builder.Services.AddScoped<ICsvExportService, CsvExportService>();
 builder.Services.AddScoped<IOperationalMonitoringService, OperationalMonitoringService>();
+builder.Services.AddScoped<ISystemAnalyticsService, SystemAnalyticsService>();
 
 // Authentication with PrepfordAuth scheme (Bearer Session Token & Gateway HMAC)
 builder.Services.AddAuthentication(options =>
