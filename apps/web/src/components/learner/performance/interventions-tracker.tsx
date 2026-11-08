@@ -51,7 +51,7 @@ export function InterventionsTracker({ interventions, isLoading }: Interventions
         <div className="space-y-3">
           {interventions.map((item) => {
             const hasPost = item.postInterventionAccuracyPercent !== null && item.postInterventionAccuracyPercent !== undefined;
-            const delta = item.deltaAccuracyPercent ?? 0;
+            const delta = item.deltaAccuracyPercent ?? (item as any).accuracyDeltaPercent ?? (hasPost ? item.postInterventionAccuracyPercent! - item.baselineAccuracyPercent : 0);
             const isPos = delta > 0;
             const isDone = item.status === "Completed";
 

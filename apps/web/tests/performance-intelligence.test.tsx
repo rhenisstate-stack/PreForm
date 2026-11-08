@@ -81,115 +81,106 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
     {
       categoryCode: "MOC",
       categoryName: "Management of Care",
-      questionsAttempted: 85,
-      correctResponses: 68,
-      incorrectResponses: 17,
+      pathway: "rn",
+      totalQuestions: 85,
+      correctCount: 68,
       accuracyPercent: 80.0,
       classification: "Strong",
-      confidenceLevel: "High",
-      trendDirection: "Up",
-      sampleSizeStatus: "Adequate",
-      averageTimeSpentSeconds: 48,
+      averageTimeSeconds: 48,
+      peerBenchmarkAccuracyPercent: 70.0,
+      deltaFromPeerPercent: 10.0,
+      recommendedRemediationAction: null,
     },
     {
       categoryCode: "PHA",
       categoryName: "Pharmacological and Parenteral Therapies",
-      questionsAttempted: 40,
-      correctResponses: 22,
-      incorrectResponses: 18,
+      pathway: "rn",
+      totalQuestions: 40,
+      correctCount: 22,
       accuracyPercent: 55.0,
       classification: "NeedsAttention",
-      confidenceLevel: "High",
-      trendDirection: "Down",
-      sampleSizeStatus: "Adequate",
-      averageTimeSpentSeconds: 62,
+      averageTimeSeconds: 62,
+      peerBenchmarkAccuracyPercent: 68.0,
+      deltaFromPeerPercent: -13.0,
+      recommendedRemediationAction: "Review high-risk IV titration protocols and calculation formulas.",
     },
     {
       categoryCode: "SIC",
       categoryName: "Safety and Infection Control",
-      questionsAttempted: 4,
-      correctResponses: 2,
-      incorrectResponses: 2,
+      pathway: "rn",
+      totalQuestions: 4,
+      correctCount: 2,
       accuracyPercent: 50.0,
       classification: "InsufficientData",
-      confidenceLevel: "Low",
-      trendDirection: "Neutral",
-      sampleSizeStatus: "Low",
-      averageTimeSpentSeconds: 50,
+      averageTimeSeconds: 50,
+      peerBenchmarkAccuracyPercent: 72.0,
+      deltaFromPeerPercent: -22.0,
+      recommendedRemediationAction: null,
     },
   ];
 
   const mockQuestionIntelligence: QuestionIntelligenceSummary = {
-    totalGradedQuestions: 450,
-    overallAccuracyPercent: 75.1,
+    totalQuestionsAnalyzed: 450,
     questionTypes: [
       {
         questionTypeKey: "sata",
-        questionTypeName: "Select All That Apply (SATA)",
-        category: "Clinical Prioritization",
-        questionsAttempted: 60,
-        correctResponses: 36,
+        displayName: "Select All That Apply (SATA)",
+        isNgn: true,
+        totalQuestions: 60,
+        correctCount: 36,
         accuracyPercent: 60.0,
-        averageTimeSpentSeconds: 72,
-        sampleSizeStatus: "Adequate",
-        performanceLevel: "Moderate",
+        averageTimeSeconds: 72,
       },
       {
         questionTypeKey: "single-choice",
-        questionTypeName: "Standard Multiple Choice",
-        category: "Traditional",
-        questionsAttempted: 200,
-        correctResponses: 168,
+        displayName: "Standard Multiple Choice",
+        isNgn: false,
+        totalQuestions: 200,
+        correctCount: 168,
         accuracyPercent: 84.0,
-        averageTimeSpentSeconds: 42,
-        sampleSizeStatus: "Adequate",
-        performanceLevel: "Strong",
+        averageTimeSeconds: 42,
       },
     ],
-    difficultyBreakdown: [
+    difficulties: [
       {
         difficulty: "Easy",
-        questionsAttempted: 100,
-        correctResponses: 92,
+        totalQuestions: 100,
+        correctCount: 92,
         accuracyPercent: 92.0,
-        averageTimeSpentSeconds: 35,
       },
       {
         difficulty: "Hard",
-        questionsAttempted: 80,
-        correctResponses: 44,
+        totalQuestions: 80,
+        correctCount: 44,
         accuracyPercent: 55.0,
-        averageTimeSpentSeconds: 68,
       },
     ],
     clinicalJudgmentSteps: [
       {
         stepKey: "RecognizeCues",
         stepName: "Recognize Cues",
-        stepNumber: 1,
-        questionsAttempted: 50,
-        correctResponses: 42,
+        orderIndex: 1,
+        totalQuestions: 50,
+        correctCount: 42,
         accuracyPercent: 84.0,
-        status: "Proficient",
       },
       {
         stepKey: "PrioritizeHypotheses",
         stepName: "Prioritize Hypotheses",
-        stepNumber: 3,
-        questionsAttempted: 45,
-        correctResponses: 27,
+        orderIndex: 3,
+        totalQuestions: 45,
+        correctCount: 27,
         accuracyPercent: 60.0,
-        status: "Developing",
       },
     ],
     recurringErrors: [
       {
-        errorType: "CategoryDeficiency",
+        patternKey: "err_pha_01",
         title: "Pharmacological and Parenteral Therapies",
         description: "Accuracy is 55.0% across 40 questions.",
-        incorrectCount: 18,
-        accuracyPercent: 55.0,
-        targetCode: "PHA",
+        impactLevel: "Critical",
+        affectedQuestionCount: 18,
+        targetCategoryCode: "PHA",
         suggestedIntervention: "Review high-risk medication administration protocols.",
       },
     ],
@@ -207,7 +198,7 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
       targetClientNeedCode: "PHA",
       targetClientNeedName: "Pharmacological and Parenteral Therapies",
       actionHref: "/dashboard?tab=tutored_cat&category=PHA",
-      actionLabel: "Start Intervention Drill",
+      actionLabel: "Launch Practice Drill",
       createdAt: new Date().toISOString(),
     },
   ];
@@ -217,17 +208,14 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
       id: "inv_001",
       recommendationId: "rec_001",
       title: "Remediation Drill: Master High-Alert Pharmacology Titrations",
-      category: "TargetedPractice",
       targetCategoryCode: "PHA",
       targetCategoryName: "Pharmacological and Parenteral Therapies",
       baselineAccuracyPercent: 55.0,
-      baselineQuestionsAnswered: 40,
       postInterventionAccuracyPercent: 72.5,
-      postInterventionQuestionsAnswered: 30,
-      accuracyDeltaPercent: 17.5,
-      status: "Evaluated",
+      deltaAccuracyPercent: 17.5,
+      status: "Completed",
       startedAt: new Date(Date.now() - 86400000 * 3).toISOString(),
-      lastEvaluatedAt: new Date().toISOString(),
+      completedAt: new Date().toISOString(),
     },
   ];
 
@@ -291,13 +279,15 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
       />
     );
 
-    expect(screen.getByText(/NCLEX-RN Performance Intelligence/i)).toBeInTheDocument();
+    expect(screen.getByText("Performance Intelligence Snapshot")).toBeInTheDocument();
+    expect(screen.getByText("NCLEX-RN")).toBeInTheDocument();
+    expect(screen.getByText("Current Clinical Preparedness & Longitudinal Growth")).toBeInTheDocument();
     expect(screen.getByText("75.1%")).toBeInTheDocument();
-    expect(screen.getByText(/12 Assessments/i)).toBeInTheDocument();
-    expect(screen.getByText(/450 Questions/i)).toBeInTheDocument();
+    expect(screen.getByText("12")).toBeInTheDocument();
+    expect(screen.getByText("450")).toBeInTheDocument();
     expect(screen.getByText("Pharmacological and Parenteral Therapies")).toBeInTheDocument();
 
-    const link = screen.getByRole("link", { name: /Open Full Intelligence/i });
+    const link = screen.getByRole("link", { name: /View Full Intelligence/i });
     expect(link).toHaveAttribute("href", "/learner/nclex-rn/performance");
   });
 
@@ -314,22 +304,22 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
       />
     );
 
-    expect(screen.getByText("NCSBN Client Needs Mastery")).toBeInTheDocument();
+    expect(screen.getByText("NCLEX Client Needs Category Mastery")).toBeInTheDocument();
     expect(screen.getByText("Management of Care")).toBeInTheDocument();
     expect(screen.getByText("80.0%")).toBeInTheDocument();
-    expect(screen.getByText("Strong")).toBeInTheDocument();
+    expect(screen.getByText("Strong Mastery")).toBeInTheDocument();
 
     expect(screen.getByText("Pharmacological and Parenteral Therapies")).toBeInTheDocument();
     expect(screen.getByText("55.0%")).toBeInTheDocument();
-    expect(screen.getByText("Needs Attention")).toBeInTheDocument();
+    expect(screen.getByText("Needs Priority Focus")).toBeInTheDocument();
 
     expect(screen.getByText("Safety and Infection Control")).toBeInTheDocument();
-    expect(screen.getByText("Insufficient Data")).toBeInTheDocument();
+    expect(screen.getByText("Insufficient Data (<5 Qs)")).toBeInTheDocument();
 
     // Click targeted practice button
-    const drillButtons = screen.getAllByRole("button", { name: /Practice Drill/i });
-    fireEvent.click(drillButtons[0]);
-    expect(handlePractice).toHaveBeenCalledWith("MOC");
+    const drillButton = screen.getByRole("button", { name: /Practice Drill/i });
+    fireEvent.click(drillButton);
+    expect(handlePractice).toHaveBeenCalledWith("PHA");
   });
 
   /* -------------------------------------------------------------------------- */
@@ -344,23 +334,33 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
       />
     );
 
+    // Question types (default active sub-tab)
     expect(screen.getByText("Select All That Apply (SATA)")).toBeInTheDocument();
     expect(screen.getByText("60.0%")).toBeInTheDocument();
     expect(screen.getByText("Standard Multiple Choice")).toBeInTheDocument();
     expect(screen.getByText("84.0%")).toBeInTheDocument();
 
-    // Difficulty
-    expect(screen.getByText("Easy")).toBeInTheDocument();
+    // Difficulty subtab
+    const diffTab = screen.getByRole("button", { name: /Difficulty/i });
+    fireEvent.click(diffTab);
+    expect(screen.getByText("Easy Tier")).toBeInTheDocument();
     expect(screen.getByText("92.0%")).toBeInTheDocument();
-    expect(screen.getByText("Hard")).toBeInTheDocument();
+    expect(screen.getByText("Hard Tier")).toBeInTheDocument();
+    expect(screen.getByText("55.0%")).toBeInTheDocument();
 
-    // NCJMM
+    // NCJMM subtab
+    const ncjmmTab = screen.getByRole("button", { name: /NCJMM Model/i });
+    fireEvent.click(ncjmmTab);
     expect(screen.getByText("Recognize Cues")).toBeInTheDocument();
+    expect(screen.getByText("84.0%")).toBeInTheDocument();
     expect(screen.getByText("Prioritize Hypotheses")).toBeInTheDocument();
+    expect(screen.getByText("60.0%")).toBeInTheDocument();
 
-    // Recurring error alert
-    expect(screen.getByText(/Recurring Deficiencies & Patterns/i)).toBeInTheDocument();
-    expect(screen.getByText("18 Incorrect Responses")).toBeInTheDocument();
+    // Error traps subtab
+    const errorsTab = screen.getByRole("button", { name: /Error Traps/i });
+    fireEvent.click(errorsTab);
+    expect(screen.getByText("Pharmacological and Parenteral Therapies")).toBeInTheDocument();
+    expect(screen.getByText(/Review high-risk medication administration protocols/i)).toBeInTheDocument();
   });
 
   /* -------------------------------------------------------------------------- */
@@ -381,13 +381,13 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
 
     expect(screen.getByText("Master High-Alert Pharmacology Titrations")).toBeInTheDocument();
     expect(screen.getByText(/Current accuracy in Pharmacological Therapies is 55.0%/i)).toBeInTheDocument();
-    expect(screen.getByText("HIGH PRIORITY")).toBeInTheDocument();
+    expect(screen.getByText("High Priority")).toBeInTheDocument();
 
-    const startBtn = screen.getByRole("button", { name: /Start Intervention Drill/i });
+    const startBtn = screen.getByRole("button", { name: /Track Intervention/i });
     fireEvent.click(startBtn);
     expect(handleStart).toHaveBeenCalledWith(mockRecommendations[0]);
 
-    const dismissBtn = screen.getByRole("button", { name: /Dismiss/i });
+    const dismissBtn = screen.getByTitle("Dismiss recommendation");
     fireEvent.click(dismissBtn);
     expect(handleUpdate).toHaveBeenCalledWith("rec_001", "Dismissed");
   });
@@ -402,7 +402,7 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
     expect(screen.getByText("55.0%")).toBeInTheDocument(); // Baseline
     expect(screen.getByText("72.5%")).toBeInTheDocument(); // Post-intervention
     expect(screen.getByText("+17.5%")).toBeInTheDocument(); // Delta
-    expect(screen.getByText("Evaluated")).toBeInTheDocument();
+    expect(screen.getByText("Completed")).toBeInTheDocument();
   });
 
   /* -------------------------------------------------------------------------- */
@@ -485,11 +485,13 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
     );
 
     expect(screen.getByText("Longitudinal Attempt Comparison")).toBeInTheDocument();
-    expect(screen.getByText("62.0%")).toBeInTheDocument();
-    expect(screen.getByText("78.0%")).toBeInTheDocument();
-    expect(screen.getByText("+16.0%")).toBeInTheDocument();
-    expect(screen.getByText("-12 min")).toBeInTheDocument();
+    expect(screen.getAllByText("62.0%").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("78.0%").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/\+16\.0%/i)).toBeInTheDocument();
+    expect(screen.getByText("60 min")).toBeInTheDocument();
+    expect(screen.getByText("48 min")).toBeInTheDocument();
     expect(screen.getByText(/Score increased by \+16% in 12 fewer minutes/i)).toBeInTheDocument();
+    expect(screen.getByText("+20.0%")).toBeInTheDocument();
   });
 
   /* -------------------------------------------------------------------------- */
@@ -561,5 +563,14 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
       screen.getByRole("heading", { name: /NCLEX-RN Clinical Performance Intelligence/i })
     ).toBeInTheDocument();
     expect(screen.getByText(/Switch to NCLEX-PN/i)).toBeInTheDocument();
+
+    // Switch to PN
+    fireEvent.click(screen.getByText(/Switch to NCLEX-PN/i));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: /NCLEX-PN Clinical Performance Intelligence/i })
+      ).toBeInTheDocument();
+    });
   });
 });
