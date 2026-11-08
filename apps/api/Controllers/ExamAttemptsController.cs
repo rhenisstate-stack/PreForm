@@ -454,7 +454,6 @@ public class ExamAttemptsController : ControllerBase
 
         var attemptsQuery = _context.ExamAttempts
             .AsNoTracking()
-            .Include(ea => ea.Exam)
             .Include(ea => ea.Responses)
             .Where(ea => ea.UserId == targetUserId);
 
