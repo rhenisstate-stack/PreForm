@@ -23,7 +23,7 @@ export function SubscriptionsPageClient({ initialPlans }: SubscriptionsPageClien
     return PRODUCTS.filter((p) => p.isActive !== false && p.planType !== "readiness");
   });
 
-  const [pathwayFilter, setPathwayFilter] = React.useState<"all" | "RN" | "PN" | "Both">("all");
+  const [pathwayFilter, setPathwayFilter] = React.useState<"all" | "RN" | "PN">("all");
   const [intervalFilter, setIntervalFilter] = React.useState<"month" | "quarter">("month");
   const [appearance, setAppearance] = React.useState<any>(null);
 
@@ -79,8 +79,7 @@ export function SubscriptionsPageClient({ initialPlans }: SubscriptionsPageClien
   const displayedPlans = React.useMemo(() => {
     const filtered = plans.filter((p) => {
       if (pathwayFilter === "all") return true;
-      if (pathwayFilter === "Both") return p.pathway === "Both";
-      return p.pathway === pathwayFilter || p.pathway === "Both";
+      return p.pathway === pathwayFilter;
     });
 
     // If "all" is selected and monthly interval, return the 3 flagship tiers: Starter, Pro, Premium
@@ -124,14 +123,7 @@ export function SubscriptionsPageClient({ initialPlans }: SubscriptionsPageClien
     return `Choose ${plan.name} Plan`;
   };
 
-  const getPathwayBadge = (pathway: "RN" | "PN" | "Both") => {
-    if (pathway === "Both") {
-      return (
-        <span className="inline-flex items-center gap-1 text-xs font-semibold text-secondary">
-          <Layers className="h-3.5 w-3.5" /> RN &amp; PN Dual Access
-        </span>
-      );
-    }
+  const getPathwayBadge = (pathway: "RN" | "PN") => {
     return (
       <span className="text-xs sm:text-sm font-medium text-muted-foreground">
         {pathway} pathway
@@ -190,17 +182,6 @@ export function SubscriptionsPageClient({ initialPlans }: SubscriptionsPageClien
                 }`}
               >
                 NCLEX-PN
-              </button>
-              <button
-                type="button"
-                onClick={() => setPathwayFilter("Both")}
-                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-all ${
-                  pathwayFilter === "Both"
-                    ? "bg-secondary text-secondary-foreground shadow-sm"
-                    : "bg-muted/60 text-muted-foreground hover:bg-muted"
-                }`}
-              >
-                Dual Access (RN &amp; PN)
               </button>
             </div>
 

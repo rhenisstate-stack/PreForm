@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { performanceIntelligenceService, QuestionReviewFilter } from "@/lib/api-services";
 import { resolveSession } from "@/lib/session";
+import { enforceLearnerPathway } from "@/lib/pathway-enforcement";
 
 export async function GET(request: Request) {
   const session = await resolveSession(request);
@@ -9,8 +10,12 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
+  const requestedPathway = searchParams.get("pathway");
+  const check = enforceLearnerPathway(session, requestedPathway);
+  if (!check.allowed) return check.errorResponse!;
+
   const filter: QuestionReviewFilter = {
-    pathway: searchParams.get("pathway") || undefined,
+    pathway: check.effectivePathway,
     attemptId: searchParams.get("attemptId") || undefined,
     categoryCode: searchParams.get("categoryCode") || undefined,
     questionTypeKey: searchParams.get("questionTypeKey") || undefined,

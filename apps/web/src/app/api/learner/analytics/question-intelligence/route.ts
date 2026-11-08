@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { performanceIntelligenceService, AnalyticsFilter } from "@/lib/api-services";
 import { resolveSession } from "@/lib/session";
+import { enforceLearnerPathway } from "@/lib/pathway-enforcement";
 
 export async function GET(request: Request) {
   const session = await resolveSession(request);
@@ -9,8 +10,12 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
+  const requestedPathway = searchParams.get("pathway");
+  const check = enforceLearnerPathway(session, requestedPathway);
+  if (!check.allowed) return check.errorResponse!;
+
   const filter: AnalyticsFilter = {
-    pathway: (searchParams.get("pathway") as "rn" | "pn" | "all") || undefined,
+    pathway: check.effectivePathway,
     timeframe: (searchParams.get("timeframe") as "7d" | "30d" | "90d" | "6m" | "all" | "custom") || undefined,
     fromDate: searchParams.get("fromDate") || undefined,
     toDate: searchParams.get("toDate") || undefined,

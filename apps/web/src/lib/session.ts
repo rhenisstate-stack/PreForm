@@ -428,9 +428,10 @@ export async function resolveSession(request?: Request): Promise<VerifiedSession
     dbMeta?.displayName ||
     String(rawPayload.displayName || rawPayload.name || "Nursing Candidate");
 
-  const authoritativePathway: "rn" | "pn" | "both" =
-    dbMeta?.pathway ||
-    (rawPayload.pathway === "both" || rawPayload.pathway === "pn" ? rawPayload.pathway : "rn");
+  const rawP = String(rawPayload.pathway || "").trim().toLowerCase();
+  const dbP = String(dbMeta?.pathway || "").trim().toLowerCase();
+  const authoritativePathway: "rn" | "pn" =
+    dbP === "pn" || rawP === "pn" ? "pn" : "rn";
 
   const authoritativePlan =
     dbMeta?.activePlan ||

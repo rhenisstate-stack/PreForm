@@ -10,7 +10,7 @@ export interface AuthUser {
   name: string;
   displayName: string;
   role: string;
-  pathway: "rn" | "pn" | "both";
+  pathway: "rn" | "pn";
   picture?: string;
   provider?: string;
   activePlan?: string;

@@ -24,6 +24,17 @@ export async function GET(
     );
   }
 
+  if (session.role === "candidate" && session.pathway?.toLowerCase() !== pathway) {
+    return NextResponse.json(
+      {
+        success: false,
+        code: "PATHWAY_MISMATCH",
+        error: `Cross-pathway access forbidden. Learner is enrolled in NCLEX-${session.pathway?.toUpperCase()} and cannot access NCLEX-${pathway.toUpperCase()} analytics.`
+      },
+      { status: 403 }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const timeRange = searchParams.get("timeRange") || undefined;
 

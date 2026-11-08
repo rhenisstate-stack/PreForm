@@ -19,6 +19,19 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json().catch(() => ({}));
+
+  // Enforce single-pathway boundary for candidate role
+  if (session.role === "candidate") {
+    if (body.pathway && body.pathway.toLowerCase() !== session.pathway?.toLowerCase()) {
+      return NextResponse.json({
+        success: false,
+        code: "PATHWAY_MISMATCH",
+        error: `Cross-pathway access forbidden. Learner is enrolled in NCLEX-${session.pathway?.toUpperCase()} and cannot create NCLEX-${body.pathway.toUpperCase()} attempts.`
+      }, { status: 403 });
+    }
+    body.pathway = session.pathway;
+  }
+
   const res = await attemptsService.startAttempt(body, session);
   return NextResponse.json(res.data || { success: res.success, error: res.error }, { status: res.status });
 }

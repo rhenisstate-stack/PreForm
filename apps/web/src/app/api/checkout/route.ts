@@ -68,13 +68,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const authoritativePathway: "rn" | "pn" | "both" =
-      product.pathway === "Both" ||
-      (product.entitlements?.includes("rn") && product.entitlements?.includes("pn"))
-        ? "both"
-        : product.pathway === "PN" || product.entitlements?.includes("pn")
-          ? "pn"
-          : "rn";
+    const studentPathway = session.pathway === "pn" ? "pn" : "rn";
+    const authoritativePathway: "rn" | "pn" =
+      product.pathway?.toUpperCase() === "PN"
+        ? "pn"
+        : product.pathway?.toUpperCase() === "RN"
+          ? "rn"
+          : studentPathway;
 
     const promoCode = typeof body.promoCode === "string" ? body.promoCode.trim() : undefined;
 
