@@ -535,7 +535,7 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
   /* -------------------------------------------------------------------------- */
   /* 10. PerformanceIntelligenceView Integration                               */
   /* -------------------------------------------------------------------------- */
-  it("renders dedicated RN Performance Intelligence View with pathway identity", async () => {
+  it("enforces single pathway isolation and blocks cross-pathway performance access", () => {
     // Mock global fetch for API calls
     const mockFetch = vi.fn().mockImplementation((url: string) => {
       if (url.includes("/api/learner/analytics/overview")) {
@@ -557,20 +557,17 @@ describe("PrepFord NCLEX — Performance Intelligence Component Suite", () => {
     });
     globalThis.fetch = mockFetch;
 
-    render(<PerformanceIntelligenceView initialPathway="rn" canSwitchPathway={true} />);
+    const { unmount } = render(<PerformanceIntelligenceView initialPathway="rn" />);
 
     expect(
       screen.getByRole("heading", { name: /NCLEX-RN Clinical Performance Intelligence/i })
     ).toBeInTheDocument();
-    expect(screen.getByText(/Switch to NCLEX-PN/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Switch to NCLEX-PN/i)).not.toBeInTheDocument();
+    unmount();
 
-    // Switch to PN
-    fireEvent.click(screen.getByText(/Switch to NCLEX-PN/i));
-
-    await waitFor(() => {
-      expect(
-        screen.getByRole("heading", { name: /NCLEX-PN Clinical Performance Intelligence/i })
-      ).toBeInTheDocument();
-    });
+    // Cross-pathway attempt: RN student attempting to access PN performance view
+    render(<PerformanceIntelligenceView initialPathway="pn" />);
+    expect(screen.getByTestId("dashboard-entitlement-blocked")).toBeInTheDocument();
+    expect(screen.getByText(/NCLEX-PN Entitlement Required/i)).toBeInTheDocument();
   });
 });

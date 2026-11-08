@@ -25,7 +25,7 @@ let mockAuthState = {
     name: string;
     displayName: string;
     role: string;
-    pathway: "rn" | "pn" | "both";
+    pathway: "rn" | "pn";
     activePlan?: string;
     targetExamDate?: string;
   },
@@ -259,14 +259,10 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
       expect(screen.getByTestId("modal-create-test")).toBeInTheDocument();
     });
 
-    it("provides deliberate pathway switcher to switch to NCLEX-PN dashboard", () => {
+    it("does not render any cross-pathway switcher to switch to NCLEX-PN dashboard", () => {
       render(<NCLEXRNDashboardPage />);
 
-      const switchBtn = screen.getByTestId("rn-deliberate-switch-to-pn");
-      expect(switchBtn).toHaveTextContent(/Switch to NCLEX-PN Dashboard/i);
-
-      fireEvent.click(switchBtn);
-      expect(mockPush).toHaveBeenCalledWith("/dashboard/pn");
+      expect(screen.queryByTestId("rn-deliberate-switch-to-pn")).not.toBeInTheDocument();
     });
 
     it("renders RN targeted study recommendations and official RN category breakdown", () => {
@@ -374,14 +370,10 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
       expect(screen.getByTestId("modal-create-test")).toBeInTheDocument();
     });
 
-    it("provides deliberate pathway switcher to switch to NCLEX-RN dashboard", () => {
+    it("does not render any cross-pathway switcher to switch to NCLEX-RN dashboard", () => {
       render(<NCLEXPNDashboardPage />);
 
-      const switchBtn = screen.getByTestId("pn-deliberate-switch-to-rn");
-      expect(switchBtn).toHaveTextContent(/Switch to NCLEX-RN Dashboard/i);
-
-      fireEvent.click(switchBtn);
-      expect(mockPush).toHaveBeenCalledWith("/dashboard/rn");
+      expect(screen.queryByTestId("pn-deliberate-switch-to-rn")).not.toBeInTheDocument();
     });
 
     it("renders PN targeted bedside recommendations and official PN category breakdown (Coordinated Care)", () => {
@@ -483,7 +475,7 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
       ).toHaveAttribute("href", "/dashboard/pn");
     });
 
-    it("allows dual-access candidates (pathway: 'both') to access both /dashboard/rn and /dashboard/pn", () => {
+    it("denies access and fails closed if candidate has invalid or legacy 'both' pathway", () => {
       mockAuthState = {
         ...mockAuthState,
         isAuthenticated: true,
@@ -493,16 +485,16 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
           name: "Taylor Dual",
           displayName: "Taylor Dual, RN",
           role: "candidate",
-          pathway: "both",
+          pathway: "both" as unknown as "rn" | "pn",
         },
       };
 
       const { unmount } = render(<DashboardClient lockedPathway="rn" />);
-      expect(screen.getByTestId("nclex-rn-dashboard-view")).toBeInTheDocument();
+      expect(screen.getByTestId("dashboard-entitlement-blocked")).toBeInTheDocument();
       unmount();
 
       render(<DashboardClient lockedPathway="pn" />);
-      expect(screen.getByTestId("nclex-pn-dashboard-view")).toBeInTheDocument();
+      expect(screen.getByTestId("dashboard-entitlement-blocked")).toBeInTheDocument();
     });
 
     it("preserves unauthenticated sign-in link destination when visiting /dashboard/rn and /dashboard/pn", () => {
@@ -525,17 +517,17 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
       expect(pnSignInLink).toHaveAttribute("href", "/sign-in?from=/dashboard/pn");
     });
 
-    it("preserves examination context and title in assessment creation modal for both RN and PN", () => {
+    it("preserves examination context and title in assessment creation modal for each pathway", () => {
       mockAuthState = {
         ...mockAuthState,
         isAuthenticated: true,
         user: {
-          id: "candidate-dual",
-          email: "dual@prepford.com",
-          name: "Taylor Dual",
-          displayName: "Taylor Dual, RN",
+          id: "candidate-rn",
+          email: "rn@prepford.com",
+          name: "Morgan RN",
+          displayName: "Morgan RN",
           role: "candidate",
-          pathway: "both",
+          pathway: "rn",
         },
       };
 
@@ -544,6 +536,19 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
       const rnModal = screen.getByTestId("modal-create-test");
       expect(within(rnModal).getByText(/Create New NCLEX-RN Assessment Test/i)).toBeInTheDocument();
       unmount();
+
+      mockAuthState = {
+        ...mockAuthState,
+        isAuthenticated: true,
+        user: {
+          id: "candidate-pn",
+          email: "pn@prepford.com",
+          name: "Casey PN",
+          displayName: "Casey PN",
+          role: "candidate",
+          pathway: "pn",
+        },
+      };
 
       render(<NCLEXPNDashboardPage />);
       fireEvent.click(screen.getByTestId("pn-hero-create-test-btn"));

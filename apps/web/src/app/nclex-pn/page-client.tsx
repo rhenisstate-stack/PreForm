@@ -1331,7 +1331,7 @@ export function NCLEXPNPageClient() {
                         variant="outline"
                         className="border-secondary/30 bg-secondary/10 text-secondary text-xs font-semibold"
                       >
-                        {plan.pathway === "Both" ? "PN + RN Dual Track" : "NCLEX-PN Pathway"}
+                        NCLEX-PN Pathway
                       </Badge>
                       <span className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground">
                         <Clock className="h-3.5 w-3.5" />

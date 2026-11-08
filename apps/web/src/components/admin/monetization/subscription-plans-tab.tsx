@@ -691,7 +691,7 @@ export function SubscriptionPlansTab({ canManagePlans }: SubscriptionPlansTabPro
                         <span className="font-mono text-[11px] text-muted-foreground">{plan.slug}</span>
                         <span className="text-muted-foreground">•</span>
                         <Badge
-                          variant={plan.pathway === "Both" ? "default" : "secondary"}
+                          variant={plan.pathway === "RN" ? "default" : "secondary"}
                           className="text-[10px] px-1.5 py-0 h-4"
                         >
                           {plan.pathway}

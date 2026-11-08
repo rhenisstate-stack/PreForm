@@ -62,13 +62,7 @@ export function CartPageClient() {
   );
   const cartPathwayLabel =
     items.length > 0
-      ? Array.from(
-          new Set(
-            items.map((item) =>
-              item.product.pathway === "Both" ? "RN & PN" : item.product.pathway
-            )
-          )
-        ).join(" + ")
+      ? Array.from(new Set(items.map((item) => item.product.pathway))).join(" + ")
       : (user?.pathway || "RN").toUpperCase();
 
   // Process ?add=<productId> from query string
@@ -222,7 +216,7 @@ export function CartPageClient() {
                       <div className="space-y-2 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline" className="font-semibold text-xs border-secondary/40 text-secondary">
-                            {product.pathway === "Both" ? "NCLEX-RN & PN" : `NCLEX-${product.pathway}`}
+                            {`NCLEX-${product.pathway}`}
                           </Badge>
                           <Badge variant="secondary" className="text-[11px] font-medium">
                             {product.planType === "readiness"

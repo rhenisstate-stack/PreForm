@@ -167,10 +167,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
       const filtered = prev.filter((i) => {
         if (i.product.planType === "readiness") return true;
-        const overlapsPathway =
-          i.product.pathway === product.pathway ||
-          i.product.pathway === "Both" ||
-          product.pathway === "Both";
+        const overlapsPathway = i.product.pathway === product.pathway;
         return !overlapsPathway;
       });
       return [...filtered, { product, quantity: 1 }];

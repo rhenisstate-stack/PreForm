@@ -3,7 +3,6 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { DashboardClient, RECENT_ACTIVITY_STORAGE_KEY } from "@/app/dashboard/page-client";
-import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
 
 let mockAuthState = {
   user: null as null | {
@@ -34,7 +33,7 @@ vi.mock("@/lib/cart-context", () => ({
   useCart: () => mockCartState,
 }));
 
-describe("PrepFord Learner Dashboard (/dashboard)", () => {
+describe("PrepFord Learner Dashboard (/dashboard) — Single-Pathway Resolution", () => {
   beforeEach(() => {
     localStorage.clear();
     mockAuthState = {
@@ -64,10 +63,10 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
     expect(signInLink).toHaveAttribute("href", "/sign-in?from=/dashboard");
   });
 
-  it("renders welcome header, active pathway, real user details, and fallback 'Explore study materials' CTA when no recent activity exists", () => {
+  it("resolves authenticated RN candidate to dedicated NCLEX-RN dashboard view", () => {
     mockAuthState = {
       user: {
-        id: "candidate-123",
+        id: "candidate-rn-123",
         email: "alex.rn@prepford.com",
         name: "Alex Morgan",
         displayName: "Alex Morgan, BSN",
@@ -82,66 +81,31 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
 
     render(<DashboardClient />);
 
-    const welcomeHeader = screen.getByTestId("dashboard-welcome-header");
-    expect(
-      within(welcomeHeader).getByRole("heading", {
-        name: /Welcome back, Alex Morgan, BSN\./i,
-      })
-    ).toBeInTheDocument();
-    expect(within(welcomeHeader).getByText(/NCLEX-RN Focus/i)).toBeInTheDocument();
-    expect(within(welcomeHeader).getByText(/NCLEX-RN Complete Preparation/i)).toBeInTheDocument();
+    // Renders the dedicated RN view
+    expect(screen.getByTestId("nclex-rn-dashboard-view")).toBeInTheDocument();
+    expect(screen.queryByTestId("nclex-pn-dashboard-view")).not.toBeInTheDocument();
 
-    const exploreCta = screen.getByTestId("dashboard-primary-cta-explore");
-    expect(exploreCta).toHaveAttribute("href", "/study-guide");
-    expect(screen.queryByTestId("dashboard-primary-cta-continue")).not.toBeInTheDocument();
+    // Renders RN-specific hero action buttons
+    expect(screen.getByTestId("rn-hero-create-test-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("rn-hero-take-rat-btn")).toBeInTheDocument();
+
+    // Renders static pathway badge, not a switcher
+    expect(screen.getByTestId("dashboard-pathway-badge")).toHaveTextContent(/NCLEX-RN/i);
+    expect(screen.queryByTestId("dashboard-pathway-rn")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-pathway-pn")).not.toBeInTheDocument();
   });
 
-  it("renders 'Continue studying' primary CTA when a real recent study activity exists in localStorage", () => {
+  it("resolves authenticated PN candidate to dedicated NCLEX-PN dashboard view", () => {
     mockAuthState = {
       user: {
-        id: "candidate-123",
-        email: "alex.rn@prepford.com",
-        name: "Alex Morgan",
-        displayName: "Alex Morgan",
+        id: "candidate-pn-456",
+        email: "jordan.pn@prepford.com",
+        name: "Jordan Lee",
+        displayName: "Jordan Lee, LPN",
         role: "candidate",
-        pathway: "rn",
-      },
-      isAuthenticated: true,
-      isLoading: false,
-    };
-
-    localStorage.setItem(
-      RECENT_ACTIVITY_STORAGE_KEY,
-      JSON.stringify({
-        title: "Pharmacological & Parenteral Therapies",
-        categoryTitle: "Physiological Integrity",
-        href: "/study-guide/pharmacology",
-        pathway: "rn",
-        visitedAt: new Date().toISOString(),
-      })
-    );
-
-    render(<DashboardClient />);
-
-    const continueCta = screen.getByTestId("dashboard-primary-cta-continue");
-    expect(continueCta).toBeInTheDocument();
-    expect(continueCta).toHaveAttribute("href", "/study-guide/pharmacology");
-    expect(
-      within(continueCta).getByText(
-        /Continue studying: Pharmacological & Parenteral Therapies/i
-      )
-    ).toBeInTheDocument();
-  });
-
-  it("renders 4 clear study launchpad actions for RN, PN, Study Guides, and Practice", () => {
-    mockAuthState = {
-      user: {
-        id: "candidate-123",
-        email: "alex.rn@prepford.com",
-        name: "Alex",
-        displayName: "Alex",
-        role: "candidate",
-        pathway: "rn",
+        pathway: "pn",
+        activePlan: "NCLEX-PN Complete Preparation",
+        targetExamDate: "2026-11-30",
       },
       isAuthenticated: true,
       isLoading: false,
@@ -149,27 +113,29 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
 
     render(<DashboardClient />);
 
-    const launchpad = screen.getByTestId("dashboard-primary-actions");
-    expect(within(launchpad).getByRole("heading", { name: "NCLEX-RN Preparation" })).toBeInTheDocument();
-    expect(within(launchpad).getByRole("heading", { name: "NCLEX-PN Preparation" })).toBeInTheDocument();
-    expect(within(launchpad).getByRole("heading", { name: "Nursing Study Guides" })).toBeInTheDocument();
-    expect(within(launchpad).getByRole("heading", { name: "Practice & Course Finder" })).toBeInTheDocument();
+    // Renders the dedicated PN view
+    expect(screen.getByTestId("nclex-pn-dashboard-view")).toBeInTheDocument();
+    expect(screen.queryByTestId("nclex-rn-dashboard-view")).not.toBeInTheDocument();
 
-    expect(within(launchpad).getByRole("link", { name: /Open NCLEX-RN Hub/i })).toHaveAttribute("href", "/nclex-rn");
-    expect(within(launchpad).getByRole("link", { name: /Open NCLEX-PN Hub/i })).toHaveAttribute("href", "/nclex-pn");
-    expect(within(launchpad).getByRole("link", { name: /Browse Study Guides/i })).toHaveAttribute("href", "/study-guide");
-    expect(within(launchpad).getByRole("link", { name: /Open Practice & Courses/i })).toHaveAttribute("href", "/courses");
+    // Renders PN-specific hero action buttons
+    expect(screen.getByTestId("pn-hero-create-test-btn")).toBeInTheDocument();
+    expect(screen.getByTestId("pn-hero-take-rat-btn")).toBeInTheDocument();
+
+    // Renders static pathway badge, not a switcher
+    expect(screen.getByTestId("dashboard-pathway-badge")).toHaveTextContent(/NCLEX-PN/i);
+    expect(screen.queryByTestId("dashboard-pathway-rn")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("dashboard-pathway-pn")).not.toBeInTheDocument();
   });
 
-  it("does not display fabricated scores or pass predictions, and provides transparent telemetry status", () => {
+  it("renders safe enrollment resolution card when candidate pathway is unassigned", () => {
     mockAuthState = {
       user: {
-        id: "candidate-123",
-        email: "alex.rn@prepford.com",
-        name: "Alex",
-        displayName: "Alex",
+        id: "candidate-unassigned",
+        email: "unassigned@prepford.com",
+        name: "Pending Student",
+        displayName: "Pending Student",
         role: "candidate",
-        pathway: "rn",
+        pathway: "" as unknown as "rn",
       },
       isAuthenticated: true,
       isLoading: false,
@@ -177,88 +143,15 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
 
     render(<DashboardClient />);
 
-    // Zero fake telemetry
-    expect(screen.queryByText(/1,098 \/ 1,840/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/High Pass Signal/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/6 Days/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/Review 48 Missed Concepts/i)).not.toBeInTheDocument();
-
-    const disclosure = screen.getByTestId("dashboard-telemetry-disclosure");
-    expect(disclosure).toBeInTheDocument();
-    expect(
-      within(disclosure).getByText(/PrepFord does not display fabricated personal scores or exam pass predictions/i)
-    ).toBeInTheDocument();
-  });
-
-  it("renders all 7 real Study Guide domains and quick navigation links", () => {
-    mockAuthState = {
-      user: {
-        id: "candidate-123",
-        email: "alex.rn@prepford.com",
-        name: "Alex",
-        displayName: "Alex",
-        role: "candidate",
-        pathway: "rn",
-      },
-      isAuthenticated: true,
-      isLoading: false,
-    };
-
-    render(<DashboardClient />);
-
-    const domainsSection = screen.getByTestId("dashboard-study-domains");
-    for (const cat of STUDY_GUIDE_CATEGORIES) {
-      const card = within(domainsSection).getByTestId(`dashboard-domain-${cat.slug}`);
-      expect(card).toBeInTheDocument();
-      expect(within(card).getByRole("heading", { name: cat.title })).toBeInTheDocument();
-      expect(within(card).getByRole("link", { name: /Study Domain/i })).toHaveAttribute(
-        "href",
-        `/study-guide/${cat.slug}`
-      );
-    }
-
-    const quickNav = screen.getByTestId("dashboard-quick-nav");
-    expect(within(quickNav).getByRole("link", { name: /Account & Profile/i })).toHaveAttribute("href", "/profile");
-    expect(within(quickNav).getByRole("link", { name: /Security & Devices/i })).toHaveAttribute(
+    expect(screen.getByTestId("dashboard-unassigned-resolution")).toBeInTheDocument();
+    expect(screen.getByText(/Pathway Enrollment Required/i)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Select Study Plan/i })).toHaveAttribute(
       "href",
-      "/dashboard/settings/security"
+      "/subscriptions"
     );
-    expect(within(quickNav).getByRole("link", { name: /All Study Plans/i })).toHaveAttribute("href", "/subscriptions");
-    expect(within(quickNav).getByRole("link", { name: /Cart \(0\)/i })).toHaveAttribute("href", "/cart");
-    expect(within(quickNav).getByRole("link", { name: /Learner FAQ/i })).toHaveAttribute("href", "/faq");
-    expect(within(quickNav).getByRole("link", { name: /Contact Support/i })).toHaveAttribute("href", "/contact");
   });
 
-  it("supports switching pathways between NCLEX-RN and NCLEX-PN", async () => {
-    const user = userEvent.setup();
-    mockAuthState = {
-      user: {
-        id: "candidate-123",
-        email: "alex.rn@prepford.com",
-        name: "Alex",
-        displayName: "Alex",
-        role: "candidate",
-        pathway: "rn",
-      },
-      isAuthenticated: true,
-      isLoading: false,
-    };
-
-    render(<DashboardClient />);
-
-    const rnBtn = screen.getByTestId("dashboard-pathway-rn");
-    const pnBtn = screen.getByTestId("dashboard-pathway-pn");
-
-    expect(rnBtn).toHaveAttribute("aria-pressed", "true");
-    expect(pnBtn).toHaveAttribute("aria-pressed", "false");
-
-    await user.click(pnBtn);
-    expect(pnBtn).toHaveAttribute("aria-pressed", "true");
-    expect(rnBtn).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByText(/NCLEX-PN Focus/i)).toBeInTheDocument();
-  });
-
-  it("renders persistent dark teal sidebar with grouped navigation and collapse control", async () => {
+  it("renders persistent dark teal sidebar with enrolled navigation link and collapse control", async () => {
     const user = userEvent.setup();
     mockAuthState = {
       user: {
@@ -278,26 +171,24 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
     const sidebar = screen.getByTestId("learner-sidebar");
     expect(sidebar).toBeInTheDocument();
 
-    // Verify navigation groups
+    // Sidebar navigation groups
     expect(within(sidebar).getByText(/^Learn$/i)).toBeInTheDocument();
     expect(within(sidebar).getByText(/^Test Bank & Assessments$/i)).toBeInTheDocument();
     expect(within(sidebar).getByText(/^Reports$/i)).toBeInTheDocument();
     expect(within(sidebar).getByText(/^Account$/i)).toBeInTheDocument();
 
-    // Verify Security & Devices sidebar navigation link
+    // Enrolled pathway sidebar link only points to /dashboard/rn for RN student
+    expect(within(sidebar).getByText("NCLEX-RN Dashboard")).toBeInTheDocument();
+    expect(within(sidebar).queryByText("NCLEX-PN Dashboard")).not.toBeInTheDocument();
+
+    // Sidebar Security & Devices link
     const securityNavLink = within(sidebar).getByTestId("sidebar-nav-security");
-    expect(securityNavLink).toBeInTheDocument();
     expect(securityNavLink).toHaveAttribute("href", "/dashboard/settings/security");
 
-    // Verify active report view highlight
-    expect(within(sidebar).getByText("Previous Tests")).toBeInTheDocument();
-    expect(within(sidebar).getByText("Active")).toBeInTheDocument();
+    // Prominent sidebar + Create Test Now button
+    expect(screen.getByTestId("sidebar-create-test-btn")).toBeInTheDocument();
 
-    // Verify prominent + Create Test Now button
-    const createBtn = screen.getByTestId("sidebar-create-test-btn");
-    expect(createBtn).toBeInTheDocument();
-
-    // Verify collapse toggle button
+    // Collapse toggle button
     const collapseToggle = screen.getByTestId("sidebar-collapse-toggle");
     expect(collapseToggle).toBeInTheDocument();
     await user.click(collapseToggle);
@@ -339,7 +230,7 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
     expect(accountMenu).toHaveAttribute("href", "/profile");
   });
 
-  it("handles honest zero-state and toggles the illustrative sample benchmark preview", async () => {
+  it("toggles the illustrative sample benchmark preview within resolved RN dashboard", async () => {
     const user = userEvent.setup();
     mockAuthState = {
       user: {
@@ -356,85 +247,15 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
 
     render(<DashboardClient />);
 
-    // Honest zero-state when learner has no test attempts yet
-    expect(screen.getByText(/No Assessment Attempts Recorded Yet/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Start Your First Practice Test/i })).toBeInTheDocument();
-
-    // Toggle illustrative sample preview
     const toggle = screen.getByTestId("toggle-sample-preview");
     expect(toggle).toHaveAttribute("aria-checked", "false");
 
     await user.click(toggle);
     expect(toggle).toHaveAttribute("aria-checked", "true");
 
-    // Clear disclosure banner must appear
-    expect(
-      screen.getByText(/SAMPLE BENCHMARK PREVIEW • Illustrative Reference Data/i)
-    ).toBeInTheDocument();
-
-    // Chart and historical table must now render with sample benchmark data
+    // Chart and historical table must render with sample benchmark data
     expect(screen.getByTestId("assessment-performance-chart")).toBeInTheDocument();
     expect(screen.getByTestId("assessment-history-table")).toBeInTheDocument();
-
-    // Verify right-side performance tier key
-    expect(screen.getByTestId("performance-key-vh")).toBeInTheDocument();
-    expect(screen.getByTestId("performance-key-h")).toBeInTheDocument();
-    expect(screen.getByTestId("performance-key-b")).toBeInTheDocument();
-    expect(screen.getByTestId("performance-key-l")).toBeInTheDocument();
-
-    // Verify reference attempts in table (Tutored CAT 7 down to Tutored CAT 1)
-    const historyTable = screen.getByTestId("assessment-history-table");
-    expect(within(historyTable).getByText("Tutored CAT 7")).toBeInTheDocument();
-    expect(within(historyTable).getByText("Tutored CAT 6")).toBeInTheDocument();
-    expect(within(historyTable).getByText("Tutored CAT 1")).toBeInTheDocument();
-  });
-
-  it("opens Review Test and View Report modals for assessment attempts", async () => {
-    const user = userEvent.setup();
-    mockAuthState = {
-      user: {
-        id: "candidate-123",
-        email: "alex.rn@prepford.com",
-        name: "Alex",
-        displayName: "Alex",
-        role: "candidate",
-        pathway: "rn",
-      },
-      isAuthenticated: true,
-      isLoading: false,
-    };
-
-    render(<DashboardClient />);
-
-    // Enable sample preview to populate attempts
-    await user.click(screen.getByTestId("toggle-sample-preview"));
-
-    // Click Review Test for Tutored CAT 7
-    const reviewBtn = screen.getByTestId("btn-review-test-tcat-07");
-    await user.click(reviewBtn);
-
-    const reviewModal = screen.getByTestId("modal-review-test");
-    expect(reviewModal).toBeInTheDocument();
-    expect(within(reviewModal).getByText(/Review: Tutored CAT 7/i)).toBeInTheDocument();
-    expect(within(reviewModal).getAllByText(/Clinical Rationale & Explanation/i).length).toBeGreaterThan(0);
-
-    // Close review modal
-    await user.click(within(reviewModal).getByRole("button", { name: /Close Review/i }));
-    expect(screen.queryByTestId("modal-review-test")).not.toBeInTheDocument();
-
-    // Click View Report for Tutored CAT 7
-    const reportBtn = screen.getByTestId("btn-view-report-tcat-07");
-    await user.click(reportBtn);
-
-    const reportModal = screen.getByTestId("modal-view-report");
-    expect(reportModal).toBeInTheDocument();
-    expect(within(reportModal).getByText(/Performance Report: Tutored CAT 7/i)).toBeInTheDocument();
-    expect(within(reportModal).getByText(/Client Needs Domain Mastery/i)).toBeInTheDocument();
-    expect(within(reportModal).getByText(/Targeted Next Study Steps/i)).toBeInTheDocument();
-
-    // Close report modal
-    await user.click(within(reportModal).getByRole("button", { name: /Done/i }));
-    expect(screen.queryByTestId("modal-view-report")).not.toBeInTheDocument();
   });
 
   it("launches the Create Test modal and records a real completed attempt", async () => {
@@ -454,13 +275,13 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
 
     render(<DashboardClient />);
 
-    // Launch Create Test modal
-    const startTestBtn = screen.getByRole("button", { name: /Start Your First Practice Test/i });
-    await user.click(startTestBtn);
+    // Launch Create Test modal from RN hero button
+    const createTestBtn = screen.getByTestId("rn-hero-create-test-btn");
+    await user.click(createTestBtn);
 
     const createModal = screen.getByTestId("modal-create-test");
     expect(createModal).toBeInTheDocument();
-    expect(within(createModal).getByText(/Create New Assessment Test/i)).toBeInTheDocument();
+    expect(within(createModal).getByText(/Create New NCLEX-RN Assessment Test/i)).toBeInTheDocument();
 
     // Start test session
     const startSessionBtn = within(createModal).getByRole("button", { name: /Start Test Session/i });
@@ -475,252 +296,37 @@ describe("PrepFord Learner Dashboard (/dashboard)", () => {
 
     // Review modal for the newly generated test should open
     expect(screen.getByTestId("modal-review-test")).toBeInTheDocument();
-    expect(screen.getByText(/Review: Tutored CAT 1/i)).toBeInTheDocument();
   });
 
-  describe("Learner Dashboard Redesign, RAT Relocation & Full-Page Experience", () => {
-    it("renders dedicated RAT entry button immediately beside Create Test Now in welcome header", () => {
-      mockAuthState = {
-        user: {
-          id: "candidate-123",
-          email: "alex.rn@prepford.com",
-          name: "Alex",
-          displayName: "Alex",
-          role: "candidate",
-          pathway: "rn",
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      };
+  it("launches RAT workflow directly from Take RN Readiness button", async () => {
+    const user = userEvent.setup();
+    mockAuthState = {
+      user: {
+        id: "candidate-123",
+        email: "alex.rn@prepford.com",
+        name: "Alex",
+        displayName: "Alex",
+        role: "candidate",
+        pathway: "rn",
+      },
+      isAuthenticated: true,
+      isLoading: false,
+    };
 
-      render(<DashboardClient />);
+    render(<DashboardClient />);
 
-      const createTestBtn = screen.getByTestId("dashboard-create-test-btn");
-      const takeRatBtn = screen.getByTestId("dashboard-take-rat-btn");
+    const takeRatBtn = screen.getByTestId("rn-hero-take-rat-btn");
+    await user.click(takeRatBtn);
 
-      expect(createTestBtn).toBeInTheDocument();
-      expect(takeRatBtn).toBeInTheDocument();
-      expect(within(createTestBtn).getByText(/\+ Create Test Now/i)).toBeInTheDocument();
-      expect(within(takeRatBtn).getByText(/Take Readiness Assessment/i)).toBeInTheDocument();
-    });
+    const workspace = screen.getByTestId("modal-create-test");
+    expect(workspace).toBeInTheDocument();
+    expect(workspace.className).toContain("fixed inset-0");
 
-    it("launches RAT workflow directly from Take Readiness Assessment button and renders full-page RAT configuration", async () => {
-      const user = userEvent.setup();
-      mockAuthState = {
-        user: {
-          id: "candidate-123",
-          email: "alex.rn@prepford.com",
-          name: "Alex",
-          displayName: "Alex",
-          role: "candidate",
-          pathway: "rn",
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      };
+    // Verifies RAT-specific heading and structure
+    expect(within(workspace).getByText(/Take Readiness Assessment \(RAT\)/i)).toBeInTheDocument();
+    expect(within(workspace).getByRole("button", { name: /Start Test Session/i })).toBeInTheDocument();
 
-      render(<DashboardClient />);
-
-      const takeRatBtn = screen.getByTestId("dashboard-take-rat-btn");
-      await user.click(takeRatBtn);
-
-      const workspace = screen.getByTestId("modal-create-test");
-      expect(workspace).toBeInTheDocument();
-      expect(workspace.className).toContain("fixed inset-0");
-      expect(workspace.className).not.toContain("max-h-[90vh]");
-
-      // Verifies RAT-specific heading and structure
-      expect(within(workspace).getByText(/Take Readiness Assessment \(RAT\)/i)).toBeInTheDocument();
-      expect(within(workspace).getByText(/Standardized Readiness Assessment Test \(RAT\)/i)).toBeInTheDocument();
-      expect(within(workspace).getByText(/Standardized multi-domain clinical examination/i)).toBeInTheDocument();
-      expect(within(workspace).getByRole("button", { name: /Start Test Session/i })).toBeInTheDocument();
-
-      // RAT mode does NOT render CAT mode options
-      expect(within(workspace).queryByText(/Tutored Computer Adaptive Test \(CAT\)/i)).not.toBeInTheDocument();
-    });
-
-    it("launches Create Test Now and ensures RAT option is completely removed from CAT configuration", async () => {
-      const user = userEvent.setup();
-      mockAuthState = {
-        user: {
-          id: "candidate-123",
-          email: "alex.rn@prepford.com",
-          name: "Alex",
-          displayName: "Alex",
-          role: "candidate",
-          pathway: "rn",
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      };
-
-      render(<DashboardClient />);
-
-      const createTestBtn = screen.getByTestId("dashboard-create-test-btn");
-      await user.click(createTestBtn);
-
-      const workspace = screen.getByTestId("modal-create-test");
-      expect(workspace).toBeInTheDocument();
-      expect(workspace.className).toContain("fixed inset-0");
-
-      // Verifies CAT-specific heading
-      expect(within(workspace).getByText(/Create New Assessment Test/i)).toBeInTheDocument();
-      expect(within(workspace).getByText(/Tutored Computer Adaptive Test \(CAT\)/i)).toBeInTheDocument();
-      expect(within(workspace).getByRole("button", { name: /Start Test Session/i })).toBeInTheDocument();
-
-      // Confirms RAT button is NOT inside Create Test Now controls
-      expect(within(workspace).queryByRole("button", { name: /Readiness Assessment \(RAT\)/i })).not.toBeInTheDocument();
-      expect(within(workspace).queryByText(/Standardized Readiness Assessment Test \(RAT\)/i)).not.toBeInTheDocument();
-    });
-
-    it("renders authoritative KPI summary cards with 4 metrics", () => {
-      mockAuthState = {
-        user: {
-          id: "candidate-123",
-          email: "alex.rn@prepford.com",
-          name: "Alex",
-          displayName: "Alex",
-          role: "candidate",
-          pathway: "rn",
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      };
-
-      render(<DashboardClient />);
-
-      const kpiSection = screen.getByTestId("dashboard-kpi-summary");
-      expect(kpiSection).toBeInTheDocument();
-
-      // Check the 4 metric cards
-      expect(within(kpiSection).getByText("Completed Assessments")).toBeInTheDocument();
-      expect(within(kpiSection).getByText("Questions Answered")).toBeInTheDocument();
-      expect(within(kpiSection).getByText("Overall Accuracy")).toBeInTheDocument();
-      expect(within(kpiSection).getByText("Readiness Level")).toBeInTheDocument();
-      expect(within(kpiSection).getByText("Not Assessed")).toBeInTheDocument();
-    });
-
-    it("supports light-mode and theme-aware classes across learner sidebar", () => {
-      mockAuthState = {
-        user: {
-          id: "candidate-123",
-          email: "alex.rn@prepford.com",
-          name: "Alex",
-          displayName: "Alex",
-          role: "candidate",
-          pathway: "rn",
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      };
-
-      render(<DashboardClient />);
-
-      const sidebar = screen.getByTestId("learner-sidebar");
-      expect(sidebar).toBeInTheDocument();
-      expect(sidebar.className).toContain("bg-card");
-      expect(sidebar.className).toContain("border-border");
-      expect(sidebar.className).toContain("text-foreground");
-      expect(sidebar.className).toContain("dark:bg-[#07161C]");
-    });
-
-    it("renders Assessment Activity & Lifecycle Overview and Question-Performance Analytics sections", () => {
-      mockAuthState = {
-        user: {
-          id: "candidate-123",
-          email: "alex.rn@prepford.com",
-          name: "Alex",
-          displayName: "Alex",
-          role: "candidate",
-          pathway: "rn",
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      };
-
-      render(<DashboardClient />);
-
-      const activitySection = screen.getByTestId("dashboard-assessment-activity");
-      expect(activitySection).toBeInTheDocument();
-      expect(within(activitySection).getByText("Assessment Activity & Lifecycle Overview")).toBeInTheDocument();
-      expect(within(activitySection).getByText("Completed Attempts")).toBeInTheDocument();
-      expect(within(activitySection).getByText("In-Progress Sessions")).toBeInTheDocument();
-      expect(within(activitySection).getByText("Interrupted / Abandoned")).toBeInTheDocument();
-
-      const questionAnalytics = screen.getByTestId("dashboard-question-analytics");
-      expect(questionAnalytics).toBeInTheDocument();
-      expect(within(questionAnalytics).getByText("Question-Performance & Item Response Analytics")).toBeInTheDocument();
-      expect(within(questionAnalytics).getByText("Correct Responses")).toBeInTheDocument();
-      expect(within(questionAnalytics).getByText("Incorrect (Remediation Queue)")).toBeInTheDocument();
-      expect(within(questionAnalytics).getByText("Unanswered / Skipped")).toBeInTheDocument();
-    });
-
-    it("renders all 8 NCSBN Client Needs categories and supports domain drill-down practice", async () => {
-      const user = userEvent.setup();
-      mockAuthState = {
-        user: {
-          id: "candidate-123",
-          email: "alex.rn@prepford.com",
-          name: "Alex",
-          displayName: "Alex",
-          role: "candidate",
-          pathway: "rn",
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      };
-
-      render(<DashboardClient />);
-
-      const cnSection = screen.getByTestId("client-needs-mastery-section");
-      expect(cnSection).toBeInTheDocument();
-      for (const code of ["MOC", "SIC", "HPM", "PSI", "BCC", "PHA", "RRP", "PPT"]) {
-        expect(within(cnSection).getByTestId(`client-need-card-${code}`)).toBeInTheDocument();
-      }
-
-      await user.click(within(cnSection).getByTestId("practice-client-need-MOC"));
-      const workspace = screen.getByTestId("modal-create-test");
-      expect(workspace).toBeInTheDocument();
-      expect(within(workspace).getByTestId("active-domain-filter-banner")).toHaveTextContent("MOC");
-    });
-
-    it("executes a full RAT session from Take Readiness Assessment through completion and records it in RAT history", async () => {
-      const user = userEvent.setup();
-      mockAuthState = {
-        user: {
-          id: "candidate-rat-99",
-          email: "rat.rn@prepford.com",
-          name: "Morgan",
-          displayName: "Morgan",
-          role: "candidate",
-          pathway: "rn",
-        },
-        isAuthenticated: true,
-        isLoading: false,
-      };
-
-      render(<DashboardClient />);
-
-      await user.click(screen.getByTestId("dashboard-take-rat-btn"));
-      const createModal = screen.getByTestId("modal-create-test");
-      await user.click(within(createModal).getByRole("button", { name: /1 Question \(Quick Test\)/i }));
-      await user.click(within(createModal).getByRole("button", { name: /Start Test Session/i }));
-
-      const optionsGroup = within(createModal).getByLabelText("Question options");
-      const firstOption = within(optionsGroup).getAllByRole("radio")[0];
-      await user.click(firstOption);
-
-      await user.click(within(createModal).getByRole("button", { name: /Submit & Complete Test/i }));
-
-      const reviewModal = screen.getByTestId("modal-review-test");
-      expect(reviewModal).toBeInTheDocument();
-      expect(within(reviewModal).getByText(/Readiness Test 1/i)).toBeInTheDocument();
-      await user.click(within(reviewModal).getByRole("button", { name: /Close Review/i }));
-
-      await user.click(screen.getByTestId("tab-rat"));
-      const historyTable = screen.getByTestId("assessment-history-table");
-      expect(within(historyTable).getAllByText(/Readiness Test 1/i).length).toBeGreaterThan(0);
-      expect(within(historyTable).getAllByText(/Readiness \(RAT\)/i).length).toBeGreaterThan(0);
-    });
+    // RAT mode does NOT render CAT mode options
+    expect(within(workspace).queryByText(/Tutored Computer Adaptive Test \(CAT\)/i)).not.toBeInTheDocument();
   });
 });

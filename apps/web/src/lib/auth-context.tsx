@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (
     data: SignInInput,
     options?: { recoverSessions?: boolean }
-  ): Promise<{ success: boolean; error?: string; errorCode?: string }> => {
+  ): Promise<{ success: boolean; user?: AuthUser; error?: string; errorCode?: string }> => {
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -103,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const registerUser = async (data: SignUpInput): Promise<{ success: boolean; error?: string }> => {
+  const registerUser = async (data: SignUpInput): Promise<{ success: boolean; user?: AuthUser; error?: string }> => {
     try {
       const res = await fetch("/api/auth/register", {
         method: "POST",

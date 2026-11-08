@@ -35,7 +35,7 @@ describe("Phase 3 — Frontend API Client & Gateway Security Verification", () =
     name: "Elizabeth Administrator",
     displayName: "Elizabeth Administrator",
     role: "admin",
-    pathway: "both",
+    pathway: "rn",
     csrfToken: "csrf_token_admin_789",
     expiresAt: new Date(Date.now() + 86400000).toISOString(),
   };

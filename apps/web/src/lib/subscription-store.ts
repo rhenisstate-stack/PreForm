@@ -111,7 +111,7 @@ export interface PlanMutationInput {
   slug: string;
   description: string;
   audience?: string;
-  pathway: "RN" | "PN" | "Both";
+  pathway: "RN" | "PN";
   planType: "starter" | "pro" | "premium" | "readiness";
   price: number;
   originalPrice?: number;
