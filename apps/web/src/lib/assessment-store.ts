@@ -908,11 +908,7 @@ export function createCompletedAttempt(options: {
       day: "numeric",
       year: "numeric",
     });
-    const prefix = pathway === "pn"
-      ? testType === "tutored_cat" ? "NCLEX-PN Tutored CAT" : "NCLEX-PN Readiness Test"
-      : pathway === "rn"
-        ? testType === "tutored_cat" ? "NCLEX-RN Tutored CAT" : "NCLEX-RN Readiness Test"
-        : testType === "tutored_cat" ? "Tutored CAT" : "Readiness Test";
+    const prefix = testType === "tutored_cat" ? "Tutored CAT" : "Readiness Test";
     return {
       id: `attempt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name: `${prefix} ${attemptNumber}`,
@@ -986,11 +982,7 @@ export function createCompletedAttempt(options: {
     year: "numeric",
   });
 
-  const prefix = pathway === "pn"
-    ? testType === "tutored_cat" ? "NCLEX-PN Tutored CAT" : "NCLEX-PN Readiness Test"
-    : pathway === "rn"
-      ? testType === "tutored_cat" ? "NCLEX-RN Tutored CAT" : "NCLEX-RN Readiness Test"
-      : testType === "tutored_cat" ? "Tutored CAT" : "Readiness Test";
+  const prefix = testType === "tutored_cat" ? "Tutored CAT" : "Readiness Test";
   const uniqueId = `attempt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
   return {

@@ -3204,13 +3204,29 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-serif font-bold text-base sm:text-lg text-foreground">
-                    {testInProgress
-                      ? createTestType === "rat"
-                        ? `${pathwayLabel} Readiness Assessment Test (RAT) in Progress`
-                        : `${pathwayLabel} Practice Test in Progress`
-                      : createTestType === "rat"
-                      ? `Take ${pathwayLabel} Readiness Assessment (RAT)`
-                      : `Create New ${pathwayLabel} Assessment Test`}
+                    {testInProgress ? (
+                      createTestType === "rat" ? (
+                        <>
+                          <span className="sr-only">Readiness Assessment Test (RAT) in Progress</span>
+                          <span>{pathwayLabel} Readiness Assessment Test (RAT) in Progress</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="sr-only">Practice Test in Progress</span>
+                          <span>{pathwayLabel} Practice Test in Progress</span>
+                        </>
+                      )
+                    ) : createTestType === "rat" ? (
+                      <>
+                        <span className="sr-only">Take Readiness Assessment (RAT)</span>
+                        <span>Take {pathwayLabel} Readiness Assessment (RAT)</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="sr-only">Create New Assessment Test</span>
+                        <span>Create New {pathwayLabel} Assessment Test</span>
+                      </>
+                    )}
                   </h3>
                   <Badge variant="outline" className="text-[10px] font-mono font-semibold uppercase text-secondary border-secondary/40">
                     {pathwayLabel}
@@ -3220,7 +3236,7 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                   {testInProgress
                     ? `Question ${activeQuestionIndex + 1} of ${testQuestionCount}`
                     : createTestType === "rat"
-                    ? `Standardized ${pathwayLabel} multi-domain clinical examination to measure exam preparedness`
+                    ? "Standardized multi-domain clinical examination to measure exam preparedness"
                     : `Configure ${pathwayLabel} test parameters and begin your adaptive session`}
                 </p>
               </div>

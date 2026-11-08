@@ -913,8 +913,8 @@ export function NCLEXPNDashboardView({
                 Recent PN Learning Activity
               </span>
               <h3 className="text-sm font-semibold text-foreground">{recentActivity.title}</h3>
-              {recentActivity.category && (
-                <p className="text-xs text-muted-foreground">{recentActivity.category}</p>
+              {recentActivity.categoryTitle && (
+                <p className="text-xs text-muted-foreground">{recentActivity.categoryTitle}</p>
               )}
             </div>
           </div>

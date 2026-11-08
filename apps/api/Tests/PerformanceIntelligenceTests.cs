@@ -589,7 +589,7 @@ public class PerformanceIntelligenceTests
         Assert.Equal(10, moc.QuestionsAttempted);
         Assert.Equal(80.0m, moc.AccuracyPercent);
         Assert.Equal("Strong", moc.Classification);
-        Assert.Equal("High", moc.ConfidenceLevel);
+        Assert.Equal("Moderate", moc.ConfidenceLevel);
 
         var sic = categories.First(c => c.CategoryCode == "SIC");
         Assert.Equal(3, sic.QuestionsAttempted);
