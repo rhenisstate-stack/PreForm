@@ -139,34 +139,6 @@ export function PracticeExamsWorkspace({
     []
   );
 
-  useEffect(() => {
-    loadPracticeExams();
-  }, [loadPracticeExams]);
-
-  useEffect(() => {
-    if (initialMode === "create") {
-      setModalOpen(true);
-      return;
-    }
-    if (loading || !initialEntityId) return;
-    const matched = exams.find((item) => item.id === initialEntityId);
-    if (!matched) return;
-    if (initialMode === "edit") {
-      openEditModal(matched);
-    } else if (initialMode === "delete") {
-      setDeleteTarget(matched);
-    } else if (initialMode === "details") {
-      const revId = matched.latestRevision?.id || matched.currentRevision?.id;
-      if (revId) setPreviewRevisionId(revId);
-    }
-  }, [initialMode, initialEntityId, loading, exams]);
-
-  useEffect(() => {
-    if (modalOpen) {
-      loadEligibleQuestions(pathway, questionFormatFilter);
-    }
-  }, [modalOpen, pathway, questionFormatFilter, loadEligibleQuestions]);
-
   const openCreateModal = (defaultPathway?: "rn" | "pn") => {
     setEditingExam(null);
     const chosenPathway =
@@ -231,6 +203,34 @@ export function PracticeExamsWorkspace({
     setFormError(null);
     setModalOpen(true);
   };
+
+  useEffect(() => {
+    loadPracticeExams();
+  }, [loadPracticeExams]);
+
+  useEffect(() => {
+    if (modalOpen) {
+      loadEligibleQuestions(pathway, questionFormatFilter);
+    }
+  }, [modalOpen, pathway, questionFormatFilter, loadEligibleQuestions]);
+
+  useEffect(() => {
+    if (initialMode === "create") {
+      setModalOpen(true);
+      return;
+    }
+    if (loading || !initialEntityId) return;
+    const matched = exams.find((item) => item.id === initialEntityId);
+    if (!matched) return;
+    if (initialMode === "edit") {
+      openEditModal(matched);
+    } else if (initialMode === "delete") {
+      setDeleteTarget(matched);
+    } else if (initialMode === "details") {
+      const revId = matched.latestRevision?.id || matched.currentRevision?.id;
+      if (revId) setPreviewRevisionId(revId);
+    }
+  }, [initialMode, initialEntityId, loading, exams]);
 
   const handleSavePracticeExam = async (e: React.FormEvent) => {
     e.preventDefault();

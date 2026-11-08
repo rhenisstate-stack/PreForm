@@ -55,6 +55,13 @@ const eslintConfig = defineConfig([
       ],
     },
   },
+  // The root layout is the only place allowed to mount the global Toaster.
+  {
+    files: ["src/app/layout.tsx"],
+    rules: {
+      "no-restricted-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
