@@ -19,9 +19,9 @@ namespace Preform.Api.Controllers;
 public class AnalyticsController : ControllerBase
 {
     private readonly ISystemAnalyticsService _analyticsService;
-    private readonly AppDbContext _context;
+    private readonly AppDbContext? _context;
 
-    public AnalyticsController(ISystemAnalyticsService analyticsService, AppDbContext context)
+    public AnalyticsController(ISystemAnalyticsService analyticsService, AppDbContext? context = null)
     {
         _analyticsService = analyticsService;
         _context = context;

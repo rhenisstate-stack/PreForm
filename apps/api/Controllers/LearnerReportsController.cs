@@ -24,9 +24,9 @@ public class LearnerReportsController : ControllerBase
     };
 
     private readonly ILearnerReportingService _reportingService;
-    private readonly AppDbContext _context;
+    private readonly AppDbContext? _context;
 
-    public LearnerReportsController(ILearnerReportingService reportingService, AppDbContext context)
+    public LearnerReportsController(ILearnerReportingService reportingService, AppDbContext? context = null)
     {
         _reportingService = reportingService;
         _context = context;
@@ -149,8 +149,10 @@ public class LearnerReportsController : ControllerBase
             ? requestedUserId
             : callerUserId;
 
-        var targetUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
-        if (targetUser == null)
+        var targetUser = _context != null
+            ? await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
+            : null;
+        if (targetUser == null && _context != null)
         {
             return (NotFound(new { success = false, error = "Learner not found." }), null, string.Empty);
         }

@@ -348,12 +348,13 @@ public class MonetizationManagementTests
         var rnUserPnEval = await entitlementService.EvaluateEntitlementAsync("usr_rn_only", "pn");
         Assert.False(rnUserPnEval.IsEntitled);
 
-        // 2. Dual candidate has BOTH RN and PN access
+        // 2. Candidate with RN pathway has RN access, but cannot access PN even with legacy multi-pathway plan
         var dualUserRnEval = await entitlementService.EvaluateEntitlementAsync("usr_dual", "rn");
         Assert.True(dualUserRnEval.IsEntitled);
 
         var dualUserPnEval = await entitlementService.EvaluateEntitlementAsync("usr_dual", "pn");
-        Assert.True(dualUserPnEval.IsEntitled);
+        Assert.False(dualUserPnEval.IsEntitled);
+        Assert.Equal("PATHWAY_NOT_ENTITLED", dualUserPnEval.ErrorCode);
 
         // 3. Feature-level entitlement checks
         var qbankAccess = await entitlementService.EvaluateFeatureAccessAsync("usr_rn_only", "practice_exams");

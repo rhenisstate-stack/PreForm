@@ -992,8 +992,10 @@ public class LearnerAnalyticsService : ILearnerAnalyticsService
             att2 = completedAttempts.LastOrDefault(a => string.Equals(a.Exam?.Pathway, att1.Exam?.Pathway, StringComparison.OrdinalIgnoreCase)) ?? completedAttempts.Last();
         }
 
+        if (att1 == null || att2 == null) return new AttemptComparisonResponseDto();
+
         // Strict cross-pathway disallowal
-        if (att1?.Exam != null && att2?.Exam != null &&
+        if (att1.Exam != null && att2.Exam != null &&
             !string.Equals(att1.Exam.Pathway, att2.Exam.Pathway, StringComparison.OrdinalIgnoreCase))
         {
             return new AttemptComparisonResponseDto();

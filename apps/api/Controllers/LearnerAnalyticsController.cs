@@ -24,9 +24,9 @@ public class LearnerAnalyticsController : ControllerBase
     };
 
     private readonly ILearnerAnalyticsService _analyticsService;
-    private readonly AppDbContext _context;
+    private readonly AppDbContext? _context;
 
-    public LearnerAnalyticsController(ILearnerAnalyticsService analyticsService, AppDbContext context)
+    public LearnerAnalyticsController(ILearnerAnalyticsService analyticsService, AppDbContext? context = null)
     {
         _analyticsService = analyticsService;
         _context = context;
@@ -400,8 +400,10 @@ public class LearnerAnalyticsController : ControllerBase
             ? requestedUserId
             : callerUserId;
 
-        var targetUser = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
-        if (targetUser == null)
+        var targetUser = _context != null
+            ? await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, ct)
+            : null;
+        if (targetUser == null && _context != null)
         {
             return (NotFound(new { success = false, error = "Learner not found." }), null, string.Empty);
         }

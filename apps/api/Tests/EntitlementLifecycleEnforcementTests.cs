@@ -202,7 +202,7 @@ public class EntitlementLifecycleEnforcementTests
     }
 
     [Fact]
-    public async Task EvaluateEntitlement_BothPathwayPlan_EntitlesRNAndPN()
+    public async Task EvaluateEntitlement_BothPathwayAssignment_FailsClosedAndDeniesAccess()
     {
         using var context = CreateDbContext(Guid.NewGuid().ToString());
         var user = new User
@@ -241,8 +241,10 @@ public class EntitlementLifecycleEnforcementTests
         var rnResult = await service.EvaluateEntitlementAsync(user.Id, "rn");
         var pnResult = await service.EvaluateEntitlementAsync(user.Id, "pn");
 
-        Assert.True(rnResult.IsEntitled);
-        Assert.True(pnResult.IsEntitled);
+        Assert.False(rnResult.IsEntitled);
+        Assert.Equal("INVALID_PATHWAY_ENROLLMENT", rnResult.ErrorCode);
+        Assert.False(pnResult.IsEntitled);
+        Assert.Equal("INVALID_PATHWAY_ENROLLMENT", pnResult.ErrorCode);
     }
 
     [Fact]

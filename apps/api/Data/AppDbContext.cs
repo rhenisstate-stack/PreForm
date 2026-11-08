@@ -144,8 +144,10 @@ public class AppDbContext : DbContext
             entity.HasIndex(u => u.Email).IsUnique();
             entity.HasIndex(u => u.IsActive);
             entity.HasIndex(u => u.AccountStatus);
+            entity.HasIndex(u => u.Pathway);
             entity.Property(u => u.SecurityVersion).HasDefaultValue(1);
             entity.Property(u => u.AccountStatus).HasMaxLength(32).HasDefaultValue("Active");
+            entity.ToTable(t => t.HasCheckConstraint("CK_Users_Single_Pathway", "\"Pathway\" IS NULL OR \"Pathway\" IN ('rn', 'pn', 'unassigned')"));
         });
 
         // UserSession Indexes & Relationships
