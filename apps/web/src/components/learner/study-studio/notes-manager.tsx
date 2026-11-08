@@ -103,6 +103,27 @@ export function NotesManager({ initialProgramme = "rn" }: NotesManagerProps) {
   const autosaveTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Fetch initial data
+  const selectNote = (note: NoteItem) => {
+    setSelectedNote(note);
+    setTitle(note.title);
+    setTags(note.tags || []);
+    setWordCount(note.wordCount || 0);
+    setCharCount(note.characterCount || 0);
+
+    let html = "<p>Start typing clinical notes...</p>";
+    try {
+      const parsed = JSON.parse(note.contentJson);
+      html = parsed.html || parsed.contentPlainText || note.contentPlainText || html;
+    } catch {
+      html = note.contentPlainText || html;
+    }
+    setContentHtml(html);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = html;
+    }
+    setSaveStatus("saved");
+  };
+
   const loadData = React.useCallback(async () => {
     try {
       setLoading(true);
@@ -137,27 +158,6 @@ export function NotesManager({ initialProgramme = "rn" }: NotesManagerProps) {
   React.useEffect(() => {
     loadData();
   }, [loadData]);
-
-  const selectNote = (note: NoteItem) => {
-    setSelectedNote(note);
-    setTitle(note.title);
-    setTags(note.tags || []);
-    setWordCount(note.wordCount || 0);
-    setCharCount(note.characterCount || 0);
-
-    let html = "<p>Start typing clinical notes...</p>";
-    try {
-      const parsed = JSON.parse(note.contentJson);
-      html = parsed.html || parsed.contentPlainText || note.contentPlainText || html;
-    } catch {
-      html = note.contentPlainText || html;
-    }
-    setContentHtml(html);
-    if (editorRef.current) {
-      editorRef.current.innerHTML = html;
-    }
-    setSaveStatus("saved");
-  };
 
   const handleEditorInput = () => {
     if (!editorRef.current || isReadOnly) return;

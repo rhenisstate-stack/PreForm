@@ -135,25 +135,6 @@ export function StudyReviewClient() {
 
   const currentCard = queue[index] ?? null;
 
-  // Keyboard navigation
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (isConfigOpen || !currentCard || submittingRating) return;
-      if (e.code === "Space" || e.key === "Enter") {
-        e.preventDefault();
-        setRevealed((prev) => !prev);
-      } else if (revealed) {
-        if (e.key === "1") handleRating(0);
-        else if (e.key === "2") handleRating(1);
-        else if (e.key === "3") handleRating(2);
-        else if (e.key === "4") handleRating(3);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [revealed, submittingRating, currentCard, isConfigOpen, index, queue]);
-
   const handleRating = async (rating: RecallRating) => {
     if (!currentCard || submittingRating) return;
     setSubmittingRating(true);
@@ -196,6 +177,25 @@ export function StudyReviewClient() {
       setSubmittingRating(false);
     }
   };
+
+  // Keyboard navigation
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (isConfigOpen || !currentCard || submittingRating) return;
+      if (e.code === "Space" || e.key === "Enter") {
+        e.preventDefault();
+        setRevealed((prev) => !prev);
+      } else if (revealed) {
+        if (e.key === "1") handleRating(0);
+        else if (e.key === "2") handleRating(1);
+        else if (e.key === "3") handleRating(2);
+        else if (e.key === "4") handleRating(3);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [revealed, submittingRating, currentCard, isConfigOpen, index, queue, handleRating]);
 
   const handleLaunchCustomDrill = async () => {
     try {
