@@ -170,34 +170,6 @@ export function RatsManagementWorkspace({
     }
   }, []);
 
-  useEffect(() => {
-    loadRats();
-  }, [loadRats]);
-
-  useEffect(() => {
-    if (initialMode === "create") {
-      setModalOpen(true);
-      return;
-    }
-    if (loading || !initialEntityId) return;
-    const matched = rats.find((item) => item.id === initialEntityId);
-    if (!matched) return;
-    if (initialMode === "edit") {
-      openEditRatModal(matched);
-    } else if (initialMode === "delete") {
-      setDeleteTarget(matched);
-    } else if (initialMode === "details") {
-      const revId = matched.latestRevision?.id || matched.currentRevision?.id;
-      if (revId) setPreviewRevisionId(revId);
-    }
-  }, [initialMode, initialEntityId, loading, rats]);
-
-  useEffect(() => {
-    if (modalOpen) {
-      loadQuestionsForPathway(pathway);
-    }
-  }, [modalOpen, pathway, loadQuestionsForPathway]);
-
   const openCreateRatModal = () => {
     setEditingExam(null);
     setTitle("");
@@ -267,6 +239,34 @@ export function RatsManagementWorkspace({
     setFormError(null);
     setModalOpen(true);
   };
+
+  useEffect(() => {
+    loadRats();
+  }, [loadRats]);
+
+  useEffect(() => {
+    if (initialMode === "create") {
+      setModalOpen(true);
+      return;
+    }
+    if (loading || !initialEntityId) return;
+    const matched = rats.find((item) => item.id === initialEntityId);
+    if (!matched) return;
+    if (initialMode === "edit") {
+      openEditRatModal(matched);
+    } else if (initialMode === "delete") {
+      setDeleteTarget(matched);
+    } else if (initialMode === "details") {
+      const revId = matched.latestRevision?.id || matched.currentRevision?.id;
+      if (revId) setPreviewRevisionId(revId);
+    }
+  }, [initialMode, initialEntityId, loading, rats]);
+
+  useEffect(() => {
+    if (modalOpen) {
+      loadQuestionsForPathway(pathway);
+    }
+  }, [modalOpen, pathway, loadQuestionsForPathway]);
 
   const handleSaveRat = async (e: React.FormEvent) => {
     e.preventDefault();
