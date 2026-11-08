@@ -590,6 +590,7 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
           attemptNumber: nextAttemptNumber,
           questionCount: testQuestionCount,
           userAnswers: formattedAnswers,
+          pathway: activePathway,
         });
 
         const candidateSession = user?.id ? {
@@ -3201,21 +3202,26 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                 )}
               </div>
               <div>
-                <h3 className="font-serif font-bold text-base sm:text-lg text-foreground">
-                  {testInProgress
-                    ? createTestType === "rat"
-                      ? "NCLEX Readiness Assessment Test (RAT) in Progress"
-                      : "NCLEX Practice Test in Progress"
-                    : createTestType === "rat"
-                    ? "Take Readiness Assessment (RAT)"
-                    : "Create New Assessment Test"}
-                </h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-serif font-bold text-base sm:text-lg text-foreground">
+                    {testInProgress
+                      ? createTestType === "rat"
+                        ? `${pathwayLabel} Readiness Assessment Test (RAT) in Progress`
+                        : `${pathwayLabel} Practice Test in Progress`
+                      : createTestType === "rat"
+                      ? `Take ${pathwayLabel} Readiness Assessment (RAT)`
+                      : `Create New ${pathwayLabel} Assessment Test`}
+                  </h3>
+                  <Badge variant="outline" className="text-[10px] font-mono font-semibold uppercase text-secondary border-secondary/40">
+                    {pathwayLabel}
+                  </Badge>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {testInProgress
                     ? `Question ${activeQuestionIndex + 1} of ${testQuestionCount}`
                     : createTestType === "rat"
-                    ? "Standardized multi-domain clinical examination to measure exam preparedness"
-                    : "Configure test parameters and begin your adaptive session"}
+                    ? `Standardized ${pathwayLabel} multi-domain clinical examination to measure exam preparedness`
+                    : `Configure ${pathwayLabel} test parameters and begin your adaptive session`}
                 </p>
               </div>
             </div>
@@ -3285,6 +3291,13 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                 {/* Standardized Published Assessments if available (filtered so RAT never appears in Create Test Now) */}
                 {(() => {
                   const modeFilteredAssessments = availableAssessments.filter((asm) => {
+                    const matchesPathway =
+                      !asm.pathway ||
+                      asm.pathway.toLowerCase() === "both" ||
+                      asm.pathway.toLowerCase() === activePathway.toLowerCase() ||
+                      (activePathway === "rn" && !asm.title?.toLowerCase().includes("pn")) ||
+                      (activePathway === "pn" && !asm.title?.toLowerCase().includes("rn"));
+                    if (!matchesPathway) return false;
                     const isRatExam =
                       asm.examType?.toLowerCase().includes("rat") ||
                       asm.examType?.toLowerCase().includes("readiness") ||

@@ -431,4 +431,192 @@ public class PerformanceIntelligenceTests
         var statusResult = Assert.IsType<ObjectResult>(result);
         Assert.Equal(StatusCodes.Status403Forbidden, statusResult.StatusCode);
     }
+
+    [Fact]
+    public async Task GetOverview_ZeroAttempts_ReturnsGracefulEmptyMetrics()
+    {
+        var (db, service, _) = CreateFixture(Guid.NewGuid().ToString());
+        var userId = "cand_empty_01";
+
+        db.Users.Add(new User { Id = userId, Email = "empty@test.com", DisplayName = "Empty Candidate", Pathway = "rn" });
+        await db.SaveChangesAsync();
+
+        var overview = await service.GetOverviewAsync(userId, new AnalyticsFilterDto());
+
+        Assert.Equal(0, overview.TotalCompletedAssessments);
+        Assert.Equal(0, overview.TotalStartedAssessments);
+        Assert.Equal(0, overview.TotalQuestionsAnswered);
+        Assert.Equal(0m, overview.OverallAccuracyPercent);
+        Assert.Equal(0m, overview.AverageScorePercent);
+        Assert.Equal(0m, overview.CompletionRatePercent);
+        Assert.Equal("Unassessed", overview.CurrentReadinessTier);
+        Assert.Empty(overview.KeyStrengths);
+    }
+
+    [Fact]
+    public async Task GetOverview_DateBoundaryFiltering_RespectsFromAndToDates()
+    {
+        var (db, service, _) = CreateFixture(Guid.NewGuid().ToString());
+        var userId = "cand_date_01";
+
+        db.Users.Add(new User { Id = userId, Email = "date@test.com", DisplayName = "Date Candidate", Pathway = "rn" });
+        var exam = new Exam { Id = "ex_date", Title = "Practice Exam", ExamType = ExamType.Practice, Pathway = "rn" };
+        db.Exams.Add(exam);
+
+        var pastDate = DateTime.UtcNow.AddDays(-40);
+        var recentDate = DateTime.UtcNow.AddDays(-5);
+
+        // Attempt 1: 40 days ago
+        db.ExamAttempts.Add(new ExamAttempt
+        {
+            Id = "att_old",
+            UserId = userId,
+            ExamId = "ex_date",
+            Status = AttemptStatus.Completed,
+            ScorePercent = 50m,
+            StartedAt = pastDate,
+            CompletedAt = pastDate.AddMinutes(30)
+        });
+
+        // Attempt 2: 5 days ago
+        db.ExamAttempts.Add(new ExamAttempt
+        {
+            Id = "att_recent",
+            UserId = userId,
+            ExamId = "ex_date",
+            Status = AttemptStatus.Completed,
+            ScorePercent = 90m,
+            StartedAt = recentDate,
+            CompletedAt = recentDate.AddMinutes(30)
+        });
+
+        await db.SaveChangesAsync();
+
+        // Filter last 7 days only
+        var filter7d = new AnalyticsFilterDto { TimeRange = "7d" };
+        var overview7d = await service.GetOverviewAsync(userId, filter7d);
+
+        Assert.Equal(1, overview7d.TotalCompletedAssessments);
+        Assert.Equal(90m, overview7d.AverageScorePercent);
+
+        // Filter all time
+        var filterAll = new AnalyticsFilterDto { TimeRange = "all" };
+        var overviewAll = await service.GetOverviewAsync(userId, filterAll);
+
+        Assert.Equal(2, overviewAll.TotalCompletedAssessments);
+        Assert.Equal(70m, overviewAll.AverageScorePercent); // (50 + 90) / 2 = 70
+    }
+
+    [Fact]
+    public async Task PathwayIsolation_RejectsCrossPathwayPollution()
+    {
+        var (db, service, _) = CreateFixture(Guid.NewGuid().ToString());
+        var userId = "cand_isolate_01";
+
+        db.Users.Add(new User { Id = userId, Email = "iso@test.com", DisplayName = "Iso Candidate", Pathway = "rn" });
+        var examRn = new Exam { Id = "ex_iso_rn", Title = "RN Exam", ExamType = ExamType.Practice, Pathway = "rn" };
+        var examPn = new Exam { Id = "ex_iso_pn", Title = "PN Exam", ExamType = ExamType.Practice, Pathway = "pn" };
+        db.Exams.AddRange(examRn, examPn);
+
+        db.ExamAttempts.AddRange(
+            new ExamAttempt { Id = "att_iso_rn", UserId = userId, ExamId = "ex_iso_rn", Status = AttemptStatus.Completed, ScorePercent = 85m },
+            new ExamAttempt { Id = "att_iso_pn", UserId = userId, ExamId = "ex_iso_pn", Status = AttemptStatus.Completed, ScorePercent = 60m }
+        );
+
+        await db.SaveChangesAsync();
+
+        var rnOverview = await service.GetOverviewAsync(userId, new AnalyticsFilterDto { Pathway = "rn" });
+        Assert.Equal(1, rnOverview.TotalCompletedAssessments);
+        Assert.Equal(85m, rnOverview.AverageScorePercent);
+
+        var pnOverview = await service.GetOverviewAsync(userId, new AnalyticsFilterDto { Pathway = "pn" });
+        Assert.Equal(1, pnOverview.TotalCompletedAssessments);
+        Assert.Equal(60m, pnOverview.AverageScorePercent);
+    }
+
+    [Fact]
+    public async Task CategoryClassification_AppliesAuthoritativeThresholds()
+    {
+        var (db, service, _) = CreateFixture(Guid.NewGuid().ToString());
+        var userId = "cand_class_01";
+
+        db.Users.Add(new User { Id = userId, Email = "class@test.com", DisplayName = "Class Candidate", Pathway = "rn" });
+        var exam = new Exam { Id = "ex_class", Title = "Class Exam", ExamType = ExamType.Practice, Pathway = "rn" };
+        db.Exams.Add(exam);
+
+        var attempt = new ExamAttempt { Id = "att_class", UserId = userId, ExamId = "ex_class", Status = AttemptStatus.Completed };
+        db.ExamAttempts.Add(attempt);
+
+        var cnMoc = new ClientNeed { Id = "cn_moc_class", Code = "MOC", Name = "Management of Care" };
+        var cnSic = new ClientNeed { Id = "cn_sic_class", Code = "SIC", Name = "Safety and Infection Control" };
+        db.ClientNeeds.AddRange(cnMoc, cnSic);
+
+        // Seed 10 MOC questions: 8 correct (80% -> Strong)
+        for (int i = 0; i < 10; i++)
+        {
+            var q = new Question { Id = $"q_moc_{i}", ClientNeedId = "cn_moc_class", Pathway = "rn" };
+            db.Questions.Add(q);
+            db.AttemptResponses.Add(new AttemptResponse
+            {
+                Id = $"r_moc_{i}",
+                ExamAttemptId = "att_class",
+                QuestionId = $"q_moc_{i}",
+                IsCorrect = i < 8,
+                GradingState = ResponseGradingState.Graded
+            });
+        }
+
+        // Seed 3 SIC questions: 1 correct (33.3% but sample size < 5 -> InsufficientData)
+        for (int i = 0; i < 3; i++)
+        {
+            var q = new Question { Id = $"q_sic_{i}", ClientNeedId = "cn_sic_class", Pathway = "rn" };
+            db.Questions.Add(q);
+            db.AttemptResponses.Add(new AttemptResponse
+            {
+                Id = $"r_sic_{i}",
+                ExamAttemptId = "att_class",
+                QuestionId = $"q_sic_{i}",
+                IsCorrect = i == 0,
+                GradingState = ResponseGradingState.Graded
+            });
+        }
+
+        await db.SaveChangesAsync();
+
+        var categories = await service.GetCategoryIntelligenceAsync(userId, new AnalyticsFilterDto { Pathway = "rn" });
+
+        var moc = categories.First(c => c.CategoryCode == "MOC");
+        Assert.Equal(10, moc.QuestionsAttempted);
+        Assert.Equal(80.0m, moc.AccuracyPercent);
+        Assert.Equal("Strong", moc.Classification);
+        Assert.Equal("High", moc.ConfidenceLevel);
+
+        var sic = categories.First(c => c.CategoryCode == "SIC");
+        Assert.Equal(3, sic.QuestionsAttempted);
+        Assert.Equal("InsufficientData", sic.Classification);
+        Assert.Equal("Low", sic.ConfidenceLevel);
+    }
+
+    [Fact]
+    public async Task Security_ReportsController_CrossLearnerAccess_Returns403Forbidden()
+    {
+        var (db, analytics, reporting) = CreateFixture(Guid.NewGuid().ToString());
+        var controller = new LearnerReportsController(reporting);
+
+        var userClaims = new ClaimsPrincipal(new ClaimsIdentity(new[]
+        {
+            new Claim(ClaimTypes.NameIdentifier, "candidate_alpha"),
+            new Claim(ClaimTypes.Role, "candidate")
+        }, "mock"));
+
+        controller.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext { User = userClaims }
+        };
+
+        var result = await controller.GetPerformanceReport(userId: "candidate_beta");
+
+        var statusResult = Assert.IsType<ObjectResult>(result);
+        Assert.Equal(StatusCodes.Status403Forbidden, statusResult.StatusCode);
+    }
 }

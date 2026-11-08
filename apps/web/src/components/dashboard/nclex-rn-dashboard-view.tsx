@@ -96,6 +96,17 @@ const RN_NCJMM_STEPS = [
   { step: "6", title: "Evaluate Outcomes", desc: "Assess therapeutic response & adjust care" },
 ];
 
+const CANONICAL_RN_CLIENT_NEEDS = [
+  { categoryCode: "MOC", categoryName: "Management of Care", subtext: "Prioritization, delegation, informed consent & legal ethics" },
+  { categoryCode: "SIC", categoryName: "Safety and Infection Control", subtext: "Surgical asepsis, hazard prevention & emergency response" },
+  { categoryCode: "HPM", categoryName: "Health Promotion and Maintenance", subtext: "Maternal-newborn, developmental stages & disease prevention" },
+  { categoryCode: "PSI", categoryName: "Psychosocial Integrity", subtext: "Mental health concepts, therapeutic communication & crisis safety" },
+  { categoryCode: "BCC", categoryName: "Basic Care and Comfort", subtext: "Mobility, nutrition, assistive devices & non-pharmacological comfort" },
+  { categoryCode: "PHA", categoryName: "Pharmacological and Parenteral Therapies", subtext: "High-alert IV medication titration, central lines & toxicity monitoring" },
+  { categoryCode: "RRP", categoryName: "Reduction of Risk Potential", subtext: "Diagnostic testing, vital sign alterations & laboratory evaluations" },
+  { categoryCode: "PPT", categoryName: "Physiological Adaptation", subtext: "Hemodynamics, acute emergencies, medical-surgical shock & telemetry" },
+];
+
 export function NCLEXRNDashboardView({
   learnerName,
   userPathway,
@@ -129,13 +140,17 @@ export function NCLEXRNDashboardView({
 }: NCLEXRNDashboardViewProps) {
   // Filter attempts to RN attempts or general attempts
   const rnStoredAttempts = React.useMemo(() => {
-    return storedAttempts.filter((a) => !a.name.toLowerCase().includes("pn") || a.name.toLowerCase().includes("rn"));
+    return storedAttempts.filter((a) => {
+      if (a.pathway) return a.pathway === "rn";
+      return !a.name.toLowerCase().includes("pn") || a.name.toLowerCase().includes("rn");
+    });
   }, [storedAttempts]);
 
   const rnAuthoritativeAttempts = React.useMemo(() => {
-    return authoritativeAttempts.filter(
-      (a) => !a.name?.toLowerCase().includes("pn") || a.name?.toLowerCase().includes("rn")
-    );
+    return authoritativeAttempts.filter((a) => {
+      if ((a as any).pathway) return (a as any).pathway === "rn";
+      return !a.name?.toLowerCase().includes("pn") || a.name?.toLowerCase().includes("rn");
+    });
   }, [authoritativeAttempts]);
 
   const [intelligenceOverview, setIntelligenceOverview] = React.useState<LearnerPerformanceOverview | null>(null);
@@ -566,20 +581,51 @@ export function NCLEXRNDashboardView({
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-border p-6 text-center space-y-2">
-            <p className="text-sm font-medium text-foreground">No category performance recorded yet.</p>
-            <p className="text-xs text-muted-foreground max-w-md mx-auto">
-              Complete your first NCLEX-RN test or diagnostic Readiness Assessment to populate your official Client Needs
-              mastery distribution.
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => onOpenCreateTest("tutored_cat")}
-              className="mt-2 bg-secondary text-white font-semibold text-xs"
-            >
-              Start First RN Practice Set
-            </Button>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {CANONICAL_RN_CLIENT_NEEDS.map((cat) => (
+                <div
+                  key={cat.categoryCode}
+                  className="rounded-xl border border-border/80 bg-muted/20 p-4 space-y-2 hover:border-secondary/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-foreground block">{cat.categoryName}</span>
+                      <span className="text-[11px] text-muted-foreground">{cat.subtext}</span>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-mono text-secondary border-secondary/30 shrink-0 ml-2">
+                      0%
+                    </Badge>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-muted/60 overflow-hidden">
+                    <div className="h-full bg-secondary/30 rounded-full w-2" />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
+                    <span>Baseline Readiness</span>
+                    <button
+                      type="button"
+                      onClick={() => onOpenCreateTest("tutored_cat", cat.categoryCode)}
+                      className="text-secondary hover:underline font-semibold"
+                    >
+                      Drill Category →
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-xl bg-secondary/10 border border-secondary/20 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <p className="text-muted-foreground text-center sm:text-left">
+                Complete an NCLEX-RN practice set or full Readiness Assessment (RAT) to update your empirical Client Needs scores.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onOpenCreateTest("tutored_cat")}
+                className="bg-secondary text-secondary-foreground font-semibold text-xs shrink-0"
+              >
+                Start First RN Practice Set
+              </Button>
+            </div>
           </div>
         )}
       </section>
@@ -700,7 +746,189 @@ export function NCLEXRNDashboardView({
       </section>
 
       {/* =====================================================================
-          SECTION 7: AI STUDY STUDIO & CURATED HIGH-ACUITY STUDY GUIDES
+          SECTION 7: TARGETED NCLEX-RN CLINICAL RECOMMENDATIONS
+         ===================================================================== */}
+      <section
+        data-testid="rn-study-recommendations"
+        aria-labelledby="rn-recommendations-heading"
+        className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 id="rn-recommendations-heading" className="text-xl font-serif font-bold text-foreground flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-amber-500" aria-hidden="true" />
+              <span>Targeted NCLEX-RN Clinical Reasoning Recommendations</span>
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Clinical judgment review topics prioritized for registered nurse practice and high-yield examination success.
+            </p>
+          </div>
+          <Badge variant="outline" className="text-xs font-mono self-start sm:self-auto text-secondary border-secondary/40">
+            NCSBN RN Prioritized
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {recommendations.length > 0 ? (
+            recommendations.slice(0, 3).map((rec) => (
+              <div
+                key={rec.id}
+                className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-2 flex flex-col justify-between hover:border-secondary/40 transition-colors"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      {rec.category}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        rec.priority === "High"
+                          ? "bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20"
+                          : "bg-secondary/15 text-secondary"
+                      }`}
+                    >
+                      {rec.priority} Priority
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-foreground">{rec.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{rec.description}</p>
+                </div>
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => onOpenCreateTest("tutored_cat")}
+                    className="text-xs font-semibold h-8 bg-secondary text-secondary-foreground hover:bg-secondary/90 w-full"
+                  >
+                    <span>Practice Clinical Scenario</span>
+                    <ArrowRight className="ml-1.5 h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-2 flex flex-col justify-between hover:border-secondary/40 transition-colors">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      Physiological Adaptation
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+                      High Priority
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-foreground">Acute Cardiopulmonary Prioritization &amp; Ventilation</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Practice recognizing sudden hypoxemic cues, pulmonary embolisms, and prioritizing ABC interventions before diagnostic delays.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => onOpenCreateTest("tutored_cat", "PPT")}
+                    className="text-xs font-semibold h-8 bg-secondary text-secondary-foreground hover:bg-secondary/90 w-full"
+                  >
+                    <span>Drill Acute Scenarios</span>
+                    <ArrowRight className="ml-1.5 h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-2 flex flex-col justify-between hover:border-secondary/40 transition-colors">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      Management of Care
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+                      High Priority
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-foreground">RN Delegation &amp; Clinical Scope Governance</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Master the EAT framework to safely delegate routine tasks to LPNs/UAPs while retaining initial assessment and teaching.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => onOpenCreateTest("tutored_cat", "MOC")}
+                    className="text-xs font-semibold h-8 bg-secondary text-secondary-foreground hover:bg-secondary/90 w-full"
+                  >
+                    <span>Practice RN Delegation</span>
+                    <ArrowRight className="ml-1.5 h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-2 flex flex-col justify-between hover:border-secondary/40 transition-colors">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      Pharmacology &amp; Parenteral
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-secondary/15 text-secondary">
+                      Targeted Focus
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-foreground">High-Alert IV Medication Titration &amp; Toxicity</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Review weight-based calculations, vasoactive drip titrations, and early toxicity monitoring for potassium, digoxin, and insulins.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => onOpenCreateTest("tutored_cat", "PHA")}
+                    className="text-xs font-semibold h-8 bg-secondary text-secondary-foreground hover:bg-secondary/90 w-full"
+                  >
+                    <span>Practice IV Titration</span>
+                    <ArrowRight className="ml-1.5 h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* =====================================================================
+          SECTION 8: RECENT RN LEARNING ACTIVITY
+         ===================================================================== */}
+      {recentActivity && (
+        <section
+          data-testid="rn-recent-activity"
+          className="rounded-2xl border border-secondary/30 bg-secondary/5 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-secondary/15 text-secondary flex items-center justify-center shrink-0">
+              <History className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-secondary">
+                Recent RN Learning Activity
+              </span>
+              <h3 className="text-sm font-semibold text-foreground">{recentActivity.title}</h3>
+              {recentActivity.category && (
+                <p className="text-xs text-muted-foreground">{recentActivity.category}</p>
+              )}
+            </div>
+          </div>
+          <Button asChild size="sm" className="bg-secondary text-secondary-foreground hover:bg-secondary/90 font-semibold self-start sm:self-auto shrink-0 rounded-xl">
+            <Link href={recentActivity.href}>
+              <span>Resume Activity</span>
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </section>
+      )}
+
+      {/* =====================================================================
+          SECTION 9: AI STUDY STUDIO & CURATED HIGH-ACUITY STUDY GUIDES
          ===================================================================== */}
       <section
         data-testid="rn-study-resources"

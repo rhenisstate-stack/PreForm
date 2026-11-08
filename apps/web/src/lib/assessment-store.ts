@@ -51,6 +51,7 @@ export interface CompletedAssessmentAttempt {
   id: string;
   name: string; // e.g. "Tutored CAT 1"
   type: "tutored_cat" | "rat";
+  pathway?: "rn" | "pn";
   date: string; // Formatted date string, e.g. "Oct 28, 2026"
   timestamp: number; // Unix timestamp for sorting
   scorePercent: number; // 0 - 100
@@ -650,6 +651,73 @@ export const SAMPLE_BENCHMARK_ATTEMPTS: CompletedAssessmentAttempt[] = [
   },
 ];
 
+export const SAMPLE_PN_BENCHMARK_ATTEMPTS: CompletedAssessmentAttempt[] = [
+  {
+    id: "pn-tcat-03",
+    name: "NCLEX-PN Tutored CAT 3",
+    type: "tutored_cat",
+    pathway: "pn",
+    date: "Oct 26, 2026",
+    timestamp: 1729929600000,
+    scorePercent: 78,
+    performanceTier: "Very High",
+    totalQuestions: 65,
+    correctCount: 51,
+    durationMinutes: 48,
+    isSampleData: true,
+    domains: [
+      { domain: "Safe and Effective Care Environment: Coordinated Care", scorePercent: 82, totalQuestions: 17, correctCount: 14 },
+      { domain: "Safe and Effective Care Environment: Safety and Infection Control", scorePercent: 80, totalQuestions: 10, correctCount: 8 },
+      { domain: "Physiological Integrity: Pharmacological Therapies", scorePercent: 75, totalQuestions: 12, correctCount: 9 },
+      { domain: "Physiological Integrity: Basic Care and Comfort", scorePercent: 80, totalQuestions: 10, correctCount: 8 },
+      { domain: "Physiological Integrity: Reduction of Risk Potential", scorePercent: 73, totalQuestions: 11, correctCount: 8 },
+      { domain: "Physiological Integrity: Physiological Adaptation", scorePercent: 80, totalQuestions: 5, correctCount: 4 },
+    ],
+    questions: CLINICAL_QUESTION_BANK.slice(0, 5).map((q, idx) => ({
+      ...q,
+      id: `pn-q-03-${idx + 1}`,
+      questionNumber: idx + 1,
+      userAnswerIndex: q.correctAnswerIndex ?? 0,
+      userAnswerIndices: q.correctAnswerIndices,
+      isCorrect: true,
+      scoreAwarded: 1,
+      isUnanswered: false,
+    })),
+  },
+  {
+    id: "pn-rat-01",
+    name: "NCLEX-PN Readiness Test 1",
+    type: "rat",
+    pathway: "pn",
+    date: "Oct 23, 2026",
+    timestamp: 1729670400000,
+    scorePercent: 72,
+    performanceTier: "High",
+    totalQuestions: 85,
+    correctCount: 61,
+    durationMinutes: 65,
+    isSampleData: true,
+    domains: [
+      { domain: "Safe and Effective Care Environment: Coordinated Care", scorePercent: 76, totalQuestions: 21, correctCount: 16 },
+      { domain: "Safe and Effective Care Environment: Safety and Infection Control", scorePercent: 73, totalQuestions: 15, correctCount: 11 },
+      { domain: "Physiological Integrity: Pharmacological Therapies", scorePercent: 70, totalQuestions: 13, correctCount: 9 },
+      { domain: "Physiological Integrity: Basic Care and Comfort", scorePercent: 75, totalQuestions: 12, correctCount: 9 },
+      { domain: "Physiological Integrity: Reduction of Risk Potential", scorePercent: 67, totalQuestions: 12, correctCount: 8 },
+      { domain: "Physiological Integrity: Physiological Adaptation", scorePercent: 75, totalQuestions: 12, correctCount: 9 },
+    ],
+    questions: CLINICAL_QUESTION_BANK.slice(0, 5).map((q, idx) => ({
+      ...q,
+      id: `pn-rat-01-${idx + 1}`,
+      questionNumber: idx + 1,
+      userAnswerIndex: q.correctAnswerIndex ?? 0,
+      userAnswerIndices: q.correctAnswerIndices,
+      isCorrect: true,
+      scoreAwarded: 1,
+      isUnanswered: false,
+    })),
+  },
+];
+
 /**
  * Storage helpers for learner-specific attempts.
  * Uses strictly namespaced keys by learner user ID.
@@ -829,8 +897,9 @@ export function createCompletedAttempt(options: {
     selectedOptionIndex?: number;
     selectedOptionIndices?: number[];
   }[];
+  pathway?: "rn" | "pn";
 }): CompletedAssessmentAttempt {
-  const { testType, attemptNumber, questionCount, userAnswers } = options;
+  const { testType, attemptNumber, questionCount, userAnswers, pathway } = options;
 
   if (questionCount <= 0) {
     const now = new Date();
@@ -839,11 +908,16 @@ export function createCompletedAttempt(options: {
       day: "numeric",
       year: "numeric",
     });
-    const prefix = testType === "tutored_cat" ? "Tutored CAT" : "Readiness Test";
+    const prefix = pathway === "pn"
+      ? testType === "tutored_cat" ? "NCLEX-PN Tutored CAT" : "NCLEX-PN Readiness Test"
+      : pathway === "rn"
+        ? testType === "tutored_cat" ? "NCLEX-RN Tutored CAT" : "NCLEX-RN Readiness Test"
+        : testType === "tutored_cat" ? "Tutored CAT" : "Readiness Test";
     return {
       id: `attempt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name: `${prefix} ${attemptNumber}`,
       type: testType,
+      pathway,
       date: dateFormatted,
       timestamp: Date.now(),
       scorePercent: 0,
@@ -912,13 +986,18 @@ export function createCompletedAttempt(options: {
     year: "numeric",
   });
 
-  const prefix = testType === "tutored_cat" ? "Tutored CAT" : "Readiness Test";
+  const prefix = pathway === "pn"
+    ? testType === "tutored_cat" ? "NCLEX-PN Tutored CAT" : "NCLEX-PN Readiness Test"
+    : pathway === "rn"
+      ? testType === "tutored_cat" ? "NCLEX-RN Tutored CAT" : "NCLEX-RN Readiness Test"
+      : testType === "tutored_cat" ? "Tutored CAT" : "Readiness Test";
   const uniqueId = `attempt-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
   return {
     id: uniqueId,
     name: `${prefix} ${attemptNumber}`,
     type: testType,
+    pathway,
     date: dateFormatted,
     timestamp: Date.now(),
     scorePercent,

@@ -59,6 +59,8 @@ import { NCLEXPNPageClient } from "@/app/nclex-pn/page-client";
 import { DashboardClient } from "@/app/dashboard/page-client";
 import NCLEXRNDashboardPage from "@/app/dashboard/rn/page";
 import NCLEXPNDashboardPage from "@/app/dashboard/pn/page";
+import LearnerNCLEXRNDashboardPage from "@/app/learner/nclex-rn/page";
+import LearnerNCLEXPNDashboardPage from "@/app/learner/nclex-pn/page";
 
 describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashboards", () => {
   beforeEach(() => {
@@ -266,6 +268,48 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
       fireEvent.click(switchBtn);
       expect(mockPush).toHaveBeenCalledWith("/dashboard/pn");
     });
+
+    it("renders RN targeted study recommendations and official RN category breakdown", () => {
+      render(<NCLEXRNDashboardPage />);
+
+      const recSection = screen.getByTestId("rn-study-recommendations");
+      expect(recSection).toBeInTheDocument();
+      expect(within(recSection).getByText(/Targeted NCLEX-RN Clinical Reasoning Recommendations/i)).toBeInTheDocument();
+      expect(within(recSection).getByText(/Acute Cardiopulmonary Prioritization & Ventilation/i)).toBeInTheDocument();
+      expect(within(recSection).getByText(/RN Delegation & Clinical Scope Governance/i)).toBeInTheDocument();
+
+      const catSection = screen.getByTestId("rn-client-needs-breakdown");
+      expect(catSection).toBeInTheDocument();
+      expect(within(catSection).getByText(/Management of Care/i)).toBeInTheDocument();
+      expect(within(catSection).getByText(/Pharmacological and Parenteral Therapies/i)).toBeInTheDocument();
+    });
+
+    it("renders /learner/nclex-rn route with full RN dashboard experience", () => {
+      render(<LearnerNCLEXRNDashboardPage />);
+      expect(screen.getByTestId("nclex-rn-dashboard-view")).toBeInTheDocument();
+      expect(screen.getByTestId("rn-dashboard-identity-heading")).toHaveTextContent("NCLEX-RN LEARNER DASHBOARD");
+    });
+
+    it("displays recent activity card when recent learning history is recorded in localStorage", () => {
+      localStorage.setItem(
+        "prepford_recent_study_activity",
+        JSON.stringify({
+          title: "Hemodynamics & Vasoactive Drips",
+          category: "Physiological Adaptation",
+          href: "/study-guide/medical-surgical-nursing",
+          visitedAt: new Date().toISOString(),
+        })
+      );
+
+      render(<NCLEXRNDashboardPage />);
+      const recentCard = screen.getByTestId("rn-recent-activity");
+      expect(recentCard).toBeInTheDocument();
+      expect(within(recentCard).getByText("Hemodynamics & Vasoactive Drips")).toBeInTheDocument();
+      expect(within(recentCard).getByRole("link", { name: /Resume Activity/i })).toHaveAttribute(
+        "href",
+        "/study-guide/medical-surgical-nursing"
+      );
+    });
   });
 
   describe("10.3 & 10.4 Dedicated NCLEX-PN Learner Dashboard (/dashboard/pn)", () => {
@@ -338,6 +382,48 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
 
       fireEvent.click(switchBtn);
       expect(mockPush).toHaveBeenCalledWith("/dashboard/rn");
+    });
+
+    it("renders PN targeted bedside recommendations and official PN category breakdown (Coordinated Care)", () => {
+      render(<NCLEXPNDashboardPage />);
+
+      const recSection = screen.getByTestId("pn-study-recommendations");
+      expect(recSection).toBeInTheDocument();
+      expect(within(recSection).getByText(/Targeted NCLEX-PN Bedside Practice Recommendations/i)).toBeInTheDocument();
+      expect(within(recSection).getByText(/Focused Vital Sign Cue Detection & Bedside Escalation/i)).toBeInTheDocument();
+      expect(within(recSection).getByText(/Oral, Subcutaneous & Routine Medication Administration/i)).toBeInTheDocument();
+
+      const catSection = screen.getByTestId("pn-client-needs-breakdown");
+      expect(catSection).toBeInTheDocument();
+      expect(within(catSection).getByText(/Coordinated Care/i)).toBeInTheDocument();
+      expect(within(catSection).getByText(/Pharmacological Therapies/i)).toBeInTheDocument();
+    });
+
+    it("renders /learner/nclex-pn route with full PN dashboard experience", () => {
+      render(<LearnerNCLEXPNDashboardPage />);
+      expect(screen.getByTestId("nclex-pn-dashboard-view")).toBeInTheDocument();
+      expect(screen.getByTestId("pn-dashboard-identity-heading")).toHaveTextContent("NCLEX-PN LEARNER DASHBOARD");
+    });
+
+    it("displays recent activity card when recent learning history is recorded in localStorage", () => {
+      localStorage.setItem(
+        "prepford_recent_study_activity",
+        JSON.stringify({
+          title: "Bedside Wound Care & Aseptic Catheter Protocols",
+          category: "Safety & Infection Control",
+          href: "/study-guide/fundamentals-of-nursing",
+          visitedAt: new Date().toISOString(),
+        })
+      );
+
+      render(<NCLEXPNDashboardPage />);
+      const recentCard = screen.getByTestId("pn-recent-activity");
+      expect(recentCard).toBeInTheDocument();
+      expect(within(recentCard).getByText("Bedside Wound Care & Aseptic Catheter Protocols")).toBeInTheDocument();
+      expect(within(recentCard).getByRole("link", { name: /Resume Activity/i })).toHaveAttribute(
+        "href",
+        "/study-guide/fundamentals-of-nursing"
+      );
     });
   });
 
@@ -437,6 +523,32 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
       render(<DashboardClient lockedPathway="pn" />);
       const pnSignInLink = screen.getByRole("link", { name: /Sign In to Workspace/i });
       expect(pnSignInLink).toHaveAttribute("href", "/sign-in?from=/dashboard/pn");
+    });
+
+    it("preserves examination context and title in assessment creation modal for both RN and PN", () => {
+      mockAuthState = {
+        ...mockAuthState,
+        isAuthenticated: true,
+        user: {
+          id: "candidate-dual",
+          email: "dual@prepford.com",
+          name: "Taylor Dual",
+          displayName: "Taylor Dual, RN",
+          role: "candidate",
+          pathway: "both",
+        },
+      };
+
+      const { unmount } = render(<NCLEXRNDashboardPage />);
+      fireEvent.click(screen.getByTestId("rn-hero-create-test-btn"));
+      const rnModal = screen.getByTestId("modal-create-test");
+      expect(within(rnModal).getByText(/Create New NCLEX-RN Assessment Test/i)).toBeInTheDocument();
+      unmount();
+
+      render(<NCLEXPNDashboardPage />);
+      fireEvent.click(screen.getByTestId("pn-hero-create-test-btn"));
+      const pnModal = screen.getByTestId("modal-create-test");
+      expect(within(pnModal).getByText(/Create New NCLEX-PN Assessment Test/i)).toBeInTheDocument();
     });
   });
 });

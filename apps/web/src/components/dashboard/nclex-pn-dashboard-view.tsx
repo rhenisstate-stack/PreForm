@@ -37,6 +37,7 @@ import {
   getTierDescription,
   getTierShortCode,
   getTierStyles,
+  SAMPLE_PN_BENCHMARK_ATTEMPTS,
 } from "@/lib/assessment-store";
 import type {
   AvailableAssessmentDto,
@@ -94,6 +95,17 @@ const PN_PROCEDURAL_STEPS = [
   { step: "4", title: "Bedside Monitoring", desc: "Observe client response, ensure comfort & record data" },
 ];
 
+const CANONICAL_PN_CLIENT_NEEDS = [
+  { categoryCode: "COC", categoryName: "Coordinated Care", subtext: "Client advocacy, reporting deviations & collaborating with RN/MD" },
+  { categoryCode: "SIC", categoryName: "Safety and Infection Control", subtext: "Medical asepsis, sterile dressing protocols & standard precautions" },
+  { categoryCode: "HPM", categoryName: "Health Promotion and Maintenance", subtext: "Routine newborn care, immunization schedules & aging process" },
+  { categoryCode: "PSI", categoryName: "Psychosocial Integrity", subtext: "Coping support, behavioral health observations & therapeutic presence" },
+  { categoryCode: "BCC", categoryName: "Basic Care and Comfort", subtext: "Personal hygiene, skin integrity, enteral feedings & mobility" },
+  { categoryCode: "PHT", categoryName: "Pharmacological Therapies", subtext: "6 Rights of medication, oral/subcutaneous administration & adverse effects" },
+  { categoryCode: "RRP", categoryName: "Reduction of Risk Potential", subtext: "Focused vital sign measurements, specimen collection & bedside lab checks" },
+  { categoryCode: "PPA", categoryName: "Physiological Adaptation", subtext: "Postoperative monitoring, drainage systems & sudden clinical escalation" },
+];
+
 export function NCLEXPNDashboardView({
   learnerName,
   userPathway,
@@ -127,13 +139,18 @@ export function NCLEXPNDashboardView({
 }: NCLEXPNDashboardViewProps) {
   // Filter attempts to PN attempts or general attempts
   const pnStoredAttempts = React.useMemo(() => {
-    return storedAttempts.filter((a) => !a.name.toLowerCase().includes("rn") || a.name.toLowerCase().includes("pn"));
-  }, [storedAttempts]);
+    const sourceAttempts = showSamplePreview ? SAMPLE_PN_BENCHMARK_ATTEMPTS : storedAttempts;
+    return sourceAttempts.filter((a) => {
+      if (a.pathway) return a.pathway === "pn";
+      return !a.name.toLowerCase().includes("rn") || a.name.toLowerCase().includes("pn");
+    });
+  }, [storedAttempts, showSamplePreview]);
 
   const pnAuthoritativeAttempts = React.useMemo(() => {
-    return authoritativeAttempts.filter(
-      (a) => !a.name?.toLowerCase().includes("rn") || a.name?.toLowerCase().includes("pn")
-    );
+    return authoritativeAttempts.filter((a) => {
+      if ((a as any).pathway) return (a as any).pathway === "pn";
+      return !a.name?.toLowerCase().includes("rn") || a.name?.toLowerCase().includes("pn");
+    });
   }, [authoritativeAttempts]);
 
   const [intelligenceOverview, setIntelligenceOverview] = React.useState<LearnerPerformanceOverview | null>(null);
@@ -564,20 +581,51 @@ export function NCLEXPNDashboardView({
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-dashed border-border p-6 text-center space-y-2">
-            <p className="text-sm font-medium text-foreground">No PN category performance recorded yet.</p>
-            <p className="text-xs text-muted-foreground max-w-md mx-auto">
-              Complete your first NCLEX-PN test or practical Readiness Assessment to populate your official Client Needs
-              mastery distribution.
-            </p>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => onOpenCreateTest("tutored_cat")}
-              className="mt-2 bg-secondary text-white font-semibold text-xs"
-            >
-              Start First PN Practice Set
-            </Button>
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {CANONICAL_PN_CLIENT_NEEDS.map((cat) => (
+                <div
+                  key={cat.categoryCode}
+                  className="rounded-xl border border-border/80 bg-muted/20 p-4 space-y-2 hover:border-teal-500/40 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-foreground block">{cat.categoryName}</span>
+                      <span className="text-[11px] text-muted-foreground">{cat.subtext}</span>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] font-mono text-teal-700 dark:text-teal-300 border-teal-500/30 shrink-0 ml-2">
+                      0%
+                    </Badge>
+                  </div>
+                  <div className="h-1.5 w-full rounded-full bg-muted/60 overflow-hidden">
+                    <div className="h-full bg-teal-500/30 rounded-full w-2" />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
+                    <span>Baseline Readiness</span>
+                    <button
+                      type="button"
+                      onClick={() => onOpenCreateTest("tutored_cat", cat.categoryCode)}
+                      className="text-teal-700 dark:text-teal-300 hover:underline font-semibold"
+                    >
+                      Drill Category →
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-xl bg-teal-500/10 border border-teal-500/20 p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <p className="text-muted-foreground text-center sm:text-left">
+                Complete an NCLEX-PN practice set or practical Readiness Assessment (RAT) to update your official Client Needs scores.
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => onOpenCreateTest("tutored_cat")}
+                className="bg-secondary text-white font-semibold text-xs shrink-0"
+              >
+                Start First PN Practice Set
+              </Button>
+            </div>
           </div>
         )}
       </section>
@@ -698,7 +746,189 @@ export function NCLEXPNDashboardView({
       </section>
 
       {/* =====================================================================
-          SECTION 7: AI STUDY STUDIO & CURATED PRACTICAL NURSING STUDY GUIDES
+          SECTION 7: TARGETED NCLEX-PN BEDSIDE PRACTICE RECOMMENDATIONS
+         ===================================================================== */}
+      <section
+        data-testid="pn-study-recommendations"
+        aria-labelledby="pn-recommendations-heading"
+        className="rounded-2xl border border-border bg-card p-6 shadow-xs space-y-4"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 id="pn-recommendations-heading" className="text-xl font-serif font-bold text-foreground flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-teal-600 dark:text-teal-400" aria-hidden="true" />
+              <span>Targeted NCLEX-PN Bedside Practice Recommendations</span>
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Practical nursing review steps prioritized for bedside clinical procedures and licensure success.
+            </p>
+          </div>
+          <Badge variant="outline" className="text-xs font-mono self-start sm:self-auto text-teal-700 dark:text-teal-300 border-teal-500/40">
+            NCSBN PN Prioritized
+          </Badge>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {recommendations.length > 0 ? (
+            recommendations.slice(0, 3).map((rec) => (
+              <div
+                key={rec.id}
+                className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-2 flex flex-col justify-between hover:border-secondary/40 transition-colors"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      {rec.category}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                        rec.priority === "High"
+                          ? "bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20"
+                          : "bg-teal-500/15 text-teal-700 dark:text-teal-300"
+                      }`}
+                    >
+                      {rec.priority} Priority
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-foreground">{rec.title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{rec.description}</p>
+                </div>
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => onOpenCreateTest("tutored_cat")}
+                    className="text-xs font-semibold h-8 bg-teal-600 text-white hover:bg-teal-500 w-full"
+                  >
+                    <span>Practice Bedside Procedure</span>
+                    <ArrowRight className="ml-1.5 h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <>
+              <div className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-2 flex flex-col justify-between hover:border-teal-500/40 transition-colors">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      Coordinated Care
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+                      High Priority
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-foreground">Focused Vital Sign Cue Detection &amp; Bedside Escalation</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Practice identifying early respiratory and hemodynamic deterioration and promptly alerting the supervising RN.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => onOpenCreateTest("tutored_cat", "COC")}
+                    className="text-xs font-semibold h-8 bg-teal-600 text-white hover:bg-teal-500 w-full"
+                  >
+                    <span>Drill Vital Escalation</span>
+                    <ArrowRight className="ml-1.5 h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-2 flex flex-col justify-between hover:border-teal-500/40 transition-colors">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      Pharmacological Therapies
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20">
+                      High Priority
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-foreground">Oral, Subcutaneous &amp; Routine Medication Administration</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Master the 6 rights of medication administration, insulin injection techniques, and verifying client identities with 2 identifiers.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => onOpenCreateTest("tutored_cat", "PHT")}
+                    className="text-xs font-semibold h-8 bg-teal-600 text-white hover:bg-teal-500 w-full"
+                  >
+                    <span>Practice Safe Med Pass</span>
+                    <ArrowRight className="ml-1.5 h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl border border-border/80 bg-muted/20 space-y-2 flex flex-col justify-between hover:border-teal-500/40 transition-colors">
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-muted text-muted-foreground">
+                      Safety &amp; Infection Control
+                    </span>
+                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-500/15 text-teal-700 dark:text-teal-300">
+                      Targeted Focus
+                    </span>
+                  </div>
+                  <h3 className="text-xs font-bold text-foreground">Aseptic Technique &amp; Sterile Dressing Protocols</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Review surgical scrub guidelines, donning sterile gloves without contamination, and closed urinary catheter drainage safety.
+                  </p>
+                </div>
+                <div className="pt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => onOpenCreateTest("tutored_cat", "SIC")}
+                    className="text-xs font-semibold h-8 bg-teal-600 text-white hover:bg-teal-500 w-full"
+                  >
+                    <span>Practice Aseptic Skills</span>
+                    <ArrowRight className="ml-1.5 h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </section>
+
+      {/* =====================================================================
+          SECTION 8: RECENT PN LEARNING ACTIVITY
+         ===================================================================== */}
+      {recentActivity && (
+        <section
+          data-testid="pn-recent-activity"
+          className="rounded-2xl border border-teal-500/30 bg-teal-500/5 p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-teal-500/15 text-teal-700 dark:text-teal-300 flex items-center justify-center shrink-0">
+              <History className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-teal-700 dark:text-teal-300">
+                Recent PN Learning Activity
+              </span>
+              <h3 className="text-sm font-semibold text-foreground">{recentActivity.title}</h3>
+              {recentActivity.category && (
+                <p className="text-xs text-muted-foreground">{recentActivity.category}</p>
+              )}
+            </div>
+          </div>
+          <Button asChild size="sm" className="bg-teal-600 text-white hover:bg-teal-500 font-semibold self-start sm:self-auto shrink-0 rounded-xl">
+            <Link href={recentActivity.href}>
+              <span>Resume Activity</span>
+              <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </section>
+      )}
+
+      {/* =====================================================================
+          SECTION 9: AI STUDY STUDIO & CURATED PRACTICAL NURSING STUDY GUIDES
          ===================================================================== */}
       <section
         data-testid="pn-study-resources"
