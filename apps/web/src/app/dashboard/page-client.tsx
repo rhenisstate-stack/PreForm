@@ -368,17 +368,72 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
       setActiveAttemptId(attemptId);
       setCreateTestType(testType);
       setCurrentTestAnswers({});
+      setStructuredTestAnswers({});
       setActiveQuestionIndex(0);
       setTestInProgress(true);
       setCreateModalOpen(true);
 
       if (typeof window !== "undefined") {
-        fetch(`/api/attempts/${encodeURIComponent(attemptId)}/questions`)
-          .then((res) => (res.ok ? res.json() : null))
-          .then((qData) => {
-            if (qData?.success && Array.isArray(qData.questions) && qData.questions.length > 0) {
-              setLiveQuestions(qData.questions);
-              setTestQuestionCount(qData.questions.length);
+        try {
+          window.sessionStorage.setItem("prepford_active_attempt_id", attemptId);
+        } catch {
+          // Ignore storage errors
+        }
+        Promise.all([
+          fetch(`/api/attempts/${encodeURIComponent(attemptId)}/questions`).then((res) => (res.ok ? res.json() : null)),
+          fetch(`/api/attempts/${encodeURIComponent(attemptId)}`).then((res) => (res.ok ? res.json() : null)),
+        ])
+          .then(([qData, detailData]) => {
+            const questions =
+              qData?.success && Array.isArray(qData.questions) && qData.questions.length > 0
+                ? qData.questions
+                : Array.isArray(detailData?.attempt?.questions)
+                ? detailData.attempt.questions
+                : [];
+            if (questions.length > 0) {
+              setLiveQuestions(questions);
+              setTestQuestionCount(questions.length);
+            }
+            const responses = detailData?.attempt?.responses;
+            if (Array.isArray(responses) && questions.length > 0) {
+              const restoredOptions: Record<number, number | number[]> = {};
+              const restoredStructured: Record<number, Record<string, unknown>> = {};
+              const indexByQId = new Map<string, number>();
+              questions.forEach((q: any, idx: number) => {
+                if (q?.id) indexByQId.set(q.id, idx);
+              });
+              for (const resp of responses) {
+                const idx = indexByQId.get(resp.questionId);
+                if (idx === undefined) continue;
+                if (resp.structuredResponseJson) {
+                  try {
+                    const parsed = typeof resp.structuredResponseJson === "string"
+                      ? JSON.parse(resp.structuredResponseJson)
+                      : resp.structuredResponseJson;
+                    if (parsed && typeof parsed === "object") {
+                      restoredStructured[idx] = parsed as Record<string, unknown>;
+                    }
+                  } catch {
+                    // Ignore malformed stored structured JSON
+                  }
+                }
+                if (resp.selectedOptionsJson) {
+                  try {
+                    const parsed = typeof resp.selectedOptionsJson === "string"
+                      ? JSON.parse(resp.selectedOptionsJson)
+                      : resp.selectedOptionsJson;
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                      const qType = String(questions[idx]?.questionType || "");
+                      const isMulti = ["sata", "multiple-choice", "checkbox", "multiple-image", "multi_select"].includes(qType);
+                      restoredOptions[idx] = isMulti ? parsed : parsed[0];
+                    }
+                  } catch {
+                    // Ignore malformed stored options JSON
+                  }
+                }
+              }
+              setCurrentTestAnswers(restoredOptions);
+              setStructuredTestAnswers(restoredStructured);
             }
           })
           .catch(() => {});
@@ -386,6 +441,28 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
     },
     []
   );
+
+  // Restore active in-progress attempt across browser refresh
+  React.useEffect(() => {
+    if (!isAuthenticated || testInProgress || typeof window === "undefined") return;
+    try {
+      const savedAttemptId = window.sessionStorage.getItem("prepford_active_attempt_id");
+      if (!savedAttemptId || savedAttemptId.startsWith("local_att_")) return;
+      fetch(`/api/attempts/${encodeURIComponent(savedAttemptId)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((detail) => {
+          const att = detail?.attempt;
+          if (att?.id && att.status === "InProgress") {
+            handleResumeAttempt(att.id, att.type === "rat" ? "rat" : "tutored_cat", "InProgress");
+          } else {
+            window.sessionStorage.removeItem("prepford_active_attempt_id");
+          }
+        })
+        .catch(() => {});
+    } catch {
+      // Ignore storage errors
+    }
+  }, [isAuthenticated, testInProgress, handleResumeAttempt]);
 
   // Support direct links and bookmarked assessment routes (?action=rat, ?action=create-test, ?tab=rat, ?clientNeed=...)
   React.useEffect(() => {
@@ -534,6 +611,11 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
         .then(async (data) => {
           if (data?.success && data.attemptId) {
             setActiveAttemptId(data.attemptId);
+            try {
+              window.sessionStorage.setItem("prepford_active_attempt_id", data.attemptId);
+            } catch {
+              // Ignore storage errors
+            }
             const qRes = await fetch(`/api/attempts/${encodeURIComponent(data.attemptId)}/questions`);
             if (qRes.ok) {
               const qData = await qRes.json();
@@ -641,12 +723,32 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                   })),
                   questions: (backendAttempt.questions || liveQuestions).map((q: any, idx: number) => {
                     const ans = currentTestAnswers[idx];
+                    const structuredAns = structuredTestAnswers[idx];
+                    const hasStructured = Boolean(structuredAns && Object.keys(structuredAns).length > 0);
                     const selectedIdx = typeof ans === "number" ? ans : -1;
                     const selectedIndices = Array.isArray(ans) ? ans : typeof ans === "number" ? [ans] : [];
+                    const backendResp = Array.isArray(backendAttempt.responses)
+                      ? backendAttempt.responses.find((r: any) => r.questionId === q.id)
+                      : undefined;
+                    const isPendingManual =
+                      backendResp?.pendingManualReview === true ||
+                      backendResp?.gradingState === "PendingManualReview" ||
+                      q.pendingManualReview === true;
                     const correctIndices = q.correctAnswerIndices || [];
-                    const isCorrect = q.isCorrect !== undefined
+                    const isCorrect: boolean | null = isPendingManual
+                      ? null
+                      : backendResp?.isCorrect !== undefined
+                      ? backendResp.isCorrect
+                      : q.isCorrect !== undefined
                       ? q.isCorrect
                       : (correctIndices.length > 0 && selectedIndices.length === correctIndices.length && selectedIndices.every((i: number) => correctIndices.includes(i)));
+                    const scoreAwarded: number | null = isPendingManual
+                      ? null
+                      : backendResp?.scoreAwarded !== undefined
+                      ? backendResp.scoreAwarded
+                      : q.scoreAwarded !== undefined
+                      ? q.scoreAwarded
+                      : (isCorrect ? 1 : 0);
                     return {
                       id: q.id || `q-${idx}`,
                       questionNumber: idx + 1,
@@ -661,8 +763,9 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                       options: Array.isArray(q.options) ? q.options.map((o: any) => typeof o === "string" ? o : o.text || "") : [],
                       rationale: q.rationale || q.explanation || "",
                       isCorrect,
-                      scoreAwarded: isCorrect ? 1 : 0,
-                      isUnanswered: selectedIndices.length === 0 && selectedIdx === -1,
+                      scoreAwarded,
+                      pendingManualReview: isPendingManual,
+                      isUnanswered: !hasStructured && selectedIndices.length === 0 && selectedIdx === -1,
                     };
                   }),
                   isSampleData: false,
@@ -681,6 +784,11 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                 } : null;
 
                 saveStoredAttempt(user?.id, completed, candidateSession);
+                try {
+                  window.sessionStorage.removeItem("prepford_active_attempt_id");
+                } catch {
+                  // Ignore storage errors
+                }
                 setAttemptRefreshKey((k) => k + 1);
                 setTestInProgress(false);
                 setCreateModalOpen(false);
@@ -1967,31 +2075,22 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                               role={isMultiSelect ? "checkbox" : "radio"}
                               aria-checked={isSelected}
                               onClick={() => {
-                                let nextSelected: number[] = [];
-                                if (isMultiSelect) {
-                                  setCurrentTestAnswers((prev) => {
-                                    const cur = prev[activeQuestionIndex];
-                                    const curArr = Array.isArray(cur)
-                                      ? cur
-                                      : typeof cur === "number"
-                                      ? [cur]
-                                      : [];
-                                    const nextArr = curArr.includes(optIdx)
-                                      ? curArr.filter((i) => i !== optIdx)
-                                      : [...curArr, optIdx].sort((a, b) => a - b);
-                                    nextSelected = nextArr;
-                                    return {
-                                      ...prev,
-                                      [activeQuestionIndex]: nextArr,
-                                    };
-                                  });
-                                } else {
-                                  nextSelected = [optIdx];
-                                  setCurrentTestAnswers((prev) => ({
-                                    ...prev,
-                                    [activeQuestionIndex]: optIdx,
-                                  }));
-                                }
+                                const cur = currentTestAnswers[activeQuestionIndex];
+                                const curArr = Array.isArray(cur)
+                                  ? cur
+                                  : typeof cur === "number"
+                                  ? [cur]
+                                  : [];
+                                const nextSelected: number[] = isMultiSelect
+                                  ? curArr.includes(optIdx)
+                                    ? curArr.filter((i) => i !== optIdx)
+                                    : [...curArr, optIdx].sort((a, b) => a - b)
+                                  : [optIdx];
+
+                                setCurrentTestAnswers((prev) => ({
+                                  ...prev,
+                                  [activeQuestionIndex]: isMultiSelect ? nextSelected : optIdx,
+                                }));
 
                                 if (activeAttemptId && !activeAttemptId.startsWith("local_att_") && liveQuestions.length > 0) {
                                   const qId = activeQ.id;
@@ -2162,14 +2261,21 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                       </div>
                       <span
                         className={`inline-flex items-center gap-1 font-semibold ${
-                          q.isUnanswered
+                          q.pendingManualReview
+                            ? "text-amber-600 dark:text-amber-400"
+                            : q.isUnanswered
                             ? "text-amber-600 dark:text-amber-400"
                             : q.isCorrect
                             ? "text-emerald-600 dark:text-emerald-400"
                             : "text-rose-600 dark:text-rose-400"
                         }`}
                       >
-                        {q.isUnanswered ? (
+                        {q.pendingManualReview ? (
+                          <>
+                            <Info className="h-3.5 w-3.5" />
+                            <span>Pending Manual Review</span>
+                          </>
+                        ) : q.isUnanswered ? (
                           <>
                             <Info className="h-3.5 w-3.5" />
                             <span>Unanswered / Skipped</span>

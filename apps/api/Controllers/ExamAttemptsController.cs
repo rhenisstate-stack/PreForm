@@ -176,12 +176,17 @@ public class CandidateAttemptResponseDto
     public string? StructuredResponseJson { get; set; }
     public int TimeSpentSeconds { get; set; }
     public DateTime AnsweredAt { get; set; }
-    /// <summary>Disclosed only after finalization; null (and omitted from the payload) while in progress.</summary>
+    /// <summary>Disclosed only after finalization; null (and omitted from the payload) while in progress or pending manual review.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public bool? IsCorrect { get; set; }
-    /// <summary>Disclosed only after finalization; null (and omitted from the payload) while in progress.</summary>
+    /// <summary>Disclosed only after finalization; null (and omitted from the payload) while in progress or pending manual review.</summary>
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public decimal? ScoreAwarded { get; set; }
+    /// <summary>True when the response requires manual grading (e.g., essay) and has not been scored yet.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? PendingManualReview { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? GradingState { get; set; }
 }
 
 [ApiController]
@@ -731,8 +736,10 @@ public class ExamAttemptsController : ControllerBase
                     StructuredResponseJson = r.StructuredResponseJson,
                     TimeSpentSeconds = r.TimeSpentSeconds,
                     AnsweredAt = r.AnsweredAt,
-                    IsCorrect = isCompleted ? r.IsCorrect : null,
-                    ScoreAwarded = isCompleted ? r.ScoreAwarded : null,
+                    IsCorrect = isCompleted && r.GradingState != ResponseGradingState.PendingManualReview ? r.IsCorrect : null,
+                    ScoreAwarded = isCompleted && r.GradingState != ResponseGradingState.PendingManualReview ? r.ScoreAwarded : null,
+                    PendingManualReview = isCompleted && r.GradingState == ResponseGradingState.PendingManualReview ? true : null,
+                    GradingState = isCompleted ? r.GradingState.ToString() : null,
                 })
                 .ToList(),
         };

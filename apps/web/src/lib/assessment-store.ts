@@ -35,9 +35,10 @@ export interface QuestionReviewItem {
   correctAnswerIndices?: number[]; // Multi-select keys
   options: string[];
   rationale: string;
-  isCorrect: boolean;
-  scoreAwarded: number; // 0 to 1
+  isCorrect: boolean | null;
+  scoreAwarded: number | null; // 0 to 1, or null when pending manual review
   isUnanswered: boolean;
+  pendingManualReview?: boolean;
 }
 
 export interface DomainPerformance {
@@ -61,6 +62,7 @@ export interface CompletedAssessmentAttempt {
   durationMinutes: number;
   domains: DomainPerformance[];
   questions: QuestionReviewItem[];
+  pendingManualReviewCount?: number;
   isSampleData?: boolean;
 }
 
