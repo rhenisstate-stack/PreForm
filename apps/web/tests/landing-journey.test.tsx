@@ -41,7 +41,7 @@ import { metadata as profileMetadata } from "@/app/profile/page";
 import { metadata as adminMetadata } from "@/app/admin/page";
 
 describe("Landing Page Information Architecture, Full-Width Heartbeat & SEO", () => {
-  it("renders Hero section with Archer-inspired copy, Explore NCLEX Prep & Explore Study Guide CTAs, and full-width left-to-right heartbeat", () => {
+  it("renders Hero section with pathway CTAs, platform tour trigger, and full-width left-to-right heartbeat", () => {
     render(<HomeClient />);
 
     expect(
@@ -53,15 +53,18 @@ describe("Landing Page Information Architecture, Full-Width Heartbeat & SEO", ()
 
     expect(
       screen.getByText(
-        /Practice nursing questions, strengthen your understanding with rationales, and organize your preparation with PrepFord's available study resources\./i
+        /Practice nursing questions, strengthen your clinical judgment, understand every answer and track your preparation through a dedicated learning platform built for NCLEX-RN and NCLEX-PN candidates\./i
       )
     ).toBeInTheDocument();
 
-    const explorePrepBtn = screen.getByRole("link", { name: /Explore NCLEX Prep/i });
-    expect(explorePrepBtn).toHaveAttribute("href", "#nursing-pathways");
+    const exploreRnBtn = screen.getByTestId("home-cta-explore-rn");
+    expect(exploreRnBtn).toHaveAttribute("href", "/nclex-rn");
 
-    const exploreStudyGuideBtn = screen.getByRole("link", { name: /Explore Study Guide/i });
-    expect(exploreStudyGuideBtn).toHaveAttribute("href", "/study-guide");
+    const explorePnBtn = screen.getByTestId("home-cta-explore-pn");
+    expect(explorePnBtn).toHaveAttribute("href", "/nclex-pn");
+
+    expect(screen.getByTestId("home-cta-watch-tour")).toBeInTheDocument();
+    expect(screen.getByTestId("home-hero-video-frame")).toBeInTheDocument();
 
     // Full-width heartbeat line spans across the hero section
     const fullwidthHeartbeat = screen.getByTestId("hero-fullwidth-heartbeat");

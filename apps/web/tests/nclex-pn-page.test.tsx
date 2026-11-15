@@ -49,14 +49,17 @@ describe("NCLEX-PN Page Transformation & Conversion Flow", () => {
     expect(
       within(hero).getByRole("heading", {
         level: 1,
-        name: /Prepare for the NCLEX-PN with Structured Practice and Clinical Clarity/i,
+        name: /Prepare for NCLEX-PN with confidence and clinical clarity\./i,
       })
     ).toBeInTheDocument();
-    expect(within(hero).getByRole("link", { name: /Explore Study Plans/i })).toHaveAttribute(
+    expect(within(hero).getByTestId("pn-hero-dashboard-cta")).toBeInTheDocument();
+    expect(within(hero).getByRole("link", { name: /Explore PN Study Plans/i })).toHaveAttribute(
       "href",
       "#pn-study-plans"
     );
-    expect(within(hero).getByRole("link", { name: /Explore Study Guide/i })).toHaveAttribute(
+    expect(within(hero).getByTestId("pn-hero-watch-tour")).toBeInTheDocument();
+    expect(within(hero).getByTestId("pn-hero-video-frame")).toBeInTheDocument();
+    expect(within(hero).getByRole("link", { name: /Browse Study Guide/i })).toHaveAttribute(
       "href",
       "/study-guide"
     );

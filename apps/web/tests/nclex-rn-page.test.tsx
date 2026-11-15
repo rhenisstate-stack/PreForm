@@ -75,22 +75,25 @@ describe("NCLEX-RN Page Transformation (/nclex-rn)", () => {
     }
   });
 
-  it("renders the Hero section with PrepFord RN headline, CTAs, and a full-width left-to-right animated heartbeat line", () => {
+  it("renders the Hero section with PrepFord RN headline, CTAs, video tour, and a full-width left-to-right animated heartbeat line", () => {
     render(<NCLEXRNPageClient />);
 
     const hero = screen.getByTestId("nclex-rn-hero");
     expect(
       within(hero).getByRole("heading", {
         level: 1,
-        name: /Prepare for the NCLEX-RN with Clinical Clarity and Structured Practice\./i,
+        name: /Build the clinical judgment to become a confident Registered Nurse\./i,
       })
     ).toBeInTheDocument();
 
-    expect(within(hero).getByRole("link", { name: /Explore Study Plans/i })).toHaveAttribute(
+    expect(within(hero).getByTestId("rn-hero-dashboard-cta")).toBeInTheDocument();
+    expect(within(hero).getByRole("link", { name: /Explore RN Study Plans/i })).toHaveAttribute(
       "href",
       "#rn-study-plans"
     );
-    expect(within(hero).getByRole("link", { name: /Explore Study Guide/i })).toHaveAttribute(
+    expect(within(hero).getByTestId("rn-hero-watch-tour")).toBeInTheDocument();
+    expect(within(hero).getByTestId("rn-hero-video-frame")).toBeInTheDocument();
+    expect(within(hero).getByRole("link", { name: /Browse Study Guide/i })).toHaveAttribute(
       "href",
       "/study-guide"
     );
