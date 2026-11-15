@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import type { VerifiedSession } from "./session";
+import { resolveBackendBaseUrl } from "./env-config";
 
 export interface ApiClientOptions extends RequestInit {
   session?: VerifiedSession | null;
@@ -48,24 +49,11 @@ export function getMockApiHandler(): MockApiHandler | null {
 
 /**
  * Returns the base URL for the backend ASP.NET Core API.
- * Never defaults to port 3000 (which is the Next.js frontend port).
+ * Prioritizes SKEW_LINE_DOTNET_BASE_URL when SKEW_LINE_ACTIVE_BACKEND=dotnet,
+ * and never defaults to port 3000 (which is the Next.js frontend port).
  */
 export function getApiBaseUrl(): string {
-  const envUrl =
-    process.env.API_GATEWAY_URL?.trim() ||
-    process.env.INTERNAL_API_URL?.trim() ||
-    process.env.NEXT_PUBLIC_API_URL?.trim();
-
-  if (envUrl && envUrl.length > 0) {
-    return envUrl.replace(/\/+$/, "");
-  }
-
-  // Default to backend API port 4000, avoiding collision with Next.js web server port (3000)
-  const backendPort =
-    process.env.BACKEND_PORT?.trim() ||
-    (process.env.PORT && process.env.PORT !== "3000" ? process.env.PORT.trim() : "4000");
-
-  return `http://127.0.0.1:${backendPort}`;
+  return resolveBackendBaseUrl();
 }
 
 /**
@@ -286,6 +274,24 @@ export async function apiRequest<T = unknown>(
         status: response.status,
         error: errorMessage,
         data: parsedData as T,
+        headers: response.headers,
+      };
+    }
+
+    const acceptHeader = requestHeaders.get("Accept") || "";
+    const expectsJsonOnly =
+      acceptHeader.includes("application/json") && !acceptHeader.includes("text/html");
+    if (expectsJsonOnly && contentType.includes("text/html")) {
+      const htmlText = typeof parsedData === "string" ? parsedData : "";
+      const isLostOrNotFound =
+        response.url?.includes("/web/restoration/lost") ||
+        htmlText.includes("Page Not Found");
+      return {
+        success: false,
+        status: isLostOrNotFound ? 404 : 502,
+        error: isLostOrNotFound
+          ? `Remote backend endpoint not found: ${normalizedEndpoint}`
+          : `Remote backend returned unexpected HTML response for ${normalizedEndpoint}`,
         headers: response.headers,
       };
     }
