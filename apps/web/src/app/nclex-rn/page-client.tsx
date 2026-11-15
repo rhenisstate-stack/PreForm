@@ -9,7 +9,6 @@ import {
   ArrowRight,
   Stethoscope,
   BookOpen,
-  HeartPulse,
   ClipboardCheck,
   BarChart3,
   FileText,
@@ -19,6 +18,7 @@ import {
   AlertCircle,
   Compass,
   ShoppingCart,
+  Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,8 @@ import { getProductById, type Product } from "@/lib/products";
 import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
 import { BRAND } from "@/lib/brand";
 import { CourseFinderQuiz } from "@/components/home/course-finder";
+import { ProductVideoPlayer } from "@/components/video/product-video-player";
+import { RN_PLATFORM_VIDEO } from "@/lib/hero-videos";
 
 type BillingDuration = "month" | "quarter";
 type RnTierKey = "starter" | "pro" | "premium";
@@ -421,8 +423,9 @@ export function NCLEXRNPageClient() {
   const { addItem } = useCart();
   const { isAuthenticated } = useAuth();
 
-  // Section 1: Dashboard navigation state
+  // Section 1: Dashboard navigation & hero video state
   const [isNavigatingDashboard, setIsNavigatingDashboard] = React.useState(false);
+  const [isRnVideoOpen, setIsRnVideoOpen] = React.useState(false);
 
   const handleGoToRnDashboard = React.useCallback(() => {
     setIsNavigatingDashboard(true);
@@ -636,200 +639,144 @@ export function NCLEXRNPageClient() {
         </div>
 
         <div className="relative z-20 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-12 lg:gap-10">
-            {/* Left Column: Brand identity, Headline, Value Prop, Primary & Secondary CTAs */}
-            <div className="lg:col-span-7 space-y-6 text-left">
-              <div className="inline-flex items-center gap-3 rounded-full bg-secondary/10 px-4 py-1.5 text-xs font-semibold text-secondary ring-1 ring-secondary/20">
+          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-12">
+            {/* Left Column: RN Pathway Identity, Headline, Supporting Copy & Primary CTAs */}
+            <div className="lg:col-span-6 space-y-6 text-left">
+              <div className="inline-flex items-center gap-2.5 rounded-full bg-teal-500/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-300 border border-teal-500/20">
                 <Image
                   src={BRAND.logo.assetPath}
                   alt=""
-                  width={22}
-                  height={22}
-                  className="h-5 w-5 rounded-sm object-contain"
+                  width={18}
+                  height={18}
+                  className="h-4 w-4 rounded-sm object-contain"
                 />
                 <span>PrepFord Registered Nursing • NCLEX-RN Pathway</span>
               </div>
 
               <h1
                 id="nclex-rn-hero-heading"
-                className="font-serif text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl leading-[1.08]"
+                className="font-serif text-3xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.15rem] leading-[1.12]"
               >
-                Prepare for the{" "}
-                <span className="text-secondary underline decoration-secondary/30 decoration-2 underline-offset-8">
-                  NCLEX-RN
-                </span>{" "}
-                with Clinical Clarity and Structured Practice.
+                Build the clinical judgment to become a confident Registered Nurse.
               </h1>
 
-              <p className="max-w-2xl text-base sm:text-lg text-muted-foreground leading-relaxed">
-                Build registered-nurse clinical judgment with PrepFord&apos;s NCLEX-RN practice question
-                bank, option-by-option correct and distractor rationales, 7-domain Nursing Study Guide,
-                and Client Needs readiness tracking.
+              <p className="max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed">
+                Prepare for NCLEX-RN with scenario-based practice, detailed clinical rationales,
+                structured nursing resources and performance insights designed to strengthen
+                registered-nurse clinical reasoning.
               </p>
 
-              {/* Key verified capability pills */}
-              <ul
-                aria-label="Available NCLEX-RN preparation tools"
-                className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-1 text-sm text-foreground/90"
-              >
-                <li className="flex items-center gap-2.5">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-secondary" aria-hidden="true" />
-                  <span>Clinical scenario &amp; prioritization questions</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-secondary" aria-hidden="true" />
-                  <span>Option-by-option clinical &amp; distractor rationales</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-secondary" aria-hidden="true" />
-                  <span>7-domain Nursing Study Guide &amp; reference notes</span>
-                </li>
-                <li className="flex items-center gap-2.5">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-secondary" aria-hidden="true" />
-                  <span>Server-scored readiness assessments &amp; analytics</span>
-                </li>
-              </ul>
-
-              {/* Prominent NCLEX-RN Learner Dashboard CTA */}
-              <div
-                data-testid="rn-dashboard-cta-banner"
-                className="mt-4 rounded-2xl border-2 border-secondary/35 bg-gradient-to-r from-secondary/15 via-secondary/10 to-transparent p-4 sm:p-5 shadow-xs transition-all hover:border-secondary/50"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-2.5 w-2.5 rounded-full bg-secondary animate-pulse" aria-hidden="true" />
-                      <span className="text-xs font-bold tracking-wider uppercase text-secondary">
-                        NCLEX-RN Registered Nurse Workspace
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium text-foreground/90 leading-snug">
-                      Continue your NCLEX-RN preparation, track your progress, and access your learning tools.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="lg"
-                    data-testid="rn-hero-dashboard-cta"
-                    onClick={handleGoToRnDashboard}
-                    disabled={isNavigatingDashboard}
-                    className="bg-secondary hover:bg-secondary/90 text-secondary-foreground font-semibold px-6 h-12 rounded-xl shadow-md shrink-0 flex items-center justify-center gap-2 group transition-all"
-                  >
-                    {isNavigatingDashboard ? (
-                      <span>Opening Dashboard...</span>
-                    ) : (
-                      <>
-                        <span>Go to RN Learner Dashboard</span>
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Primary and secondary CTAs */}
-              <div className="flex flex-wrap items-center gap-3.5 pt-3">
+              {/* Primary, Secondary & Video Actions */}
+              <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3.5 pt-1">
                 <Button
-                  asChild
+                  type="button"
                   size="lg"
-                  className="bg-primary text-primary-foreground hover:bg-primary/90 font-semibold px-7 h-12 rounded-xl shadow-md"
+                  data-testid="rn-hero-dashboard-cta"
+                  onClick={handleGoToRnDashboard}
+                  disabled={isNavigatingDashboard}
+                  className="bg-[#142B4A] hover:bg-[#142B4A]/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold px-6 h-12 rounded-xl shadow-sm flex items-center justify-center gap-2 group"
                 >
-                  <a href="#rn-study-plans">
-                    Explore Study Plans
-                    <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
-                  </a>
+                  {isNavigatingDashboard ? (
+                    <span>Opening Dashboard...</span>
+                  ) : (
+                    <>
+                      <span>Go to RN Learner Dashboard</span>
+                      <ArrowRight
+                        className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                        aria-hidden="true"
+                      />
+                    </>
+                  )}
                 </Button>
 
                 <Button
                   asChild
                   variant="outline"
                   size="lg"
-                  className="h-12 rounded-xl px-6 font-semibold border-border/80 bg-background/80 hover:bg-muted"
+                  className="h-12 rounded-xl px-6 font-semibold border-2 border-[#0D9488]/40 bg-white dark:bg-card hover:bg-teal-50/70 dark:hover:bg-muted"
                 >
-                  <Link href="/study-guide">
-                    <BookOpen className="mr-2 h-4 w-4 text-secondary" aria-hidden="true" />
-                    Explore Study Guide
-                  </Link>
+                  <a href="#rn-study-plans">
+                    <Compass className="mr-2 h-4 w-4 text-[#0D9488]" aria-hidden="true" />
+                    Explore RN Study Plans
+                  </a>
                 </Button>
 
                 <Button
-                  asChild
+                  type="button"
                   variant="ghost"
                   size="lg"
-                  className="h-12 rounded-xl px-5 font-semibold text-foreground hover:text-secondary"
+                  data-testid="rn-hero-watch-tour"
+                  onClick={() => setIsRnVideoOpen(true)}
+                  className="h-12 rounded-xl px-4 font-semibold text-[#0D9488] hover:text-[#0F766E] hover:bg-teal-50/80 dark:text-teal-300 dark:hover:bg-teal-950/40"
                 >
-                  <a href="#rn-question-experience">Try Free Sample Question</a>
+                  <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" />
+                  Watch the RN Platform Tour
                 </Button>
               </div>
 
-              {/* Pathway switcher note for LPN/LVN visitors */}
-              <p className="text-xs text-muted-foreground pt-1">
-                Preparing for practical or vocational nursing licensure instead?{" "}
+              {/* Verified RN Capability Pills */}
+              <ul
+                aria-label="Available NCLEX-RN preparation tools"
+                className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-1 text-xs sm:text-sm font-medium text-foreground/90"
+              >
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0D9488]" aria-hidden="true" />
+                  <span>RN clinical scenario &amp; prioritization items</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0D9488]" aria-hidden="true" />
+                  <span>Option-by-option clinical &amp; distractor rationales</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0D9488]" aria-hidden="true" />
+                  <span>7-domain Nursing Study Guide &amp; reference notes</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0D9488]" aria-hidden="true" />
+                  <span>Client Needs readiness &amp; performance insights</span>
+                </li>
+              </ul>
+
+              {/* Secondary Utility Links & Pathway Switcher */}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground pt-1">
                 <Link
-                  href="/nclex-pn"
-                  className="font-semibold text-secondary underline-offset-4 hover:underline"
+                  href="/study-guide"
+                  className="font-medium text-foreground/80 hover:text-[#0D9488] underline-offset-4 hover:underline"
                 >
-                  Switch to the NCLEX-PN Pathway →
+                  Browse Study Guide
                 </Link>
-              </p>
+                <a
+                  href="#rn-question-experience"
+                  className="font-medium text-foreground/80 hover:text-[#0D9488] underline-offset-4 hover:underline"
+                >
+                  Try Free Sample Question
+                </a>
+                <span>
+                  Preparing for LPN/LVN?{" "}
+                  <Link
+                    href="/nclex-pn"
+                    className="font-semibold text-[#0D9488] underline-offset-4 hover:underline"
+                  >
+                    Switch to NCLEX-PN →
+                  </Link>
+                </span>
+              </div>
             </div>
 
-            {/* Right Column: Integrated Healthcare Visual Composition (no boxy card frame) */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative mx-auto max-w-md lg:max-w-none">
-                {/* Soft organic backdrop glow */}
-                <div
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -inset-4 rounded-[2.5rem] bg-gradient-to-tr from-secondary/20 via-primary/10 to-transparent blur-2xl"
+            {/* Right Column: RN Platform Tour Product Video Frame */}
+            <div className="lg:col-span-6 relative">
+              <div className="relative mx-auto max-w-xl lg:max-w-none">
+                <ProductVideoPlayer
+                  video={RN_PLATFORM_VIDEO}
+                  open={isRnVideoOpen}
+                  onOpenChange={setIsRnVideoOpen}
+                  frameTestId="rn-hero-video-frame"
+                  playButtonTestId="rn-hero-video-play"
+                  modalTestId="rn-hero-video-modal"
                 />
-
-                {/* Main nursing image blended naturally */}
-                <div className="relative overflow-hidden rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-2xl">
-                  <Image
-                    src="/images/illustrations/prepford-rn-pathway-card.png"
-                    alt="Registered nurse candidate reviewing acute care clinical notes and NCLEX-RN practice scenarios"
-                    width={640}
-                    height={720}
-                    priority
-                    className="h-[380px] sm:h-[440px] w-full object-contain sm:object-cover object-center"
-                  />
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/95 via-background/20 to-transparent"
-                  />
-
-                  {/* Floating Clinical Telemetry Overlay Badge */}
-                  <div className="absolute top-4 left-4 right-4 sm:right-auto flex items-center gap-3 rounded-2xl bg-background/90 dark:bg-card/90 backdrop-blur-md px-4 py-2.5 shadow-lg">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary/15 text-secondary">
-                      <HeartPulse className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wider text-secondary">
-                        Clinical Judgment Focus
-                      </p>
-                      <p className="text-xs font-medium text-foreground">
-                        Acute Prioritization, Delegation &amp; Pharmacology
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Bottom Integrated Resource Summary Strip */}
-                  <div className="absolute bottom-4 inset-x-4 rounded-2xl bg-background/95 dark:bg-card/95 backdrop-blur-md p-4 shadow-lg">
-                    <div className="flex items-center justify-between gap-2">
-                      <div>
-                        <p className="text-xs font-semibold text-foreground">
-                          Structured RN Exam Preparation
-                        </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          Question Bank • Rationales • 7-Domain Study Guide • Readiness Pack
-                        </p>
-                      </div>
-                      <Badge className="bg-secondary text-secondary-foreground shrink-0">
-                        RN Pathway
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
+                <p className="mt-2.5 text-center lg:text-right text-xs text-muted-foreground">
+                  Includes RN dashboard, acute care scenarios, rationales, and Client Needs analytics.
+                </p>
               </div>
             </div>
           </div>

@@ -2,365 +2,161 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import {
-  BookOpen,
-  Compass,
   Activity,
+  ArrowRight,
   CheckCircle2,
+  GraduationCap,
+  Play,
+  Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { ProductVideoPlayer } from "@/components/video/product-video-player";
+import { HOME_PLATFORM_VIDEO } from "@/lib/hero-videos";
 
 const FULLWIDTH_ECG_PATH =
   "M0,68 L140,68 L175,68 L192,48 L208,82 L226,18 L244,98 L262,56 L285,68 L520,68 L555,68 L572,48 L588,82 L606,18 L624,98 L642,56 L665,68 L900,68 L935,68 L952,48 L968,82 L986,18 L1004,98 L1022,56 L1045,68 L1260,68 L1295,68 L1312,48 L1328,82 L1346,18 L1364,98 L1382,56 L1405,68 L1440,68";
 
-interface HeroSlide {
-  id: string;
-  eyebrow: string;
-  title: string;
-  description: string;
-  primaryCta: {
-    label: string;
-    href: string;
-    icon: React.ComponentType<{ className?: string }>;
-  };
-  secondaryCta: {
-    label: string;
-    href: string;
-    icon: React.ComponentType<{ className?: string }>;
-  };
-  capabilities: string[];
-  disclaimer: string;
-  image: {
-    src: string;
-    alt: string;
-    testid?: string;
-  };
-}
-
-const HERO_SLIDES: HeroSlide[] = [
-  {
-    id: "slide-pathways",
-    eyebrow: "NCLEX-RN & NCLEX-PN Exam Preparation",
-    title: "Prepare for NCLEX with greater clarity and confidence.",
-    description:
-      "Practice nursing questions, strengthen your understanding with rationales, and organize your preparation with PrepFord's available study resources.",
-    primaryCta: {
-      label: "Explore NCLEX Prep",
-      href: "#nursing-pathways",
-      icon: Compass,
-    },
-    secondaryCta: {
-      label: "Explore Study Guide",
-      href: "/study-guide",
-      icon: BookOpen,
-    },
-    capabilities: [
-      "Dedicated NCLEX-RN & NCLEX-PN Pathways",
-      "Step-by-Step Clinical Answer Rationales",
-      "7-Domain Nursing Study Guide & Notes",
-      "Adaptive CAT & NGN Case Study Practice",
-    ],
-    disclaimer: "Independent preparation platform. Not affiliated with or endorsed by NCSBN.",
-    image: {
-      src: "/images/illustrations/prepford-landing-hero.png",
-      alt: "Nursing candidate preparing for NCLEX licensure with PrepFord digital learning workspace",
-      testid: "hero-nurse-image",
-    },
-  },
-  {
-    id: "slide-ngn",
-    eyebrow: "Next Generation NCLEX (NGN)",
-    title: "Master Clinical Judgment with EHR Unfolding Cases.",
-    description:
-      "Analyze realistic electronic health records, monitor vital sign trajectories, and prioritize life-saving nursing actions across NCSBN's 6 cognitive decision steps.",
-    primaryCta: {
-      label: "Explore Nursing Courses",
-      href: "/courses",
-      icon: Compass,
-    },
-    secondaryCta: {
-      label: "Compare RN Plans",
-      href: "/nclex-rn#rn-study-plans",
-      icon: BookOpen,
-    },
-    capabilities: [
-      "Multi-Tab Patient EHR Charts & Labs",
-      "6-Step NCSBN Clinical Judgment Model",
-      "Option-by-Option Distractor Rationales",
-      "Client Safety & Prioritization Focus",
-    ],
-    disclaimer: "Built for registered nurse and practical nurse clinical reasoning development.",
-    image: {
-      src: "/images/illustrations/prepford-ehr-unfolding-case.png",
-      alt: "PrepFord electronic health record unfolding clinical case simulation for Next Gen NCLEX",
-      testid: "hero-slide-image-ngn",
-    },
-  },
-  {
-    id: "slide-study-guide",
-    eyebrow: "Comprehensive Nursing Curriculum",
-    title: "Master High-Yield Clinical Concepts Across 7 Nursing Domains.",
-    description:
-      "From pharmacology mechanisms and cardiovascular emergencies to pediatric milestones and prioritization frameworks, review organized clinical notes anytime.",
-    primaryCta: {
-      label: "Browse Study Guides",
-      href: "/study-guide",
-      icon: BookOpen,
-    },
-    secondaryCta: {
-      label: "Explore RN Pathway",
-      href: "/nclex-rn",
-      icon: Compass,
-    },
-    capabilities: [
-      "7 Core NCSBN Client Needs Domains",
-      "Organized Clinical Review Sheets",
-      "High-Alert Medication Safety Quick-Ref",
-      "Distraction-Free Mobile Study Format",
-    ],
-    disclaimer: "Organized around NCSBN Client Needs and safety competencies.",
-    image: {
-      src: "/images/illustrations/prepford-pathophysiology-rationales.png",
-      alt: "Structured PrepFord 7-domain nursing study guide with core clinical topics and high-yield notes",
-      testid: "hero-slide-image-studyguide",
-    },
-  },
-  {
-    id: "slide-analytics",
-    eyebrow: "Personalized Assessment & Analytics",
-    title: "Transparent Clinical Readiness Insights for Confident Exam Day.",
-    description:
-      "Track mastery across Client Needs categories, benchmark passing probability with timed readiness assessments, and focus review where it counts most.",
-    primaryCta: {
-      label: "View Study Plans",
-      href: "/subscriptions",
-      icon: Compass,
-    },
-    secondaryCta: {
-      label: "Go to Learner Dashboard",
-      href: "/dashboard",
-      icon: BookOpen,
-    },
-    capabilities: [
-      "Timed Readiness Assessment Scoring",
-      "Client Needs Percentage Breakdown",
-      "High-Yield Topic Strength Identification",
-      "Transparent, Honest Readiness Signals",
-    ],
-    disclaimer: "Data-driven study feedback designed to eliminate exam-day surprises.",
-    image: {
-      src: "/images/illustrations/prepford-readiness-analytics.png",
-      alt: "PrepFord clinical readiness dashboard showing Client Needs domain proficiency and exam confidence metrics",
-      testid: "hero-slide-image-analytics",
-    },
-  },
+const HERO_CAPABILITIES = [
+  "Dedicated NCLEX-RN & NCLEX-PN Pathways",
+  "Step-by-Step Clinical Answer Rationales",
+  "7-Domain Nursing Study Guide & Notes",
+  "Adaptive CAT & NGN Case Study Practice",
 ];
 
 export function HeroSection() {
-  const [activeSlide, setActiveSlide] = React.useState(0);
-  const [isPlaying, setIsPlaying] = React.useState(true);
-  const [isHovered, setIsHovered] = React.useState(false);
-  const [isFocused, setIsFocused] = React.useState(false);
-  const [isDocumentVisible, setIsDocumentVisible] = React.useState(true);
-
-  // Check prefers-reduced-motion
-  React.useEffect(() => {
-    if (typeof window !== "undefined" && window.matchMedia) {
-      const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-      setIsPlaying(!mediaQuery.matches);
-
-      const listener = (e: MediaQueryListEvent) => {
-        setIsPlaying(!e.matches);
-      };
-      mediaQuery.addEventListener?.("change", listener);
-      return () => mediaQuery.removeEventListener?.("change", listener);
-    }
-  }, []);
-
-  // Pause autoplay when document/tab is hidden
-  React.useEffect(() => {
-    if (typeof document === "undefined") return;
-
-    const handleVisibilityChange = () => {
-      setIsDocumentVisible(document.visibilityState === "visible");
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, []);
-
-  // Automatic Carousel Playback (7000ms display interval)
-  React.useEffect(() => {
-    if (!isPlaying || isHovered || isFocused || !isDocumentVisible) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }, 7000);
-
-    return () => clearInterval(interval);
-  }, [isPlaying, isHovered, isFocused, isDocumentVisible]);
-
-  // Optional keyboard arrow navigation for power users/accessibility
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowLeft") {
-      e.preventDefault();
-      setActiveSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
-    } else if (e.key === "ArrowRight") {
-      e.preventDefault();
-      setActiveSlide((prev) => (prev + 1) % HERO_SLIDES.length);
-    }
-  };
-
-  const currentSlide = HERO_SLIDES[activeSlide];
-  const PrimaryIcon = currentSlide.primaryCta.icon;
-  const SecondaryIcon = currentSlide.secondaryCta.icon;
+  const [isVideoOpen, setIsVideoOpen] = React.useState(false);
 
   return (
     <section
       id="main-content"
       data-testid="hero-section"
-      className="relative isolate w-full min-h-[640px] lg:min-h-[720px] flex flex-col justify-between overflow-hidden bg-gradient-to-b from-teal-50/50 via-slate-50/35 to-background dark:from-slate-950 dark:via-slate-900/90 dark:to-background text-foreground pt-8 sm:pt-12 lg:pt-16 pb-2 sm:pb-3"
-      aria-label="PrepFord NCLEX Hero"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      onFocus={() => setIsFocused(true)}
-      onBlur={() => setIsFocused(false)}
-      onKeyDown={handleKeyDown}
-      tabIndex={0}
-      role="region"
-      aria-roledescription="carousel"
+      aria-labelledby="home-hero-heading"
+      className="relative isolate w-full min-h-[640px] lg:min-h-[700px] flex flex-col justify-between overflow-hidden bg-gradient-to-b from-slate-50 via-white to-background dark:from-slate-950 dark:via-slate-900/90 dark:to-background text-foreground pt-10 sm:pt-14 lg:pt-16 pb-2 sm:pb-3"
     >
-      {/* Subtle Ambient Tonal Glows (z-0, decorative, pointer-events-none) */}
+      {/* Subtle Clinical Ambient Accents */}
       <div
         aria-hidden="true"
         className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
       >
-        <div className="absolute -top-28 right-1/4 h-96 w-96 rounded-full bg-teal-500/10 dark:bg-teal-400/10 blur-3xl" />
-        <div className="absolute bottom-12 -left-20 h-80 w-80 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl" />
+        <div className="absolute -top-28 right-1/4 h-96 w-96 rounded-full bg-teal-500/8 dark:bg-teal-400/10 blur-3xl" />
+        <div className="absolute bottom-12 -left-20 h-80 w-80 rounded-full bg-[#142B4A]/5 dark:bg-primary/10 blur-3xl" />
       </div>
 
-      {/* Foreground Content Container (z-20, flex-1 to center split layout vertically in document flow) */}
+      {/* Main Two-Column Hero Content */}
       <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 relative z-20 flex-1 flex items-center mb-6 sm:mb-8 lg:mb-10">
-        {/* Unified Editorial Split Layout (Archer Review-Inspired) */}
         <div
-          key={currentSlide.id}
           data-testid="hero-split-layout"
-          role="group"
-          aria-roledescription="slide"
-          aria-label={`Slide ${activeSlide + 1} of ${HERO_SLIDES.length}: ${currentSlide.title}`}
-          className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 xl:gap-16 items-center transition-opacity duration-700 ease-in-out motion-reduce:transition-none py-2 sm:py-4"
+          className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center py-2 sm:py-4"
         >
-          {/* Left Column: Eyebrow, Headline, Supporting Copy, Primary & Secondary CTAs */}
+          {/* Left Column: Headline, Copy, Pathway CTAs, Tour Action */}
           <div
             data-testid="hero-left-column"
             className="lg:col-span-6 text-left flex flex-col items-start"
           >
-            {/* Slide Eyebrow Badge */}
-            <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-300">
-              <span className="h-2 w-2 rounded-full bg-teal-600 dark:bg-teal-400 motion-safe:animate-pulse" />
-              <span>{currentSlide.eyebrow}</span>
+            <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-300 border border-teal-500/20">
+              <span className="h-2 w-2 rounded-full bg-[#0D9488] motion-safe:animate-pulse" />
+              <span>NCLEX-RN &amp; NCLEX-PN Learning Platform</span>
             </div>
 
-            {/* Headline */}
-            <h1 className="mt-5 text-3xl font-serif font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem] leading-[1.18] sm:leading-[1.14] text-left">
-              {currentSlide.title}
+            <h1
+              id="home-hero-heading"
+              className="mt-5 text-3xl font-serif font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem] leading-[1.15] sm:leading-[1.12] text-left"
+            >
+              Prepare for NCLEX with greater clarity and confidence.
             </h1>
 
-            {/* Supporting Description */}
             <p className="mt-5 max-w-xl text-left text-base sm:text-lg text-muted-foreground leading-relaxed">
-              {currentSlide.description}
+              Practice nursing questions, strengthen your clinical judgment, understand every answer
+              and track your preparation through a dedicated learning platform built for NCLEX-RN
+              and NCLEX-PN candidates.
             </p>
 
-            {/* Primary & Secondary Action Buttons */}
-            <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center justify-start gap-4 w-full sm:w-auto">
+            {/* Pathway & Video Tour Actions */}
+            <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-start gap-3.5 w-full sm:w-auto">
               <Button
                 size="lg"
                 asChild
-                className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md px-8 py-6 text-base rounded-xl"
+                data-testid="home-cta-explore-rn"
+                className="w-full sm:w-auto bg-[#142B4A] hover:bg-[#142B4A]/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold shadow-sm px-6 h-12 text-base rounded-xl"
               >
-                <Link href={currentSlide.primaryCta.href}>
-                  <PrimaryIcon className="mr-2 h-5 w-5" />
-                  {currentSlide.primaryCta.label}
+                <Link href="/nclex-rn">
+                  <GraduationCap className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Explore NCLEX-RN
+                  <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                 </Link>
               </Button>
+
               <Button
                 variant="outline"
                 size="lg"
                 asChild
-                className="w-full sm:w-auto font-semibold px-8 py-6 text-base border-2 border-input rounded-xl bg-card/90 text-foreground backdrop-blur-xs hover:bg-muted hover:text-foreground shadow-sm"
+                data-testid="home-cta-explore-pn"
+                className="w-full sm:w-auto font-semibold px-6 h-12 text-base border-2 border-[#0D9488]/40 rounded-xl bg-white dark:bg-card text-foreground hover:bg-teal-50/70 dark:hover:bg-muted shadow-xs"
               >
-                <Link href={currentSlide.secondaryCta.href}>
-                  <SecondaryIcon className="mr-2 h-5 w-5 text-secondary" />
-                  {currentSlide.secondaryCta.label}
+                <Link href="/nclex-pn">
+                  <Stethoscope className="mr-2 h-4 w-4 text-[#0D9488]" aria-hidden="true" />
+                  Explore NCLEX-PN
                 </Link>
+              </Button>
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="lg"
+                data-testid="home-cta-watch-tour"
+                onClick={() => setIsVideoOpen(true)}
+                className="w-full sm:w-auto font-semibold px-4 h-12 text-sm text-[#0D9488] hover:text-[#0F766E] hover:bg-teal-50/80 dark:text-teal-300 dark:hover:bg-teal-950/40 rounded-xl"
+              >
+                <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" />
+                Watch Platform Tour
               </Button>
             </div>
 
-            {/* Capability Indicators */}
+            {/* Verified Capability Indicators */}
             <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-medium text-foreground/90 w-full max-w-lg">
-              {currentSlide.capabilities.map((cap) => (
+              {HERO_CAPABILITIES.map((cap) => (
                 <div key={cap} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0" aria-hidden="true" />
                   <span>{cap}</span>
                 </div>
               ))}
             </div>
 
             <p className="mt-4 text-xs text-muted-foreground text-left">
-              {currentSlide.disclaimer}
+              Independent preparation platform. Not affiliated with or endorsed by NCSBN.
             </p>
           </div>
 
-          {/* Right Column: Seamlessly Integrated Visual (Archer Review-Inspired, No Separate White Card Frame) */}
+          {/* Right Column: Polished Laptop/Dashboard Video Frame */}
           <div
             data-testid="hero-right-column"
-            className="lg:col-span-6 relative w-full flex items-center justify-center lg:justify-end"
+            className="lg:col-span-6 relative w-full flex flex-col items-center lg:items-end"
           >
             <div className="relative w-full max-w-xl lg:max-w-none">
-              {/* Subtle ambient backlight glow behind visual */}
-              <div
-                aria-hidden="true"
-                className="absolute -inset-4 rounded-3xl bg-gradient-to-tr from-teal-500/15 via-primary/5 to-transparent blur-2xl pointer-events-none select-none"
+              <ProductVideoPlayer
+                video={HOME_PLATFORM_VIDEO}
+                open={isVideoOpen}
+                onOpenChange={setIsVideoOpen}
+                frameTestId="home-hero-video-frame"
+                playButtonTestId="home-hero-video-play"
+                modalTestId="home-hero-video-modal"
               />
-
-              {/* Seamless Integrated Image Surface without artificial white card frame */}
-              <div className="relative w-full overflow-hidden transition-all duration-700 ease-out">
-                <Image
-                  src={currentSlide.image.src}
-                  alt={currentSlide.image.alt}
-                  data-testid={currentSlide.image.testid ?? "hero-slide-image"}
-                  width={1376}
-                  height={768}
-                  priority={activeSlide === 0}
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 640px"
-                  className={cn(
-                    "w-full h-auto transition-transform duration-700 rounded-3xl shadow-xl shadow-teal-950/5",
-                    // Editorial clinical photography & dashboard showcase: soft rounded corners and restrained elevation
-                    currentSlide.id === "slide-pathways"
-                      ? "object-cover aspect-[16/10] sm:aspect-video"
-                      : "object-cover aspect-[4/3] sm:aspect-video lg:aspect-[16/10]"
-                  )}
-                />
-              </div>
+              <p className="mt-2.5 text-center lg:text-right text-xs text-muted-foreground">
+                One learning platform. Two dedicated nursing pathways. A more structured way to prepare.
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Full-Width Left-to-Right Animated Heartbeat / ECG Line (z-10, spans full hero width in natural document flow) */}
+      {/* Full-Width Left-to-Right Animated Heartbeat / ECG Line */}
       <div
         aria-hidden="true"
         data-testid="hero-fullwidth-heartbeat"
-        className="relative inset-x-0 w-full z-10 pointer-events-none select-none overflow-hidden mt-6 sm:mt-8 lg:mt-10"
+        className="relative inset-x-0 w-full z-10 pointer-events-none select-none overflow-hidden mt-4 sm:mt-6 lg:mt-8"
       >
-        <div
-          data-testid="hero-ecg-container"
-          className="w-full"
-        >
+        <div data-testid="hero-ecg-container" className="w-full">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between text-[10px] sm:text-[11px] font-mono text-teal-800/75 dark:text-teal-300/80 mb-1 gap-2">
             <span className="inline-flex items-center gap-1.5 shrink-0">
               <Activity className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400 motion-safe:animate-heartbeat" />
@@ -378,7 +174,6 @@ export function HeroSection() {
             fill="none"
             preserveAspectRatio="none"
           >
-            {/* Static baseline waveform */}
             <path
               data-testid="hero-ecg-baseline"
               d={FULLWIDTH_ECG_PATH}
@@ -389,7 +184,6 @@ export function HeroSection() {
               strokeLinejoin="round"
               className="text-teal-700/20 dark:text-teal-400/25"
             />
-            {/* Travelling left-to-right heartbeat pulse wave */}
             <path
               data-testid="hero-ecg-pulse-ltr"
               d={FULLWIDTH_ECG_PATH}

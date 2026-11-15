@@ -18,11 +18,11 @@ import {
   FileText,
   HelpCircle,
   Layers,
+  Play,
   RotateCcw,
   ShieldCheck,
   ShoppingCart,
   Sparkles,
-  Stethoscope,
   XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,8 @@ import { getProductById, type Product } from "@/lib/products";
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { BRAND } from "@/lib/brand";
+import { ProductVideoPlayer } from "@/components/video/product-video-player";
+import { PN_PLATFORM_VIDEO } from "@/lib/hero-videos";
 
 const PN_HERO_ECG_PATH =
   "M0,68 L140,68 L175,68 L192,48 L208,82 L226,18 L244,98 L262,56 L285,68 L520,68 L555,68 L572,48 L588,82 L606,18 L624,98 L642,56 L665,68 L900,68 L935,68 L952,48 L968,82 L986,18 L1004,98 L1022,56 L1045,68 L1260,68 L1295,68 L1312,48 L1328,82 L1346,18 L1364,98 L1382,56 L1405,68 L1440,68";
@@ -310,6 +312,7 @@ export function NCLEXPNPageClient() {
   const isAuthenticated = auth?.isAuthenticated ?? false;
 
   const [isNavigatingDashboard, setIsNavigatingDashboard] = React.useState(false);
+  const [isPnVideoOpen, setIsPnVideoOpen] = React.useState(false);
 
   const handleGoToPnDashboard = React.useCallback(() => {
     setIsNavigatingDashboard(true);
@@ -468,14 +471,14 @@ export function NCLEXPNPageClient() {
         {/* Hero Foreground Content */}
         <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 relative z-20">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
-            {/* Left Column: Brand Pill, Heading, Copy, Resource Summary, CTAs */}
+            {/* Left Column: PN Pathway Identity, Heading, Copy & Primary CTAs */}
             <div className="lg:col-span-6 text-left flex flex-col items-start">
-              <div className="inline-flex items-center gap-2.5 rounded-full bg-teal-500/12 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-300">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+              <div className="inline-flex items-center gap-2.5 rounded-full bg-teal-500/12 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-300 border border-teal-500/20">
+                <Image
                   src={BRAND.logo.assetPath}
                   alt=""
-                  aria-hidden="true"
+                  width={16}
+                  height={16}
                   className="h-4 w-4 rounded-sm object-contain"
                 />
                 <span>NCLEX-PN Exam Preparation • LPN &amp; LVN Pathway</span>
@@ -483,137 +486,128 @@ export function NCLEXPNPageClient() {
 
               <h1
                 id="nclex-pn-hero-heading"
-                className="mt-5 text-3xl font-serif font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.2rem] leading-[1.12]"
+                className="mt-5 text-3xl font-serif font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.15rem] leading-[1.12]"
               >
-                Prepare for the NCLEX-PN with Structured Practice and Clinical Clarity
+                Prepare for NCLEX-PN with confidence and clinical clarity.
               </h1>
 
               <p className="mt-5 max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed">
-                Build confidence for practical and vocational nursing licensure with PrepFord&apos;s scenario-based NCLEX-PN practice questions, option-by-option clinical rationales, and 7-domain Nursing Study Guide.
+                Strengthen your practical nursing knowledge through realistic clinical scenarios,
+                detailed answer rationales, structured study resources and progress tracking.
               </p>
 
-              {/* Real Available Resource Highlights */}
-              <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-medium text-foreground/90 w-full max-w-lg">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
-                  <span>Practical Nursing Scenario Questions</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
-                  <span>Option-by-Option Clinical Rationales</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
-                  <span>7-Domain Nursing Study Guide &amp; Notes</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-secondary shrink-0" aria-hidden="true" />
-                  <span>Timed Readiness Assessment Packs</span>
-                </div>
-              </div>
-
-              {/* Prominent NCLEX-PN Learner Dashboard CTA */}
-              <div
-                data-testid="pn-dashboard-cta-banner"
-                className="mt-6 w-full max-w-xl rounded-2xl border-2 border-secondary/35 bg-gradient-to-r from-teal-500/15 via-teal-500/10 to-transparent p-4 sm:p-5 shadow-xs transition-all hover:border-secondary/50"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-2.5 w-2.5 rounded-full bg-secondary animate-pulse" aria-hidden="true" />
-                      <span className="text-xs font-bold tracking-wider uppercase text-teal-800 dark:text-teal-300">
-                        NCLEX-PN Practical Nurse Workspace
-                      </span>
-                    </div>
-                    <p className="text-sm font-medium text-foreground/90 leading-snug">
-                      Continue your NCLEX-PN preparation, monitor your progress, and build your practical nursing confidence.
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    size="lg"
-                    data-testid="pn-hero-dashboard-cta"
-                    onClick={handleGoToPnDashboard}
-                    disabled={isNavigatingDashboard}
-                    className="bg-secondary hover:bg-secondary/90 text-white font-semibold px-6 h-12 rounded-xl shadow-md shrink-0 flex items-center justify-center gap-2 group transition-all"
-                  >
-                    {isNavigatingDashboard ? (
-                      <span>Opening Dashboard...</span>
-                    ) : (
-                      <>
-                        <span>Go to PN Learner Dashboard</span>
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" aria-hidden="true" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              {/* Primary & Secondary CTAs */}
-              <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-start gap-3.5 w-full sm:w-auto">
+              {/* Primary, Secondary & Video Actions */}
+              <div className="mt-7 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-start gap-3.5 w-full sm:w-auto">
                 <Button
+                  type="button"
                   size="lg"
-                  asChild
-                  className="w-full sm:w-auto bg-primary hover:bg-primary/90 text-primary-foreground font-semibold shadow-md px-7 py-6 text-base rounded-xl"
+                  data-testid="pn-hero-dashboard-cta"
+                  onClick={handleGoToPnDashboard}
+                  disabled={isNavigatingDashboard}
+                  className="w-full sm:w-auto bg-[#142B4A] hover:bg-[#142B4A]/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold px-6 h-12 rounded-xl shadow-sm flex items-center justify-center gap-2 group"
                 >
-                  <a href="#pn-study-plans">
-                    <Compass className="mr-2 h-5 w-5" />
-                    Explore Study Plans
-                  </a>
+                  {isNavigatingDashboard ? (
+                    <span>Opening Dashboard...</span>
+                  ) : (
+                    <>
+                      <span>Go to PN Learner Dashboard</span>
+                      <ArrowRight
+                        className="h-4 w-4 transition-transform group-hover:translate-x-1"
+                        aria-hidden="true"
+                      />
+                    </>
+                  )}
                 </Button>
+
                 <Button
                   variant="outline"
                   size="lg"
                   asChild
-                  className="w-full sm:w-auto font-semibold px-7 py-6 text-base border-2 border-input rounded-xl bg-card/90 text-foreground backdrop-blur-xs hover:bg-muted hover:text-foreground shadow-sm"
+                  className="w-full sm:w-auto font-semibold px-6 h-12 text-base border-2 border-[#0D9488]/40 rounded-xl bg-white dark:bg-card text-foreground hover:bg-teal-50/70 dark:hover:bg-muted shadow-xs"
                 >
-                  <Link href="/study-guide">
-                    <BookOpen className="mr-2 h-5 w-5 text-secondary" />
-                    Explore Study Guide
-                  </Link>
+                  <a href="#pn-study-plans">
+                    <Compass className="mr-2 h-4 w-4 text-[#0D9488]" aria-hidden="true" />
+                    Explore PN Study Plans
+                  </a>
                 </Button>
+
                 <Button
+                  type="button"
                   variant="ghost"
                   size="lg"
-                  asChild
-                  className="w-full sm:w-auto font-semibold px-5 py-6 text-sm text-foreground hover:text-secondary rounded-xl"
+                  data-testid="pn-hero-watch-tour"
+                  onClick={() => setIsPnVideoOpen(true)}
+                  className="w-full sm:w-auto font-semibold px-4 h-12 text-sm text-[#0D9488] hover:text-[#0F766E] hover:bg-teal-50/80 dark:text-teal-300 dark:hover:bg-teal-950/40 rounded-xl"
                 >
-                  <a href="#pn-question-experience">
-                    Try Free Sample Question →
-                  </a>
+                  <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" />
+                  Watch the PN Platform Tour
                 </Button>
               </div>
 
-              <p className="mt-4 text-xs text-muted-foreground">
+              {/* Real Available PN Resource Highlights */}
+              <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-medium text-foreground/90 w-full max-w-lg">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0" aria-hidden="true" />
+                  <span>Practical Nursing Scenario Questions</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0" aria-hidden="true" />
+                  <span>Option-by-Option Clinical Rationales</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0" aria-hidden="true" />
+                  <span>7-Domain Nursing Study Guide &amp; Notes</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0" aria-hidden="true" />
+                  <span>PN Domain Progress &amp; Readiness</span>
+                </div>
+              </div>
+
+              {/* Secondary Utility Links & Pathway Switcher */}
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+                <Link
+                  href="/study-guide"
+                  className="font-medium text-foreground/80 hover:text-[#0D9488] underline-offset-4 hover:underline"
+                >
+                  Browse Study Guide
+                </Link>
+                <a
+                  href="#pn-question-experience"
+                  className="font-medium text-foreground/80 hover:text-[#0D9488] underline-offset-4 hover:underline"
+                >
+                  Try Free Sample Question
+                </a>
+                <span>
+                  Preparing for Registered Nurse?{" "}
+                  <Link
+                    href="/nclex-rn"
+                    className="font-semibold text-[#0D9488] underline-offset-4 hover:underline"
+                  >
+                    Switch to NCLEX-RN →
+                  </Link>
+                </span>
+              </div>
+
+              <p className="mt-3 text-xs text-muted-foreground">
                 Independent preparation platform. Not affiliated with or endorsed by NCSBN.
               </p>
             </div>
 
-            {/* Right Column: Integrated Nursing Visual (Softly Blended, No Boxed Card) */}
+            {/* Right Column: PN Platform Tour Product Video Frame */}
             <div className="lg:col-span-6 relative">
               <div className="relative mx-auto max-w-xl lg:max-w-none">
-                <div
-                  aria-hidden="true"
-                  className="absolute -inset-4 rounded-[2.5rem] bg-gradient-to-tr from-teal-500/20 via-primary/10 to-transparent blur-2xl pointer-events-none select-none"
+                <ProductVideoPlayer
+                  video={PN_PLATFORM_VIDEO}
+                  open={isPnVideoOpen}
+                  onOpenChange={setIsPnVideoOpen}
+                  frameTestId="pn-hero-video-frame"
+                  playButtonTestId="pn-hero-video-play"
+                  modalTestId="pn-hero-video-modal"
                 />
-                <div className="relative rounded-3xl overflow-hidden shadow-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src="/images/illustrations/prepford-pn-pathway-card.png"
-                    alt="Practical nursing student reviewing patient care charts and medication safety notes"
-                    data-testid="pn-hero-image"
-                    className="w-full h-[340px] sm:h-[420px] lg:h-[460px] object-contain sm:object-cover object-center"
-                  />
-                  <div className="absolute bottom-5 left-5 right-5 flex flex-wrap items-center justify-between gap-2 text-xs text-white/95">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/85 backdrop-blur-md px-3.5 py-1.5 font-semibold text-slate-100">
-                      <Stethoscope className="h-3.5 w-3.5 text-teal-300" />
-                      Focused on LPN / LVN Clinical Scope
-                    </span>
-                    <span className="rounded-full bg-teal-600/90 backdrop-blur-md px-3 py-1 font-mono text-[11px] text-white font-semibold">
-                      Coordinated Care • Safety • Pharmacology
-                    </span>
-                  </div>
-                </div>
+                <p className="mt-2.5 text-center lg:text-right text-xs text-muted-foreground">
+                  Focused on LPN/LVN scope: data collection, coordinated care, and medication safety.
+                </p>
               </div>
             </div>
           </div>
