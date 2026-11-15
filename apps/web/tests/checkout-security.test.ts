@@ -118,7 +118,7 @@ describe("Phase 3 — Checkout Security & Payment Lifecycle Remediation", () => 
     expect(data.plan.name).toContain("NCLEX-RN");
   });
 
-  it("5. authoritatively resolves dual-pathway bundle (prep-premium) granting both pathways", async () => {
+  it("5. authoritatively resolves single-pathway RN premium bundle (prep-premium) to rn pathway", async () => {
     mockSessionValue = JSON.stringify({
       sub: candidateUserId,
       email: candidateEmail,
@@ -139,11 +139,11 @@ describe("Phase 3 — Checkout Security & Payment Lifecycle Remediation", () => 
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.success).toBe(true);
-    expect(data.plan.pathway).toBe("both");
+    expect(data.plan.pathway).toBe("rn");
 
-    // Profile record in database reflects authoritative dual access
+    // Profile record in database reflects authoritative single-pathway RN access
     const savedMeta = getUserProfileMeta(candidateUserId, candidateEmail);
-    expect(savedMeta?.pathway).toBe("both");
-    expect(savedMeta?.activePlan).toContain("All-Access");
+    expect(savedMeta?.pathway).toBe("rn");
+    expect(savedMeta?.activePlan).toContain("NCLEX-RN Premium");
   });
 });

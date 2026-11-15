@@ -43,7 +43,7 @@ vi.mock("@/lib/cart-context", () => ({
   }),
 }));
 
-describe("Homepage Hero Animated Carousel", () => {
+describe("Homepage Hero Experience", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -52,10 +52,9 @@ describe("Homepage Hero Animated Carousel", () => {
     vi.useRealTimers();
   });
 
-  it("renders the initial slide with Archer-inspired copy and seamless visual integration without manual controls", () => {
+  it("renders the authoritative headline and primary pathway CTAs without manual carousel controls", () => {
     render(<HeroSection />);
 
-    // Verify slide 1 headline
     expect(
       screen.getByRole("heading", {
         level: 1,
@@ -63,165 +62,36 @@ describe("Homepage Hero Animated Carousel", () => {
       })
     ).toBeInTheDocument();
 
-    // Verify manual controls and counters are removed in accordance with Archer Review inspiration
+    // Verify manual carousel controls and counters are not present
     expect(screen.queryByTestId("hero-slide-counter")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hero-carousel-prev")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hero-carousel-next")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hero-carousel-play-toggle")).not.toBeInTheDocument();
     expect(screen.queryByTestId("hero-carousel-dot-0")).not.toBeInTheDocument();
 
-    // Verify right column image is seamlessly integrated without artificial white card frame
-    const rightCol = screen.getByTestId("hero-right-column");
-    expect(within(rightCol).getByRole("img")).toBeInTheDocument();
+    // Verify primary RN & PN CTAs
+    expect(screen.getByTestId("home-cta-explore-rn")).toHaveAttribute("href", "/nclex-rn");
+    expect(screen.getByTestId("home-cta-explore-pn")).toHaveAttribute("href", "/nclex-pn");
   });
 
-  it("automatically cycles slides using 7000ms autoplay interval", () => {
-    vi.useFakeTimers();
-    render(<HeroSection />);
+  it("renders decorative autoplay background video with accessibility safeguards", () => {
+    const { container } = render(<HeroSection />);
 
-    // Initial: Slide 1
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Prepare for NCLEX with greater clarity and confidence\./i,
-      })
-    ).toBeInTheDocument();
-
-    // Advance 7000ms -> Slide 2 (NGN Unfolding Cases)
-    act(() => {
-      vi.advanceTimersByTime(7000);
-    });
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Master Clinical Judgment with EHR Unfolding Cases\./i,
-      })
-    ).toBeInTheDocument();
-
-    // Advance 7000ms -> Slide 3 (Study Guide)
-    act(() => {
-      vi.advanceTimersByTime(7000);
-    });
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Master High-Yield Clinical Concepts Across 7 Nursing Domains\./i,
-      })
-    ).toBeInTheDocument();
-
-    // Advance 7000ms -> Slide 4 (Readiness Insights)
-    act(() => {
-      vi.advanceTimersByTime(7000);
-    });
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Transparent Clinical Readiness Insights for Confident Exam Day\./i,
-      })
-    ).toBeInTheDocument();
-
-    // Advance 7000ms -> Wrap back to Slide 1
-    act(() => {
-      vi.advanceTimersByTime(7000);
-    });
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Prepare for NCLEX with greater clarity and confidence\./i,
-      })
-    ).toBeInTheDocument();
+    const video = container.querySelector("video");
+    expect(video).toBeInTheDocument();
+    expect(video).toHaveAttribute("aria-hidden", "true");
+    expect(video).toHaveProperty("muted", true);
+    expect(video).toHaveProperty("loop", true);
+    expect(video).toHaveProperty("playsInline", true);
   });
 
-  it("pauses automatic slide advancement when user hovers over hero section and resumes on leave", () => {
-    vi.useFakeTimers();
+  it("preserves hero section landmark and trust badges", () => {
     render(<HeroSection />);
 
     const hero = screen.getByTestId("hero-section");
-
-    // Mouse enters hero -> should pause
-    fireEvent.mouseEnter(hero);
-
-    // Advance 14000ms while hovered -> should stay on Slide 1
-    act(() => {
-      vi.advanceTimersByTime(14000);
-    });
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Prepare for NCLEX with greater clarity and confidence\./i,
-      })
-    ).toBeInTheDocument();
-
-    // Mouse leaves hero -> should resume
-    fireEvent.mouseLeave(hero);
-
-    // Advance 7000ms -> advances to Slide 2
-    act(() => {
-      vi.advanceTimersByTime(7000);
-    });
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Master Clinical Judgment with EHR Unfolding Cases\./i,
-      })
-    ).toBeInTheDocument();
-  });
-
-  it("pauses automatic slide advancement when user focuses within hero section and resumes on blur", () => {
-    vi.useFakeTimers();
-    render(<HeroSection />);
-
-    const hero = screen.getByTestId("hero-section");
-
-    // Focus enters hero -> should pause
-    fireEvent.focusIn(hero);
-
-    act(() => {
-      vi.advanceTimersByTime(14000);
-    });
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Prepare for NCLEX with greater clarity and confidence\./i,
-      })
-    ).toBeInTheDocument();
-
-    // Blur from hero -> should resume
-    fireEvent.focusOut(hero);
-
-    act(() => {
-      vi.advanceTimersByTime(7000);
-    });
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Master Clinical Judgment with EHR Unfolding Cases\./i,
-      })
-    ).toBeInTheDocument();
-  });
-
-  it("supports keyboard arrow navigation (ArrowLeft & ArrowRight)", () => {
-    render(<HeroSection />);
-
-    const carousel = screen.getByRole("region", { name: /PrepFord NCLEX Hero/i });
-
-    // ArrowRight advances to Slide 2
-    fireEvent.keyDown(carousel, { key: "ArrowRight" });
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Master Clinical Judgment with EHR Unfolding Cases\./i,
-      })
-    ).toBeInTheDocument();
-
-    // ArrowLeft goes back to Slide 1
-    fireEvent.keyDown(carousel, { key: "ArrowLeft" });
-    expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: /Prepare for NCLEX with greater clarity and confidence\./i,
-      })
-    ).toBeInTheDocument();
+    expect(hero).toBeInTheDocument();
+    expect(screen.getByText(/NCLEX-RN & NCLEX-PN Learning Platform/i)).toBeInTheDocument();
+    expect(screen.getByText(/Practice nursing questions, strengthen your clinical judgment/i)).toBeInTheDocument();
   });
 });
 

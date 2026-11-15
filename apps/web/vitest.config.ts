@@ -11,6 +11,12 @@ export default defineConfig({
     include: ["tests/**/*.{test,spec}.{ts,tsx}"],
     exclude: ["e2e/**", "node_modules/**", "dist/**"],
     testTimeout: 20000,
+    poolOptions: {
+      forks: {
+        minForks: 1,
+        maxForks: 4,
+      },
+    },
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },

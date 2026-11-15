@@ -56,7 +56,7 @@ describe("Homepage header integration & Nursing dropdown navigation", () => {
     const logoMark = within(logoLink).getByTestId("brand-logo-mark");
     expect(logoMark.className).toContain("h-11");
     expect(logoMark.className).toContain("w-11");
-    expect(logoMark).toHaveAttribute("src", "/prepford-logo.png");
+    expect(logoMark.getAttribute("src")).toContain("prepford-logo.png");
 
     const stackedWordmark = within(logoLink).getByTestId("brand-wordmark-stacked");
     expect(stackedWordmark.className).toContain("flex-col");

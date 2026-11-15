@@ -38,22 +38,42 @@ describe("Phase 5: Admin Overview, Reports Studio & System Health Observability"
   });
 
   it("AdminOverviewClient renders PostgreSQL-authoritative platform metrics", async () => {
-    (global.fetch as any).mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({
-        success: true,
-        data: {
-          totalLearners: 1250,
-          activeLearners: 840,
-          totalQuestions: 4200,
-          publishedQuestions: 3800,
-          reviewQueueCount: 400,
-          publishedExamsCount: 18,
-          totalCompletedAttempts: 5600,
-          averageCohortScorePercent: 74.2,
-          activeEngagementRate: 67.2,
-        },
-      }),
+    (global.fetch as any).mockImplementation((url: string) => {
+      if (url.includes("/api/admin/analytics/overview")) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({
+            success: true,
+            data: {
+              kpis: {
+                totalUsers: 1250,
+                activeUsers: 840,
+                newRegistrations: 120,
+                totalRnLearners: 900,
+                totalPnLearners: 350,
+                totalExaminations: 18,
+                examinationAttempts: 6100,
+                completedExaminations: 5600,
+                totalQuestions: 4200,
+                publishedStudyResources: 45,
+                activeSubscriptions: 620,
+                netSubscriptionRevenue: 42000,
+                grossCollectedRevenue: 43500,
+                totalRefunds: 1500,
+                pendingOperationalTasks: 400,
+              },
+              deltas: {
+                periodLabel: "vs prior 30 days",
+              },
+              calculatedAt: new Date().toISOString(),
+            },
+          }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: async () => ({ success: true, data: {} }),
+      });
     });
 
     render(<AdminOverviewClient />);
@@ -65,13 +85,12 @@ describe("Phase 5: Admin Overview, Reports Studio & System Health Observability"
       expect(screen.getByText("18")).toBeInTheDocument(); // Published exams
     });
 
-    expect(screen.getByText(/840 active \(67.2% rate\)/i)).toBeInTheDocument();
-    expect(screen.getByText(/3800 published across formats/i)).toBeInTheDocument();
-    expect(screen.getByText(/5600 completed \(74.2% avg\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/840 active \(67% rate\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/5600 completed attempts/i)).toBeInTheDocument();
 
-    // Quick links to Reports Studio and Monitoring
-    expect(screen.getByText(/Reports & Analytics Studio/i)).toBeInTheDocument();
-    expect(screen.getByText(/Platform System Health/i)).toBeInTheDocument();
+    // Workspace header & tabs
+    expect(screen.getByText(/System Intelligence & Operational Command/i)).toBeInTheDocument();
+    expect(screen.getByText(/Review Queues/i)).toBeInTheDocument();
   });
 
   it("AdminReportsClient renders assessment report, decile buckets, and exports CSV", async () => {

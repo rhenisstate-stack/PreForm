@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
@@ -19,6 +19,7 @@ import {
 import { getApiBaseUrl } from "@/lib/api-client";
 import PublicHeader from "@/components/layout/public-header";
 import PublicFooter from "@/components/layout/public-footer";
+import { PublicRouteOnly } from "@/components/layout/public-route-only";
 import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import { ECGHeartbeat, buildNormalSinusRhythmPath } from "@/components/auth/ecg-heartbeat";
 import { AuthLoadingSkeleton } from "@/components/auth/auth-loading-skeleton";
@@ -296,11 +297,19 @@ describe("Authentication Connectivity & Experience Upgrade", () => {
 
     it("suppresses PublicFooter on /sign-in and /sign-up", () => {
       currentPathname = "/sign-in";
-      const { container: signInContainer } = render(<PublicFooter />);
+      const { container: signInContainer } = render(
+        <PublicRouteOnly>
+          <PublicFooter />
+        </PublicRouteOnly>
+      );
       expect(signInContainer.firstChild).toBeNull();
 
       currentPathname = "/sign-up";
-      const { container: signUpContainer } = render(<PublicFooter />);
+      const { container: signUpContainer } = render(
+        <PublicRouteOnly>
+          <PublicFooter />
+        </PublicRouteOnly>
+      );
       expect(signUpContainer.firstChild).toBeNull();
     });
 
@@ -370,10 +379,10 @@ describe("Authentication Connectivity & Experience Upgrade", () => {
       const user = userEvent.setup();
       render(<SignUpPageClient />);
 
-      await user.type(screen.getByLabelText(/Full name/i), "SingleName");
-      await user.type(screen.getByLabelText(/Email address/i), "mark@example.com");
-      await user.type(screen.getByLabelText(/^Create password$/i), "C0mpl3x#P@ssw0rd!2026");
-      await user.type(screen.getByLabelText(/^Confirm password$/i), "C0mpl3x#P@ssw0rd!2026");
+      fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: "SingleName" } });
+      fireEvent.change(screen.getByLabelText(/Email address/i), { target: { value: "mark@example.com" } });
+      fireEvent.change(screen.getByLabelText(/^Create password$/i), { target: { value: "C0mpl3x#P@ssw0rd!2026" } });
+      fireEvent.change(screen.getByLabelText(/^Confirm password$/i), { target: { value: "C0mpl3x#P@ssw0rd!2026" } });
       await user.click(screen.getByRole("checkbox"));
       await user.click(screen.getByRole("button", { name: /^Create account$/i }));
 
@@ -390,17 +399,17 @@ describe("Authentication Connectivity & Experience Upgrade", () => {
       const user = userEvent.setup();
       render(<SignUpPageClient />);
 
-      await user.type(screen.getByLabelText(/Full name/i), "Mark Gitau");
-      await user.type(screen.getByLabelText(/Email address/i), "mark.gitau@prepford.com");
-      await user.type(screen.getByLabelText(/^Create password$/i), "C0mpl3x#P@ssw0rd!2026");
-      await user.type(screen.getByLabelText(/^Confirm password$/i), "C0mpl3x#P@ssw0rd!2026");
+      fireEvent.change(screen.getByLabelText(/Full name/i), { target: { value: "Mark Gitau" } });
+      fireEvent.change(screen.getByLabelText(/Email address/i), { target: { value: "mark.gitau@prepford.com" } });
+      fireEvent.change(screen.getByLabelText(/^Create password$/i), { target: { value: "C0mpl3x#P@ssw0rd!2026" } });
+      fireEvent.change(screen.getByLabelText(/^Confirm password$/i), { target: { value: "C0mpl3x#P@ssw0rd!2026" } });
       await user.click(screen.getByRole("checkbox"));
       await user.click(screen.getByRole("button", { name: /^Create account$/i }));
 
       await waitFor(() => {
         expect(mockRegisterUser).toHaveBeenCalledTimes(1);
-        // Spec Part C: newly registered learners land directly on /dashboard.
-        expect(mockPush).toHaveBeenCalledWith("/dashboard");
+        // Single-pathway enforcement: newly registered RN learners land directly on /dashboard/rn.
+        expect(mockPush).toHaveBeenCalledWith("/dashboard/rn");
       });
     });
 

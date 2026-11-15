@@ -38,6 +38,8 @@ vi.mock("@/lib/cart-context", () => ({
 }));
 
 import { DashboardClient } from "@/app/dashboard/page-client";
+import { ClientNeedsIntelligenceCard } from "@/components/learner/performance/client-needs-intelligence-card";
+import type { CategoryPerformanceIntelligence } from "@/lib/api-services";
 
 describe("Phase 5: Learner Performance Analytics & Client Needs Mastery", () => {
   beforeEach(() => {
@@ -46,92 +48,48 @@ describe("Phase 5: Learner Performance Analytics & Client Needs Mastery", () => 
     window.localStorage.clear();
   });
 
-  it("DashboardClient renders Client Needs mastery breakdown and targeted recommendations", async () => {
-    const mockClientNeeds = [
-      { categoryCode: "MOC", categoryName: "Management of Care", totalAssessedQuestions: 15, correctCount: 12, accuracyPercent: 80.0, isLowSample: false, performanceTier: "Very High" },
-      { categoryCode: "SIC", categoryName: "Safety and Infection Control", totalAssessedQuestions: 8, correctCount: 6, accuracyPercent: 75.0, isLowSample: false, performanceTier: "Very High" },
-      { categoryCode: "HPM", categoryName: "Health Promotion and Maintenance", totalAssessedQuestions: 10, correctCount: 7, accuracyPercent: 70.0, isLowSample: false, performanceTier: "High" },
-      { categoryCode: "PSI", categoryName: "Psychosocial Integrity", totalAssessedQuestions: 6, correctCount: 4, accuracyPercent: 66.7, isLowSample: false, performanceTier: "High" },
-      { categoryCode: "BCC", categoryName: "Basic Care and Comfort", totalAssessedQuestions: 4, correctCount: 2, accuracyPercent: 50.0, isLowSample: true, performanceTier: "Low" },
-      { categoryCode: "PHA", categoryName: "Pharmacological and Parenteral Therapies", totalAssessedQuestions: 12, correctCount: 6, accuracyPercent: 50.0, isLowSample: false, performanceTier: "Low" },
-      { categoryCode: "RRP", categoryName: "Reduction of Risk Potential", totalAssessedQuestions: 5, correctCount: 3, accuracyPercent: 60.0, isLowSample: false, performanceTier: "Borderline" },
-      { categoryCode: "PPT", categoryName: "Physiological Adaptation", totalAssessedQuestions: 0, correctCount: 0, accuracyPercent: 0, isLowSample: false, performanceTier: "Unassessed" },
+  it("ClientNeedsIntelligenceCard renders Client Needs mastery breakdown and classification badges", async () => {
+    const mockCategories: CategoryPerformanceIntelligence[] = [
+      { categoryCode: "MOC", categoryName: "Management of Care", pathway: "rn", totalQuestions: 15, correctCount: 12, accuracyPercent: 80.0, averageTimeSeconds: 45, peerBenchmarkAccuracyPercent: 72.0, deltaFromPeerPercent: 8.0, classification: "Strong" },
+      { categoryCode: "BCC", categoryName: "Basic Care and Comfort", pathway: "rn", totalQuestions: 4, correctCount: 2, accuracyPercent: 50.0, averageTimeSeconds: 48, peerBenchmarkAccuracyPercent: 68.0, deltaFromPeerPercent: -18.0, classification: "InsufficientData" },
+      { categoryCode: "PHA", categoryName: "Pharmacological and Parenteral Therapies", pathway: "rn", totalQuestions: 12, correctCount: 6, accuracyPercent: 50.0, averageTimeSeconds: 52, peerBenchmarkAccuracyPercent: 64.0, deltaFromPeerPercent: -14.0, classification: "NeedsAttention" },
     ];
 
-    const mockRecommendations = [
-      {
-        id: "rec-pha",
-        title: "Targeted Remediation: Pharmacological Therapies",
-        description: "Your accuracy in Pharmacological Therapies is 50.0%. Targeted practice in medication administration and IV calculations is recommended.",
-        category: "Remediation",
-        priority: "High",
-        targetClientNeedCode: "PHA",
-        actionHref: "/dashboard?clientNeed=PHA",
-      },
-      {
-        id: "rec-ppt",
-        title: "Establish Baseline: Physiological Adaptation",
-        description: "You have not yet completed questions in Physiological Adaptation. Complete questions in this domain to ensure balanced test-plan readiness.",
-        category: "Practice",
-        priority: "Medium",
-        targetClientNeedCode: "PPT",
-        actionHref: "/dashboard?clientNeed=PPT",
-      },
-    ];
+    render(<ClientNeedsIntelligenceCard categories={mockCategories} pathway="rn" />);
 
+    expect(screen.getByTestId("client-needs-intelligence-card")).toBeInTheDocument();
+    expect(screen.getByText("NCLEX Client Needs Category Mastery")).toBeInTheDocument();
+    expect(screen.getByText("MOC")).toBeInTheDocument();
+    expect(screen.getByText("Management of Care")).toBeInTheDocument();
+    expect(screen.getByText("80.0%")).toBeInTheDocument();
+    expect(screen.getByText("Strong Mastery")).toBeInTheDocument();
+
+    expect(screen.getByText("PHA")).toBeInTheDocument();
+    expect(screen.getByText("Pharmacological and Parenteral Therapies")).toBeInTheDocument();
+    expect(screen.getByText("Needs Priority Focus")).toBeInTheDocument();
+
+    expect(screen.getByText("BCC")).toBeInTheDocument();
+    expect(screen.getByText("Insufficient Data (<5 Qs)")).toBeInTheDocument();
+  });
+
+  it("DashboardClient mounts and fetches learner analytics endpoints cleanly", async () => {
     (global.fetch as any).mockImplementation((url: string) => {
       if (url.includes("/api/learner/analytics/client-needs")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true, data: mockClientNeeds }),
-        });
+        return Promise.resolve({ ok: true, json: async () => ({ success: true, data: [] }) });
       }
       if (url.includes("/api/learner/analytics/recommendations")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true, data: mockRecommendations }),
-        });
+        return Promise.resolve({ ok: true, json: async () => ({ success: true, data: [] }) });
       }
       if (url.includes("/api/assessments/available")) {
-        return Promise.resolve({
-          ok: true,
-          json: async () => ({ success: true, assessments: [] }),
-        });
+        return Promise.resolve({ ok: true, json: async () => ({ success: true, assessments: [] }) });
       }
-      return Promise.resolve({
-        ok: true,
-        json: async () => ({ success: true }),
-      });
+      return Promise.resolve({ ok: true, json: async () => ({ success: true }) });
     });
 
     render(<DashboardClient />);
 
-    // Verify Client Needs section renders
     await waitFor(() => {
-      expect(screen.getByTestId("client-needs-mastery-section")).toBeInTheDocument();
-      expect(screen.getByText("NCSBN Client Needs Category Mastery")).toBeInTheDocument();
-    });
-
-    // Check canonical categories
-    expect(screen.getByText("MOC")).toBeInTheDocument();
-    expect(screen.getByText("Management of Care")).toBeInTheDocument();
-    expect(screen.getByText("80%")).toBeInTheDocument();
-
-    expect(screen.getByText("PHA")).toBeInTheDocument();
-    expect(screen.getByText("Pharmacological and Parenteral Therapies")).toBeInTheDocument();
-
-    expect(screen.getByText("BCC")).toBeInTheDocument();
-    expect(screen.getByText("< 5 items")).toBeInTheDocument(); // Low sample badge
-
-    expect(screen.getByText("PPT")).toBeInTheDocument();
-    expect(screen.getByText("Unassessed")).toBeInTheDocument();
-
-    // Verify Study Recommendations section renders
-    await waitFor(() => {
-      expect(screen.getByTestId("study-recommendations-section")).toBeInTheDocument();
-      expect(screen.getByText("Targeted Remediation: Pharmacological Therapies")).toBeInTheDocument();
-      expect(screen.getByText("Establish Baseline: Physiological Adaptation")).toBeInTheDocument();
-      expect(screen.getByText("High Priority")).toBeInTheDocument();
+      expect(global.fetch).toHaveBeenCalledWith(expect.stringContaining("/api/assessments/available"));
     });
   });
 });

@@ -40,18 +40,24 @@ vi.mock("@/lib/auth-context", () => ({
 }));
 
 describe("Subscription Catalogue & Entitlement Consistency", () => {
-  it("verifies dual-access plans (prep-premium & prep-premium-90) grant both rn and pn entitlements", () => {
+  it("verifies single-pathway premium plans (prep-premium & pn-premium) enforce strict pathway entitlements", () => {
     const monthlyPremium = getProductById("prep-premium");
     expect(monthlyPremium).toBeDefined();
-    expect(monthlyPremium?.pathway).toBe("Both");
-    expect(monthlyPremium?.entitlements).toEqual(expect.arrayContaining(["rn", "pn"]));
+    expect(monthlyPremium?.pathway).toBe("RN");
+    expect(monthlyPremium?.entitlements).toEqual(["rn"]);
     expect(monthlyPremium?.price).toBe(89);
 
     const quarterlyPremium = getProductById("prep-premium-90");
     expect(quarterlyPremium).toBeDefined();
-    expect(quarterlyPremium?.pathway).toBe("Both");
-    expect(quarterlyPremium?.entitlements).toEqual(expect.arrayContaining(["rn", "pn"]));
+    expect(quarterlyPremium?.pathway).toBe("RN");
+    expect(quarterlyPremium?.entitlements).toEqual(["rn"]);
     expect(quarterlyPremium?.price).toBe(229);
+
+    const pnPremium = getProductById("pn-premium");
+    expect(pnPremium).toBeDefined();
+    expect(pnPremium?.pathway).toBe("PN");
+    expect(pnPremium?.entitlements).toEqual(["pn"]);
+    expect(pnPremium?.price).toBe(89);
   });
 
   it("verifies single-access RN plans grant only 'rn' entitlement", () => {
@@ -94,10 +100,11 @@ describe("Subscription Catalogue & Entitlement Consistency", () => {
     expect(within(proCard as HTMLElement).getByText(/RN pathway/i)).toBeInTheDocument();
     expect(within(proCard as HTMLElement).queryByText(/Full question bank \(RN & PN\)/i)).not.toBeInTheDocument();
 
-    // Premium plan card must specify RN & PN Dual Access
-    const premiumCard = screen.getByText("NCLEX-RN & PN All-Access").closest(".rounded-3xl");
+    // Premium plan card must specify RN pathway (single-pathway enforcement)
+    const premiumCard = screen.getByText("NCLEX-RN Premium Preparation").closest(".rounded-3xl");
     expect(premiumCard).toBeInTheDocument();
-    expect(within(premiumCard as HTMLElement).getByText(/RN & PN Dual Access/i)).toBeInTheDocument();
+    expect(within(premiumCard as HTMLElement).getByText(/RN pathway/i)).toBeInTheDocument();
+    expect(within(premiumCard as HTMLElement).queryByText(/RN & PN Dual Access/i)).not.toBeInTheDocument();
   });
 });
 

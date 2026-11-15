@@ -182,12 +182,11 @@ describe("PrepFord Learner Dashboard Security Center (/dashboard/settings/securi
     expect(securityNavLink).toHaveAttribute("href", "/dashboard/settings/security");
     expect(securityNavLink).toHaveAttribute("aria-current", "page");
 
-    // Header with breadcrumbs and pathway toggles is present
+    // Header with breadcrumbs and single-pathway badge is present
     const header = screen.getByTestId("dashboard-header");
     expect(header).toBeInTheDocument();
     expect(screen.getByTestId("dashboard-breadcrumbs")).toBeInTheDocument();
-    expect(screen.getByTestId("dashboard-pathway-rn")).toBeInTheDocument();
-    expect(screen.getByTestId("dashboard-pathway-pn")).toBeInTheDocument();
+    expect(screen.getByTestId("learner-pathway-badge")).toHaveTextContent("NCLEX-RN");
 
     // Page title
     expect(screen.getByRole("heading", { name: /Account Security & Sessions/i })).toBeInTheDocument();
