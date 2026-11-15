@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# large hero video binaries (hosted via CDN/object storage; keep .vtt captions tracked)
+public/videos/*.mp4
+public/videos/*.webm

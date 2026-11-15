@@ -44,7 +44,7 @@ export const HOME_PLATFORM_VIDEO: HeroVideoConfig = {
   platformLabel: "Actual Platform Walkthrough",
   durationLabel: "1:30",
   durationSeconds: 90,
-  posterSrc: "/images/illustrations/prepford-landing-hero.png",
+  posterSrc: "/images/videos/prepford-platform-tour-poster.png",
   posterAlt:
     "PrepFord NCLEX-RN and NCLEX-PN learning platform preview showing question practice, rationales, and study notes",
   mp4Src: process.env.NEXT_PUBLIC_HOME_TOUR_MP4 || "/videos/prepford-platform-tour.mp4",
@@ -76,7 +76,7 @@ export const RN_PLATFORM_VIDEO: HeroVideoConfig = {
   platformLabel: "Actual NCLEX-RN Platform Walkthrough",
   durationLabel: "1:25",
   durationSeconds: 85,
-  posterSrc: "/images/illustrations/prepford-rn-pathway-card.png",
+  posterSrc: "/images/videos/prepford-rn-tour-poster.png",
   posterAlt:
     "PrepFord NCLEX-RN platform preview featuring acute care clinical scenarios, rationales, and RN dashboard",
   mp4Src: process.env.NEXT_PUBLIC_RN_TOUR_MP4 || "/videos/prepford-rn-tour.mp4",
@@ -108,7 +108,7 @@ export const PN_PLATFORM_VIDEO: HeroVideoConfig = {
   platformLabel: "Actual NCLEX-PN Platform Walkthrough",
   durationLabel: "1:25",
   durationSeconds: 85,
-  posterSrc: "/images/illustrations/prepford-pn-pathway-card.png",
+  posterSrc: "/images/videos/prepford-pn-tour-poster.png",
   posterAlt:
     "PrepFord NCLEX-PN platform preview featuring practical nursing clinical scenarios, rationales, and PN dashboard",
   mp4Src: process.env.NEXT_PUBLIC_PN_TOUR_MP4 || "/videos/prepford-pn-tour.mp4",
