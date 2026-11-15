@@ -26,9 +26,19 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
     });
   }
 
-  test("homepage hero navigation and platform tour modal work end-to-end", async ({ page }) => {
+  test("homepage hero navigation, lazy video loading, WebM playback, and captions work end-to-end", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    const videoRequests: string[] = [];
+    page.on("request", (req) => {
+      if (/\.(mp4|webm)(\?|$)/i.test(req.url())) {
+        videoRequests.push(req.url());
+      }
+    });
+
+    await page.goto("/", { waitUntil: "networkidle" });
 
     await expect(
       page.getByRole("heading", {
@@ -37,18 +47,44 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
       })
     ).toBeVisible();
 
-    // Open and close video modal via keyboard Escape
+    // Gate 6: Zero video bytes downloaded before explicit playback
+    expect(videoRequests).toHaveLength(0);
+
+    // Open video modal and verify real 1920x1080 WebM loads with captions
     await page.getByTestId("home-cta-watch-tour").click();
-    await expect(page.getByTestId("home-hero-video-modal")).toBeVisible();
+    const modal = page.getByTestId("home-hero-video-modal");
+    await expect(modal).toBeVisible();
+
+    const videoEl = modal.getByTestId("product-video-element");
+    await expect(videoEl).toBeVisible();
+
+    await page.waitForFunction(() => {
+      const v = document.querySelector('[data-testid="product-video-element"]') as HTMLVideoElement | null;
+      return Boolean(v && v.readyState >= 1 && v.videoWidth === 1920 && v.videoHeight === 1080);
+    }, { timeout: 15000 });
+
+    const videoMeta = await videoEl.evaluate((v: HTMLVideoElement) => ({
+      width: v.videoWidth,
+      height: v.videoHeight,
+      duration: v.duration,
+      hasCaptions: v.textTracks.length > 0,
+    }));
+    expect(videoMeta.width).toBe(1920);
+    expect(videoMeta.height).toBe(1080);
+    expect(videoMeta.duration).toBeGreaterThanOrEqual(75);
+    expect(videoMeta.hasCaptions).toBe(true);
+    expect(videoRequests.length).toBeGreaterThan(0);
+
+    // Close via Escape key
     await page.keyboard.press("Escape");
-    await expect(page.getByTestId("home-hero-video-modal")).toBeHidden();
+    await expect(modal).toBeHidden();
 
     // Verify RN & PN pathway CTAs
     await expect(page.getByTestId("home-cta-explore-rn")).toHaveAttribute("href", "/nclex-rn");
     await expect(page.getByTestId("home-cta-explore-pn")).toHaveAttribute("href", "/nclex-pn");
   });
 
-  test("NCLEX-RN hero video modal and dashboard CTA work end-to-end", async ({ page }) => {
+  test("NCLEX-RN hero video playback and dashboard CTA work end-to-end", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/nclex-rn", { waitUntil: "domcontentloaded" });
 
@@ -60,15 +96,22 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
     ).toBeVisible();
 
     await page.getByTestId("rn-hero-watch-tour").click();
-    await expect(page.getByTestId("rn-hero-video-modal")).toBeVisible();
+    const modal = page.getByTestId("rn-hero-video-modal");
+    await expect(modal).toBeVisible();
+
+    await page.waitForFunction(() => {
+      const v = document.querySelector('[data-testid="product-video-element"]') as HTMLVideoElement | null;
+      return Boolean(v && v.readyState >= 1 && v.currentSrc.includes("prepford-rn-tour.webm"));
+    }, { timeout: 15000 });
+
     await page.keyboard.press("Escape");
-    await expect(page.getByTestId("rn-hero-video-modal")).toBeHidden();
+    await expect(modal).toBeHidden();
 
     await page.getByTestId("rn-hero-dashboard-cta").click();
     await expect(page).toHaveURL(/\/sign-in\?from=%2Fdashboard%2Frn/);
   });
 
-  test("NCLEX-PN hero video modal and dashboard CTA work end-to-end", async ({ page }) => {
+  test("NCLEX-PN hero video playback and dashboard CTA work end-to-end", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/nclex-pn", { waitUntil: "domcontentloaded" });
 
@@ -80,11 +123,37 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
     ).toBeVisible();
 
     await page.getByTestId("pn-hero-watch-tour").click();
-    await expect(page.getByTestId("pn-hero-video-modal")).toBeVisible();
+    const modal = page.getByTestId("pn-hero-video-modal");
+    await expect(modal).toBeVisible();
+
+    await page.waitForFunction(() => {
+      const v = document.querySelector('[data-testid="product-video-element"]') as HTMLVideoElement | null;
+      return Boolean(v && v.readyState >= 1 && v.currentSrc.includes("prepford-pn-tour.webm"));
+    }, { timeout: 15000 });
+
     await page.keyboard.press("Escape");
-    await expect(page.getByTestId("pn-hero-video-modal")).toBeHidden();
+    await expect(modal).toBeHidden();
 
     await page.getByTestId("pn-hero-dashboard-cta").click();
     await expect(page).toHaveURL(/\/sign-in\?from=%2Fdashboard%2Fpn/);
+  });
+
+  test("mobile 390px video modal opens and plays without horizontal overflow", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+
+    await page.getByTestId("home-hero-video-play").click();
+    const modal = page.getByTestId("home-hero-video-modal");
+    await expect(modal).toBeVisible();
+
+    await page.waitForFunction(() => {
+      const v = document.querySelector('[data-testid="product-video-element"]') as HTMLVideoElement | null;
+      return Boolean(v && v.readyState >= 1);
+    }, { timeout: 15000 });
+
+    const hasOverflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth
+    );
+    expect(hasOverflow).toBe(false);
   });
 });
