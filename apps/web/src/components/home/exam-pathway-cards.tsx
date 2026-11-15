@@ -1,6 +1,5 @@
-"use client";
-
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, CheckCircle2, ShieldCheck, Stethoscope } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -93,12 +92,12 @@ export function ExamPathwayCards() {
             >
               {/* Pathway Image Header */}
               <div className="relative h-56 sm:h-64 w-full overflow-hidden bg-muted">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={pathway.imageSrc}
                   alt={pathway.imageAlt}
-                  className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                  loading="lazy"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 560px"
+                  className="object-cover transition-transform duration-500 hover:scale-105"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-card via-card/25 to-transparent" />
                 <Badge

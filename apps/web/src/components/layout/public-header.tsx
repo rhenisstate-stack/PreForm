@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import {
   Menu,
@@ -266,21 +267,21 @@ export default function PublicHeader({ user: propUser }: PublicHeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-md shadow-xs">
+    <header className="sticky top-0 z-40 bg-card border-b border-border/60 shadow-xs">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
         <Link
           href="/"
           className="flex items-center gap-3 text-xl font-serif font-semibold text-foreground transition-opacity hover:opacity-90"
           aria-label={`${BRAND.fullName} home`}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <Image
             src={BRAND.logo.assetPath}
             alt={BRAND.logo.alt}
             data-testid="brand-logo-mark"
             className="h-11 w-11 sm:h-12 sm:w-12 rounded-xl object-contain shrink-0"
             width={48}
             height={48}
+            priority
           />
           <span
             data-testid="brand-wordmark-stacked"

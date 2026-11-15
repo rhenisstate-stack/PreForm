@@ -149,7 +149,7 @@ export function QuestionLearningShowcase() {
                   <span className="font-mono text-xs font-bold text-secondary uppercase tracking-widest">
                     {currentStep.stepNumber}
                   </span>
-                  <span className="text-xs font-semibold bg-secondary/10 text-secondary px-2.5 py-0.5 rounded-full">
+                  <span className="text-xs font-semibold bg-secondary/10 text-[#115E59] dark:text-teal-200 px-2.5 py-0.5 rounded-full">
                     {currentStep.badge}
                   </span>
                 </div>
@@ -174,18 +174,23 @@ export function QuestionLearningShowcase() {
 
               {/* Navigation Controls */}
               <div className="pt-6 flex items-center justify-between">
-                <div className="flex items-center gap-1.5" role="tablist" aria-label="Step carousel indicators">
+                <div className="flex items-center gap-1" role="tablist" aria-label="Step carousel indicators">
                   {LEARNING_STEPS.map((step, idx) => (
                     <button
                       key={step.id}
+                      type="button"
                       onClick={() => setActiveStep(idx)}
                       role="tab"
                       aria-selected={activeStep === idx}
                       aria-label={`Go to ${step.badge}`}
-                      className={`h-2 rounded-full transition-all ${
-                        activeStep === idx ? "w-8 bg-secondary" : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
-                      }`}
-                    />
+                      className="min-w-[24px] min-h-[24px] flex items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
+                      <span
+                        className={`h-2 rounded-full transition-all ${
+                          activeStep === idx ? "w-8 bg-secondary" : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                        }`}
+                      />
+                    </button>
                   ))}
                 </div>
 
@@ -215,7 +220,6 @@ export function QuestionLearningShowcase() {
                 alt={currentStep.imageAlt}
                 fill
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 600px"
-                priority={activeStep === 0}
                 className="w-full h-full object-cover transition-all duration-500 hover:scale-[1.02]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-card/80 via-transparent to-transparent lg:hidden pointer-events-none" />

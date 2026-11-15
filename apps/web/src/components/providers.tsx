@@ -1,6 +1,8 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
+import { usePathname } from "next/navigation";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider as NextThemesProvider } from "next-themes";
 import type { ThemeProviderProps as NextThemesProviderProps } from "next-themes";
@@ -8,6 +10,25 @@ import { AuthProvider } from "@/lib/auth-context";
 import { CartProvider } from "@/lib/cart-context";
 import { NotificationsProvider } from "@/lib/notifications-context";
 import { SplashScreen } from "@/components/layout/splash-screen";
+
+const DeferredToaster = dynamic(
+  () => import("@/components/ui/sonner").then((m) => m.Toaster),
+  { ssr: false }
+);
+
+function WorkspaceSplashGate() {
+  const pathname = usePathname();
+  const isWorkspaceRoute =
+    pathname?.startsWith("/dashboard") ||
+    pathname?.startsWith("/admin") ||
+    pathname?.startsWith("/learner") ||
+    pathname?.startsWith("/profile");
+
+  if (!isWorkspaceRoute) {
+    return null;
+  }
+  return <SplashScreen />;
+}
 
 function makeQueryClient(): QueryClient {
   return new QueryClient({
@@ -49,8 +70,11 @@ export function Providers({ children, ...themeProps }: { children: React.ReactNo
         <AuthProvider>
           <CartProvider>
             <NotificationsProvider>
-              <SplashScreen />
+              <React.Suspense fallback={null}>
+                <WorkspaceSplashGate />
+              </React.Suspense>
               {children}
+              <DeferredToaster position="top-center" richColors />
             </NotificationsProvider>
           </CartProvider>
         </AuthProvider>

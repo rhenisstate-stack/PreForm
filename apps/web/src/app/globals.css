@@ -989,11 +989,11 @@ p {
 }
 
 @keyframes ecgPulseLeftToRight {
-  0% {
-    stroke-dashoffset: 1000;
+  0%, 100% {
+    opacity: 0.72;
   }
-  100% {
-    stroke-dashoffset: 0;
+  50% {
+    opacity: 1;
   }
 }
 
@@ -1012,10 +1012,7 @@ p {
 .animate-ecg,
 .animate-ecg-ltr,
 .motion-safe\:animate-ecg-ltr {
-  stroke-dasharray: 220 280;
-  stroke-dashoffset: 1000;
-  animation: ecgPulseLeftToRight 3.6s linear infinite;
-  will-change: stroke-dashoffset;
+  animation: ecgPulseLeftToRight 3.6s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import {
   Activity,
   ArrowRight,
@@ -12,8 +13,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { HeroBackgroundVideo } from "@/components/video/hero-background-video";
-import { ProductVideoPlayer } from "@/components/video/product-video-player";
 import { HOME_PLATFORM_VIDEO } from "@/lib/hero-videos";
+
+const ProductVideoPlayer = dynamic(
+  () => import("@/components/video/product-video-player").then((m) => m.ProductVideoPlayer),
+  { ssr: false }
+);
 
 const FULLWIDTH_ECG_PATH =
   "M0,68 L140,68 L175,68 L192,48 L208,82 L226,18 L244,98 L262,56 L285,68 L520,68 L555,68 L572,48 L588,82 L606,18 L624,98 L642,56 L665,68 L900,68 L935,68 L952,48 L968,82 L986,18 L1004,98 L1022,56 L1045,68 L1260,68 L1295,68 L1312,48 L1328,82 L1346,18 L1364,98 L1382,56 L1405,68 L1440,68";
@@ -52,8 +57,8 @@ export function HeroSection() {
             data-testid="hero-left-column"
             className="lg:col-span-8 xl:col-span-7 text-left flex flex-col items-start"
           >
-            <div className="inline-flex items-center gap-2 rounded-full bg-teal-400/15 backdrop-blur-xs px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-200 border border-teal-300/30">
-              <span className="h-2 w-2 rounded-full bg-[#0D9488] motion-safe:animate-pulse" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-teal-400/15 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-200 border border-teal-300/30">
+              <span className="h-2 w-2 rounded-full bg-[#0D9488]" />
               <span>NCLEX-RN &amp; NCLEX-PN Learning Platform</span>
             </div>
 
@@ -76,7 +81,7 @@ export function HeroSection() {
                 size="lg"
                 asChild
                 data-testid="home-cta-explore-rn"
-                className="w-full sm:w-auto bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold shadow-md px-6 h-12 text-base rounded-xl"
+                className="w-full sm:w-auto bg-[#0F766E] hover:bg-[#115E59] text-white font-semibold shadow-md px-6 h-12 text-base rounded-xl"
               >
                 <Link href="/nclex-rn">
                   <GraduationCap className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -90,7 +95,7 @@ export function HeroSection() {
                 size="lg"
                 asChild
                 data-testid="home-cta-explore-pn"
-                className="w-full sm:w-auto font-semibold px-6 h-12 text-base border-2 border-white/40 rounded-xl bg-white/10 backdrop-blur-xs text-white hover:bg-white/20 hover:text-white shadow-xs"
+                className="w-full sm:w-auto font-semibold px-6 h-12 text-base border-2 border-white/40 rounded-xl bg-white/10 text-white hover:bg-white/20 hover:text-white shadow-xs"
               >
                 <Link href="/nclex-pn">
                   <Stethoscope className="mr-2 h-4 w-4 text-teal-300" aria-hidden="true" />

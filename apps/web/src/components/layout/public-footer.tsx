@@ -1,7 +1,5 @@
-"use client";
-
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Image from "next/image";
 import { Linkedin, Twitter, Youtube, Facebook, Mail, HelpCircle, ShieldCheck } from "lucide-react";
 import { BRAND } from "@/lib/brand";
 
@@ -76,17 +74,6 @@ const socialLinks = [
 ];
 
 export default function PublicFooter() {
-  const pathname = usePathname();
-
-  // The learner dashboard, administrative workspace and auth pages use their own full-screen shells
-  if (
-    pathname?.startsWith("/dashboard") ||
-    pathname?.startsWith("/admin") ||
-    pathname?.startsWith("/sign-in") ||
-    pathname?.startsWith("/sign-up")
-  ) {
-    return null;
-  }
   const currentYear = 2026;
 
   return (
@@ -101,8 +88,7 @@ export default function PublicFooter() {
               className="inline-flex items-center gap-3 text-xl font-serif font-semibold text-foreground hover:opacity-90 transition-opacity"
               aria-label={`${BRAND.fullName} home`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={BRAND.logo.assetPath}
                 alt={BRAND.logo.alt}
                 className="h-11 w-11 rounded-xl object-contain shrink-0"

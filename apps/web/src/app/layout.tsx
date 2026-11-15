@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import { type ReactNode, Suspense } from "react";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import { AnnouncementBar } from "@/components/layout/announcement-bar";
 import PublicHeader from "@/components/layout/public-header";
 import PublicFooter from "@/components/layout/public-footer";
-import { Toaster } from "@/components/ui/sonner";
+import { PublicRouteOnly } from "@/components/layout/public-route-only";
 import { BRAND } from "@/lib/brand";
 
 export const metadata: Metadata = {
@@ -122,15 +121,22 @@ export default function RootLayout({
           }}
         />
         <Providers attribute="class" defaultTheme="light" enableSystem>
-          <Suspense fallback={null}>
-            <AnnouncementBar announcements={null} isLoading={false} />
+          <Suspense
+            fallback={
+              <div
+                className="h-[69px] sm:h-[73px] w-full bg-card border-b border-border/60"
+                aria-hidden="true"
+              />
+            }
+          >
             <PublicHeader />
           </Suspense>
           <main className="min-h-screen">{children}</main>
           <Suspense fallback={null}>
-            <PublicFooter />
+            <PublicRouteOnly>
+              <PublicFooter />
+            </PublicRouteOnly>
           </Suspense>
-          <Toaster position="top-center" richColors />
         </Providers>
       </body>
     </html>

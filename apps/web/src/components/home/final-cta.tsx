@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowRight, BookOpen, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";

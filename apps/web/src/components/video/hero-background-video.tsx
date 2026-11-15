@@ -28,6 +28,22 @@ function getReducedMotionSnapshot(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
+function subscribeMobileViewport(callback: () => void): () => void {
+  if (typeof window === "undefined" || !window.matchMedia) {
+    return () => {};
+  }
+  const mq = window.matchMedia("(max-width: 767px)");
+  mq.addEventListener?.("change", callback);
+  return () => mq.removeEventListener?.("change", callback);
+}
+
+function getMobileViewportSnapshot(): boolean {
+  if (typeof window === "undefined" || !window.matchMedia) {
+    return false;
+  }
+  return window.matchMedia("(max-width: 767px)").matches;
+}
+
 /**
  * Full-bleed, muted, looping background video for PrepFord hero sections.
  * Renders poster-first to prevent CLS, respects prefers-reduced-motion,
@@ -52,6 +68,12 @@ export function HeroBackgroundVideo({
     () => false
   );
 
+  const isMobileViewport = React.useSyncExternalStore(
+    subscribeMobileViewport,
+    getMobileViewportSnapshot,
+    () => true
+  );
+
   const sourceKey = `${video.webmSrc}|${video.mp4Src}`;
 
   React.useEffect(() => {
@@ -62,7 +84,7 @@ export function HeroBackgroundVideo({
   }, [sourceKey]);
 
   React.useEffect(() => {
-    if (prefersReducedMotion || hasError) {
+    if (isMobileViewport || prefersReducedMotion || hasError) {
       return;
     }
 
@@ -133,11 +155,7 @@ export function HeroBackgroundVideo({
     el.addEventListener("playing", handlePlaying);
     el.addEventListener("error", handleError);
 
-    if (el.readyState >= 2) {
-      attemptPlay();
-    } else {
-      attemptPlay();
-    }
+    attemptPlay();
 
     return () => {
       cancelled = true;
@@ -145,9 +163,9 @@ export function HeroBackgroundVideo({
       el.removeEventListener("playing", handlePlaying);
       el.removeEventListener("error", handleError);
     };
-  }, [prefersReducedMotion, hasError, sourceKey]);
+  }, [isMobileViewport, prefersReducedMotion, hasError, sourceKey]);
 
-  const showVideo = !prefersReducedMotion && !hasError && !autoplayBlocked;
+  const showVideo = !isMobileViewport && !prefersReducedMotion && !hasError && !autoplayBlocked;
 
   return (
     <div
@@ -158,13 +176,14 @@ export function HeroBackgroundVideo({
         className
       )}
     >
-      {/* Poster-first base layer: prevents CLS and serves as reduced-motion / error / blocked fallback */}
+      {/* Poster-first base layer: prevents CLS and serves as reduced-motion / mobile / error / blocked fallback */}
       <Image
         src={video.posterSrc}
         alt=""
         fill
         priority
-        sizes="100vw"
+        fetchPriority="high"
+        sizes="(max-width: 640px) 480px, 100vw"
         data-testid={`${testId}-poster`}
         className="object-cover object-center"
       />

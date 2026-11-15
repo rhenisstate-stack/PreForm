@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowRight, Quote, MessageSquarePlus } from "lucide-react";
 import { TestimonialCard, type TestimonialData } from "@/components/testimonials/testimonial-card";

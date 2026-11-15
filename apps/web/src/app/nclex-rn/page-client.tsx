@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
@@ -27,10 +28,17 @@ import { useAuth } from "@/lib/auth-context";
 import { getProductById, type Product } from "@/lib/products";
 import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
 import { BRAND } from "@/lib/brand";
-import { CourseFinderQuiz } from "@/components/home/course-finder";
 import { HeroBackgroundVideo } from "@/components/video/hero-background-video";
-import { ProductVideoPlayer } from "@/components/video/product-video-player";
 import { RN_PLATFORM_VIDEO } from "@/lib/hero-videos";
+
+const CourseFinderQuiz = dynamic(
+  () => import("@/components/home/course-finder").then((m) => m.CourseFinderQuiz),
+  { ssr: false }
+);
+const ProductVideoPlayer = dynamic(
+  () => import("@/components/video/product-video-player").then((m) => m.ProductVideoPlayer),
+  { ssr: false }
+);
 
 type BillingDuration = "month" | "quarter";
 type RnTierKey = "starter" | "pro" | "premium";
@@ -671,7 +679,7 @@ export function NCLEXRNPageClient() {
                   data-testid="rn-hero-dashboard-cta"
                   onClick={handleGoToRnDashboard}
                   disabled={isNavigatingDashboard}
-                  className="bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold px-6 h-12 rounded-xl shadow-md flex items-center justify-center gap-2 group"
+                  className="bg-[#0F766E] hover:bg-[#115E59] text-white font-semibold px-6 h-12 rounded-xl shadow-md flex items-center justify-center gap-2 group"
                 >
                   {isNavigatingDashboard ? (
                     <span>Opening Dashboard...</span>
@@ -2024,7 +2032,7 @@ export function NCLEXRNPageClient() {
                 className="flex flex-col justify-between rounded-3xl bg-card p-6 shadow-sm ring-1 ring-border/60"
               >
                 <div className="space-y-3">
-                  <Badge className="bg-secondary/15 text-secondary font-semibold">
+                  <Badge className="bg-secondary/15 text-[#115E59] dark:text-teal-200 font-semibold">
                     {item.stage}
                   </Badge>
                   <h3 className="font-serif text-lg font-bold text-foreground">{item.title}</h3>

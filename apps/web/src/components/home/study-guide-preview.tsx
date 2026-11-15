@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { ArrowRight, BookOpen, FileText } from "lucide-react";
 import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";

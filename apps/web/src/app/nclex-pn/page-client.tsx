@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   Activity,
@@ -34,8 +35,12 @@ import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { BRAND } from "@/lib/brand";
 import { HeroBackgroundVideo } from "@/components/video/hero-background-video";
-import { ProductVideoPlayer } from "@/components/video/product-video-player";
 import { PN_PLATFORM_VIDEO } from "@/lib/hero-videos";
+
+const ProductVideoPlayer = dynamic(
+  () => import("@/components/video/product-video-player").then((m) => m.ProductVideoPlayer),
+  { ssr: false }
+);
 
 const PN_HERO_ECG_PATH =
   "M0,68 L140,68 L175,68 L192,48 L208,82 L226,18 L244,98 L262,56 L285,68 L520,68 L555,68 L572,48 L588,82 L606,18 L624,98 L642,56 L665,68 L900,68 L935,68 L952,48 L968,82 L986,18 L1004,98 L1022,56 L1045,68 L1260,68 L1295,68 L1312,48 L1328,82 L1346,18 L1364,98 L1382,56 L1405,68 L1440,68";
@@ -502,7 +507,7 @@ export function NCLEXPNPageClient() {
                   data-testid="pn-hero-dashboard-cta"
                   onClick={handleGoToPnDashboard}
                   disabled={isNavigatingDashboard}
-                  className="w-full sm:w-auto bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold px-6 h-12 rounded-xl shadow-md flex items-center justify-center gap-2 group"
+                  className="w-full sm:w-auto bg-[#0F766E] hover:bg-[#115E59] text-white font-semibold px-6 h-12 rounded-xl shadow-md flex items-center justify-center gap-2 group"
                 >
                   {isNavigatingDashboard ? (
                     <span>Opening Dashboard...</span>
@@ -1201,12 +1206,12 @@ export function NCLEXPNPageClient() {
               </div>
 
               <div className="lg:col-span-6 relative min-h-[280px] sm:min-h-[340px] bg-muted overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                   src={activeFeature.imageSrc}
                   alt={activeFeature.imageAlt}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 600px"
+                  className="object-cover"
                 />
               </div>
             </div>
@@ -1269,7 +1274,7 @@ export function NCLEXPNPageClient() {
                 }`}
               >
                 <span>90-Day Quarterly Access</span>
-                <span className="rounded-full bg-secondary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary-foreground">
+                <span className="rounded-full bg-[#115E59] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
                   Save up to $38
                 </span>
               </button>
@@ -1463,7 +1468,7 @@ export function NCLEXPNPageClient() {
                       <td className="py-4 px-6 text-muted-foreground">
                         {typeof row.starter === "boolean" ? (
                           row.starter ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
                               <Check className="h-4 w-4" aria-hidden="true" />
                               <span>Included</span>
                             </span>
@@ -1477,7 +1482,7 @@ export function NCLEXPNPageClient() {
                       <td className="py-4 px-6 font-medium text-foreground bg-secondary/5">
                         {typeof row.pro === "boolean" ? (
                           row.pro ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
                               <Check className="h-4 w-4" aria-hidden="true" />
                               <span>Included</span>
                             </span>
@@ -1491,7 +1496,7 @@ export function NCLEXPNPageClient() {
                       <td className="py-4 px-6 text-muted-foreground">
                         {typeof row.premium === "boolean" ? (
                           row.premium ? (
-                            <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
+                            <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-400 font-semibold">
                               <Check className="h-4 w-4" aria-hidden="true" />
                               <span>Included</span>
                             </span>

@@ -1,5 +1,3 @@
-"use client";
-
 import { HeroSection } from "@/components/home/hero-section";
 import { ExamPathwayCards } from "@/components/home/exam-pathway-cards";
 import { QuestionLearningShowcase } from "@/components/home/question-learning-showcase";
