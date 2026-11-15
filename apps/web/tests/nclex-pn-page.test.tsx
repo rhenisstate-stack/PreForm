@@ -58,7 +58,7 @@ describe("NCLEX-PN Page Transformation & Conversion Flow", () => {
       "#pn-study-plans"
     );
     expect(within(hero).getByTestId("pn-hero-watch-tour")).toBeInTheDocument();
-    expect(within(hero).getByTestId("pn-hero-video-frame")).toBeInTheDocument();
+    expect(within(hero).getByTestId("pn-hero-background-video")).toBeInTheDocument();
     expect(within(hero).getByRole("link", { name: /Browse Study Guide/i })).toHaveAttribute(
       "href",
       "/study-guide"

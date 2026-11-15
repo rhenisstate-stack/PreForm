@@ -99,14 +99,13 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
 
       expect(
         within(hero).getByText(
-          /Continue your NCLEX-RN preparation, track your progress, and access your learning tools\./i
+          /Prepare for NCLEX-RN with scenario-based practice, detailed clinical rationales/i
         )
       ).toBeInTheDocument();
 
       // Preserves secondary marketing actions
-      expect(within(hero).getByRole("link", { name: /Explore Study Plans/i })).toBeInTheDocument();
-      expect(within(hero).getByRole("link", { name: /Explore Study Guide/i })).toBeInTheDocument();
-      expect(within(hero).getByRole("link", { name: /Try Free Sample Question/i })).toBeInTheDocument();
+      expect(within(hero).getByRole("link", { name: /Explore RN Study Plans/i })).toBeInTheDocument();
+      expect(within(hero).getByTestId("rn-hero-watch-tour")).toBeInTheDocument();
     });
 
     it("redirects unauthenticated visitor to /sign-in preserving RN destination", async () => {
@@ -152,14 +151,13 @@ describe("Phase 9 & 10: NCLEX-RN and NCLEX-PN Landing Page CTAs & Distinct Dashb
 
       expect(
         within(hero).getByText(
-          /Continue your NCLEX-PN preparation, monitor your progress, and build your practical nursing confidence\./i
+          /Strengthen your practical nursing knowledge through realistic clinical scenarios/i
         )
       ).toBeInTheDocument();
 
       // Preserves secondary marketing actions
-      expect(within(hero).getByRole("link", { name: /Explore Study Plans/i })).toBeInTheDocument();
-      expect(within(hero).getByRole("link", { name: /Explore Study Guide/i })).toBeInTheDocument();
-      expect(within(hero).getByRole("link", { name: /Try Free Sample Question/i })).toBeInTheDocument();
+      expect(within(hero).getByRole("link", { name: /Explore PN Study Plans/i })).toBeInTheDocument();
+      expect(within(hero).getByTestId("pn-hero-watch-tour")).toBeInTheDocument();
     });
 
     it("redirects unauthenticated visitor to /sign-in preserving PN destination", async () => {

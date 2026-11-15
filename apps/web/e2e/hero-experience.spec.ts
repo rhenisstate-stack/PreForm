@@ -26,19 +26,15 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
     });
   }
 
-  test("homepage hero navigation, lazy video loading, WebM playback, and captions work end-to-end", async ({
+  test("homepage hero autoplay background video, reduced-motion fallback, and optional tour modal work end-to-end", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
 
-    const videoRequests: string[] = [];
-    page.on("request", (req) => {
-      if (/\.(mp4|webm)(\?|$)/i.test(req.url())) {
-        videoRequests.push(req.url());
-      }
-    });
+    const pageErrors: string[] = [];
+    page.on("pageerror", (err) => pageErrors.push(err.message));
 
-    await page.goto("/", { waitUntil: "networkidle" });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
 
     await expect(
       page.getByRole("heading", {
@@ -47,10 +43,32 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
       })
     ).toBeVisible();
 
-    // Gate 6: Zero video bytes downloaded before explicit playback
-    expect(videoRequests).toHaveLength(0);
+    const bgVideo = page.getByTestId("home-hero-background-video");
+    await expect(bgVideo).toBeAttached();
+    await expect(bgVideo).toHaveAttribute("aria-hidden", "true");
 
-    // Open video modal and verify real 1920x1080 WebM loads with captions
+    await page.waitForFunction(() => {
+      const v = document.querySelector('[data-testid="home-hero-background-video"]') as HTMLVideoElement | null;
+      return Boolean(v && v.readyState >= 1 && v.videoWidth === 1920 && v.videoHeight === 1080);
+    }, { timeout: 15000 });
+
+    const bgProps = await bgVideo.evaluate((v: HTMLVideoElement) => ({
+      muted: v.muted,
+      autoplay: v.autoplay,
+      loop: v.loop,
+      playsInline: v.playsInline,
+      width: v.videoWidth,
+      height: v.videoHeight,
+      pointerEvents: getComputedStyle(v).pointerEvents,
+    }));
+    expect(bgProps.muted).toBe(true);
+    expect(bgProps.autoplay).toBe(true);
+    expect(bgProps.loop).toBe(true);
+    expect(bgProps.playsInline).toBe(true);
+    expect(bgProps.width).toBe(1920);
+    expect(bgProps.height).toBe(1080);
+
+    // Open optional video modal and verify real 1920x1080 WebM loads with captions
     await page.getByTestId("home-cta-watch-tour").click();
     const modal = page.getByTestId("home-hero-video-modal");
     await expect(modal).toBeVisible();
@@ -73,7 +91,6 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
     expect(videoMeta.height).toBe(1080);
     expect(videoMeta.duration).toBeGreaterThanOrEqual(75);
     expect(videoMeta.hasCaptions).toBe(true);
-    expect(videoRequests.length).toBeGreaterThan(0);
 
     // Close via Escape key
     await page.keyboard.press("Escape");
@@ -82,9 +99,17 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
     // Verify RN & PN pathway CTAs
     await expect(page.getByTestId("home-cta-explore-rn")).toHaveAttribute("href", "/nclex-rn");
     await expect(page.getByTestId("home-cta-explore-pn")).toHaveAttribute("href", "/nclex-pn");
+    expect(pageErrors).toHaveLength(0);
   });
 
-  test("NCLEX-RN hero video playback and dashboard CTA work end-to-end", async ({ page }) => {
+  test("prefers-reduced-motion disables hero background video and preserves poster", async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/", { waitUntil: "domcontentloaded" });
+    await expect(page.getByTestId("home-hero-background-video")).toHaveCount(0);
+    await expect(page.getByTestId("home-hero-background-video-poster")).toBeVisible();
+  });
+
+  test("NCLEX-RN hero background video, modal tour, and dashboard CTA work end-to-end", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/nclex-rn", { waitUntil: "domcontentloaded" });
 
@@ -94,6 +119,11 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
         name: /Build the clinical judgment to become a confident Registered Nurse\./i,
       })
     ).toBeVisible();
+
+    await page.waitForFunction(() => {
+      const v = document.querySelector('[data-testid="rn-hero-background-video"]') as HTMLVideoElement | null;
+      return Boolean(v && v.readyState >= 1 && v.currentSrc.includes("prepford-rn-tour"));
+    }, { timeout: 15000 });
 
     await page.getByTestId("rn-hero-watch-tour").click();
     const modal = page.getByTestId("rn-hero-video-modal");
@@ -111,7 +141,7 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
     await expect(page).toHaveURL(/\/sign-in\?from=%2Fdashboard%2Frn/);
   });
 
-  test("NCLEX-PN hero video playback and dashboard CTA work end-to-end", async ({ page }) => {
+  test("NCLEX-PN hero background video, modal tour, and dashboard CTA work end-to-end", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto("/nclex-pn", { waitUntil: "domcontentloaded" });
 
@@ -121,6 +151,11 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
         name: /Prepare for NCLEX-PN with confidence and clinical clarity\./i,
       })
     ).toBeVisible();
+
+    await page.waitForFunction(() => {
+      const v = document.querySelector('[data-testid="pn-hero-background-video"]') as HTMLVideoElement | null;
+      return Boolean(v && v.readyState >= 1 && v.currentSrc.includes("prepford-pn-tour"));
+    }, { timeout: 15000 });
 
     await page.getByTestId("pn-hero-watch-tour").click();
     const modal = page.getByTestId("pn-hero-video-modal");
@@ -138,11 +173,11 @@ test.describe("PrepFord Hero Experiences & Responsive Validation", () => {
     await expect(page).toHaveURL(/\/sign-in\?from=%2Fdashboard%2Fpn/);
   });
 
-  test("mobile 390px video modal opens and plays without horizontal overflow", async ({ page }) => {
+  test("mobile 390px hero video modal opens and plays without horizontal overflow", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/", { waitUntil: "domcontentloaded" });
 
-    await page.getByTestId("home-hero-video-play").click();
+    await page.getByTestId("home-cta-watch-tour").click();
     const modal = page.getByTestId("home-hero-video-modal");
     await expect(modal).toBeVisible();
 

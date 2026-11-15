@@ -33,6 +33,7 @@ import { getProductById, type Product } from "@/lib/products";
 import { useCart } from "@/lib/cart-context";
 import { useAuth } from "@/lib/auth-context";
 import { BRAND } from "@/lib/brand";
+import { HeroBackgroundVideo } from "@/components/video/hero-background-video";
 import { ProductVideoPlayer } from "@/components/video/product-video-player";
 import { PN_PLATFORM_VIDEO } from "@/lib/hero-videos";
 
@@ -413,16 +414,13 @@ export function NCLEXPNPageClient() {
       <section
         data-testid="nclex-pn-hero"
         aria-labelledby="nclex-pn-hero-heading"
-        className="relative isolate w-full min-h-[580px] lg:min-h-[650px] flex items-center overflow-hidden bg-gradient-to-b from-slate-100/95 via-teal-50/45 to-background dark:from-slate-950 dark:via-slate-900/90 dark:to-background pt-12 pb-24 sm:pt-16 sm:pb-28 lg:pt-20 lg:pb-32"
+        className="relative isolate w-full min-h-[600px] lg:min-h-[660px] flex items-center overflow-hidden bg-[#142B4A] text-white pt-12 pb-24 sm:pt-16 sm:pb-28 lg:pt-20 lg:pb-32"
       >
-        {/* Subtle Ambient Backlight (decorative, pointer-events-none) */}
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
-        >
-          <div className="absolute -top-24 right-1/4 h-96 w-96 rounded-full bg-teal-500/10 dark:bg-teal-400/10 blur-3xl" />
-          <div className="absolute bottom-12 -left-24 h-80 w-80 rounded-full bg-primary/5 dark:bg-primary/10 blur-3xl" />
-        </div>
+        {/* Full-Bleed Autoplay PN Background Video */}
+        <HeroBackgroundVideo
+          video={PN_PLATFORM_VIDEO}
+          testId="pn-hero-background-video"
+        />
 
         {/* Continuous Full-Width Left-to-Right Animated ECG/Heartbeat Line */}
         <div
@@ -430,12 +428,12 @@ export function NCLEXPNPageClient() {
           data-testid="pn-hero-heartbeat"
           className="absolute inset-x-0 bottom-3 sm:bottom-5 z-10 w-full pointer-events-none select-none overflow-hidden"
         >
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between text-[11px] font-mono text-teal-800/75 dark:text-teal-300/80 mb-1">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between text-[11px] font-mono text-teal-200/85 mb-1">
             <span className="inline-flex items-center gap-1.5">
-              <Activity className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400 motion-safe:animate-heartbeat" />
+              <Activity className="h-3.5 w-3.5 text-teal-300 motion-safe:animate-heartbeat" />
               PREPFORD PRACTICAL NURSING RHYTHM • LEAD II
             </span>
-            <span className="font-semibold text-teal-700 dark:text-emerald-300">
+            <span className="font-semibold text-emerald-300">
               LPN / LVN PATHWAY • LEFT-TO-RIGHT PULSE
             </span>
           </div>
@@ -472,8 +470,8 @@ export function NCLEXPNPageClient() {
         <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 relative z-20">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-12 items-center">
             {/* Left Column: PN Pathway Identity, Heading, Copy & Primary CTAs */}
-            <div className="lg:col-span-6 text-left flex flex-col items-start">
-              <div className="inline-flex items-center gap-2.5 rounded-full bg-teal-500/12 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-300 border border-teal-500/20">
+            <div className="lg:col-span-8 xl:col-span-7 text-left flex flex-col items-start">
+              <div className="inline-flex items-center gap-2.5 rounded-full bg-teal-400/15 backdrop-blur-xs px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-200 border border-teal-300/30">
                 <Image
                   src={BRAND.logo.assetPath}
                   alt=""
@@ -486,17 +484,17 @@ export function NCLEXPNPageClient() {
 
               <h1
                 id="nclex-pn-hero-heading"
-                className="mt-5 text-3xl font-serif font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.15rem] leading-[1.12]"
+                className="mt-5 text-3xl font-serif font-bold tracking-tight text-white sm:text-5xl lg:text-[3.25rem] leading-[1.12] drop-shadow-sm"
               >
                 Prepare for NCLEX-PN with confidence and clinical clarity.
               </h1>
 
-              <p className="mt-5 max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed">
+              <p className="mt-5 max-w-xl text-base sm:text-lg text-slate-200 leading-relaxed">
                 Strengthen your practical nursing knowledge through realistic clinical scenarios,
                 detailed answer rationales, structured study resources and progress tracking.
               </p>
 
-              {/* Primary, Secondary & Video Actions */}
+              {/* Primary, Secondary & Optional Video Modal Actions */}
               <div className="mt-7 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-start gap-3.5 w-full sm:w-auto">
                 <Button
                   type="button"
@@ -504,7 +502,7 @@ export function NCLEXPNPageClient() {
                   data-testid="pn-hero-dashboard-cta"
                   onClick={handleGoToPnDashboard}
                   disabled={isNavigatingDashboard}
-                  className="w-full sm:w-auto bg-[#142B4A] hover:bg-[#142B4A]/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold px-6 h-12 rounded-xl shadow-sm flex items-center justify-center gap-2 group"
+                  className="w-full sm:w-auto bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold px-6 h-12 rounded-xl shadow-md flex items-center justify-center gap-2 group"
                 >
                   {isNavigatingDashboard ? (
                     <span>Opening Dashboard...</span>
@@ -523,10 +521,10 @@ export function NCLEXPNPageClient() {
                   variant="outline"
                   size="lg"
                   asChild
-                  className="w-full sm:w-auto font-semibold px-6 h-12 text-base border-2 border-[#0D9488]/40 rounded-xl bg-white dark:bg-card text-foreground hover:bg-teal-50/70 dark:hover:bg-muted shadow-xs"
+                  className="w-full sm:w-auto font-semibold px-6 h-12 text-base border-2 border-white/40 rounded-xl bg-white/10 backdrop-blur-xs text-white hover:bg-white/20 hover:text-white shadow-xs"
                 >
                   <a href="#pn-study-plans">
-                    <Compass className="mr-2 h-4 w-4 text-[#0D9488]" aria-hidden="true" />
+                    <Compass className="mr-2 h-4 w-4 text-teal-300" aria-hidden="true" />
                     Explore PN Study Plans
                   </a>
                 </Button>
@@ -537,7 +535,7 @@ export function NCLEXPNPageClient() {
                   size="lg"
                   data-testid="pn-hero-watch-tour"
                   onClick={() => setIsPnVideoOpen(true)}
-                  className="w-full sm:w-auto font-semibold px-4 h-12 text-sm text-[#0D9488] hover:text-[#0F766E] hover:bg-teal-50/80 dark:text-teal-300 dark:hover:bg-teal-950/40 rounded-xl"
+                  className="w-full sm:w-auto font-semibold px-4 h-12 text-sm text-teal-200 hover:text-white hover:bg-white/10 rounded-xl"
                 >
                   <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" />
                   Watch the PN Platform Tour
@@ -545,36 +543,36 @@ export function NCLEXPNPageClient() {
               </div>
 
               {/* Real Available PN Resource Highlights */}
-              <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-medium text-foreground/90 w-full max-w-lg">
+              <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-medium text-slate-100 w-full max-w-lg">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 text-teal-300 shrink-0" aria-hidden="true" />
                   <span>Practical Nursing Scenario Questions</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 text-teal-300 shrink-0" aria-hidden="true" />
                   <span>Option-by-Option Clinical Rationales</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 text-teal-300 shrink-0" aria-hidden="true" />
                   <span>7-Domain Nursing Study Guide &amp; Notes</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 text-teal-300 shrink-0" aria-hidden="true" />
                   <span>PN Domain Progress &amp; Readiness</span>
                 </div>
               </div>
 
               {/* Secondary Utility Links & Pathway Switcher */}
-              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+              <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-300">
                 <Link
                   href="/study-guide"
-                  className="font-medium text-foreground/80 hover:text-[#0D9488] underline-offset-4 hover:underline"
+                  className="font-medium text-white/90 hover:text-teal-300 underline-offset-4 hover:underline"
                 >
                   Browse Study Guide
                 </Link>
                 <a
                   href="#pn-question-experience"
-                  className="font-medium text-foreground/80 hover:text-[#0D9488] underline-offset-4 hover:underline"
+                  className="font-medium text-white/90 hover:text-teal-300 underline-offset-4 hover:underline"
                 >
                   Try Free Sample Question
                 </a>
@@ -582,34 +580,26 @@ export function NCLEXPNPageClient() {
                   Preparing for Registered Nurse?{" "}
                   <Link
                     href="/nclex-rn"
-                    className="font-semibold text-[#0D9488] underline-offset-4 hover:underline"
+                    className="font-semibold text-teal-300 underline-offset-4 hover:underline"
                   >
                     Switch to NCLEX-RN →
                   </Link>
                 </span>
               </div>
 
-              <p className="mt-3 text-xs text-muted-foreground">
+              <p className="mt-3 text-xs text-slate-300">
                 Independent preparation platform. Not affiliated with or endorsed by NCSBN.
               </p>
             </div>
 
-            {/* Right Column: PN Platform Tour Product Video Frame */}
-            <div className="lg:col-span-6 relative">
-              <div className="relative mx-auto max-w-xl lg:max-w-none">
-                <ProductVideoPlayer
-                  video={PN_PLATFORM_VIDEO}
-                  open={isPnVideoOpen}
-                  onOpenChange={setIsPnVideoOpen}
-                  frameTestId="pn-hero-video-frame"
-                  playButtonTestId="pn-hero-video-play"
-                  modalTestId="pn-hero-video-modal"
-                />
-                <p className="mt-2.5 text-center lg:text-right text-xs text-muted-foreground">
-                  Focused on LPN/LVN scope: data collection, coordinated care, and medication safety.
-                </p>
-              </div>
-            </div>
+            {/* Optional Secondary Full-Screen PN Tour Modal */}
+            <ProductVideoPlayer
+              video={PN_PLATFORM_VIDEO}
+              open={isPnVideoOpen}
+              onOpenChange={setIsPnVideoOpen}
+              modalOnly
+              modalTestId="pn-hero-video-modal"
+            />
           </div>
         </div>
       </section>

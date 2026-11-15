@@ -64,7 +64,7 @@ describe("Landing Page Information Architecture, Full-Width Heartbeat & SEO", ()
     expect(explorePnBtn).toHaveAttribute("href", "/nclex-pn");
 
     expect(screen.getByTestId("home-cta-watch-tour")).toBeInTheDocument();
-    expect(screen.getByTestId("home-hero-video-frame")).toBeInTheDocument();
+    expect(screen.getByTestId("home-hero-background-video")).toBeInTheDocument();
 
     // Full-width heartbeat line spans across the hero section
     const fullwidthHeartbeat = screen.getByTestId("hero-fullwidth-heartbeat");

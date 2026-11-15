@@ -92,7 +92,7 @@ describe("NCLEX-RN Page Transformation (/nclex-rn)", () => {
       "#rn-study-plans"
     );
     expect(within(hero).getByTestId("rn-hero-watch-tour")).toBeInTheDocument();
-    expect(within(hero).getByTestId("rn-hero-video-frame")).toBeInTheDocument();
+    expect(within(hero).getByTestId("rn-hero-background-video")).toBeInTheDocument();
     expect(within(hero).getByRole("link", { name: /Browse Study Guide/i })).toHaveAttribute(
       "href",
       "/study-guide"

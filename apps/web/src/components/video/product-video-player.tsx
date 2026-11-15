@@ -32,6 +32,7 @@ export interface ProductVideoPlayerProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   priorityPoster?: boolean;
+  modalOnly?: boolean;
   frameTestId?: string;
   playButtonTestId?: string;
   modalTestId?: string;
@@ -43,6 +44,7 @@ export function ProductVideoPlayer({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
   priorityPoster = true,
+  modalOnly = false,
   frameTestId = "product-video-frame",
   playButtonTestId = "product-video-play-button",
   modalTestId = "product-video-modal",
@@ -106,9 +108,10 @@ export function ProductVideoPlayer({
 
   return (
     <>
-      {/* Polished Laptop / Application Frame Video Preview */}
-      <div
-        data-testid={frameTestId}
+      {!modalOnly && (
+        /* Polished Laptop / Application Frame Video Preview */
+        <div
+          data-testid={frameTestId}
         className={cn(
           "relative w-full rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl shadow-slate-900/5 overflow-hidden",
           className
@@ -190,7 +193,8 @@ export function ProductVideoPlayer({
             </span>
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Accessible Lightbox Modal Player (lazy-loads video only when opened) */}
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>

@@ -28,6 +28,7 @@ import { getProductById, type Product } from "@/lib/products";
 import { STUDY_GUIDE_CATEGORIES } from "@/lib/study-guide-data";
 import { BRAND } from "@/lib/brand";
 import { CourseFinderQuiz } from "@/components/home/course-finder";
+import { HeroBackgroundVideo } from "@/components/video/hero-background-video";
 import { ProductVideoPlayer } from "@/components/video/product-video-player";
 import { RN_PLATFORM_VIDEO } from "@/lib/hero-videos";
 
@@ -576,16 +577,12 @@ export function NCLEXRNPageClient() {
       <section
         data-testid="nclex-rn-hero"
         aria-labelledby="nclex-rn-hero-heading"
-        className="relative w-full overflow-hidden bg-gradient-to-b from-background via-background to-muted/30 pt-10 pb-20 lg:pt-16 lg:pb-28"
+        className="relative isolate w-full min-h-[600px] lg:min-h-[660px] flex items-center overflow-hidden bg-[#142B4A] text-white pt-10 pb-24 lg:pt-16 lg:pb-28"
       >
-        {/* Subtle ambient radial illumination */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -top-28 left-1/4 h-96 w-96 rounded-full bg-secondary/10 blur-3xl dark:bg-secondary/15"
-        />
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute bottom-0 right-10 h-96 w-96 rounded-full bg-primary/10 blur-3xl dark:bg-primary/20"
+        {/* Full-Bleed Autoplay RN Background Video */}
+        <HeroBackgroundVideo
+          video={RN_PLATFORM_VIDEO}
+          testId="rn-hero-background-video"
         />
 
         {/* Full-viewport-width animated ECG / heartbeat line traveling left-to-right */}
@@ -638,11 +635,11 @@ export function NCLEXRNPageClient() {
           </svg>
         </div>
 
-        <div className="relative z-20 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="relative z-20 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-12 lg:gap-12">
             {/* Left Column: RN Pathway Identity, Headline, Supporting Copy & Primary CTAs */}
-            <div className="lg:col-span-6 space-y-6 text-left">
-              <div className="inline-flex items-center gap-2.5 rounded-full bg-teal-500/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-300 border border-teal-500/20">
+            <div className="lg:col-span-8 xl:col-span-7 space-y-6 text-left">
+              <div className="inline-flex items-center gap-2.5 rounded-full bg-teal-400/15 backdrop-blur-xs px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-200 border border-teal-300/30">
                 <Image
                   src={BRAND.logo.assetPath}
                   alt=""
@@ -655,18 +652,18 @@ export function NCLEXRNPageClient() {
 
               <h1
                 id="nclex-rn-hero-heading"
-                className="font-serif text-3xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.15rem] leading-[1.12]"
+                className="font-serif text-3xl font-bold tracking-tight text-white sm:text-5xl lg:text-[3.25rem] leading-[1.12] drop-shadow-sm"
               >
                 Build the clinical judgment to become a confident Registered Nurse.
               </h1>
 
-              <p className="max-w-xl text-base sm:text-lg text-muted-foreground leading-relaxed">
+              <p className="max-w-xl text-base sm:text-lg text-slate-200 leading-relaxed">
                 Prepare for NCLEX-RN with scenario-based practice, detailed clinical rationales,
                 structured nursing resources and performance insights designed to strengthen
                 registered-nurse clinical reasoning.
               </p>
 
-              {/* Primary, Secondary & Video Actions */}
+              {/* Primary, Secondary & Optional Video Modal Actions */}
               <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3.5 pt-1">
                 <Button
                   type="button"
@@ -674,7 +671,7 @@ export function NCLEXRNPageClient() {
                   data-testid="rn-hero-dashboard-cta"
                   onClick={handleGoToRnDashboard}
                   disabled={isNavigatingDashboard}
-                  className="bg-[#142B4A] hover:bg-[#142B4A]/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold px-6 h-12 rounded-xl shadow-sm flex items-center justify-center gap-2 group"
+                  className="bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold px-6 h-12 rounded-xl shadow-md flex items-center justify-center gap-2 group"
                 >
                   {isNavigatingDashboard ? (
                     <span>Opening Dashboard...</span>
@@ -693,10 +690,10 @@ export function NCLEXRNPageClient() {
                   asChild
                   variant="outline"
                   size="lg"
-                  className="h-12 rounded-xl px-6 font-semibold border-2 border-[#0D9488]/40 bg-white dark:bg-card hover:bg-teal-50/70 dark:hover:bg-muted"
+                  className="h-12 rounded-xl px-6 font-semibold border-2 border-white/40 bg-white/10 backdrop-blur-xs text-white hover:bg-white/20 hover:text-white"
                 >
                   <a href="#rn-study-plans">
-                    <Compass className="mr-2 h-4 w-4 text-[#0D9488]" aria-hidden="true" />
+                    <Compass className="mr-2 h-4 w-4 text-teal-300" aria-hidden="true" />
                     Explore RN Study Plans
                   </a>
                 </Button>
@@ -707,7 +704,7 @@ export function NCLEXRNPageClient() {
                   size="lg"
                   data-testid="rn-hero-watch-tour"
                   onClick={() => setIsRnVideoOpen(true)}
-                  className="h-12 rounded-xl px-4 font-semibold text-[#0D9488] hover:text-[#0F766E] hover:bg-teal-50/80 dark:text-teal-300 dark:hover:bg-teal-950/40"
+                  className="h-12 rounded-xl px-4 font-semibold text-teal-200 hover:text-white hover:bg-white/10"
                 >
                   <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" />
                   Watch the RN Platform Tour
@@ -717,37 +714,37 @@ export function NCLEXRNPageClient() {
               {/* Verified RN Capability Pills */}
               <ul
                 aria-label="Available NCLEX-RN preparation tools"
-                className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-1 text-xs sm:text-sm font-medium text-foreground/90"
+                className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 pt-1 text-xs sm:text-sm font-medium text-slate-100"
               >
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0D9488]" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-300" aria-hidden="true" />
                   <span>RN clinical scenario &amp; prioritization items</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0D9488]" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-300" aria-hidden="true" />
                   <span>Option-by-option clinical &amp; distractor rationales</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0D9488]" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-300" aria-hidden="true" />
                   <span>7-domain Nursing Study Guide &amp; reference notes</span>
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0D9488]" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-teal-300" aria-hidden="true" />
                   <span>Client Needs readiness &amp; performance insights</span>
                 </li>
               </ul>
 
               {/* Secondary Utility Links & Pathway Switcher */}
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground pt-1">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-slate-300 pt-1">
                 <Link
                   href="/study-guide"
-                  className="font-medium text-foreground/80 hover:text-[#0D9488] underline-offset-4 hover:underline"
+                  className="font-medium text-white/90 hover:text-teal-300 underline-offset-4 hover:underline"
                 >
                   Browse Study Guide
                 </Link>
                 <a
                   href="#rn-question-experience"
-                  className="font-medium text-foreground/80 hover:text-[#0D9488] underline-offset-4 hover:underline"
+                  className="font-medium text-white/90 hover:text-teal-300 underline-offset-4 hover:underline"
                 >
                   Try Free Sample Question
                 </a>
@@ -755,7 +752,7 @@ export function NCLEXRNPageClient() {
                   Preparing for LPN/LVN?{" "}
                   <Link
                     href="/nclex-pn"
-                    className="font-semibold text-[#0D9488] underline-offset-4 hover:underline"
+                    className="font-semibold text-teal-300 underline-offset-4 hover:underline"
                   >
                     Switch to NCLEX-PN →
                   </Link>
@@ -763,22 +760,14 @@ export function NCLEXRNPageClient() {
               </div>
             </div>
 
-            {/* Right Column: RN Platform Tour Product Video Frame */}
-            <div className="lg:col-span-6 relative">
-              <div className="relative mx-auto max-w-xl lg:max-w-none">
-                <ProductVideoPlayer
-                  video={RN_PLATFORM_VIDEO}
-                  open={isRnVideoOpen}
-                  onOpenChange={setIsRnVideoOpen}
-                  frameTestId="rn-hero-video-frame"
-                  playButtonTestId="rn-hero-video-play"
-                  modalTestId="rn-hero-video-modal"
-                />
-                <p className="mt-2.5 text-center lg:text-right text-xs text-muted-foreground">
-                  Includes RN dashboard, acute care scenarios, rationales, and Client Needs analytics.
-                </p>
-              </div>
-            </div>
+            {/* Optional Secondary Full-Screen RN Tour Modal */}
+            <ProductVideoPlayer
+              video={RN_PLATFORM_VIDEO}
+              open={isRnVideoOpen}
+              onOpenChange={setIsRnVideoOpen}
+              modalOnly
+              modalTestId="rn-hero-video-modal"
+            />
           </div>
         </div>
       </section>

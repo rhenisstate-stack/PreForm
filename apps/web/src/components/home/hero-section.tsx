@@ -11,6 +11,7 @@ import {
   Stethoscope,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HeroBackgroundVideo } from "@/components/video/hero-background-video";
 import { ProductVideoPlayer } from "@/components/video/product-video-player";
 import { HOME_PLATFORM_VIDEO } from "@/lib/hero-videos";
 
@@ -32,53 +33,50 @@ export function HeroSection() {
       id="main-content"
       data-testid="hero-section"
       aria-labelledby="home-hero-heading"
-      className="relative isolate w-full min-h-[640px] lg:min-h-[700px] flex flex-col justify-between overflow-hidden bg-gradient-to-b from-slate-50 via-white to-background dark:from-slate-950 dark:via-slate-900/90 dark:to-background text-foreground pt-10 sm:pt-14 lg:pt-16 pb-2 sm:pb-3"
+      className="relative isolate w-full min-h-[640px] lg:min-h-[700px] flex flex-col justify-between overflow-hidden bg-[#142B4A] text-white pt-10 sm:pt-14 lg:pt-16 pb-2 sm:pb-3"
     >
-      {/* Subtle Clinical Ambient Accents */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden"
-      >
-        <div className="absolute -top-28 right-1/4 h-96 w-96 rounded-full bg-teal-500/8 dark:bg-teal-400/10 blur-3xl" />
-        <div className="absolute bottom-12 -left-20 h-80 w-80 rounded-full bg-[#142B4A]/5 dark:bg-primary/10 blur-3xl" />
-      </div>
+      {/* Full-Bleed Autoplay Hero Background Video */}
+      <HeroBackgroundVideo
+        video={HOME_PLATFORM_VIDEO}
+        testId="home-hero-background-video"
+      />
 
-      {/* Main Two-Column Hero Content */}
+      {/* Main Hero Content */}
       <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 relative z-20 flex-1 flex items-center mb-6 sm:mb-8 lg:mb-10">
         <div
           data-testid="hero-split-layout"
           className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center py-2 sm:py-4"
         >
-          {/* Left Column: Headline, Copy, Pathway CTAs, Tour Action */}
+          {/* Left Column: Headline, Copy, Pathway CTAs, Optional Tour Modal */}
           <div
             data-testid="hero-left-column"
-            className="lg:col-span-6 text-left flex flex-col items-start"
+            className="lg:col-span-8 xl:col-span-7 text-left flex flex-col items-start"
           >
-            <div className="inline-flex items-center gap-2 rounded-full bg-teal-500/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-800 dark:text-teal-300 border border-teal-500/20">
+            <div className="inline-flex items-center gap-2 rounded-full bg-teal-400/15 backdrop-blur-xs px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-200 border border-teal-300/30">
               <span className="h-2 w-2 rounded-full bg-[#0D9488] motion-safe:animate-pulse" />
               <span>NCLEX-RN &amp; NCLEX-PN Learning Platform</span>
             </div>
 
             <h1
               id="home-hero-heading"
-              className="mt-5 text-3xl font-serif font-bold tracking-tight text-foreground sm:text-5xl lg:text-[3.25rem] leading-[1.15] sm:leading-[1.12] text-left"
+              className="mt-5 text-3xl font-serif font-bold tracking-tight text-white sm:text-5xl lg:text-[3.35rem] leading-[1.12] drop-shadow-sm text-left"
             >
               Prepare for NCLEX with greater clarity and confidence.
             </h1>
 
-            <p className="mt-5 max-w-xl text-left text-base sm:text-lg text-muted-foreground leading-relaxed">
+            <p className="mt-5 max-w-xl text-left text-base sm:text-lg text-slate-200 leading-relaxed">
               Practice nursing questions, strengthen your clinical judgment, understand every answer
               and track your preparation through a dedicated learning platform built for NCLEX-RN
               and NCLEX-PN candidates.
             </p>
 
-            {/* Pathway & Video Tour Actions */}
+            {/* Pathway & Optional Full-Screen Video Tour Actions */}
             <div className="mt-8 flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center justify-start gap-3.5 w-full sm:w-auto">
               <Button
                 size="lg"
                 asChild
                 data-testid="home-cta-explore-rn"
-                className="w-full sm:w-auto bg-[#142B4A] hover:bg-[#142B4A]/90 dark:bg-primary dark:hover:bg-primary/90 text-white dark:text-primary-foreground font-semibold shadow-sm px-6 h-12 text-base rounded-xl"
+                className="w-full sm:w-auto bg-[#0D9488] hover:bg-[#0F766E] text-white font-semibold shadow-md px-6 h-12 text-base rounded-xl"
               >
                 <Link href="/nclex-rn">
                   <GraduationCap className="mr-2 h-4 w-4" aria-hidden="true" />
@@ -92,10 +90,10 @@ export function HeroSection() {
                 size="lg"
                 asChild
                 data-testid="home-cta-explore-pn"
-                className="w-full sm:w-auto font-semibold px-6 h-12 text-base border-2 border-[#0D9488]/40 rounded-xl bg-white dark:bg-card text-foreground hover:bg-teal-50/70 dark:hover:bg-muted shadow-xs"
+                className="w-full sm:w-auto font-semibold px-6 h-12 text-base border-2 border-white/40 rounded-xl bg-white/10 backdrop-blur-xs text-white hover:bg-white/20 hover:text-white shadow-xs"
               >
                 <Link href="/nclex-pn">
-                  <Stethoscope className="mr-2 h-4 w-4 text-[#0D9488]" aria-hidden="true" />
+                  <Stethoscope className="mr-2 h-4 w-4 text-teal-300" aria-hidden="true" />
                   Explore NCLEX-PN
                 </Link>
               </Button>
@@ -106,7 +104,7 @@ export function HeroSection() {
                 size="lg"
                 data-testid="home-cta-watch-tour"
                 onClick={() => setIsVideoOpen(true)}
-                className="w-full sm:w-auto font-semibold px-4 h-12 text-sm text-[#0D9488] hover:text-[#0F766E] hover:bg-teal-50/80 dark:text-teal-300 dark:hover:bg-teal-950/40 rounded-xl"
+                className="w-full sm:w-auto font-semibold px-4 h-12 text-sm text-teal-200 hover:text-white hover:bg-white/10 rounded-xl"
               >
                 <Play className="mr-2 h-4 w-4 fill-current" aria-hidden="true" />
                 Watch Platform Tour
@@ -114,39 +112,28 @@ export function HeroSection() {
             </div>
 
             {/* Verified Capability Indicators */}
-            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-medium text-foreground/90 w-full max-w-lg">
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs sm:text-sm font-medium text-slate-100 w-full max-w-lg">
               {HERO_CAPABILITIES.map((cap) => (
                 <div key={cap} className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-[#0D9488] shrink-0" aria-hidden="true" />
+                  <CheckCircle2 className="h-4 w-4 text-teal-300 shrink-0" aria-hidden="true" />
                   <span>{cap}</span>
                 </div>
               ))}
             </div>
 
-            <p className="mt-4 text-xs text-muted-foreground text-left">
+            <p className="mt-4 text-xs text-muted-foreground !text-slate-300 text-left">
               Independent preparation platform. Not affiliated with or endorsed by NCSBN.
             </p>
           </div>
 
-          {/* Right Column: Polished Laptop/Dashboard Video Frame */}
-          <div
-            data-testid="hero-right-column"
-            className="lg:col-span-6 relative w-full flex flex-col items-center lg:items-end"
-          >
-            <div className="relative w-full max-w-xl lg:max-w-none">
-              <ProductVideoPlayer
-                video={HOME_PLATFORM_VIDEO}
-                open={isVideoOpen}
-                onOpenChange={setIsVideoOpen}
-                frameTestId="home-hero-video-frame"
-                playButtonTestId="home-hero-video-play"
-                modalTestId="home-hero-video-modal"
-              />
-              <p className="mt-2.5 text-center lg:text-right text-xs text-muted-foreground">
-                One learning platform. Two dedicated nursing pathways. A more structured way to prepare.
-              </p>
-            </div>
-          </div>
+          {/* Optional Secondary Full-Screen Tour Modal (does not obscure background video) */}
+          <ProductVideoPlayer
+            video={HOME_PLATFORM_VIDEO}
+            open={isVideoOpen}
+            onOpenChange={setIsVideoOpen}
+            modalOnly
+            modalTestId="home-hero-video-modal"
+          />
         </div>
       </div>
 
@@ -157,13 +144,13 @@ export function HeroSection() {
         className="relative inset-x-0 w-full z-10 pointer-events-none select-none overflow-hidden mt-4 sm:mt-6 lg:mt-8"
       >
         <div data-testid="hero-ecg-container" className="w-full">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between text-[10px] sm:text-[11px] font-mono text-teal-800/75 dark:text-teal-300/80 mb-1 gap-2">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between text-[10px] sm:text-[11px] font-mono text-teal-200/85 mb-1 gap-2">
             <span className="inline-flex items-center gap-1.5 shrink-0">
-              <Activity className="h-3.5 w-3.5 text-teal-600 dark:text-teal-400 motion-safe:animate-heartbeat" />
+              <Activity className="h-3.5 w-3.5 text-teal-300 motion-safe:animate-heartbeat" />
               <span className="hidden sm:inline">PREPFORD CLINICAL RHYTHM • LEAD II</span>
               <span className="sm:hidden">RHYTHM • LEAD II</span>
             </span>
-            <span className="font-semibold text-teal-700 dark:text-emerald-300 text-right shrink-0">
+            <span className="font-semibold text-emerald-300 text-right shrink-0">
               <span className="hidden sm:inline">NORMAL SINUS • LEFT-TO-RIGHT PULSE</span>
               <span className="sm:hidden">NORMAL SINUS</span>
             </span>
@@ -182,7 +169,7 @@ export function HeroSection() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-teal-700/20 dark:text-teal-400/25"
+              className="text-teal-300/30"
             />
             <path
               data-testid="hero-ecg-pulse-ltr"
@@ -192,7 +179,7 @@ export function HeroSection() {
               strokeWidth="3.2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-teal-600 dark:text-teal-300 drop-shadow-[0_0_8px_rgba(13,148,136,0.55)] dark:drop-shadow-[0_0_10px_rgba(45,212,191,0.85)] motion-safe:animate-ecg-ltr"
+              className="text-teal-300 drop-shadow-[0_0_10px_rgba(45,212,191,0.85)] motion-safe:animate-ecg-ltr"
             />
           </svg>
         </div>
