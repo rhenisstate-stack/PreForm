@@ -8,6 +8,7 @@ const rootDir = path.resolve(webDir, "../..");
 
 // Load root environment variables, then allow local web configurations to take precedence
 dotenv.config({ path: path.resolve(rootDir, ".env") });
+dotenv.config({ path: path.resolve(rootDir, ".env.local"), override: true });
 dotenv.config({ path: path.resolve(webDir, ".env"), override: true });
 dotenv.config({ path: path.resolve(webDir, ".env.local"), override: true });
 
