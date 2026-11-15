@@ -48,6 +48,8 @@ import {
 } from "lucide-react";
 import { QuestionFlagButton } from "@/components/assessments/question-flag-button";
 import { InExamReauthModal, ExamReauthResult } from "@/components/assessments/in-exam-reauth-modal";
+import { QuestionTypeRenderer } from "@/components/questions/question-type-renderer";
+import { isOptionBasedQuestionType } from "@/lib/question-types";
 import { useAuth } from "@/lib/auth-context";
 import { useCart } from "@/lib/cart-context";
 import { BRAND } from "@/lib/brand";
@@ -336,6 +338,7 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
   const [selectedAssessmentId, setSelectedAssessmentId] = React.useState<string | null>(null);
   const [liveQuestions, setLiveQuestions] = React.useState<CandidateQuestionDto[]>([]);
   const [currentTestAnswers, setCurrentTestAnswers] = React.useState<Record<number, number | number[]>>({});
+  const [structuredTestAnswers, setStructuredTestAnswers] = React.useState<Record<number, Record<string, any>>>({});
   const [activeQuestionIndex, setActiveQuestionIndex] = React.useState<number>(0);
   const [isSubmittingTest, setIsSubmittingTest] = React.useState<boolean>(false);
   const [referenceNowMs, setReferenceNowMs] = React.useState<number | null>(null);
@@ -509,7 +512,7 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
 
   // Launches an assessment session with backend snapshot dispatch and offline fallback
   const handleStartTestSession = (overrideAssessmentId?: string) => {
-    const tempId = "att_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+    const tempId = "local_att_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
     setActiveAttemptId(tempId);
     setCurrentTestAnswers({});
     setActiveQuestionIndex(0);
@@ -606,7 +609,7 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
       }
     };
 
-    if (activeAttemptId && liveQuestions.length > 0 && !activeAttemptId.startsWith("att_")) {
+    if (activeAttemptId && liveQuestions.length > 0 && !activeAttemptId.startsWith("local_att_")) {
       fetch(`/api/attempts/${encodeURIComponent(activeAttemptId)}/submit`, {
         method: "POST",
       })
@@ -1914,8 +1917,45 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                         )}
                       </div>
 
-                      {/* Options */}
-                      <div className="space-y-2.5 pt-1" role={isMultiSelect ? "group" : "radiogroup"} aria-label="Question options">
+                      {/* Options or Structured/NGN Question Renderer */}
+                      {!isOptionBasedQuestionType((activeQ as any).questionType) ? (
+                        <div className="pt-1">
+                          <QuestionTypeRenderer
+                            questionId={activeQ.id}
+                            questionTypeKey={(activeQ as any).questionType || "single-choice"}
+                            stem={activeQ.stem}
+                            instructions={(activeQ as any).instructions}
+                            clinicalScenario={(activeQ as any).clinicalScenario}
+                            exhibitsJson={(activeQ as any).exhibitsJson}
+                            structuredContentJson={(activeQ as any).structuredContentJson}
+                            mediaUrl={(activeQ as any).mediaUrl}
+                            mode="candidate-interactive"
+                            structuredResponse={structuredTestAnswers[activeQuestionIndex] || {}}
+                            onStructuredResponseChange={(nextStructured) => {
+                              setStructuredTestAnswers((prev) => ({
+                                ...prev,
+                                [activeQuestionIndex]: nextStructured,
+                              }));
+                              if (activeAttemptId && !activeAttemptId.startsWith("local_att_") && liveQuestions.length > 0) {
+                                const qId = activeQ.id;
+                                if (qId) {
+                                  fetch(`/api/attempts/${encodeURIComponent(activeAttemptId)}/responses`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                      questionId: qId,
+                                      selectedOptionIndices: [],
+                                      structuredResponse: nextStructured,
+                                      timeSpentSeconds: 15,
+                                    }),
+                                  }).catch(() => {});
+                                }
+                              }
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5 pt-1" role={isMultiSelect ? "group" : "radiogroup"} aria-label="Question options">
                         {activeQ.options.map((opt, optIdx) => {
                           const isSelected = selectedIndices.includes(optIdx);
                           const optMediaUrl = (activeQ as any).optionMediaUrls?.[optIdx];
@@ -1953,7 +1993,7 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                                   }));
                                 }
 
-                                if (activeAttemptId && !activeAttemptId.startsWith("att_") && liveQuestions.length > 0) {
+                                if (activeAttemptId && !activeAttemptId.startsWith("local_att_") && liveQuestions.length > 0) {
                                   const qId = activeQ.id;
                                   if (qId) {
                                     fetch(`/api/attempts/${encodeURIComponent(activeAttemptId)}/responses`, {
@@ -2002,7 +2042,8 @@ export function DashboardClient({ lockedPathway, initialPathway }: DashboardClie
                             </button>
                           );
                         })}
-                      </div>
+                        </div>
+                      )}
 
                       {/* Question Navigation Controls */}
                       <div className="flex items-center justify-between pt-4 border-t border-border">

@@ -363,22 +363,47 @@ export function QuestionTypeRenderer({
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold">Draggable Clinical Items</Label>
+                  <Label className="text-xs font-semibold">Clinical Items &amp; Target Assignment</Label>
                   {(Array.isArray(parsedStructured.items) ? parsedStructured.items : []).map(
                     (item: any, idx: number) => {
+                      const itemId = typeof item === "object" && item.id ? String(item.id) : `dd-${idx + 1}`;
                       const label = typeof item === "string" ? item : item.text || item.label || `Item ${idx + 1}`;
                       const target = typeof item === "object" ? item.targetCategory : null;
+                      const categories: string[] = Array.isArray(parsedStructured.categories)
+                        ? parsedStructured.categories
+                        : ["Priority Intervention", "Routine Monitoring"];
+                      const assignments: Record<string, string> = effectiveStructuredResponse.assignments || {};
                       return (
                         <div
-                          key={idx}
-                          className="flex items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 p-2.5 text-xs"
+                          key={itemId}
+                          className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 rounded-lg border border-border bg-muted/30 p-2.5 text-xs"
                         >
-                          <span>{label}</span>
-                          {showAnswerKey && target && (
-                            <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300">
-                              Target: {target}
-                            </Badge>
-                          )}
+                          <span className="font-medium">{label}</span>
+                          <div className="flex items-center gap-2">
+                            <select
+                              aria-label={`Assign category for ${label}`}
+                              disabled={mode === "candidate-review"}
+                              value={assignments[itemId] || ""}
+                              onChange={(e) =>
+                                updateStructuredResponse({
+                                  assignments: { ...assignments, [itemId]: e.target.value },
+                                })
+                              }
+                              className="h-8 rounded border border-input bg-background px-2 text-xs"
+                            >
+                              <option value="">Select category...</option>
+                              {categories.map((cat) => (
+                                <option key={cat} value={cat}>
+                                  {cat}
+                                </option>
+                              ))}
+                            </select>
+                            {showAnswerKey && target && (
+                              <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shrink-0">
+                                Key: {target}
+                              </Badge>
+                            )}
+                          </div>
                         </div>
                       );
                     }
@@ -496,23 +521,39 @@ export function QuestionTypeRenderer({
                       {Array.isArray(sub.options) && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
                           {sub.options.map((optText: string, oIdx: number) => {
+                            const itemKey = String(sub.itemNumber || idx + 1);
+                            const answersMap: Record<string, string[]> = effectiveStructuredResponse.answers || {};
+                            const currentSelected: string[] = Array.isArray(answersMap[itemKey]) ? answersMap[itemKey] : [];
+                            const isSelected = currentSelected.includes(optText);
                             const isSubCorrect =
                               Array.isArray(sub.correctAnswers) &&
                               sub.correctAnswers.includes(optText);
                             return (
-                              <div
+                              <button
                                 key={oIdx}
-                                className={`rounded border p-2 text-xs flex items-center justify-between ${
+                                type="button"
+                                disabled={mode === "candidate-review"}
+                                onClick={() => {
+                                  const nextForItem = isSelected
+                                    ? currentSelected.filter((v) => v !== optText)
+                                    : [...currentSelected, optText];
+                                  updateStructuredResponse({
+                                    answers: { ...answersMap, [itemKey]: nextForItem },
+                                  });
+                                }}
+                                className={`rounded border p-2 text-xs text-left flex items-center justify-between transition-colors ${
                                   showAnswerKey && isSubCorrect
                                     ? "border-emerald-500/50 bg-emerald-500/10 font-semibold"
-                                    : "border-border bg-background"
+                                    : isSelected
+                                    ? "border-teal-500 bg-teal-500/10 font-semibold"
+                                    : "border-border bg-background hover:bg-muted/50"
                                 }`}
                               >
                                 <span>{optText}</span>
                                 {showAnswerKey && isSubCorrect && (
                                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                                 )}
-                              </div>
+                              </button>
                             );
                           })}
                         </div>
@@ -564,23 +605,59 @@ export function QuestionTypeRenderer({
               <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Clinical Concept-to-Intervention Matching
               </div>
-              <div className="space-y-2">
-                {(Array.isArray(parsedStructured.pairs) ? parsedStructured.pairs : []).map(
-                  (pair: any, idx: number) => (
-                    <div
-                      key={pair.id || idx}
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center rounded-lg border border-border bg-muted/20 p-3 text-xs sm:text-sm"
-                    >
-                      <div className="font-semibold">{pair.term || pair.leftPrompt}</div>
-                      <div className="rounded border border-emerald-500/30 bg-background p-2 text-xs">
-                        {showAnswerKey
-                          ? pair.definition || pair.rightMatch
-                          : effectiveStructuredResponse[`match_${idx}`] || "Select matching clinical item..."}
-                      </div>
-                    </div>
-                  )
-                )}
-              </div>
+              {(() => {
+                const pairs: any[] = Array.isArray(parsedStructured.pairs) ? parsedStructured.pairs : [];
+                const distractors: string[] = Array.isArray(parsedStructured.distractors) ? parsedStructured.distractors : [];
+                const allChoices = Array.from(
+                  new Set([
+                    ...pairs.map((p) => p.definition || p.rightMatch).filter(Boolean),
+                    ...distractors,
+                  ])
+                );
+                const matches: Record<string, string> = effectiveStructuredResponse.matches || {};
+                return (
+                  <div className="space-y-2">
+                    {pairs.map((pair: any, idx: number) => {
+                      const pairId = pair.id || `m-${idx + 1}`;
+                      const term = pair.term || pair.leftPrompt;
+                      const correctDef = pair.definition || pair.rightMatch;
+                      return (
+                        <div
+                          key={pairId}
+                          className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center rounded-lg border border-border bg-muted/20 p-3 text-xs sm:text-sm"
+                        >
+                          <div className="font-semibold">{term}</div>
+                          <div className="flex items-center gap-2">
+                            <select
+                              aria-label={`Match for ${term}`}
+                              disabled={mode === "candidate-review"}
+                              value={matches[pairId] || ""}
+                              onChange={(e) =>
+                                updateStructuredResponse({
+                                  matches: { ...matches, [pairId]: e.target.value },
+                                })
+                              }
+                              className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-xs"
+                            >
+                              <option value="">Select matching clinical item...</option>
+                              {allChoices.map((choice) => (
+                                <option key={choice} value={choice}>
+                                  {choice}
+                                </option>
+                              ))}
+                            </select>
+                            {showAnswerKey && correctDef && (
+                              <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shrink-0">
+                                Key: {correctDef}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           )}
 
@@ -858,38 +935,128 @@ export function QuestionTypeRenderer({
                   </table>
                 </div>
               )}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1.5">
-                  <div className="text-xs font-bold">Actions to Take (2)</div>
-                  {(Array.isArray(parsedStructured.correctActions)
-                    ? parsedStructured.correctActions
-                    : []
-                  ).map((act: string, idx: number) => (
-                    <div key={idx} className="text-xs rounded bg-background p-2 border border-border">
-                      {act}
+              {(() => {
+                const potentialConditions: string[] = Array.isArray(parsedStructured.potentialConditions)
+                  ? parsedStructured.potentialConditions
+                  : parsedStructured.correctCondition
+                  ? [parsedStructured.correctCondition]
+                  : [];
+                const actionsList: string[] = Array.isArray(parsedStructured.actionsToTake)
+                  ? parsedStructured.actionsToTake
+                  : Array.isArray(parsedStructured.correctActions)
+                  ? parsedStructured.correctActions
+                  : [];
+                const paramsList: string[] = Array.isArray(parsedStructured.parametersToMonitor)
+                  ? parsedStructured.parametersToMonitor
+                  : Array.isArray(parsedStructured.correctParameters)
+                  ? parsedStructured.correctParameters
+                  : [];
+
+                const selectedCondition: string = effectiveStructuredResponse.condition || "";
+                const selectedActions: string[] = Array.isArray(effectiveStructuredResponse.actions)
+                  ? effectiveStructuredResponse.actions
+                  : [];
+                const selectedParams: string[] = Array.isArray(effectiveStructuredResponse.parameters)
+                  ? effectiveStructuredResponse.parameters
+                  : [];
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1.5">
+                      <div className="text-xs font-bold">Actions to Take (2)</div>
+                      {actionsList.map((act: string, idx: number) => {
+                        const checked = selectedActions.includes(act);
+                        const isKey = Array.isArray(parsedStructured.correctActions) && parsedStructured.correctActions.includes(act);
+                        return (
+                          <label
+                            key={idx}
+                            className={`flex items-start gap-2 text-xs rounded p-2 border cursor-pointer ${
+                              showAnswerKey && isKey
+                                ? "border-emerald-500/50 bg-emerald-500/10 font-semibold"
+                                : checked
+                                ? "border-teal-500 bg-teal-500/10"
+                                : "bg-background border-border"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              disabled={mode === "candidate-review"}
+                              checked={checked}
+                              onChange={() => {
+                                const next = checked
+                                  ? selectedActions.filter((a) => a !== act)
+                                  : [...selectedActions, act];
+                                updateStructuredResponse({ actions: next });
+                              }}
+                              className="mt-0.5 accent-teal-600"
+                            />
+                            <span>{act}</span>
+                          </label>
+                        );
+                      })}
                     </div>
-                  ))}
-                </div>
-                <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-3 flex flex-col justify-center items-center text-center space-y-1">
-                  <div className="text-[10px] font-mono uppercase text-muted-foreground">
-                    Potential Condition
-                  </div>
-                  <div className="text-sm font-bold text-primary">
-                    {parsedStructured.correctCondition || "Acute Clinical Condition"}
-                  </div>
-                </div>
-                <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1.5">
-                  <div className="text-xs font-bold">Parameters to Monitor (2)</div>
-                  {(Array.isArray(parsedStructured.correctParameters)
-                    ? parsedStructured.correctParameters
-                    : []
-                  ).map((param: string, idx: number) => (
-                    <div key={idx} className="text-xs rounded bg-background p-2 border border-border">
-                      {param}
+
+                    <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-3 flex flex-col justify-center space-y-2">
+                      <div className="text-[10px] font-mono uppercase text-muted-foreground text-center">
+                        Potential Condition
+                      </div>
+                      <select
+                        aria-label="Potential Condition"
+                        disabled={mode === "candidate-review"}
+                        value={selectedCondition}
+                        onChange={(e) => updateStructuredResponse({ condition: e.target.value })}
+                        className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
+                      >
+                        <option value="">Select condition...</option>
+                        {potentialConditions.map((cond) => (
+                          <option key={cond} value={cond}>
+                            {cond}
+                          </option>
+                        ))}
+                      </select>
+                      {showAnswerKey && parsedStructured.correctCondition && (
+                        <div className="text-xs font-bold text-emerald-700 dark:text-emerald-300 text-center">
+                          Key: {parsedStructured.correctCondition}
+                        </div>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
+
+                    <div className="rounded-lg border border-border bg-muted/20 p-3 space-y-1.5">
+                      <div className="text-xs font-bold">Parameters to Monitor (2)</div>
+                      {paramsList.map((param: string, idx: number) => {
+                        const checked = selectedParams.includes(param);
+                        const isKey = Array.isArray(parsedStructured.correctParameters) && parsedStructured.correctParameters.includes(param);
+                        return (
+                          <label
+                            key={idx}
+                            className={`flex items-start gap-2 text-xs rounded p-2 border cursor-pointer ${
+                              showAnswerKey && isKey
+                                ? "border-emerald-500/50 bg-emerald-500/10 font-semibold"
+                                : checked
+                                ? "border-teal-500 bg-teal-500/10"
+                                : "bg-background border-border"
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              disabled={mode === "candidate-review"}
+                              checked={checked}
+                              onChange={() => {
+                                const next = checked
+                                  ? selectedParams.filter((p) => p !== param)
+                                  : [...selectedParams, param];
+                                updateStructuredResponse({ parameters: next });
+                              }}
+                              className="mt-0.5 accent-teal-600"
+                            />
+                            <span>{param}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
         </div>

@@ -37,11 +37,8 @@ export function HorizontalRankingChart({
   emptyMessage = "No categorical performance metrics recorded.",
   className,
 }: HorizontalRankingChartProps) {
-  if (!items || items.length === 0) {
-    return <ChartEmptyState heightClass="h-full min-h-[220px]" description={emptyMessage} />;
-  }
-
   const sortedItems = React.useMemo(() => {
+    if (!items || items.length === 0) return [];
     let list = [...items];
     if (sortBy === "desc") {
       list.sort((a, b) => b.value - a.value);
@@ -53,6 +50,10 @@ export function HorizontalRankingChart({
     }
     return list;
   }, [items, sortBy, maxItems]);
+
+  if (!items || items.length === 0) {
+    return <ChartEmptyState heightClass="h-full min-h-[220px]" description={emptyMessage} />;
+  }
 
   const getStatusBadge = (item: RankingItem) => {
     if (item.status) {
