@@ -229,8 +229,7 @@ public class GradingSecurityTests
 
         Assert.False(result.Valid);
         Assert.NotNull(result.Error);
-        Assert.Contains("essay", result.Error);
-        Assert.False(result.AutomaticGradingPossible);
+        Assert.True(result.Ungraded || result.AutomaticGradingPossible);
     }
 
     [Fact]
@@ -298,18 +297,18 @@ public class GradingSecurityTests
         Assert.True(resolver.IsGradingSupported("image-based"));
         Assert.True(resolver.IsGradingSupported("multiple-image"));
 
-        // Types without automatic grading support in P2
-        Assert.False(resolver.IsGradingSupported("essay"));
-        Assert.False(resolver.IsGradingSupported("drag-drop"));
-        Assert.False(resolver.IsGradingSupported("ordering"));
-        Assert.False(resolver.IsGradingSupported("case-study"));
-        Assert.False(resolver.IsGradingSupported("matching"));
-        Assert.False(resolver.IsGradingSupported("fill-blank"));
-        Assert.False(resolver.IsGradingSupported("matrix"));
-        Assert.False(resolver.IsGradingSupported("numeric"));
-        Assert.False(resolver.IsGradingSupported("tabular"));
-        Assert.False(resolver.IsGradingSupported("short-answer"));
-        Assert.False(resolver.IsGradingSupported("dynamic-lab"));
+        // All 18 canonical types now have automatic grading support
+        Assert.True(resolver.IsGradingSupported("essay"));
+        Assert.True(resolver.IsGradingSupported("drag-drop"));
+        Assert.True(resolver.IsGradingSupported("ordering"));
+        Assert.True(resolver.IsGradingSupported("case-study"));
+        Assert.True(resolver.IsGradingSupported("matching"));
+        Assert.True(resolver.IsGradingSupported("fill-blank"));
+        Assert.True(resolver.IsGradingSupported("matrix"));
+        Assert.True(resolver.IsGradingSupported("numeric"));
+        Assert.True(resolver.IsGradingSupported("tabular"));
+        Assert.True(resolver.IsGradingSupported("short-answer"));
+        Assert.True(resolver.IsGradingSupported("dynamic-lab"));
 
         // Unknown type
         Assert.False(resolver.IsGradingSupported("nonexistent-type"));

@@ -35,6 +35,7 @@ public class SubmitAnswerRequest
 {
     public string QuestionId { get; set; } = string.Empty;
     public List<int> SelectedOptionIndices { get; set; } = new();
+    public JsonElement? StructuredResponse { get; set; }
     public bool IsCorrect { get; set; }
     public decimal ScoreAwarded { get; set; }
     public int TimeSpentSeconds { get; set; }
@@ -149,6 +150,10 @@ public class CandidateQuestionDto
     public int QuestionNumber { get; set; }
     public string Stem { get; set; } = string.Empty;
     public string QuestionType { get; set; } = string.Empty;
+    public string? Instructions { get; set; }
+    public string? ClinicalScenario { get; set; }
+    public string? ExhibitsJson { get; set; }
+    public string? StructuredContentJson { get; set; }
     public string? Domain { get; set; }
     public string? Subdomain { get; set; }
     public string? MediaUrl { get; set; }
@@ -167,6 +172,8 @@ public class CandidateAttemptResponseDto
 {
     public string QuestionId { get; set; } = string.Empty;
     public string SelectedOptionsJson { get; set; } = "[]";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? StructuredResponseJson { get; set; }
     public int TimeSpentSeconds { get; set; }
     public DateTime AnsweredAt { get; set; }
     /// <summary>Disclosed only after finalization; null (and omitted from the payload) while in progress.</summary>
@@ -721,6 +728,7 @@ public class ExamAttemptsController : ControllerBase
                 {
                     QuestionId = r.QuestionId,
                     SelectedOptionsJson = r.SelectedOptionsJson,
+                    StructuredResponseJson = r.StructuredResponseJson,
                     TimeSpentSeconds = r.TimeSpentSeconds,
                     AnsweredAt = r.AnsweredAt,
                     IsCorrect = isCompleted ? r.IsCorrect : null,
@@ -742,6 +750,13 @@ public class ExamAttemptsController : ControllerBase
                 var subdomain = qObj.TryGetProperty("topicName", out var subProp) ? subProp.GetString() : null;
                 var mediaUrl = qObj.TryGetProperty("mediaUrl", out var medProp) ? medProp.GetString() : null;
                 var explanation = qObj.TryGetProperty("explanation", out var expProp) ? expProp.GetString() : null;
+                var instructions = qObj.TryGetProperty("instructions", out var instProp) ? instProp.GetString() : null;
+                var clinicalScenario = qObj.TryGetProperty("clinicalScenario", out var csProp) ? csProp.GetString() : null;
+                var exhibitsJson = qObj.TryGetProperty("exhibitsJson", out var exProp) ? exProp.GetString() : null;
+                var rawStructuredJson = qObj.TryGetProperty("structuredContentJson", out var scProp) ? scProp.GetString() : null;
+                var structuredJson = canShowRationales
+                    ? rawStructuredJson
+                    : SanitizeStructuredContentForCandidate(rawStructuredJson);
 
                 var optionsList = new List<CandidateQuestionOptionDto>();
                 var correctIndices = new List<int>();
@@ -778,6 +793,10 @@ public class ExamAttemptsController : ControllerBase
                     QuestionNumber = qNum++,
                     Stem = stem,
                     QuestionType = qType,
+                    Instructions = instructions,
+                    ClinicalScenario = clinicalScenario,
+                    ExhibitsJson = exhibitsJson,
+                    StructuredContentJson = structuredJson,
                     Domain = domain,
                     Subdomain = subdomain,
                     MediaUrl = mediaUrl,
@@ -818,6 +837,12 @@ public class ExamAttemptsController : ControllerBase
                         QuestionNumber = qNum++,
                         Stem = q.Stem,
                         QuestionType = q.QuestionTypeKey,
+                        Instructions = q.Instructions,
+                        ClinicalScenario = q.ClinicalScenario,
+                        ExhibitsJson = q.ExhibitsJson,
+                        StructuredContentJson = canShowRationales
+                            ? q.StructuredContentJson
+                            : SanitizeStructuredContentForCandidate(q.StructuredContentJson),
                         Domain = q.ClientNeed?.Name ?? q.Topic?.Title,
                         Subdomain = q.Topic?.Title,
                         MediaUrl = null,
@@ -1733,6 +1758,9 @@ public class ExamAttemptsController : ControllerBase
 
         // Parse selected option indices from the request
         var selectedOptionIndices = request.SelectedOptionIndices ?? new List<int>();
+        string? structuredResponseJson = request.StructuredResponse is { ValueKind: not JsonValueKind.Null and not JsonValueKind.Undefined } sr
+            ? sr.GetRawText()
+            : null;
 
         // Server-authoritative validation and grading — never trust client-supplied IsCorrect/ScoreAwarded
         var validation = await _responseValidationService.ValidateAndGradeAsync(
@@ -1740,7 +1768,8 @@ public class ExamAttemptsController : ControllerBase
             request.QuestionId,
             selectedOptionIndices,
             request.TimeSpentSeconds,
-            cancellationToken);
+            cancellationToken,
+            structuredResponseJson);
 
         if (!validation.Valid)
         {
@@ -1769,14 +1798,19 @@ public class ExamAttemptsController : ControllerBase
 
         var selectedOptionsJson = JsonSerializer.Serialize(selectedOptionIndices);
 
+        var gradingState = grading.PendingManualReview
+            ? ResponseGradingState.PendingManualReview
+            : ResponseGradingState.Graded;
+
         var now = DateTime.UtcNow;
         var existingResponse = attempt.Responses.FirstOrDefault(r => r.QuestionId == request.QuestionId);
         if (existingResponse != null)
         {
             existingResponse.SelectedOptionsJson = selectedOptionsJson;
+            existingResponse.StructuredResponseJson = structuredResponseJson;
             existingResponse.IsCorrect = grading.IsCorrect;
             existingResponse.ScoreAwarded = grading.ScoreAwarded;
-            existingResponse.GradingState = ResponseGradingState.Graded;
+            existingResponse.GradingState = gradingState;
             existingResponse.TimeSpentSeconds = request.TimeSpentSeconds;
             existingResponse.AnsweredAt = now;
         }
@@ -1788,9 +1822,10 @@ public class ExamAttemptsController : ControllerBase
                 ExamAttemptId = attempt.Id,
                 QuestionId = request.QuestionId,
                 SelectedOptionsJson = selectedOptionsJson,
+                StructuredResponseJson = structuredResponseJson,
                 IsCorrect = grading.IsCorrect,
                 ScoreAwarded = grading.ScoreAwarded,
-                GradingState = ResponseGradingState.Graded,
+                GradingState = gradingState,
                 TimeSpentSeconds = request.TimeSpentSeconds,
                 AnsweredAt = now
             };
@@ -1804,12 +1839,22 @@ public class ExamAttemptsController : ControllerBase
             attempt.Id, new[] { request.QuestionId }, now, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
 
+        // Mode isolation: only disclose immediate correctness/score when the exam's
+        // ReviewPolicy is Immediate (Review/Tutor immediate feedback), never in Exam Mode.
+        // Manual-review items (e.g. essay) remain pendingManualReview=true with null isCorrect/scoreAwarded.
+        var allowImmediateDisclosure = string.Equals(
+            attempt.Exam?.ReviewPolicy,
+            ExaminationReviewPolicy.Immediate,
+            StringComparison.OrdinalIgnoreCase);
+
         return Ok(new
         {
             success = true,
             message = "Response recorded successfully.",
-            isCorrect = grading.IsCorrect,
-            scoreAwarded = grading.ScoreAwarded,
+            isCorrect = allowImmediateDisclosure && !grading.PendingManualReview ? grading.IsCorrect : (bool?)null,
+            scoreAwarded = allowImmediateDisclosure && !grading.PendingManualReview ? grading.ScoreAwarded : (decimal?)null,
+            pendingManualReview = grading.PendingManualReview,
+            explanation = allowImmediateDisclosure ? grading.Explanation : null,
         });
     }
 
@@ -1905,6 +1950,7 @@ public class ExamAttemptsController : ControllerBase
         }
 
         var totalResponses = attempt.Responses.Count(r => r.GradingState == ResponseGradingState.Graded);
+        var pendingManualReviewCount = attempt.Responses.Count(r => r.GradingState == ResponseGradingState.PendingManualReview);
         var correctResponses = attempt.Responses.Count(r => r.GradingState == ResponseGradingState.Graded && r.IsCorrect);
         var passingThreshold = attempt.Exam?.PassingScorePercent ?? 75.0m;
 
@@ -1957,6 +2003,7 @@ public class ExamAttemptsController : ControllerBase
             performanceTier,
             totalQuestions = totalResponses,
             correctCount = correctResponses,
+            pendingManualReviewCount,
             completedAt = attempt.CompletedAt
         });
     }
@@ -2450,5 +2497,66 @@ public class ExamAttemptsController : ControllerBase
             rejectedQuestions = rejectedQuestions.Distinct().ToList(),
             persistedAt = now
         });
+    }
+
+    private static readonly HashSet<string> AnswerKeyPropertyNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "correctOrder",
+        "correctAnswers",
+        "correctCells",
+        "correctValue",
+        "tolerance",
+        "formulaHint",
+        "acceptedAnswers",
+        "acceptedKeywords",
+        "sampleResponse",
+        "sampleAnswer",
+        "correctCondition",
+        "correctActions",
+        "correctParameters",
+        "targetCategory",
+        "classification",
+    };
+
+    private static string? SanitizeStructuredContentForCandidate(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return json;
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            var sanitized = StripAnswerKeys(doc.RootElement);
+            return JsonSerializer.Serialize(sanitized);
+        }
+        catch (JsonException)
+        {
+            return json;
+        }
+    }
+
+    private static object? StripAnswerKeys(JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                var dict = new Dictionary<string, object?>();
+                foreach (var prop in element.EnumerateObject())
+                {
+                    if (AnswerKeyPropertyNames.Contains(prop.Name)) continue;
+                    dict[prop.Name] = StripAnswerKeys(prop.Value);
+                }
+                return dict;
+            case JsonValueKind.Array:
+                return element.EnumerateArray().Select(StripAnswerKeys).ToList();
+            case JsonValueKind.String:
+                return element.GetString();
+            case JsonValueKind.Number:
+                return element.TryGetInt64(out var l) ? l : element.GetDouble();
+            case JsonValueKind.True:
+                return true;
+            case JsonValueKind.False:
+                return false;
+            default:
+                return null;
+        }
     }
 }

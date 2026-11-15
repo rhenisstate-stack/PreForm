@@ -169,14 +169,23 @@ public class QuestionTypeContractValidatorTests
             }, 4);
             Assert.Equal("unsupported-payload-kind", unsupportedContent.ErrorCode);
 
-            var unsupportedEssay = await validator.ValidateAsync(new QuestionTypePayloadEnvelope
+            var invalidEssayShape = await validator.ValidateAsync(new QuestionTypePayloadEnvelope
             {
                 TypeKey = "essay",
                 ContractVersion = 1,
                 Kind = QuestionTypePayloadKind.Response,
                 Payload = Json("\"not-accepted\""),
             });
-            Assert.Equal("unsupported-payload-kind", unsupportedEssay.ErrorCode);
+            Assert.Equal("invalid-response-shape", invalidEssayShape.ErrorCode);
+
+            var validEssay = await validator.ValidateAsync(new QuestionTypePayloadEnvelope
+            {
+                TypeKey = "essay",
+                ContractVersion = 1,
+                Kind = QuestionTypePayloadKind.Response,
+                Payload = Json("{\"text\":\"Clinical SBAR note\"}"),
+            });
+            Assert.True(validEssay.IsValid);
 
             var oversized = await validator.ValidateAsync(new QuestionTypePayloadEnvelope
             {

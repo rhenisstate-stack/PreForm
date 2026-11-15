@@ -129,9 +129,9 @@ public class Phase3AssessmentTests
     }
 
     [Fact]
-    public async Task AssessmentSelection_ExcludesUnsupportedNGNTypes()
+    public async Task AssessmentSelection_IncludesSupportedNGNTypes()
     {
-        var (controller, selectionService, db) = CreateController("P3_Select_ExcludeNGN");
+        var (controller, selectionService, db) = CreateController("P3_Select_IncludeNGN");
 
         // Seed 1 traditional published question and 2 NGN published questions (drag-drop, case-study)
         SeedQuestion(db, "q_trad_1", "rn", QuestionStatus.Published, "single-choice");
@@ -142,13 +142,16 @@ public class Phase3AssessmentTests
         var result = await selectionService.SelectQuestionsAsync(new AssessmentSelectionRequest
         {
             Pathway = "rn",
-            QuestionCount = 1,
+            QuestionCount = 3,
             ExamType = ExamType.Practice
         });
 
         Assert.True(result.Success);
-        Assert.Single(result.SelectedQuestions);
-        Assert.Equal("q_trad_1", result.SelectedQuestions[0].Question.Id);
+        Assert.Equal(3, result.SelectedQuestions.Count);
+        var ids = result.SelectedQuestions.Select(x => x.Question.Id).ToHashSet();
+        Assert.Contains("q_trad_1", ids);
+        Assert.Contains("q_ngn_1", ids);
+        Assert.Contains("q_ngn_2", ids);
     }
 
     [Fact]

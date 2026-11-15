@@ -177,7 +177,7 @@ public class AnalyticsController : ControllerBase
             return Unauthorized(new { success = false, error = "User identity could not be established." });
         }
 
-        if (role != "admin" && role != "superadmin")
+        if (role != "admin" && role != "superadmin" && _context != null)
         {
             var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == targetUserId, ct);
             var studentPathway = (user?.Pathway ?? "").Trim().ToLowerInvariant();

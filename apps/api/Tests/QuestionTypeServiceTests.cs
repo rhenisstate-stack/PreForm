@@ -178,10 +178,9 @@ public class QuestionTypeServiceTests
         Assert.Equal("ExactMatch", sata.SupportedScoring);
         Assert.Equal(new[] { "automatic-exact-match" }, sata.SupportedScoringModes);
         Assert.Equal(nameof(QuestionTypeStatus.GradingSupported), sata.ImplementationStatus);
-        Assert.Equal("NotImplemented", essay.SupportedScoring);
-        Assert.Equal(new[] { "not-implemented" }, essay.SupportedScoringModes);
-        Assert.Equal(nameof(QuestionTypeStatus.Catalogued), essay.ImplementationStatus);
-        Assert.False(essay.CapabilityDetails.SupportsManualGrading);
+        Assert.Equal("Manual", essay.SupportedScoring);
+        Assert.Equal(nameof(QuestionTypeStatus.GradingSupported), essay.ImplementationStatus);
+        Assert.True(essay.CapabilityDetails.SupportsManualGrading);
     }
 
     [Fact]

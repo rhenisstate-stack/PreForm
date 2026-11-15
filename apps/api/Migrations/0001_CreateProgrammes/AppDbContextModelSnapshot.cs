@@ -321,6 +321,9 @@ namespace Preform.Api.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("StructuredResponseJson")
+                        .HasColumnType("jsonb");
+
                     b.Property<int>("TimeSpentSeconds")
                         .HasColumnType("integer");
 
@@ -1179,6 +1182,12 @@ namespace Preform.Api.Migrations
                     b.Property<bool>("IsFavourite")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsOfficial")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(160)
@@ -1318,6 +1327,169 @@ namespace Preform.Api.Migrations
                     b.HasIndex("RuleType", "IsActive");
 
                     b.ToTable("IpAccessRules", "public");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.LearnerIntervention", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<int>("ActivityCount")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("BaselineAccuracyPercent")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("BaselineQuestionsAnswered")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastEvaluatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Pathway")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal>("PostInterventionAccuracyPercent")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("PostInterventionQuestionsAnswered")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RecommendationId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("TargetClientNeedCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TargetQuestionTypeKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RecommendationId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "Pathway");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("LearnerInterventions", "public");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.LearnerPerformanceRecommendation", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ActionHref")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<DateTime?>("DismissedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Evidence")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Pathway")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("SuggestedAction")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("TargetClientNeedCode")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TargetQuestionTypeKey")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "Pathway");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("LearnerPerformanceRecommendations", "public");
                 });
 
             modelBuilder.Entity("Preform.Api.Models.ManualSubscriptionAuthorization", b =>
@@ -2241,6 +2413,9 @@ namespace Preform.Api.Migrations
                     b.Property<bool>("IsFavourite")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsOfficial")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("IsPinned")
                         .HasColumnType("boolean");
 
@@ -2251,6 +2426,15 @@ namespace Preform.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("StudyGuideId")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<string>("SubjectDomainId")
                         .HasMaxLength(128)
@@ -2333,6 +2517,51 @@ namespace Preform.Api.Migrations
                     b.HasIndex("NoteId");
 
                     b.ToTable("StudyNoteVersions", "public");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.StudyReviewConfiguration", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("AllowCustomDrills")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("DefaultCardLimit")
+                        .HasColumnType("integer");
+
+                    b.Property<double>("DefaultEaseFactor")
+                        .HasColumnType("double precision");
+
+                    b.Property<bool>("EnablePn")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("EnableRn")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MaxCardsPerSession")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinIntervalDays")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("RequireSubscription")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("SupportedModesJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StudyReviewConfigurations", "public");
                 });
 
             modelBuilder.Entity("Preform.Api.Models.StudyReviewSession", b =>
@@ -2937,7 +3166,17 @@ namespace Preform.Api.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
                     b.Property<string>("Difficulty")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("FeedbackMode")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("character varying(32)");
@@ -2948,6 +3187,15 @@ namespace Preform.Api.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsOfficial")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MaxAttempts")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Programme")
                         .IsRequired()
                         .HasMaxLength(10)
@@ -2955,6 +3203,15 @@ namespace Preform.Api.Migrations
 
                     b.Property<int>("QuestionCount")
                         .HasColumnType("integer");
+
+                    b.Property<string>("QuestionIdsJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("SubjectDomainId")
                         .HasMaxLength(128)
@@ -3113,7 +3370,12 @@ namespace Preform.Api.Migrations
 
                     b.HasIndex("IsActive");
 
-                    b.ToTable("Users", "public");
+                    b.HasIndex("Pathway");
+
+                    b.ToTable("Users", "public", t =>
+                        {
+                            t.HasCheckConstraint("CK_Users_Single_Pathway", "\"Pathway\" IS NULL OR \"Pathway\" IN ('rn', 'pn', 'unassigned')");
+                        });
                 });
 
             modelBuilder.Entity("Preform.Api.Models.UserProfileImage", b =>
@@ -3596,6 +3858,35 @@ namespace Preform.Api.Migrations
                     b.Navigation("Flashcard");
                 });
 
+            modelBuilder.Entity("Preform.Api.Models.LearnerIntervention", b =>
+                {
+                    b.HasOne("Preform.Api.Models.LearnerPerformanceRecommendation", "Recommendation")
+                        .WithMany("Interventions")
+                        .HasForeignKey("RecommendationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Preform.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Recommendation");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.LearnerPerformanceRecommendation", b =>
+                {
+                    b.HasOne("Preform.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Preform.Api.Models.ManualSubscriptionAuthorization", b =>
                 {
                     b.HasOne("Preform.Api.Models.Order", "Order")
@@ -4057,6 +4348,11 @@ namespace Preform.Api.Migrations
             modelBuilder.Entity("Preform.Api.Models.FlashcardDeck", b =>
                 {
                     b.Navigation("Flashcards");
+                });
+
+            modelBuilder.Entity("Preform.Api.Models.LearnerPerformanceRecommendation", b =>
+                {
+                    b.Navigation("Interventions");
                 });
 
             modelBuilder.Entity("Preform.Api.Models.Order", b =>

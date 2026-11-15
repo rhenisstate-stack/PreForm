@@ -25,6 +25,19 @@ public class AttemptSnapshotTests
 
     private static ExamAttemptsController CreateController(AppDbContext context, string userId = "cand_001", string role = "candidate")
     {
+        if (!context.Users.Any(u => u.Id == userId))
+        {
+            context.Users.Add(new User
+            {
+                Id = userId,
+                Email = $"{userId}@test.local",
+                DisplayName = userId,
+                Pathway = "rn",
+                IsActive = true
+            });
+            context.SaveChanges();
+        }
+
         var nullLogger = NullLogger<ExamAttemptsController>.Instance;
         var resolver = new QuestionGraderResolver(QuestionTypeRegistry.Instance);
         var validationService = new ResponseValidationService(context, resolver);

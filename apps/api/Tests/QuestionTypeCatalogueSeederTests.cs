@@ -34,7 +34,7 @@ public class QuestionTypeCatalogueSeederTests
         Assert.Equal(Enumerable.Range(1, 18).Select(index => $"qt-{index}"), records.Select(item => item.Id));
         Assert.Equal(18, records.Select(item => item.Key).Distinct().Count());
         Assert.Equal("ExactMatch", records.Single(item => item.Key == "sata").SupportedScoring);
-        Assert.Equal("NotImplemented", records.Single(item => item.Key == "essay").SupportedScoring);
+        Assert.Equal("Manual", records.Single(item => item.Key == "essay").SupportedScoring);
     }
 
     [Fact]

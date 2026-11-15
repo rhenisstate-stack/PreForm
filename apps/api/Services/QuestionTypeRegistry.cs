@@ -7,6 +7,7 @@ public enum QuestionTypeGradingStrategy
 {
     None,
     OptionExactMatch,
+    Structured,
 }
 
 public sealed record QuestionTypeDescriptor(
@@ -81,64 +82,74 @@ public sealed class QuestionTypeRegistry : IQuestionTypeRegistry
                 QuestionScoringMode.AutomaticExactMatch),
             Type("drag-drop", "Drag-and-Drop", "Interactive clinical priority classification", "NGN", 7,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.RequiresSpecializedRenderer |
-                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator |
+                QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.AutomaticPartialCredit),
             Type("ordering", "Ordering / Sequencing", "Step-by-step procedural or nursing intervention order", "NGN", 8,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.RequiresSpecializedRenderer |
-                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator |
+                QuestionTypeCapability.SupportsAutomaticGrading,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.AutomaticExactMatch),
             Type("case-study", "NGN Case Study", "Multi-part clinical unfolding case study with EHR tabs", "NGN", 9,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.SupportsClinicalScenario |
                 QuestionTypeCapability.SupportsExhibits | QuestionTypeCapability.RequiresSpecializedRenderer |
-                QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedResponseValidator | QuestionTypeCapability.SupportsAutomaticGrading |
+                QuestionTypeCapability.SupportsPartialCredit,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.AutomaticPartialCredit),
             Type("essay", "Extended Response / Essay", "Clinical reasoning reflection requiring instructor review", "Traditional", 10,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.RequiresSpecializedRenderer |
-                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator |
+                QuestionTypeCapability.SupportsManualGrading,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.Manual),
             Type("matching", "Matching", "Paired concept-to-intervention clinical matching", "Traditional", 11,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.RequiresSpecializedRenderer |
-                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator |
+                QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.AutomaticPartialCredit),
             Type("fill-blank", "Fill-in-the-Blank", "Direct textual entry for clinical terms or dosage", "Traditional", 12,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.RequiresSpecializedInput |
-                QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedResponseValidator | QuestionTypeCapability.SupportsAutomaticGrading |
+                QuestionTypeCapability.SupportsPartialCredit,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.AutomaticPartialCredit),
             Type("matrix", "Matrix / Grid Response", "Tabular multiple-response clinical evaluation matrix", "NGN", 13,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.RequiresSpecializedRenderer |
-                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator |
+                QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.AutomaticPartialCredit),
             Type("numeric", "Numeric Response", "Dosage calculation and clinical measurement entry", "Traditional", 14,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.RequiresSpecializedInput |
-                QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedResponseValidator | QuestionTypeCapability.SupportsAutomaticGrading,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.AutomaticExactMatch),
             Type("true-false", "True / False", "Binary clinical fact and safety validation", "Traditional", 15,
                 QuestionTypeCapability.SupportsOptions | QuestionTypeCapability.SupportsAutomaticGrading,
                 QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.OptionExactMatch,
                 QuestionScoringMode.AutomaticExactMatch),
             Type("tabular", "Tabular Response", "Data table evaluation for clinical interventions", "NGN", 16,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.RequiresSpecializedRenderer |
-                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedInput | QuestionTypeCapability.RequiresSpecializedResponseValidator |
+                QuestionTypeCapability.SupportsAutomaticGrading | QuestionTypeCapability.SupportsPartialCredit,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.AutomaticPartialCredit),
             Type("short-answer", "Short-Answer Response", "Concise clinical assessment entry", "Traditional", 17,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.RequiresSpecializedInput |
-                QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedResponseValidator | QuestionTypeCapability.SupportsAutomaticGrading |
+                QuestionTypeCapability.SupportsPartialCredit,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.AutomaticPartialCredit),
             Type("dynamic-lab", "Dynamic Lab Value Response", "Interactive laboratory value and trend analysis", "NGN", 18,
                 QuestionTypeCapability.SupportsStructuredResponse | QuestionTypeCapability.RequiresSpecializedRenderer |
-                QuestionTypeCapability.RequiresSpecializedResponseValidator,
-                QuestionTypeStatus.Catalogued, QuestionTypeGradingStrategy.None,
-                QuestionScoringMode.NotImplemented),
+                QuestionTypeCapability.RequiresSpecializedResponseValidator | QuestionTypeCapability.SupportsAutomaticGrading |
+                QuestionTypeCapability.SupportsPartialCredit,
+                QuestionTypeStatus.GradingSupported, QuestionTypeGradingStrategy.Structured,
+                QuestionScoringMode.AutomaticPartialCredit),
         });
 
     private static readonly IReadOnlyDictionary<string, QuestionTypeDescriptor> DescriptorsByKey =
@@ -177,7 +188,11 @@ public sealed class QuestionTypeRegistry : IQuestionTypeRegistry
             capabilities,
             status,
             gradingStrategy,
-            Array.AsReadOnly(new[] { scoringMode }));
+            Array.AsReadOnly(new[] { scoringMode }))
+        {
+            SupportsAuthoring = true,
+            SupportsDelivery = true,
+        };
     }
 
     private static IReadOnlyDictionary<string, QuestionTypeDescriptor> CreateLookup(

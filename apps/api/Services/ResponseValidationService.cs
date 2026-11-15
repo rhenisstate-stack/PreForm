@@ -26,7 +26,8 @@ public interface IResponseValidationService
         string questionId,
         IReadOnlyList<int>? selectedOptionIndices,
         int timeSpentSeconds,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default,
+        string? structuredResponseJson = null);
 }
 
 /// <summary>
@@ -74,7 +75,8 @@ public class ResponseValidationService : IResponseValidationService
         string questionId,
         IReadOnlyList<int>? selectedOptionIndices,
         int timeSpentSeconds,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        string? structuredResponseJson = null)
     {
         if (string.IsNullOrWhiteSpace(attemptId))
         {
@@ -138,31 +140,35 @@ public class ResponseValidationService : IResponseValidationService
             .ToList();
 
         var selectedOptionIndicesToGrade = selectedOptionIndices ?? new List<int>();
+        var isOptionGrader = grader is OptionBasedQuestionGrader;
 
-        if (options.Count == 0)
+        if (isOptionGrader)
         {
-            // Missing grading data entirely (no options). This is an explicit
-            // ungraded outcome — correctness could not be determined.
-            return new ResponseValidationResult
+            if (options.Count == 0)
             {
-                Valid = false,
-                Error = "No authoritative options are available for grading.",
-                QuestionTypeKey = question.QuestionTypeKey,
-                AutomaticGradingPossible = true,
-                Ungraded = true,
-            };
-        }
+                // Missing grading data entirely (no options). This is an explicit
+                // ungraded outcome — correctness could not be determined.
+                return new ResponseValidationResult
+                {
+                    Valid = false,
+                    Error = "No authoritative options are available for grading.",
+                    QuestionTypeKey = question.QuestionTypeKey,
+                    AutomaticGradingPossible = true,
+                    Ungraded = true,
+                };
+            }
 
-        // Payload validity: reject option indices that do not reference real options.
-        if (selectedOptionIndicesToGrade.Any(i => i < 0 || i >= options.Count))
-        {
-            return new ResponseValidationResult
+            // Payload validity: reject option indices that do not reference real options.
+            if (selectedOptionIndicesToGrade.Any(i => i < 0 || i >= options.Count))
             {
-                Valid = false,
-                Error = "Response payload is invalid: a selected option index is out of range.",
-                QuestionTypeKey = question.QuestionTypeKey,
-                AutomaticGradingPossible = grader.SupportsAutomaticGrading,
-            };
+                return new ResponseValidationResult
+                {
+                    Valid = false,
+                    Error = "Response payload is invalid: a selected option index is out of range.",
+                    QuestionTypeKey = question.QuestionTypeKey,
+                    AutomaticGradingPossible = grader.SupportsAutomaticGrading,
+                };
+            }
         }
 
         var gradingContext = new QuestionGradingContext
@@ -171,6 +177,8 @@ public class ResponseValidationService : IResponseValidationService
             QuestionStem = question.Stem,
             Options = optionInfos,
             SelectedOptionIndices = selectedOptionIndicesToGrade,
+            ResponsePayload = structuredResponseJson,
+            StructuredContentJson = question.StructuredContentJson,
             TimeSpentSeconds = timeSpentSeconds,
             MaxScore = 1.0m,
         };

@@ -41,49 +41,52 @@ public class QuestionTypeRegistryTests
     }
 
     [Fact]
-    public void Registry_OnlyAdvertisesImplementedOptionExactMatchGraders()
+    public void Registry_AdvertisesAll18ImplementedGraders()
     {
         var registeredGraders = QuestionTypeRegistry.Instance.All
             .Where(descriptor => descriptor.GradingStrategy != QuestionTypeGradingStrategy.None)
             .Select(descriptor => descriptor.Key)
             .ToArray();
 
-        Assert.Equal(new[]
-        {
-            "single-choice", "multiple-choice", "sata", "checkbox",
-            "image-based", "multiple-image", "true-false",
-        }, registeredGraders);
+        Assert.Equal(18, registeredGraders.Length);
+        Assert.Equal(CanonicalKeys, registeredGraders);
 
         Assert.All(
-            QuestionTypeRegistry.Instance.All.Where(
-                descriptor => descriptor.GradingStrategy == QuestionTypeGradingStrategy.None),
+            QuestionTypeRegistry.Instance.All,
             descriptor =>
             {
-                Assert.Equal(QuestionTypeStatus.Catalogued, descriptor.ImplementationStatus);
-                Assert.Equal(new[] { QuestionScoringMode.NotImplemented }, descriptor.SupportedScoringModes);
-                Assert.False(descriptor.SupportsAuthoring);
-                Assert.False(descriptor.SupportsDelivery);
-                Assert.False(descriptor.SupportsAutomaticGrading);
+                Assert.Equal(QuestionTypeStatus.GradingSupported, descriptor.ImplementationStatus);
+                Assert.True(descriptor.SupportsAuthoring);
+                Assert.True(descriptor.SupportsDelivery);
+                if (descriptor.Key == "essay")
+                {
+                    Assert.False(descriptor.SupportsAutomaticGrading);
+                    Assert.NotEqual(0, (int)(descriptor.Capabilities & QuestionTypeCapability.SupportsManualGrading));
+                }
+                else
+                {
+                    Assert.True(descriptor.SupportsAutomaticGrading);
+                }
             });
     }
 
     [Fact]
-    public void Registry_UsesExactMatchForCurrentGradersAndVersionedContracts()
+    public void Registry_UsesVersionedContractsForAll18Types()
     {
-        var gradedTypes = QuestionTypeRegistry.Instance.All
-            .Where(descriptor => descriptor.GradingStrategy != QuestionTypeGradingStrategy.None);
-
-        Assert.All(gradedTypes, descriptor =>
+        var optionTypes = QuestionTypeRegistry.Instance.All
+            .Where(descriptor => descriptor.GradingStrategy == QuestionTypeGradingStrategy.OptionExactMatch)
+            .ToArray();
+        Assert.Equal(7, optionTypes.Length);
+        Assert.All(optionTypes, descriptor =>
         {
-            Assert.Equal(QuestionTypeStatus.GradingSupported, descriptor.ImplementationStatus);
             Assert.Equal(1, descriptor.ContractVersion);
             Assert.Equal(new[] { QuestionScoringMode.AutomaticExactMatch }, descriptor.SupportedScoringModes);
-            Assert.False(descriptor.SupportsAuthoring);
         });
 
-        Assert.All(gradedTypes, descriptor => Assert.False(descriptor.SupportsDelivery));
-
-        var sata = QuestionTypeRegistry.Instance.All.Single(descriptor => descriptor.Key == "sata");
-        Assert.False((sata.Capabilities & QuestionTypeCapability.SupportsPartialCredit) != 0);
+        var structuredTypes = QuestionTypeRegistry.Instance.All
+            .Where(descriptor => descriptor.GradingStrategy == QuestionTypeGradingStrategy.Structured)
+            .ToArray();
+        Assert.Equal(11, structuredTypes.Length);
+        Assert.All(structuredTypes, descriptor => Assert.Equal(1, descriptor.ContractVersion));
     }
 }

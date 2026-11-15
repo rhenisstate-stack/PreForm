@@ -64,10 +64,18 @@ public sealed class QuestionTypeContractValidator : IQuestionTypeContractValidat
         }
 
         if (envelope.Kind != QuestionTypePayloadKind.Response
-            || descriptor.GradingStrategy != QuestionTypeGradingStrategy.OptionExactMatch
-            || (descriptor.Capabilities & QuestionTypeCapability.RequiresSpecializedRenderer) != 0)
+            || descriptor.GradingStrategy == QuestionTypeGradingStrategy.None)
         {
             return Invalid("unsupported-payload-kind");
+        }
+
+        if (descriptor.GradingStrategy == QuestionTypeGradingStrategy.Structured)
+        {
+            if (envelope.Payload.ValueKind != System.Text.Json.JsonValueKind.Object)
+            {
+                return Invalid("invalid-response-shape");
+            }
+            return new QuestionTypePayloadValidationResult { IsValid = true };
         }
 
         if (optionCount is null or <= 0 or > MaximumOptionCount

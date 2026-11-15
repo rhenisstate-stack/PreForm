@@ -124,6 +124,9 @@ public enum ResponseGradingState
 
     /// <summary>Server could not grade the response because authoritative grading data is missing or invalid (e.g. no answer key). No score meaning is attached to this state.</summary>
     Ungraded = 2,
+
+    /// <summary>Response is valid and persisted, awaiting manual instructor/rubric grading (e.g. clinical essay).</summary>
+    PendingManualReview = 3,
 }
 
 [Table("Exams", Schema = "public")]
@@ -295,6 +298,13 @@ public class AttemptResponse
 
     [Required]
     public string SelectedOptionsJson { get; set; } = "[]"; // Serialized JSON array of chosen option keys
+
+    /// <summary>
+    /// Serialized JSON payload for structured/NGN question types (drag-drop, ordering,
+    /// case-study, essay, matching, fill-blank, matrix, numeric, tabular, short-answer, dynamic-lab).
+    /// </summary>
+    [Column(TypeName = "jsonb")]
+    public string? StructuredResponseJson { get; set; }
 
     public bool IsCorrect { get; set; } = false;
 

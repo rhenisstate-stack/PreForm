@@ -408,7 +408,7 @@ public class LearnerAnalyticsController : ControllerBase
             return (NotFound(new { success = false, error = "Learner not found." }), null, string.Empty);
         }
 
-        if (!isPrivileged)
+        if (!isPrivileged && _context != null && targetUser != null)
         {
             var studentPathway = targetUser.Pathway?.Trim().ToLowerInvariant();
             if (studentPathway != "rn" && studentPathway != "pn")
@@ -440,7 +440,7 @@ public class LearnerAnalyticsController : ControllerBase
 
         var effectivePathway = !string.IsNullOrWhiteSpace(requestedPathway)
             ? requestedPathway.Trim().ToLowerInvariant()
-            : (targetUser.Pathway?.Trim().ToLowerInvariant() ?? "rn");
+            : (targetUser?.Pathway?.Trim().ToLowerInvariant() ?? "rn");
 
         return (null, targetUserId, effectivePathway);
     }

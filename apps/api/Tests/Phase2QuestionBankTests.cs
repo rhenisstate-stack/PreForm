@@ -423,9 +423,9 @@ public class Phase2QuestionBankTests
     }
 
     [Fact]
-    public async Task QuestionLifecycle_NGNTypes_BlockedFromPublicationUntilGradingSupported()
+    public async Task QuestionLifecycle_NGNTypes_CanBePublishedOnceGradingSupported()
     {
-        var (_, qbService, _) = CreateServices(nameof(QuestionLifecycle_NGNTypes_BlockedFromPublicationUntilGradingSupported));
+        var (_, qbService, _) = CreateServices(nameof(QuestionLifecycle_NGNTypes_CanBePublishedOnceGradingSupported));
 
         var validJson = JsonSerializer.Serialize(new { steps = new[] { "Assess", "Intervene" } });
 
@@ -441,15 +441,14 @@ public class Phase2QuestionBankTests
         await qbService.TransitionStatusAsync(q.Id, new QuestionStatusTransitionRequest { TargetStatus = QuestionStatus.InReview }, "author-1", false);
         await qbService.TransitionStatusAsync(q.Id, new QuestionStatusTransitionRequest { TargetStatus = QuestionStatus.Approved }, "reviewer-1", false);
 
-        // Attempting to publish an NGN Catalogued type must be blocked!
-        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            qbService.TransitionStatusAsync(q.Id, new QuestionStatusTransitionRequest
-            {
-                TargetStatus = QuestionStatus.Published
-            }, "publisher-1", false));
+        // Now that ordering is GradingSupported, publication succeeds
+        var published = await qbService.TransitionStatusAsync(q.Id, new QuestionStatusTransitionRequest
+        {
+            TargetStatus = QuestionStatus.Published
+        }, "publisher-1", false);
 
-        Assert.Contains("cannot be published", ex.Message, StringComparison.OrdinalIgnoreCase);
-        Assert.Contains("grading support is implemented", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(published);
+        Assert.Equal(QuestionStatus.Published, published!.Status);
     }
 
     [Fact]

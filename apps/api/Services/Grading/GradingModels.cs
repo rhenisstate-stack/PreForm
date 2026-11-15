@@ -30,6 +30,11 @@ public class GradingResult
     /// </summary>
     public bool Ungraded { get; init; }
 
+    /// <summary>
+    /// True when the response is valid and persisted but requires manual instructor/rubric grading (e.g. essay).
+    /// </summary>
+    public bool PendingManualReview { get; init; }
+
     /// <summary>Error message if grading could not be performed.</summary>
     public string? Error { get; init; }
 
@@ -66,6 +71,19 @@ public class GradingResult
             MaxScore = 0,
             AutomaticGradingPossible = false,
             Error = error,
+        };
+    }
+
+    public static GradingResult PendingManualReviewResult(decimal maxScore, string explanation)
+    {
+        return new GradingResult
+        {
+            IsCorrect = false,
+            ScoreAwarded = 0m,
+            MaxScore = maxScore,
+            Explanation = explanation,
+            AutomaticGradingPossible = false,
+            PendingManualReview = true,
         };
     }
 
@@ -107,6 +125,9 @@ public class QuestionGradingContext
 
     /// <summary>The candidate's raw response payload.</summary>
     public string? ResponsePayload { get; init; }
+
+    /// <summary>The authoritative structured question content JSON (for structured/NGN types).</summary>
+    public string? StructuredContentJson { get; init; }
 
     /// <summary>Time spent on the question in seconds.</summary>
     public int TimeSpentSeconds { get; init; }
@@ -233,10 +254,16 @@ public class QuestionGraderResolver : IQuestionGraderResolver
 
     public QuestionGraderResolver(IQuestionTypeRegistry questionTypeRegistry)
     {
-        foreach (var descriptor in questionTypeRegistry.All.Where(
-            item => item.GradingStrategy == QuestionTypeGradingStrategy.OptionExactMatch))
+        foreach (var descriptor in questionTypeRegistry.All)
         {
-            _graders[descriptor.Key] = new OptionBasedQuestionGrader(descriptor.Key);
+            if (descriptor.GradingStrategy == QuestionTypeGradingStrategy.OptionExactMatch)
+            {
+                _graders[descriptor.Key] = new OptionBasedQuestionGrader(descriptor.Key);
+            }
+            else if (descriptor.GradingStrategy == QuestionTypeGradingStrategy.Structured)
+            {
+                _graders[descriptor.Key] = new StructuredQuestionGrader(descriptor.Key);
+            }
         }
     }
 
