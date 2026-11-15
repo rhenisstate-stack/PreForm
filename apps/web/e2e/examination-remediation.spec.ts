@@ -58,14 +58,26 @@ async function loginAdminUI(page: Page): Promise<void> {
   await page.goto("/sign-in?from=/admin/examinations");
   await page.fill("#email", ADMIN_EMAIL);
   await page.fill("#password", ADMIN_PASSWORD);
-  await Promise.all([
+  const [loginRes] = await Promise.all([
     page.waitForResponse(
-      (res) => res.url().includes("/api/auth/login") && res.status() === 200,
+      (res) => res.url().includes("/api/auth/login") && res.request().method() === "POST",
       { timeout: 15000 }
     ),
     page.click('button[type="submit"]'),
   ]);
-  await page.waitForURL("**/admin/examinations", { timeout: 20000 });
+  if (loginRes.status() !== 200) {
+    const clearBtn = page.getByRole("button", { name: /Clear stale sessions and sign in/i });
+    await expect(clearBtn).toBeVisible({ timeout: 5000 });
+    const [retryRes] = await Promise.all([
+      page.waitForResponse(
+        (res) => res.url().includes("/api/auth/login") && res.status() === 200,
+        { timeout: 15000 }
+      ),
+      clearBtn.click(),
+    ]);
+    expect(retryRes.status()).toBe(200);
+  }
+  await page.waitForURL((url) => url.pathname === "/admin/examinations", { timeout: 20000 });
 }
 
 async function navigationEntryCount(page: Page): Promise<number> {
@@ -73,6 +85,9 @@ async function navigationEntryCount(page: Page): Promise<number> {
 }
 
 test.describe("examination remediation E2E", () => {
+  test.afterEach(async ({ page }) => {
+    await page.request.post("/api/auth/logout").catch(() => {});
+  });
   let consoleMessages: string[];
 
   test.beforeEach(async ({ page }) => {
@@ -90,13 +105,6 @@ test.describe("examination remediation E2E", () => {
   });
 
   test("admin can open the examination catalogue and sorting/pagination state round-trips through the HMAC-protected query", async ({ page }) => {
-    await loginAdminUI(page);
-
-    // Page segment rendered (Issue B: children must be mounted by the shell gates).
-    await expect(page.getByText("Examination Code", { exact: false }).first()).toBeVisible({
-      timeout: 20000,
-    });
-
     // Issue A: the catalogue was fetched through the signed query request -> 200.
     const catalogueResponses: Array<{ status: number; url: string }> = [];
     page.on("response", (res) => {
@@ -105,16 +113,31 @@ test.describe("examination remediation E2E", () => {
       }
     });
 
-    await page.waitForResponse(
+    const initialCataloguePromise = page.waitForResponse(
       (res) =>
         res.url().includes("/api/admin/examinations") && res.status() === 200,
-      { timeout: 20000 }
+      { timeout: 25000 }
     );
+
+    await loginAdminUI(page);
+    await initialCataloguePromise;
+
+    // Page segment rendered (Issue B: children must be mounted by the shell gates).
+    await expect(page.getByRole("button", { name: /Ascending|Descending/ })).toBeVisible({
+      timeout: 20000,
+    });
 
     // Toggle sort direction in the real UI.
     const sortButton = page.getByRole("button", { name: /Ascending|Descending/ });
     await expect(sortButton).toBeVisible();
     const before = (await sortButton.textContent()) || "";
+    const refetchPromise = page.waitForResponse(
+      (res) =>
+        res.url().includes("/api/admin/examinations") &&
+        res.status() === 200 &&
+        res.url().includes("sortDirection="),
+      { timeout: 20000 }
+    );
     await sortButton.click();
 
     // Sort direction flips both in the UI and in the URL state.
@@ -124,13 +147,7 @@ test.describe("examination remediation E2E", () => {
     expect(page.url()).toContain("sortDirection=");
 
     // The flipped sort triggers a refetch of the signed query-string request.
-    const refetch = await page.waitForResponse(
-      (res) =>
-        res.url().includes("/api/admin/examinations") &&
-        res.status() === 200 &&
-        res.url().includes("sortDirection="),
-      { timeout: 20000 }
-    );
+    const refetch = await refetchPromise;
     expect(refetch.status()).toBe(200);
 
     // Query-string HMAC: every observed catalogue response must be accepted.
@@ -145,15 +162,15 @@ test.describe("examination remediation E2E", () => {
     expect(page.url()).toContain("sortDirection=");
 
     // Pagination control is present and page state persists in the URL when used.
-    const paginationResponse = page.waitForResponse(
-      (res) => res.url().includes("/api/admin/examinations") && res.status() === 200,
-      { timeout: 20000 }
-    );
     const navDuringPagination = await navigationEntryCount(page);
     const nextButton = page.getByRole("button", { name: "Next", exact: false }).first();
-    if (await nextButton.isVisible().catch(() => false)) {
+    if ((await nextButton.isVisible().catch(() => false)) && (await nextButton.isEnabled().catch(() => false))) {
+      const paginationResponse = page.waitForResponse(
+        (res) => res.url().includes("/api/admin/examinations") && res.status() === 200,
+        { timeout: 20000 }
+      );
       await nextButton.click();
-      await (await paginationResponse).status();
+      await paginationResponse;
       expect(page.url()).toContain("page=2");
     }
     expect(await navigationEntryCount(page)).toBe(navDuringPagination);
@@ -167,7 +184,11 @@ test.describe("examination remediation E2E", () => {
     expect(navBefore).toBe(1);
 
     // Drive real <Link> navigations through the sidebar.
-    const dashboardLink = page.getByRole("link", { name: "Dashboard" }).first();
+    const overviewBtn = page.getByRole("button", { name: "Overview" });
+    if ((await overviewBtn.getAttribute("aria-expanded")) !== "true") {
+      await overviewBtn.click();
+    }
+    const dashboardLink = page.locator('nav[aria-label="Admin navigation"] a[href="/admin"]').first();
     await expect(dashboardLink).toBeVisible();
     await dashboardLink.click();
     await page.waitForURL("**/admin", { timeout: 15000 });
@@ -176,11 +197,15 @@ test.describe("examination remediation E2E", () => {
     });
 
     // Back to the examinations console through the same sidebar link.
-    const examinationsLink = page.getByRole("link", { name: "Examinations" }).first();
+    const examMgmtBtn = page.getByRole("button", { name: "Examination Management" });
+    if ((await examMgmtBtn.getAttribute("aria-expanded")) !== "true") {
+      await examMgmtBtn.click();
+    }
+    const examinationsLink = page.locator('nav[aria-label="Admin navigation"] a[href="/admin/examinations"]').first();
     await expect(examinationsLink).toBeVisible();
     await examinationsLink.click();
     await page.waitForURL("**/admin/examinations", { timeout: 15000 });
-    await expect(page.getByText("Examination Code", { exact: false }).first()).toBeVisible({
+    await expect(page.getByRole("button", { name: /Ascending|Descending/ })).toBeVisible({
       timeout: 20000,
     });
 

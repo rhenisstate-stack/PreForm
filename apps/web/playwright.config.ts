@@ -58,8 +58,8 @@ export default defineConfig({
         reuseExistingServer: true,
         timeout: 120000,
         env: {
-          INTERNAL_API_URL: "http://127.0.0.1:5000",
-          API_GATEWAY_URL: "http://127.0.0.1:5000",
+          INTERNAL_API_URL: process.env.INTERNAL_API_URL || "http://127.0.0.1:4000",
+          API_GATEWAY_URL: process.env.API_GATEWAY_URL || "http://127.0.0.1:4000",
         },
       },
 });

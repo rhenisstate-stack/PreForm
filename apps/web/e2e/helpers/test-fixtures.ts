@@ -39,6 +39,10 @@ export async function registerStudentUI(page: Page, student: TestStudent): Promi
   }
 
   await page.fill("#password", student.password);
+  const confirmPasswordInput = page.locator("#confirmPassword");
+  if (await confirmPasswordInput.isVisible()) {
+    await confirmPasswordInput.fill(student.password);
+  }
 
   // Accept terms and conditions
   const termsCheckbox = page.locator('input[name="agreeTerms"], input[type="checkbox"]').first();
@@ -57,7 +61,7 @@ export async function registerStudentUI(page: Page, student: TestStudent): Promi
 
   // Verify redirected to authenticated destination pathname
   await page.waitForURL(
-    (url) => ["/dashboard", "/courses", "/profile"].includes(url.pathname),
+    (url) => url.pathname.startsWith("/dashboard") || ["/courses", "/profile"].includes(url.pathname),
     { timeout: 15000 }
   );
 }
@@ -70,6 +74,10 @@ export async function loginStudentUI(page: Page, student: TestStudent): Promise<
 
   await page.fill("#email", student.email);
   await page.fill("#password", student.password);
+  const confirmPasswordInput = page.locator("#confirmPassword");
+  if (await confirmPasswordInput.isVisible()) {
+    await confirmPasswordInput.fill(student.password);
+  }
 
   // Submit login form and await successful 200 response
   await Promise.all([
@@ -81,7 +89,7 @@ export async function loginStudentUI(page: Page, student: TestStudent): Promise<
   ]);
 
   await page.waitForURL(
-    (url) => ["/dashboard", "/courses", "/profile"].includes(url.pathname),
+    (url) => url.pathname.startsWith("/dashboard") || ["/courses", "/profile"].includes(url.pathname),
     { timeout: 15000 }
   );
 }
