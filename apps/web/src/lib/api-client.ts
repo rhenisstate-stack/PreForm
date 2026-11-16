@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import type { VerifiedSession } from "./session";
-import { resolveBackendBaseUrl } from "./env-config";
+import { resolvePrepfordApiBaseUrl } from "./env-config";
 
 export interface ApiClientOptions extends RequestInit {
   session?: VerifiedSession | null;
@@ -48,12 +48,12 @@ export function getMockApiHandler(): MockApiHandler | null {
 }
 
 /**
- * Returns the base URL for the backend ASP.NET Core API.
- * Prioritizes SKEW_LINE_DOTNET_BASE_URL when SKEW_LINE_ACTIVE_BACKEND=dotnet,
- * and never defaults to port 3000 (which is the Next.js frontend port).
+ * Returns the base URL for PrepFord's authoritative ASP.NET Core 8 API.
+ * Never defaults to port 3000 (Next.js frontend port) and never misroutes
+ * PrepFord-local /api/v1/* traffic to SKEW_LINE_DOTNET_BASE_URL.
  */
 export function getApiBaseUrl(): string {
-  return resolveBackendBaseUrl();
+  return resolvePrepfordApiBaseUrl();
 }
 
 /**

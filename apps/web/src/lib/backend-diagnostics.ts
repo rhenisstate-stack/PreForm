@@ -92,7 +92,7 @@ export async function checkRemoteBackendConnectivity(
     configuredBackendUrl: baseUrl,
     applicationIdentity: {
       appName: envResult.config.appName || "Prepford",
-      appKey: envResult.config.appKey || "WEBSITE_1",
+      appKey: envResult.config.appKey || "",
       activeBackend: envResult.config.activeBackend || "dotnet",
     },
     connectivityStatus,

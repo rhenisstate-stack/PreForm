@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { resolveBackendBaseUrl, validatePrepfordEnvironment } from "@/lib/env-config";
+import {
+  resolveBackendBaseUrl,
+  resolvePrepfordApiBaseUrl,
+  validatePrepfordEnvironment,
+} from "@/lib/env-config";
 import { apiClient, getApiBaseUrl } from "@/lib/api-client";
 import { checkRemoteBackendConnectivity } from "@/lib/backend-diagnostics";
 
@@ -12,7 +16,7 @@ describe("Remote .NET Backend Environment & Integration", () => {
     process.env.SKEW_LINE_APP_NAME = "Prepford";
     process.env.SKEW_LINE_APP_TITLE = "Prepford";
     process.env.SKEW_LINE_APP_DOMAIN = "https://www.prepford.com/";
-    process.env.SKEW_LINE_APP_KEY = "WEBSITE_1";
+    process.env.SKEW_LINE_APP_KEY = "WEBSITE_12";
     process.env.SKEW_LINE_ACTIVE_BACKEND = "dotnet";
     process.env.SKEW_LINE_DOTNET_BASE_URL = "http://108.61.9.189:8008";
   });
@@ -23,11 +27,12 @@ describe("Remote .NET Backend Environment & Integration", () => {
     vi.restoreAllMocks();
   });
 
-  it("prioritizes SKEW_LINE_DOTNET_BASE_URL over local gateway defaults when active backend is dotnet", () => {
+  it("isolates SKEW_LINE_DOTNET_BASE_URL from PrepFord's local ASP.NET Core API URL", () => {
     process.env.INTERNAL_API_URL = "http://localhost:4000";
     process.env.API_GATEWAY_URL = "http://localhost:4000";
     expect(resolveBackendBaseUrl()).toBe("http://108.61.9.189:8008");
-    expect(getApiBaseUrl()).toBe("http://108.61.9.189:8008");
+    expect(resolvePrepfordApiBaseUrl()).toBe("http://localhost:4000");
+    expect(getApiBaseUrl()).toBe("http://localhost:4000");
   });
 
   it("rejects localhost fallback in strict production builds", () => {
@@ -37,22 +42,35 @@ describe("Remote .NET Backend Environment & Integration", () => {
     expect(() => resolveBackendBaseUrl()).toThrow(/cannot target localhost/i);
   });
 
-  it("validates SKEW_LINE variables and emits HTTP transport warning for unencrypted remote host", () => {
+  it("validates SKEW_LINE WEBSITE_12 variables and emits HTTP transport warning for unencrypted remote host", () => {
     const result = validatePrepfordEnvironment();
     expect(result.valid).toBe(true);
     expect(result.errors).toEqual([]);
-    expect(result.config.appKey).toBe("WEBSITE_1");
+    expect(result.config.appKey).toBe("WEBSITE_12");
+    expect(result.config.appDomain).toBe("https://www.prepford.com/");
     expect(result.config.activeBackend).toBe("dotnet");
     expect(result.config.isHttpsBackend).toBe(false);
     expect(result.warnings.some((w) => w.includes("unencrypted HTTP"))).toBe(true);
   });
 
-  it("reports validation errors when required SKEW_LINE variables are invalid or missing", () => {
-    process.env.SKEW_LINE_APP_KEY = "WRONG_KEY";
+  it("validates HTTPS SKEW_LINE_DOTNET_BASE_URL in strict production with zero warnings", () => {
+    (process.env as Record<string, string>).NODE_ENV = "production";
+    process.env.APP_ENV = "production";
+    process.env.SKEW_LINE_DOTNET_BASE_URL = "https://explicitbackend.com";
+    const result = validatePrepfordEnvironment();
+    expect(result.valid).toBe(true);
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toEqual([]);
+    expect(result.config.isHttpsBackend).toBe(true);
+  });
+
+  it("rejects cross-website identity keys (WEBSITE_1, WEBSITE_11) and invalid backends", () => {
+    process.env.SKEW_LINE_APP_KEY = "WEBSITE_11";
     process.env.SKEW_LINE_ACTIVE_BACKEND = "node";
     const result = validatePrepfordEnvironment();
     expect(result.valid).toBe(false);
-    expect(result.errors).toHaveLength(2);
+    expect(result.errors.some((e) => e.includes("WEBSITE_12"))).toBe(true);
+    expect(result.errors.some((e) => e.includes("SKEW_LINE_ACTIVE_BACKEND"))).toBe(true);
   });
 
   it("treats unexpected HTML Page Not Found responses as 404 API failures instead of JSON success", async () => {
@@ -91,7 +109,7 @@ describe("Remote .NET Backend Environment & Integration", () => {
     expect(diag.connectivityStatus).toBe("reachable");
     expect(diag.healthEndpointStatus).toBe(200);
     expect(diag.documentationAvailable).toBe(false);
-    expect(diag.applicationIdentity.appKey).toBe("WEBSITE_1");
+    expect(diag.applicationIdentity.appKey).toBe("WEBSITE_12");
     const serialized = JSON.stringify(diag);
     expect(serialized).not.toContain("super-secret-value-never-expose");
     expect(serialized).not.toContain("gateway-secret-never-expose");
