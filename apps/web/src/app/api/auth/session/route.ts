@@ -5,6 +5,8 @@ import type { BackendUserSummary } from "@/lib/api-services";
 import { resolveBrowserPictureUrl } from "@/lib/profile-picture";
 import { resolveSession, clearSessionCookie } from "@/lib/session";
 
+const NO_STORE_HEADERS = { "Cache-Control": "no-store" };
+
 /**
  * Maps a backend user summary to the browser-facing authenticated user object.
  * The profile picture is derived from authoritative backend metadata rather
@@ -45,10 +47,13 @@ export async function GET(request?: Request) {
     const apiRes = await authService.getSession(session);
 
     if (apiRes.success && apiRes.data?.authenticated && apiRes.data.user) {
-      return NextResponse.json({
-        authenticated: true,
-        user: mapSessionUser(apiRes.data.user, session),
-      });
+      return NextResponse.json(
+        {
+          authenticated: true,
+          user: mapSessionUser(apiRes.data.user, session),
+        },
+        { headers: NO_STORE_HEADERS }
+      );
     }
 
     if (apiRes.status === 401 || apiRes.status === 403) {
@@ -59,7 +64,7 @@ export async function GET(request?: Request) {
       } catch {
         // Outside server action / route handler context
       }
-      return NextResponse.json({ authenticated: false, user: null });
+      return NextResponse.json({ authenticated: false, user: null }, { headers: NO_STORE_HEADERS });
     }
 
     // Fail-Closed Boundary (Phase 7.9.2 Work Package E):
@@ -72,7 +77,7 @@ export async function GET(request?: Request) {
         unavailable: true,
         error: "Backend authentication service is temporarily unavailable. Please retry.",
       },
-      { status: 503 }
+      { status: 503, headers: NO_STORE_HEADERS }
     );
   } catch (err) {
     if (err && typeof err === "object" && "digest" in err) {

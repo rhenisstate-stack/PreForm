@@ -21,7 +21,10 @@ export async function POST(request?: Request) {
     const cookieStore = await cookies();
     clearSessionCookie(cookieStore);
 
-    return NextResponse.json({ success: true, message: "Logged out successfully" });
+    return NextResponse.json(
+      { success: true, message: "Logged out successfully" },
+      { headers: { "Cache-Control": "no-store" } }
+    );
   } catch (err) {
     console.error("[Logout API] Error:", err);
     return NextResponse.json({ success: false, error: "Logout failed" }, { status: 500 });
