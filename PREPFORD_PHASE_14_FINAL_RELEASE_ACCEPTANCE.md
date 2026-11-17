@@ -73,3 +73,5 @@ Under Phase 14 release criteria, full `ACCEPTED` requires both production TLS **
 2. **Optional Vercel Dashboard Record:** Record the exact Vercel deployment ID, timestamp, and deployed commit SHA from the Vercel dashboard (`rhenisstate-stack/PreForm`, `feature/dotnet-backend-migration`).
 
 **Release Decision:** **CONDITIONALLY ACCEPTED** until the authorized `WEBSITE_12` positive authentication lifecycle is executed and passes against `https://www.prepford.com/`.
+
+> **Phase 15 Follow-up (`2026-11-17`):** See `PREPFORD_PHASE_15_FINAL_PRODUCTION_ACCEPTANCE.md`. Production TLS (`isHttpsBackend: true`) and all negative/CSRF/cookie-clearing probes were re-verified; the authorized `WEBSITE_12` test account remains unprovisioned locally, so the release decision remains **CONDITIONALLY ACCEPTED**.
