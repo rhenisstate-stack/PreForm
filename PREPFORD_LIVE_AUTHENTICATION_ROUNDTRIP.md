@@ -1,7 +1,7 @@
 # PREPFORD — LIVE AUTHENTICATION ROUND-TRIP REPORT
 
-**Date:** 2026-11-17 (Updated Phase 12)  
-**Upstream Endpoint:** `https://explicitbackend.com` (`TLSv1.3`, valid Let's Encrypt cert; re-probed `2026-11-17`: `GET /api/castoline/strata/main/categories/list/absolute?fetchtype=absolute` with `WEBSITE_12` returned `200 application/json; charset=utf-8`)  
+**Date:** 2026-11-17 (Updated Phase 14 — Production HTTPS Confirmed; Negative Controls Re-Verified)  
+**Upstream Endpoint:** `https://explicitbackend.com` (`TLSv1.3`, valid Let's Encrypt cert; production `/api/castoline/config-status` now reports `isHttpsBackend: true` with `warnings: []`)  
 **Website Identity:** `WEBSITE_12` (`https://www.prepford.com/`)
 
 ---
