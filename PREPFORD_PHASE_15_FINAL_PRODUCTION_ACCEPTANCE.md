@@ -127,3 +127,5 @@ Executed `GET https://www.prepford.com/api/castoline/config-status` prior to any
 **CONDITIONALLY ACCEPTED**
 
 Production upstream HTTPS (`isHttpsBackend: true`), certificate verification (`ssl_verify_result=0`), BFF connectivity, cookie-clearing policy, CSRF origin enforcement, and all negative authentication/authorization controls are verified on `https://www.prepford.com/`. Full **ACCEPTED** status remains gated solely on provisioning an authorized `WEBSITE_12` test account and executing the positive login -> cookie inspection -> `/api/castoline/auth/me` -> protected resource -> logout -> post-logout `401` lifecycle against production.
+
+> **Phase 16 Follow-up (`2026-11-17`):** See `PREPFORD_PHASE_16_FINAL_PRODUCTION_ACCEPTANCE.md`. Production configuration (`isHttpsBackend: true`) and upstream TLS (`ssl_verify_result=0`) were re-verified; the authorized `WEBSITE_12` test account remains unprovisioned, so the release decision remains **CONDITIONALLY ACCEPTED**.

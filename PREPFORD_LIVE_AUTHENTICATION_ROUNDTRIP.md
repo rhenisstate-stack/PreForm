@@ -1,6 +1,6 @@
 # PREPFORD — LIVE AUTHENTICATION ROUND-TRIP REPORT
 
-**Date:** 2026-11-17 (Updated Phase 15 — Live Negative & Cookie-Clearing Probes Re-Verified; Positive `WEBSITE_12` Lifecycle Still Blocked on Credentials)  
+**Date:** 2026-11-17 (Updated Phase 16 — Pre-Auth Config & TLS Re-Verified; Positive `WEBSITE_12` Lifecycle Still Blocked on Credentials)  
 **Upstream Endpoint:** `https://explicitbackend.com` (`TLSv1.3`, valid Let's Encrypt cert; production `/api/castoline/config-status` now reports `isHttpsBackend: true` with `warnings: []`)  
 **Website Identity:** `WEBSITE_12` (`https://www.prepford.com/`)
 
@@ -26,6 +26,6 @@
 
 ## 2. Positive Authenticated Round-Trip (External Dependency)
 
-- **Status:** **UNVERIFIED / BLOCKED_EXTERNAL_DEPENDENCY (Phase 15)**
-- **Reason:** Inspected `.env`, `.env.local`, `apps/web/.env.local`, and process environment variables; no authorized `WEBSITE_12` PrepFord integration test account credentials are present locally. Per policy, NURVIA/Qlex-Nursing (`WEBSITE_11`) credentials were not reused, real learner credentials were not used, and unauthorized production accounts were not created.
+- **Status:** **UNVERIFIED / BLOCKED_EXTERNAL_DEPENDENCY (Phase 16)**
+- **Reason:** Inspected `.env`, `.env.local`, `apps/web/.env.local`, `.gitignore` (`.env` / `.env.*` excluded), and process environment variables; no authorized `WEBSITE_12` PrepFord integration test account credentials are present locally. Per policy, NURVIA/Qlex-Nursing (`WEBSITE_11`) credentials were not reused, real learner credentials were not used, and unauthorized production accounts were not created.
 - **Provisioning Request:** Request an authorized administrator to provision one dedicated `WEBSITE_12` integration test user in LexmaCasto (role: `Learner`) and supply its credentials via a secure channel to execute the 12-step login -> `/api/castoline/auth/me` -> `/api/castoline/auth/logout` -> `401` lifecycle test.
