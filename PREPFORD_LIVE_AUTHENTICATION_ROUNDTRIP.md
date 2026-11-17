@@ -1,7 +1,7 @@
 # PREPFORD — LIVE AUTHENTICATION ROUND-TRIP REPORT
 
-**Date:** 2026-11-16 (Updated Phase 12)  
-**Upstream Endpoint:** `https://explicitbackend.com` (`TLSv1.3`, valid Let's Encrypt cert; Phase 12 local probe observed `ETIMEDOUT 108.61.9.189:443`)  
+**Date:** 2026-11-17 (Updated Phase 12)  
+**Upstream Endpoint:** `https://explicitbackend.com` (`TLSv1.3`, valid Let's Encrypt cert; re-probed `2026-11-17`: `GET /api/castoline/strata/main/categories/list/absolute?fetchtype=absolute` with `WEBSITE_12` returned `200 application/json; charset=utf-8`)  
 **Website Identity:** `WEBSITE_12` (`https://www.prepford.com/`)
 
 ---

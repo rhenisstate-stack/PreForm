@@ -1,22 +1,21 @@
 # PREPFORD — PHASE 12 FINAL PRODUCTION ACCEPTANCE REPORT
 
-**Date:** 2026-11-16  
+**Date:** 2026-11-17  
 **Repository:** `c:\Users\gitau\Documents\PREform`  
 **Production Domain:** `https://www.prepford.com/`  
 **Central Identity:** `WEBSITE_12`  
 **Upstream Backend:** `https://explicitbackend.com`  
-**Phase 12 Release Decision:** **NOT ACCEPTED** (Blocked on unexecuted Vercel Production deployment, missing `/api/castoline/*` production routes, and unprovisioned `WEBSITE_12` test account)
+**Phase 12 Release Decision:** **CONDITIONALLY ACCEPTED** (Pushed `53e850f` to owner-authorized `preform/feature/dotnet-backend-migration`; pending Vercel dashboard/CLI confirmation & deployment of `53e850f`, plus provisioned `WEBSITE_12` test account)
 
 ---
 
 ## 1. Executive Summary & Release Decision
 
-Phase 12 audited the repository at commit `1dace09`, re-verified the local TypeScript, SQLite-guard, and 160-test Vitest regression baseline, and probed the live production domain (`https://www.prepford.com/`) and local Vercel CLI state.
+Phase 12 verified the local Git state (`53e850f`, 5 commits ahead of `preform/feature/dotnet-backend-migration` at `b29c448` with zero divergence), audited the outgoing diff, and executed the owner-authorized push of `feature/dotnet-backend-migration` to `preform` (`https://github.com/rhenisstate-stack/PreForm.git`) at commit `53e850f4647cb63002bf58a17dc656bd4ebd22b6`. `origin/main` (`2aef11c`) was not modified.
 
-Under Phase 12 release acceptance criteria, the release decision is **NOT ACCEPTED** for production sign-off because:
-1. **Vercel Production Deployment Has Not Occurred:** `npx vercel whoami` (`Vercel CLI 65.16.0`) is `Logged out`, `VERCEL_TOKEN` is unset, and `.vercel/project.json` is absent locally. Live production probes confirm `https://www.prepford.com/api/castoline/*` still returns `HTTP 404` (`text/html; charset=utf-8`).
-2. **Authorized `WEBSITE_12` Test Account Unavailable:** No dedicated `WEBSITE_12` test credentials are provisioned locally, preventing live positive login -> `/api/castoline/auth/me` -> `/api/castoline/auth/logout` -> `401` verification.
-3. **Upstream Probe Timeout Observed Locally:** A Phase 12 direct probe from the local workstation to `https://explicitbackend.com` timed out (`ETIMEDOUT 108.61.9.189:443`), so live upstream availability must also be re-verified from Vercel Production after deployment.
+Re-probing `https://explicitbackend.com` on `2026-11-17` confirmed upstream reachability (`HTTP 200 application/json; charset=utf-8` on `WEBSITE_12` strata). However, the release remains **CONDITIONALLY ACCEPTED** pending two external items requiring owner/admin completion:
+1. **Vercel Production Project Verification, Env Vars & Deployment Confirmation:** Local `npx vercel whoami` (`Vercel CLI 65.16.0`) is `Logged out`, `VERCEL_TOKEN` is unset, and `.vercel/project.json` is absent. Live probes ~90 seconds after the push confirm `https://www.prepford.com/api/castoline/*` still returns `HTTP 404` (`text/html; charset=utf-8`), so the owner must verify in Vercel that `www.prepford.com` is linked to `rhenisstate-stack/PreForm` with Production Branch `feature/dotnet-backend-migration`, verify the 6 server-side `SKEW_LINE_*` Production environment variables, and confirm/trigger deployment of `53e850f`+.
+2. **Authorized `WEBSITE_12` Test Account:** No dedicated `WEBSITE_12` test credentials are provisioned locally, preventing live positive login -> `/api/castoline/auth/me` -> `/api/castoline/auth/logout` -> `401` verification.
 
 No application source code was modified in Phase 12; the reviewed integration implementation remains intact.
 
@@ -36,10 +35,11 @@ No application source code was modified in Phase 12; the reviewed integration im
 
 ## 3. Vercel Project & Production Branch Verification
 
+- **Owner-Authorized Target:** `rhenisstate-stack/PreForm` (`preform/feature/dotnet-backend-migration`) serving `https://www.prepford.com/`.
 - **Local Vercel State:** `vercel` is not installed globally, `.vercel/project.json` and `apps/web/.vercel` do not exist, `VERCEL_TOKEN` is unset, and `npx vercel whoami` (`Vercel CLI 65.16.0`) returned `Logged out`.
 - **Unverified Vercel Project Settings (Requires Owner Dashboard / Authenticated CLI Access):**
-  - Linked Vercel project ID/name
-  - Configured Production branch (`origin/main` vs `preform/feature/dotnet-backend-migration`)
+  - Linked Vercel project ID/name (`rhenisstate-stack/PreForm` expected)
+  - Configured Production branch (`feature/dotnet-backend-migration` expected)
   - Root directory (`apps/web` expected)
   - Framework/build configuration and Node.js runtime version (`>=24.0.0` declared in root `package.json`)
 - **Canonical Domain Observed Live:** `https://www.prepford.com/` responds with `server: Vercel` and `x-vercel-id: bom1::...`.
@@ -65,31 +65,31 @@ The following six server-side variables are required in Vercel's **Production** 
 
 ## 5. Deployment Commit SHA & Deployment Result
 
-- **Deployment Status:** **NOT EXECUTED / PENDING OWNER AUTHORIZATION**
-- **Deployment Identifier / Timestamp / Build Status:** Unavailable (no Vercel CLI authentication or `VERCEL_TOKEN`, and target production branch confirmation pending).
-- **Live Production Observation:** `https://www.prepford.com/` is serving an older production build that does not include `/api/castoline/*`.
+- **Git Push to Authorized Production Branch:** **COMPLETED** — `git push preform feature/dotnet-backend-migration` pushed `b29c448..53e850f` to `https://github.com/rhenisstate-stack/PreForm.git` (`refs/heads/feature/dotnet-backend-migration` verified at `53e850f4647cb63002bf58a17dc656bd4ebd22b6`). `origin/main` (`2aef11c`) was not modified.
+- **Vercel Deployment Status:** **PENDING OWNER VERIFICATION / DEPLOYMENT** — No Vercel CLI authentication or `VERCEL_TOKEN` is available locally, and `https://www.prepford.com/api/castoline/*` still returned `404` ~90 seconds after the push.
+- **Live Production Observation:** `https://www.prepford.com/` is still serving an older production build that does not include `/api/castoline/*`.
 
 ---
 
 ## 6. Production Route Smoke-Test Results
 
-Executed against `https://www.prepford.com/` on `2026-11-16`:
+Executed against `https://www.prepford.com/` on `2026-11-17` (~90 seconds post-push):
 
 | Method & URL | HTTP Status | Content-Type | Cache-Control | Result / Contract Check |
 |---|---|---|---|---|
 | `GET https://www.prepford.com/` | `200` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PASS** (prior build live) |
 | `GET https://www.prepford.com/sign-in` | `200` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PASS** |
 | `GET https://www.prepford.com/sign-up` | `200` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PASS** |
-| `GET https://www.prepford.com/api/castoline/config-status` | `404` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **FAIL** (route missing in live deployment) |
-| `GET https://www.prepford.com/api/castoline/auth/me` | `404` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **FAIL** (route missing in live deployment) |
-| `GET https://www.prepford.com/api/castoline/strata/categories` | `404` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **FAIL** (route missing in live deployment) |
+| `GET https://www.prepford.com/api/castoline/config-status` | `404` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PENDING DEPLOYMENT** (route missing in currently live build) |
+| `GET https://www.prepford.com/api/castoline/auth/me` | `404` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PENDING DEPLOYMENT** (route missing in currently live build) |
+| `GET https://www.prepford.com/api/castoline/strata/categories` | `404` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PENDING DEPLOYMENT** (route missing in currently live build) |
 
 ---
 
 ## 7. Authorized Authentication Lifecycle Results
 
 - **Positive Lifecycle (`WEBSITE_12` Login -> `/api/castoline/auth/me` -> Logout -> `401`):** **UNVERIFIED / BLOCKED_EXTERNAL_DEPENDENCY** — no authorized `WEBSITE_12` test account credentials are available locally.
-- **Negative & Boundary Controls:** Preserved from Phase 11 (`lexmacasto-integration.test.ts` and `remote-backend-config.test.ts` re-verified passing in Phase 12; live upstream `https://explicitbackend.com` probe from this host timed out with `ETIMEDOUT 108.61.9.189:443`).
+- **Negative & Boundary Controls:** Preserved from Phase 11 (`lexmacasto-integration.test.ts` and `remote-backend-config.test.ts`). Direct probe to `https://explicitbackend.com/api/castoline/strata/main/categories/list/absolute?fetchtype=absolute` with `WEBSITE_12` on `2026-11-17` returned `HTTP 200 application/json; charset=utf-8`.
 
 ---
 
@@ -117,15 +117,14 @@ Re-run in Phase 12 (no source code changes made):
 
 ## 10. Remaining External Dependencies
 
-1. **Owner Authorization & Vercel Production Deployment:** Confirm the connected Vercel Production branch/project, verify/configure the 6 server-side `SKEW_LINE_*` Production environment variables, and deploy the reviewed integration commit to `https://www.prepford.com/`.
-2. **Upstream Reachability Check:** Confirm `https://explicitbackend.com` (`108.61.9.189:443`) is reachable from Vercel Production (local probe timed out with `ETIMEDOUT`).
-3. **Authorized `WEBSITE_12` Test Account:** Provision a dedicated `WEBSITE_12` test user in LexmaCasto and supply credentials through a secure local channel to execute the positive and negative production authentication lifecycle.
+1. **Vercel Project & Production Deployment Confirmation:** Verify in the Vercel dashboard (or via authenticated Vercel CLI) that `www.prepford.com` is connected to `rhenisstate-stack/PreForm` with Production Branch `feature/dotnet-backend-migration`, Root Directory `apps/web`, and the 6 server-side `SKEW_LINE_*` Production environment variables, then confirm/trigger deployment of the pushed commit.
+2. **Authorized `WEBSITE_12` Test Account:** Provision a dedicated `WEBSITE_12` test user in LexmaCasto and supply credentials through a secure local channel (untracked local env/secret file) to execute the positive and negative production authentication lifecycle.
 
 ---
 
 ## 11. Explicit Release Recommendation
 
-**NOT ACCEPTED** for production sign-off until:
-1. The reviewed integration is deployed to Vercel Production (`https://www.prepford.com/`) with all 6 server-side `SKEW_LINE_*` Production environment variables verified,
-2. Live `/api/castoline/*` smoke tests and post-deployment bundle/security checks pass on `https://www.prepford.com/`, and
+**CONDITIONALLY ACCEPTED** — Retain `CONDITIONALLY ACCEPTED` until:
+1. Vercel confirms `rhenisstate-stack/PreForm` (`feature/dotnet-backend-migration`) as the Production branch and deploys the reviewed commit to `https://www.prepford.com/` with all 6 server-side `SKEW_LINE_*` Production variables verified,
+2. Live `/api/castoline/*` smoke tests, upstream BFF connectivity, and post-deployment bundle/security checks pass on `https://www.prepford.com/`, and
 3. The authorized `WEBSITE_12` positive and negative authentication lifecycle is executed against the live deployment.
