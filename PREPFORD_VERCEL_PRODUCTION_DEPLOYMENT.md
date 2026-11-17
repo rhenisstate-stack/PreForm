@@ -1,6 +1,6 @@
 # PREPFORD — VERCEL PRODUCTION DEPLOYMENT REPORT
 
-**Date:** 2026-11-17 (Updated Phase 12 — Live Production BFF Deployed; HTTP Upstream Warning Observed)  
+**Date:** 2026-11-17 (Updated Phase 13 — Live Production BFF Deployed; `SKEW_LINE_DOTNET_BASE_URL` Still `http://` in Vercel Production)  
 **Production Domain:** `https://www.prepford.com/`  
 **Apex Redirect:** `https://prepford.com/` -> `308` -> `https://www.prepford.com/`
 
