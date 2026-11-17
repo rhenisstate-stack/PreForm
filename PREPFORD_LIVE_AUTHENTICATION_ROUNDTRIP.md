@@ -12,10 +12,12 @@
 |---|---|---|
 | Missing Casto session headers | `GET https://explicitbackend.com/api/castoline/system/user/list/current?fetchtype=current` | `401 Unauthorized` (`{"error":"Missing Casto authentication headers"}`) |
 | Invalid/expired Casto session headers | `GET https://explicitbackend.com/api/castoline/system/user/list/current?fetchtype=current` | `401 Unauthorized` (`{"error":"Invalid or expired Casto session"}`) |
-| Incorrect login credentials | `POST https://explicitbackend.com/api/castoline/auth/login` | `401 Unauthorized` |
-| Cross-site POST (`sec-fetch-site: cross-site` / mismatched `Origin`) | `POST /api/castoline/auth/login` (BFF) | `403 Forbidden` (`lexmacasto-integration.test.ts`) |
+| Incorrect login credentials | `POST https://www.prepford.com/api/castoline/auth/login` (live BFF) | `401 Unauthorized` (`Cache-Control: no-store`, `errorCode: "UNAUTHORIZED"`) |
+| Missing required login fields | `POST https://www.prepford.com/api/castoline/auth/login` (live BFF `{}`) | `400 Bad Request` (`Cache-Control: no-store`, `Email is required.`) |
+| Malformed JSON login body | `POST https://www.prepford.com/api/castoline/auth/login` (live BFF) | `400 Bad Request` (`Cache-Control: no-store`, `Invalid JSON request body.`) |
+| Cross-site POST (`Origin: https://evil.example`) | `POST https://www.prepford.com/api/castoline/auth/login` (live BFF) | `403 Forbidden` (`Cache-Control: no-store`, `Request origin mismatch.`) |
 | Invalid website identity (`WEBSITE_11`) | `lexmaCastoRequest()` | `503 Service Unavailable` (`MISSING_APP_IDENTITY`, fail-closed) |
-| Unknown strata resource / unauthenticated `examsLive` | `GET /api/castoline/strata/{hacked\|examsLive}` | `404` / `401` (`lexmacasto-integration.test.ts`) |
+| Unknown / protected strata resource | `GET https://www.prepford.com/api/castoline/strata/{hacked\|examsLive}` (live BFF) | `404` / `401` (`Cache-Control: no-store`) |
 
 ---
 

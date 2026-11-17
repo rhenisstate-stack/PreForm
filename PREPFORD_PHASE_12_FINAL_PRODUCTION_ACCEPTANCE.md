@@ -5,16 +5,21 @@
 **Production Domain:** `https://www.prepford.com/`  
 **Central Identity:** `WEBSITE_12`  
 **Upstream Backend:** `https://explicitbackend.com`  
-**Phase 12 Release Decision:** **CONDITIONALLY ACCEPTED** (Pushed `53e850f` to owner-authorized `preform/feature/dotnet-backend-migration`; pending Vercel dashboard/CLI confirmation & deployment of `53e850f`, plus provisioned `WEBSITE_12` test account)
+**Phase 12 Release Decision:** **CONDITIONALLY ACCEPTED** (Production `/api/castoline/*` BFF is live on `https://www.prepford.com/`, but `SKEW_LINE_DOTNET_BASE_URL` in Vercel Production is currently `http://` (`isHttpsBackend: false`) instead of `https://explicitbackend.com`, and `WEBSITE_12` positive auth lifecycle remains pending)
 
 ---
 
 ## 1. Executive Summary & Release Decision
 
-Phase 12 verified the local Git state (`53e850f`, 5 commits ahead of `preform/feature/dotnet-backend-migration` at `b29c448` with zero divergence), audited the outgoing diff, and executed the owner-authorized push of `feature/dotnet-backend-migration` to `preform` (`https://github.com/rhenisstate-stack/PreForm.git`) at commit `53e850f4647cb63002bf58a17dc656bd4ebd22b6`. `origin/main` (`2aef11c`) was not modified.
+Phase 12 verified and pushed the reviewed integration to the owner-authorized production branch `preform/feature/dotnet-backend-migration` (`https://github.com/rhenisstate-stack/PreForm.git`) without modifying `origin/main`.
 
-Re-probing `https://explicitbackend.com` on `2026-11-17` confirmed upstream reachability (`HTTP 200 application/json; charset=utf-8` on `WEBSITE_12` strata). However, the release remains **CONDITIONALLY ACCEPTED** pending two external items requiring owner/admin completion:
-1. **Vercel Production Project Verification, Env Vars & Deployment Confirmation:** Local `npx vercel whoami` (`Vercel CLI 65.16.0`) is `Logged out`, `VERCEL_TOKEN` is unset, and `.vercel/project.json` is absent. Live probes ~90 seconds after the push confirm `https://www.prepford.com/api/castoline/*` still returns `HTTP 404` (`text/html; charset=utf-8`), so the owner must verify in Vercel that `www.prepford.com` is linked to `rhenisstate-stack/PreForm` with Production Branch `feature/dotnet-backend-migration`, verify the 6 server-side `SKEW_LINE_*` Production environment variables, and confirm/trigger deployment of `53e850f`+.
+Live production probes on `https://www.prepford.com/` on `2026-11-17` confirm the PrepFord BFF deployment is now live:
+- `/api/castoline/config-status` returns `200 application/json` (`no-store`), `/api/castoline/auth/me` returns `401` (`no-store`), and `/api/castoline/strata/categories` returns `200` (`no-store`, live upstream categories fetched).
+- Live negative auth, malformed JSON, missing-field, CSRF (`403` on `Origin: https://evil.example`), and strata allowlist (`404`/`401`) checks all pass on `https://www.prepford.com/`.
+- Live client bundle scan across all 22 `/_next/static` chunks returned `0` leaks of `WEBSITE_12`, `WEBSITE_11`, `WEBSITE_1`, `explicitbackend`, `108.61.9.189`, or `SKEW_LINE`.
+
+However, full `ACCEPTED` status remains blocked by two external configuration/account items:
+1. **Vercel Production `SKEW_LINE_DOTNET_BASE_URL` Must Be Updated to `https://explicitbackend.com`:** `/api/castoline/config-status` currently reports `"isHttpsBackend": false` with warning `"Remote SKEW_LINE backend uses unencrypted HTTP. Configure an HTTPS/TLS reverse proxy before transmitting production credentials."` Vercel Production must be updated to `SKEW_LINE_DOTNET_BASE_URL=https://explicitbackend.com` and redeployed, and the Vercel project metadata (`rhenisstate-stack/PreForm`, `feature/dotnet-backend-migration`) confirmed in the dashboard.
 2. **Authorized `WEBSITE_12` Test Account:** No dedicated `WEBSITE_12` test credentials are provisioned locally, preventing live positive login -> `/api/castoline/auth/me` -> `/api/castoline/auth/logout` -> `401` verification.
 
 No application source code was modified in Phase 12; the reviewed integration implementation remains intact.
@@ -48,16 +53,16 @@ No application source code was modified in Phase 12; the reviewed integration im
 
 ## 4. Production Environment-Variable Verification
 
-The following six server-side variables are required in Vercel's **Production** scope (none with `NEXT_PUBLIC_`):
+Verified via sanitized `GET https://www.prepford.com/api/castoline/config-status` (`2026-11-17`):
 
 | Variable | Local `.env.local` / `apps/web/.env.local` Presence | Vercel Production Status |
 |---|---|---|
-| `SKEW_LINE_APP_NAME` | Present (server-side) | **UNVERIFIED** (no authenticated Vercel access) |
-| `SKEW_LINE_APP_TITLE` | Present (server-side) | **UNVERIFIED** (no authenticated Vercel access) |
-| `SKEW_LINE_APP_DOMAIN` | Present (server-side) | **UNVERIFIED** (no authenticated Vercel access) |
-| `SKEW_LINE_APP_KEY` | Present (server-side) | **UNVERIFIED** (no authenticated Vercel access) |
-| `SKEW_LINE_ACTIVE_BACKEND` | Present (server-side) | **UNVERIFIED** (no authenticated Vercel access) |
-| `SKEW_LINE_DOTNET_BASE_URL` | Present (server-side) | **UNVERIFIED** (no authenticated Vercel access) |
+| `SKEW_LINE_APP_NAME` | Present (server-side) | **CONFIGURED** (`appName: "Prepford"`) |
+| `SKEW_LINE_APP_TITLE` | Present (server-side) | **CONFIGURED** (`appTitle: "Prepford"`) |
+| `SKEW_LINE_APP_DOMAIN` | Present (server-side) | **CONFIGURED** (`appDomain: "https://www.prepford.com/"`) |
+| `SKEW_LINE_APP_KEY` | Present (server-side) | **CONFIGURED** (`appKeyConfigured: true`, not exposed in client bundles) |
+| `SKEW_LINE_ACTIVE_BACKEND` | Present (server-side) | **CONFIGURED** (`activeBackend: "dotnet"`) |
+| `SKEW_LINE_DOTNET_BASE_URL` | Present (server-side, `https://`) | **MISCONFIGURED (`http://`)** — `isHttpsBackend: false` with warning `"Remote SKEW_LINE backend uses unencrypted HTTP. Configure an HTTPS/TLS reverse proxy before transmitting production credentials."` Must be updated to `https://explicitbackend.com` in Vercel Production. |
 
 *(Per security policy, variable values and secrets are not printed.)*
 
@@ -65,40 +70,46 @@ The following six server-side variables are required in Vercel's **Production** 
 
 ## 5. Deployment Commit SHA & Deployment Result
 
-- **Git Push to Authorized Production Branch:** **COMPLETED** — `git push preform feature/dotnet-backend-migration` pushed `b29c448..53e850f` to `https://github.com/rhenisstate-stack/PreForm.git` (`refs/heads/feature/dotnet-backend-migration` verified at `53e850f4647cb63002bf58a17dc656bd4ebd22b6`). `origin/main` (`2aef11c`) was not modified.
-- **Vercel Deployment Status:** **PENDING OWNER VERIFICATION / DEPLOYMENT** — No Vercel CLI authentication or `VERCEL_TOKEN` is available locally, and `https://www.prepford.com/api/castoline/*` still returned `404` ~90 seconds after the push.
-- **Live Production Observation:** `https://www.prepford.com/` is still serving an older production build that does not include `/api/castoline/*`.
+- **Git Push to Authorized Production Branch:** **COMPLETED** — `preform/feature/dotnet-backend-migration` (`https://github.com/rhenisstate-stack/PreForm.git`) at `f5be06aea6c37a89888531f4c9a85702abfd0df7`. `origin/main` (`2aef11c`) was not modified.
+- **Vercel Deployment Status:** **DEPLOYED LIVE** on `https://www.prepford.com/` (`/api/castoline/*` routes are live and serving JSON). Exact Vercel deployment ID and deployed commit SHA remain unverified locally because `npx vercel whoami` is `Logged out` and `VERCEL_TOKEN` is unset.
 
 ---
 
 ## 6. Production Route Smoke-Test Results
 
-Executed against `https://www.prepford.com/` on `2026-11-17` (~90 seconds post-push):
+Executed against `https://www.prepford.com/` on `2026-11-17`:
 
 | Method & URL | HTTP Status | Content-Type | Cache-Control | Result / Contract Check |
 |---|---|---|---|---|
-| `GET https://www.prepford.com/` | `200` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PASS** (prior build live) |
+| `GET https://www.prepford.com/` | `200` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PASS** |
 | `GET https://www.prepford.com/sign-in` | `200` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PASS** |
 | `GET https://www.prepford.com/sign-up` | `200` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PASS** |
-| `GET https://www.prepford.com/api/castoline/config-status` | `404` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PENDING DEPLOYMENT** (route missing in currently live build) |
-| `GET https://www.prepford.com/api/castoline/auth/me` | `404` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PENDING DEPLOYMENT** (route missing in currently live build) |
-| `GET https://www.prepford.com/api/castoline/strata/categories` | `404` | `text/html; charset=utf-8` | `public, max-age=0, must-revalidate` | **PENDING DEPLOYMENT** (route missing in currently live build) |
+| `GET https://www.prepford.com/api/castoline/config-status` | `200` | `application/json` | `no-store` | **PASS (route/contract)**; **WARN (`isHttpsBackend: false`)** |
+| `GET https://www.prepford.com/api/castoline/auth/me` | `401` | `application/json` | `no-store` | **PASS** (`{"success":false,"message":"Not authenticated.","errorCode":"UNAUTHORIZED"}`) |
+| `GET https://www.prepford.com/api/castoline/strata/categories` | `200` | `application/json` | `no-store` | **PASS** (`"Categories Fetched Successfully ⚓"`, upstream BFF connectivity verified) |
 
 ---
 
 ## 7. Authorized Authentication Lifecycle Results
 
 - **Positive Lifecycle (`WEBSITE_12` Login -> `/api/castoline/auth/me` -> Logout -> `401`):** **UNVERIFIED / BLOCKED_EXTERNAL_DEPENDENCY** — no authorized `WEBSITE_12` test account credentials are available locally.
-- **Negative & Boundary Controls:** Preserved from Phase 11 (`lexmacasto-integration.test.ts` and `remote-backend-config.test.ts`). Direct probe to `https://explicitbackend.com/api/castoline/strata/main/categories/list/absolute?fetchtype=absolute` with `WEBSITE_12` on `2026-11-17` returned `HTTP 200 application/json; charset=utf-8`.
+- **Live Production Negative & Boundary Controls (`https://www.prepford.com/`, `2026-11-17`):**
+  - `POST /api/castoline/auth/login` (invalid credentials) -> `401` (`no-store`)
+  - `POST /api/castoline/auth/login` (missing fields `{}`) -> `400` (`no-store`, `"Email is required."`)
+  - `POST /api/castoline/auth/login` (malformed JSON) -> `400` (`no-store`, `"Invalid JSON request body."`)
+  - `POST /api/castoline/auth/login` (cross-origin `Origin: https://evil.example`) -> `403` (`no-store`, `"Request origin mismatch."`)
+  - `GET /api/castoline/strata/hacked` -> `404` (`no-store`)
+  - `GET /api/castoline/strata/examsLive` (unauthenticated) -> `401` (`no-store`)
 
 ---
 
 ## 8. Security Audit Results
 
-- **Live Production Bundle Scan (`https://www.prepford.com/`):**
-  - Fetched HTML for `/`, `/sign-in`, and `/sign-up` and scanned all **22** referenced `/_next/static/immutable/chunks/*.js` bundles.
-  - **Findings:** **0** occurrences of `WEBSITE_12`, `WEBSITE_11`, `WEBSITE_1`, `explicitbackend`, `108.61.9.189`, `SKEW_LINE`, or `castoline`.
-- **Post-Deployment Security Audit:** Pending fresh Vercel Production deployment of commit `1dace09`+ to inspect the newly deployed client bundles, `Cache-Control: no-store` headers, HttpOnly/Secure/SameSite cookie attributes, and CSRF rejection in production.
+- **Live Production Bundle Scan (`https://www.prepford.com/`, `2026-11-17`):**
+  - Fetched HTML for `/`, `/sign-in`, and `/sign-up` and scanned all **22** referenced `/_next/static` JS chunks.
+  - **Findings:** **0** occurrences of `WEBSITE_12`, `WEBSITE_11`, `WEBSITE_1`, `explicitbackend`, `108.61.9.189`, or `SKEW_LINE`.
+- **Cache-Control & CSRF Controls:** All probed `/api/castoline/*` responses returned `Cache-Control: no-store`, and cross-origin `POST` was rejected with `403`.
+- **Transport Finding:** `/api/castoline/config-status` reports `isHttpsBackend: false`, indicating Vercel Production's `SKEW_LINE_DOTNET_BASE_URL` is currently using `http://` instead of `https://explicitbackend.com`. Must be remediated in Vercel Production before transmitting production credentials.
 
 ---
 
@@ -117,14 +128,13 @@ Re-run in Phase 12 (no source code changes made):
 
 ## 10. Remaining External Dependencies
 
-1. **Vercel Project & Production Deployment Confirmation:** Verify in the Vercel dashboard (or via authenticated Vercel CLI) that `www.prepford.com` is connected to `rhenisstate-stack/PreForm` with Production Branch `feature/dotnet-backend-migration`, Root Directory `apps/web`, and the 6 server-side `SKEW_LINE_*` Production environment variables, then confirm/trigger deployment of the pushed commit.
-2. **Authorized `WEBSITE_12` Test Account:** Provision a dedicated `WEBSITE_12` test user in LexmaCasto and supply credentials through a secure local channel (untracked local env/secret file) to execute the positive and negative production authentication lifecycle.
+1. **Vercel Production `SKEW_LINE_DOTNET_BASE_URL` Remediation & Project Metadata Confirmation:** Update `SKEW_LINE_DOTNET_BASE_URL` in Vercel **Production** scope from `http://...` to `https://explicitbackend.com`, trigger a fresh Production deployment so `/api/castoline/config-status` reports `"isHttpsBackend": true` with `warnings: []`, and confirm the Vercel project metadata (`rhenisstate-stack/PreForm`, Production Branch `feature/dotnet-backend-migration`, deployment ID/SHA).
+2. **Authorized `WEBSITE_12` Test Account:** Provision a dedicated `WEBSITE_12` test user in LexmaCasto and supply credentials through a secure local channel (untracked local env/secret file) to execute the positive production authentication lifecycle.
 
 ---
 
 ## 11. Explicit Release Recommendation
 
 **CONDITIONALLY ACCEPTED** — Retain `CONDITIONALLY ACCEPTED` until:
-1. Vercel confirms `rhenisstate-stack/PreForm` (`feature/dotnet-backend-migration`) as the Production branch and deploys the reviewed commit to `https://www.prepford.com/` with all 6 server-side `SKEW_LINE_*` Production variables verified,
-2. Live `/api/castoline/*` smoke tests, upstream BFF connectivity, and post-deployment bundle/security checks pass on `https://www.prepford.com/`, and
-3. The authorized `WEBSITE_12` positive and negative authentication lifecycle is executed against the live deployment.
+1. Vercel confirms `rhenisstate-stack/PreForm` (`feature/dotnet-backend-migration`) and updates `SKEW_LINE_DOTNET_BASE_URL=https://explicitbackend.com` in Production + redeploys so `/api/castoline/config-status` reports `"isHttpsBackend": true`, and
+2. The authorized `WEBSITE_12` positive authentication lifecycle (login -> `/api/castoline/auth/me` -> HttpOnly/Secure/SameSite cookie check -> logout -> `401`) is executed against `https://www.prepford.com/`.

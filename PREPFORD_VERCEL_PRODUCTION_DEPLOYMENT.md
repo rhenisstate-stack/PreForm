@@ -1,6 +1,6 @@
 # PREPFORD — VERCEL PRODUCTION DEPLOYMENT REPORT
 
-**Date:** 2026-11-17 (Updated Phase 12 — Owner-Authorized Push Executed)  
+**Date:** 2026-11-17 (Updated Phase 12 — Live Production BFF Deployed; HTTP Upstream Warning Observed)  
 **Production Domain:** `https://www.prepford.com/`  
 **Apex Redirect:** `https://prepford.com/` -> `308` -> `https://www.prepford.com/`
 
@@ -10,27 +10,22 @@
 
 - **Owner-Authorized Production Branch:** `preform/feature/dotnet-backend-migration` (`https://github.com/rhenisstate-stack/PreForm.git`)
 - **Current Branch:** `feature/dotnet-backend-migration`
-- **Pushed Commit:** `53e850f4647cb63002bf58a17dc656bd4ebd22b6` (`53e850f` — `docs(phase12): record production deployment and WEBSITE_12 auth blockers`, containing reviewed integration commits `9a94f8b`, `1297c18`, `5f560ae`, `1dace09`, `53e850f`)
-- **Remote Push Result:** `b29c448..53e850f  feature/dotnet-backend-migration -> feature/dotnet-backend-migration` (`git ls-remote preform refs/heads/feature/dotnet-backend-migration` verified `53e850f4647cb63002bf58a17dc656bd4ebd22b6`). `origin/main` (`2aef11c`) was not modified or pushed.
-- **Vercel CLI / Token:** `vercel` is not globally installed, `npx vercel whoami` (`Vercel CLI 65.16.0`) reports `Logged out`, `VERCEL_TOKEN` is unset, and `.vercel/project.json` is not present locally.
-- **Vercel Project Settings (Requires Owner Dashboard / Authenticated CLI Verification):**
-  - Connected repository: `rhenisstate-stack/PreForm` (pending owner verification)
-  - Production Branch: `feature/dotnet-backend-migration` (pending owner verification)
-  - Root Directory: `apps/web` (pending owner verification)
-  - Node.js runtime: `24.x` (pending owner verification)
+- **Remote HEAD:** `f5be06aea6c37a89888531f4c9a85702abfd0df7` (`f5be06a` — `docs(phase12): record push to preform/feature/dotnet-backend-migration and post-push probes`, containing reviewed integration commits `9a94f8b`, `1297c18`, `5f560ae`, `1dace09`, `53e850f`, `f5be06a`). `origin/main` (`2aef11c`) was not modified or pushed.
+- **Vercel CLI / Token:** `vercel` is not globally installed, `npx vercel whoami` (`Vercel CLI 65.16.0`) reports `Logged out`, `VERCEL_TOKEN` is unset, and `.vercel/project.json` is not present locally. Therefore, the Vercel deployment ID, exact deployed SHA metadata, and Vercel dashboard settings (`rhenisstate-stack/PreForm`, Production Branch `feature/dotnet-backend-migration`, Root Directory `apps/web`, Node `24.x`) cannot be read via CLI.
+- **Live Deployment Evidence:** All `/api/castoline/*` BFF routes are now live and serving JSON on `https://www.prepford.com/`, confirming the Phase 9/10/11/12 integration has been deployed to Vercel Production.
 
 ---
 
-## 2. Live Production Smoke Probes (`https://www.prepford.com/`) — Post-Push (2026-11-17)
+## 2. Live Production Smoke Probes (`https://www.prepford.com/`) — 2026-11-17
 
-| Route | Observed HTTP Status | Content-Type / Cache-Control | Response Headers / Notes |
+| Route | Observed HTTP Status | Content-Type / Cache-Control | Response Summary / Notes |
 |---|---|---|---|
-| `/` | `200` | `text/html; charset=utf-8` / `public, max-age=0, must-revalidate` | `server: Vercel`, `x-vercel-id: bom1::jh9sp-1794895487720-08592b3d57f5` (prior build) |
-| `/sign-in` | `200` | `text/html; charset=utf-8` / `public, max-age=0, must-revalidate` | `server: Vercel`, `x-vercel-id: bom1::659tq-1794895488020-04d4c7eb5cdf` |
-| `/sign-up` | `200` | `text/html; charset=utf-8` / `public, max-age=0, must-revalidate` | `server: Vercel`, `x-vercel-id: bom1::jh9sp-1794895488134-e200db41f835` |
-| `/api/castoline/config-status` | `404` | `text/html; charset=utf-8` / `public, max-age=0, must-revalidate` | BFF routes still `404` ~90s after push; Vercel project/branch/build requires owner verification |
-| `/api/castoline/auth/me` | `404` | `text/html; charset=utf-8` / `public, max-age=0, must-revalidate` | BFF routes still `404` ~90s after push |
-| `/api/castoline/strata/categories` | `404` | `text/html; charset=utf-8` / `public, max-age=0, must-revalidate` | BFF routes still `404` ~90s after push |
+| `GET /` | `200` | `text/html; charset=utf-8` / `public, max-age=0, must-revalidate` | `server: Vercel`, `x-vercel-id: bom1::vz7tx-1794900936565-bb4368add6f1` |
+| `GET /sign-in` | `200` | `text/html; charset=utf-8` / `public, max-age=0, must-revalidate` | `server: Vercel`, `x-vercel-id: bom1::9dwtg-1794900938245-39cf822e0d83` |
+| `GET /sign-up` | `200` | `text/html; charset=utf-8` / `public, max-age=0, must-revalidate` | `server: Vercel`, `x-vercel-id: bom1::vnp5b-1794900939450-e6bd557c28c7` |
+| `GET /api/castoline/config-status` | `200` | `application/json` / `no-store` | `valid: true`, `appName: "Prepford"`, `appTitle: "Prepford"`, `appDomain: "https://www.prepford.com/"`, `appKeyConfigured: true`, `activeBackend: "dotnet"`, **`isHttpsBackend: false`** (warning: unencrypted HTTP upstream) |
+| `GET /api/castoline/auth/me` | `401` | `application/json` / `no-store` | `{"success":false,"message":"Not authenticated.","errorCode":"UNAUTHORIZED"}` |
+| `GET /api/castoline/strata/categories` | `200` | `application/json` / `no-store` | `{"success":true,"message":"Categories Fetched Successfully ⚓",...}` (live upstream BFF round-trip confirmed) |
 
 ---
 
